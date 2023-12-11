@@ -1,6 +1,5 @@
 use clap::{Parser, ValueEnum};
 
-/// Simple program to greet a person
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -30,12 +29,35 @@ enum Platform {
     PredictIt,
 }
 
+struct MarketForDB {
+    title: String,
+    platform: Platform,
+    platform_id: String,
+}
+
 fn main() {
+    // get cli arguments
     let args = Args::parse();
+
     // get platform list
     let platforms: Vec<&Platform> = match &args.platform {
         Some(platform) => Vec::from([platform]),
         None => Vec::from([&Platform::Kalshi, &Platform::Manifold]),
     };
-    println!("Getting data from {:?}", &platforms)
+    println!("Platforms selected: {:?}", &platforms);
+
+    // check environment variables
+    // - database credentials
+    // - kalshi credentials
+
+    let collated_data: Vec<MarketForDB> = Vec::new();
+    for platform in platforms {
+        println!("Processing platform: {:?}", &platform);
+        // get all resolved market IDs
+        // process each market
+        //     get detailed market info (including trade history)
+        //     convert detailed market information into database format
+    }
+
+    // save collated data - to database or file
 }
