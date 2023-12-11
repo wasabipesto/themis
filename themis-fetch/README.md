@@ -1,0 +1,1 @@
+This is the backend service that downloads data from each platform and saves it to a database for querying later.
