@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css"
+    />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vuetify@3.4.4/dist/vuetify.min.css" />
+    <title>Calibration City</title>
+  </head>
+
+  <body>
+    <div id="app">
+      <v-app>
+        <v-app-bar>
+          <!--<span class="text-h5 mx-5">
+            <v-app-bar-nav-icon
+              variant="text"
+              @click.stop="option_drawers_visible = !option_drawers_visible"
+            ></v-app-bar-nav-icon>
+          </span>-->
+          <span class="text-h5 mx-5">
+            <v-icon class="mx-1">mdi-city</v-icon>
+            <span class="mx-1">Calibration City</span>
+          </span>
+        </v-app-bar>
+
+        <v-navigation-drawer :width="400" v-model="option_drawers_visible">
+          <v-expansion-panels variant="accordion" v-model="option_drawers_open">
+            <v-expansion-panel key="0">
+              <v-expansion-panel-title>
+                <v-icon class="mr-3">mdi-help</v-icon>
+                Instructions
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <p class="my-2">
+                  Prediction markets claim to be accurate, but how can we tell? And under what
+                  conditions are they reliable? To investigate, we can generate a type of diagram
+                  called a <b>Calibration Plot</b> which aggregates thoudands of markets from
+                  several prediction market sites on a single graph and shows how often they were
+                  right.
+                </p>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+            <v-expansion-panel>
+              <v-expansion-panel-title>
+                <v-icon class="mr-3">mdi-chart-line</v-icon>
+                What does the plot mean?
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <p class="my-2">
+                  Across the x-axis the markets are grouped by their estimated probability, and
+                  along the y-axis the true outcome is shown. If a point is at (0.75,0.80), it means
+                  the prediction markets thought those events would happen with a
+                  <b>75% probaility</b> and they turned out to happen <b>80% of the time</b>. That's
+                  pretty good! To be the most accurate, you should ecpect the dots to line up along
+                  the reference line from the bottom-left corner to the top-right - this represents
+                  perfect calibration.
+                </p>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+            <v-expansion-panel>
+              <v-expansion-panel-title>
+                <v-icon class="mr-3">mdi-medal-outline</v-icon>
+                What's the Brier score?
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <p class="my-2">good grade!</p>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+            <v-expansion-panel>
+              <v-expansion-panel-title>
+                <v-icon class="mr-3">mdi-book-outline</v-icon>
+                Resources
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <p class="my-2">
+                  <a href="https://academic.oup.com/ej/article-abstract/123/568/491/5079498"
+                    >Do Prediction Markets Produce Well-Calibrated Probability Forecasts?</a
+                  >
+                </p>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+            <v-divider :thickness="20"></v-divider>
+            <v-expansion-panel>
+              <v-expansion-panel-title>
+                <v-icon class="mr-3">mdi-ruler-square-compass</v-icon>
+                Bin Method: {{ getOptionLabel("bin_method", options_selected.bin_method) }}
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <p class="my-2">
+                  The binning method determines where on the x-axis each market is placed. This
+                  metric should represent the market's true belief or predicted value. We usually
+                  care about how accurate the market was on average over the course of the market,
+                  so the default is time-weighted.
+                </p>
+                <v-radio-group v-model="options_selected.bin_method">
+                  <v-radio
+                    v-for="(v,k) in options.bin_method"
+                    :key="k"
+                    :value="k"
+                    :label="v.label"
+                  ></v-radio>
+                </v-radio-group>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+            <v-expansion-panel>
+              <v-expansion-panel-title>
+                <v-icon class="mr-3">mdi-globe-model</v-icon>
+                Weighting: {{ getOptionLabel("weighting", options_selected.weighting) }}
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <p class="my-2">
+                  With no weighting, the true resolution value of all markets in each bin are
+                  averaged evenly. Weighting gives more importance to markets meeting certain
+                  criteria.
+                </p>
+                <v-radio-group v-model="options_selected.weighting">
+                  <v-radio
+                    v-for="(v,k) in options.weighting"
+                    :key="k"
+                    :value="k"
+                    :label="v.label"
+                  ></v-radio>
+                </v-radio-group>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+            <v-expansion-panel>
+              <v-expansion-panel-title>
+                <v-icon class="mr-3">mdi-calendar</v-icon>
+                Minimum Open Length: {{ options_selected.min_open_length }} days
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <p class="my-2">
+                  Filter the markets in the sample to only those open longer than a certain number
+                  of days. Useful to filter out markets that were quickly or fradulently resolved.
+                </p>
+                <v-slider
+                  v-model="options_selected.min_open_length"
+                  :min="options.min_open_length.range[0]"
+                  :max="options.min_open_length.range[1]"
+                  step="1"
+                  class="pt-8"
+                  density="compact"
+                  thumb-label="always"
+                >
+                </v-slider>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+            <v-expansion-panel>
+              <v-expansion-panel-title>
+                <v-icon class="mr-3">mdi-account-group-outline</v-icon>
+                Minimum Unique Traders: {{ options_selected.min_num_traders }} traders
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <p class="my-2">
+                  Filter the markets in the sample to only those with at least a certain number of
+                  unique traders. Useful to filter out personal markets with no wider interest.
+                </p>
+                <v-slider
+                  v-model="options_selected.min_num_traders"
+                  :min="options.min_num_traders.range[0]"
+                  :max="options.min_num_traders.range[1]"
+                  step="1"
+                  class="pt-8"
+                  density="compact"
+                  thumb-label="always"
+                >
+                </v-slider>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+            <v-expansion-panel>
+              <v-expansion-panel-title>
+                <v-icon class="mr-3">mdi-cash</v-icon>
+                Minimum Market Volume: ${{ options_selected.min_volume }}
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <p class="my-2">
+                  Filter the markets in the sample to only those with at least a certain amount of
+                  money in volume. Useful to isolate only the high-profile markets. This metric is
+                  measured in USD.
+                </p>
+                <v-slider
+                  v-model="options_selected.min_volume"
+                  :min="options.min_volume.range[0]"
+                  :max="options.min_volume.range[1]"
+                  step="10"
+                  class="pt-8"
+                  density="compact"
+                  thumb-label="always"
+                >
+                </v-slider>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+            <v-expansion-panel>
+              <v-expansion-panel-title>
+                <v-icon class="mr-3">mdi-gavel</v-icon>
+                Predictive Label: {{ getOptionLabel("is_predictive", options_selected.is_predictive)
+                }}
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <p class="my-2">
+                  Many sites allow non-predictive markets and label them as such. This option
+                  follows how each site distinguishes markets.
+                </p>
+                <v-radio-group v-model="options_selected.is_predictive">
+                  <v-radio
+                    v-for="(v,k) in options.is_predictive"
+                    :key="k"
+                    :value="k"
+                    :label="v.label"
+                  ></v-radio>
+                </v-radio-group>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+            <v-expansion-panel>
+              <v-expansion-panel-title>
+                <v-icon class="mr-3">mdi-message-outline</v-icon>
+                Title Contains: {{ options_selected.title_contains || 'None' }}
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <p class="my-2">
+                  Filter for markets that contain a specific term in their title. Note that
+                  different sites will have different naming conventions.
+                </p>
+                <v-text-field
+                  clearable
+                  v-model="options_selected.title_contains"
+                  label="Title Contains"
+                ></v-text-field>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+            <v-expansion-panel>
+              <v-expansion-panel-title>
+                <v-icon class="mr-3">mdi-group</v-icon>
+                Categories: {{ getCategoryLabel(options_selected.categories) }}
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <p class="my-2">
+                  Filter the markets in the sample to only those in certain categories.
+                  Unimplemented.
+                </p>
+                <v-chip-group
+                  v-model="options_selected.categories"
+                  selected-class="text-deep-purple-accent-4"
+                  multiple
+                >
+                  <v-chip v-for="cat in options.categories" :key="cat" :value="cat">
+                    {{ cat }}
+                  </v-chip>
+                </v-chip-group>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+          </v-expansion-panels>
+        </v-navigation-drawer>
+
+        <v-snackbar v-model="loading">
+          <v-progress-circular indeterminate color="red"></v-progress-circular>
+          <span class="mx-5">Loading data...</span>
+        </v-snackbar>
+
+        <v-main>
+          <v-container>
+            <v-card elevation="16">
+              <v-card-text>
+                <div id="graph"></div>
+              </v-card-text>
+            </v-card>
+          </v-container>
+        </v-main>
+
+        <v-navigation-drawer location="right">
+          <v-list lines="five" select-strategy="classic">
+            <!--
+            <v-list-item class="text-h6 m-5"><span>Plot Settings</span></v-list-item>
+            <v-list-subheader>Reference</v-list-subheader>
+            <v-list-item value="ref" class="py-3">
+              <v-list-item-title>Reference Line</v-list-item-title>
+              <v-list-item-subtitle>
+                A line representing perfect calibration.
+              </v-list-item-subtitle>
+            </v-list-item>
+            -->
+            <v-list-subheader>Platforms</v-list-subheader>
+            <v-list-item v-for="(v,k) in sidebar_data" :value="k" class="py-4">
+              <v-list-item-title>
+                <div>
+                  <img :src="v.icon_url" width="25" class="mx-1" />
+                  <span class="mx-1">{{v.name}}</span>
+                </div>
+              </v-list-item-title>
+              <v-list-item-subtitle>
+                <div><span>{{v.description}}</span></div>
+                <div v-if="!loading" class="my-1">
+                  <div><span>Markets: </span><span>{{v.num_markets}}</span></div>
+                  <div><span>Brier Score: </span><span>{{v.brier_score}}</span></div>
+                </div>
+              </v-list-item-subtitle>
+            </v-list-item>
+          </v-list>
+        </v-navigation-drawer>
+      </v-app>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@3.4.4/dist/vuetify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <script>
+      const { createApp } = Vue
+      const { createVuetify } = Vuetify
+      const vuetify = createVuetify()
+
+      const app = Vue.createApp({
+        data() {
+          return {
+            loading: true,
+            option_drawers_visible: true,
+            option_drawers_open: [0],
+            sidebar_data: [
+              {
+                name: 'Manifold',
+                description: 'A play-money platform where anyone can make any market.',
+                icon_url: 'https://manifold.markets/welcome/manipurple.png',
+                num_markets: 37555,
+                brier_score: 0.1635,
+              },
+              {
+                name: 'Kalshi',
+                description: 'A US-regulated exchange with limited real-money contracts.',
+                icon_url:
+                  'https://kalshi-public-images.s3.us-east-2.amazonaws.com/illustrations/halftone/bear-small.png',
+                num_markets: 4852,
+                brier_score: 0.1569,
+              },
+              {
+                name: 'PredictIt',
+                description: '',
+                icon_url: 'https://manifold.markets/welcome/manipurple.png',
+                num_markets: 14029,
+                brier_score: 0.1867,
+              },
+            ],
+            options_selected: {
+              bin_method: 'prob_time_weighted',
+              weighting: 'num_traders',
+              min_open_length: 7,
+              min_num_traders: 1,
+              min_volume: 10,
+              is_predictive: 'predictive',
+              title_contains: '',
+              categories: [],
+            },
+            options: {
+              bin_method: {
+                prob_time_weighted: { label: 'Time-Weighted Average' },
+                prob_trade_weighted: { label: 'Trade-Weighted Average' },
+                prob_at_q1: { label: '25% of Market Duration' },
+                prob_at_q2: { label: '50% of Market Duration' },
+                prob_at_q3: { label: '75% of Market Duration' },
+                prob_at_1w: { label: '1 Week Before Resolution' },
+                prob_at_1m: { label: '1 Month Before Resolution' },
+                prob_at_1y: { label: '1 Year Before Resolution' },
+                resolution: { label: 'At Market Resolution' },
+              },
+              weighting: {
+                none: { label: 'None' },
+                volume: { label: 'Market Volume' },
+                open_days: { label: 'Market Length' },
+                num_traders: { label: 'Number of Traders' },
+              },
+              min_open_length: {
+                range: [0, 90],
+              },
+              min_num_traders: {
+                range: [0, 50],
+              },
+              min_volume: {
+                range: [0, 500],
+              },
+              is_predictive: {
+                predictive: { label: 'Predictive Only' },
+                all: { label: 'All Markets' },
+                non_predictive: { label: 'Non-Predictive' },
+              },
+              categories: [
+                'Sports',
+                'Elections',
+                'Finance',
+                'AI',
+                'Entertainment',
+                'Technology',
+                'Climate',
+              ],
+            },
+          }
+        },
+        methods: {
+          getOptionLabel(option, value) {
+            try {
+              return this['options'][option][value]['label']
+            } catch {
+              return '¯\\_(ツ)_/¯'
+            }
+          },
+          getCategoryLabel(list) {
+            if (list.length === 0) {
+              return 'None'
+            } else {
+              return list.join(', ')
+            }
+          },
+
+          async updatePage() {
+            this.loading = true
+            await fetch('https://calibration.city/manifold/get_data', {
+              method: 'POST',
+              //body: options_selected,
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                //this.api_data = data
+                this.updateGraph(data)
+              })
+            this.loading = false
+          },
+
+          updateGraph(data) {
+            var traces = [
+              {
+                x: [0, 1],
+                y: [0, 1],
+                name: 'Reference',
+                type: 'lines',
+                mode: 'line',
+                line: {
+                  color: 'rgb(127, 127, 127)',
+                  width: 1,
+                },
+              },
+            ]
+            traces.push({
+              x: data.x,
+              y: data.y,
+              text: data.point_desc,
+              name: 'Manifold <br>n=' + data.num_markets_total + ' b=' + data.brier_score,
+              type: 'scatter',
+              mode: 'markers',
+              marker: {
+                color: 'rgb(72, 95, 199)',
+                size: data.point_size,
+              },
+            })
+            var layout = {
+              title: data.title,
+              xaxis: {
+                title: data.xlabel,
+                range: [0, 1],
+                tickformat: ',.0%',
+              },
+              yaxis: {
+                title: data.ylabel,
+                range: [0, 1],
+                tickformat: ',.0%',
+              },
+              legend: {
+                x: 0.01,
+                y: 1.0,
+              },
+              margin: {
+                l: 80,
+                t: 80,
+                b: 80,
+                r: 40,
+              },
+            }
+            const config = { responsive: true }
+            Plotly.newPlot('graph', traces, layout, config)
+          },
+        },
+        beforeMount() {
+          this.updatePage()
+        },
+        watch: {
+          options_selected: {
+            deep: true,
+            handler: _.debounce(function () {
+              this.updatePage()
+            }, 500), // debounce timeout
+          },
+        },
+      })
+
+      app.use(vuetify).mount('#app')
+    </script>
+  </body>
+</html>
