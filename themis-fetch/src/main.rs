@@ -1,4 +1,61 @@
 use clap::{Parser, ValueEnum};
+use serde::{Deserialize, Serialize};
+use std::fs::File;
+
+const OUTPUT_KEYWORD_DB: &str = "db";
+const OUTPUT_KEYWORD_STDOUT: &str = "stdout";
+
+#[allow(non_snake_case)]
+#[derive(Deserialize, Clone, Debug)]
+struct ManifoldLiteMarketResponse {
+    id: String,
+    isResolved: bool,
+}
+
+fn manifold_get_market_ids() -> Vec<String> {
+    let api_url = "https://manifold.markets/api/v0/markets";
+    let limit = 1000;
+    let mut before: Option<String> = None;
+    let mut market_ids: Vec<String> = Vec::new();
+    let client = reqwest::blocking::Client::new();
+    loop {
+        let response = client
+            .get(api_url)
+            .query(&[("limit", limit)])
+            .query(&[("before", before)])
+            .send()
+            .unwrap()
+            .json::<Vec<ManifoldLiteMarketResponse>>()
+            .unwrap();
+        market_ids.append(
+            &mut response
+                .clone()
+                .into_iter()
+                .filter(|response| response.isResolved)
+                .map(|response| response.id)
+                .collect(),
+        );
+        if response.len() < limit {
+            break;
+        }
+        before = Some(response.last().unwrap().clone().id);
+    }
+    market_ids
+}
+
+fn manifold_get_market_data(market_ids: Vec<String>) -> Vec<MarketForDB> {
+    let _client = reqwest::blocking::Client::new();
+    let mut market_data: Vec<MarketForDB> = Vec::new();
+    for id in market_ids {
+        // placeholder
+        market_data.push(MarketForDB {
+            title: "ooo".to_string(),
+            platform: Platform::Manifold,
+            platform_id: id,
+        })
+    }
+    market_data
+}
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -20,7 +77,7 @@ struct Args {
     verbose: bool,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Serialize)]
 enum Platform {
     Kalshi,
     Manifold,
@@ -29,6 +86,7 @@ enum Platform {
     PredictIt,
 }
 
+#[derive(Debug, Serialize)]
 struct MarketForDB {
     title: String,
     platform: Platform,
@@ -38,26 +96,55 @@ struct MarketForDB {
 fn main() {
     // get cli arguments
     let args = Args::parse();
+    println!("Initialization: {:?}", &args);
 
     // get platform list
     let platforms: Vec<&Platform> = match &args.platform {
         Some(platform) => Vec::from([platform]),
         None => Vec::from([&Platform::Kalshi, &Platform::Manifold]),
     };
-    println!("Platforms selected: {:?}", &platforms);
+    println!("Initialization: Platforms {:?} selected.", &platforms);
 
+    println!("Initialization: Checking environment variables.");
     // check environment variables
     // - database credentials
     // - kalshi credentials
 
-    let collated_data: Vec<MarketForDB> = Vec::new();
-    for platform in platforms {
-        println!("Processing platform: {:?}", &platform);
-        // get all resolved market IDs
-        // process each market
-        //     get detailed market info (including trade history)
-        //     convert detailed market information into database format
+    println!("Initialization: Starting platform processing.");
+    let mut collated_data: Vec<MarketForDB> = Vec::new();
+    for platform in platforms.clone() {
+        // get all resolved market IDs or just the one requested
+        let market_ids: Vec<String> = if let Some(single_id) = &args.id {
+            println!("{:?}: Downloading bulk market data...", &platform);
+            Vec::from([single_id.to_owned()])
+        } else {
+            println!("{:?}: Downloading bulk market data...", &platform);
+            match platform {
+                Platform::Manifold => manifold_get_market_ids(),
+                _ => panic!("Unimplemented."),
+            }
+        };
+        // get detailed data for each market and convert into database format
+        println!("{:?}: Downloading detailed market data...", &platform);
+        collated_data.append(&mut match platform {
+            Platform::Manifold => manifold_get_market_data(market_ids),
+            _ => panic!("Unimplemented."),
+        });
+        println!("{:?}: Processing complete.", &platform);
     }
-
+    println!(
+        "{:?} platforms processed. {:?} markets processed.",
+        platforms.len(),
+        collated_data.len()
+    );
     // save collated data - to database or file
+    match args.output.as_str() {
+        OUTPUT_KEYWORD_DB => println!("Unimplemented."),
+        OUTPUT_KEYWORD_STDOUT => {
+            println!("{}", serde_json::to_string_pretty(&collated_data).unwrap())
+        }
+        filename => {
+            serde_json::to_writer_pretty(&File::create(filename).unwrap(), &collated_data).unwrap()
+        }
+    }
 }
