@@ -7,13 +7,20 @@ const OUTPUT_KEYWORD_STDOUT: &str = "stdout";
 
 #[allow(non_snake_case)]
 #[derive(Deserialize, Clone, Debug)]
-struct ManifoldLiteMarketResponse {
+struct ManifoldLiteMarket {
     id: String,
     isResolved: bool,
 }
 
+#[allow(non_snake_case)]
+#[derive(Deserialize, Clone, Debug)]
+struct ManifoldFullMarket {
+    id: String,
+    question: String,
+}
+
 fn manifold_get_market_ids() -> Vec<String> {
-    let api_url = "https://manifold.markets/api/v0/markets";
+    let api_url = "https://api.manifold.markets/v0/markets";
     let limit = 1000;
     let mut before: Option<String> = None;
     let mut market_ids: Vec<String> = Vec::new();
@@ -25,7 +32,7 @@ fn manifold_get_market_ids() -> Vec<String> {
             .query(&[("before", before)])
             .send()
             .unwrap()
-            .json::<Vec<ManifoldLiteMarketResponse>>()
+            .json::<Vec<ManifoldLiteMarket>>()
             .unwrap();
         market_ids.append(
             &mut response
@@ -39,19 +46,34 @@ fn manifold_get_market_ids() -> Vec<String> {
             break;
         }
         before = Some(response.last().unwrap().clone().id);
+        println!(
+            "Manifold: Downloading bulk market data at {}",
+            before.clone().unwrap()
+        );
     }
     market_ids
 }
 
 fn manifold_get_market_data(market_ids: Vec<String>) -> Vec<MarketForDB> {
-    let _client = reqwest::blocking::Client::new();
+    let api_url = "https://api.manifold.markets/v0/market";
+    let client = reqwest::blocking::Client::new();
     let mut market_data: Vec<MarketForDB> = Vec::new();
     for id in market_ids {
-        // placeholder
+        println!(
+            "Manifold: Downloading detailed market data for {}",
+            id.clone()
+        );
+        let response = client
+            .get(api_url)
+            .query(&[("id", id)])
+            .send()
+            .unwrap()
+            .json::<ManifoldFullMarket>()
+            .unwrap();
         market_data.push(MarketForDB {
-            title: "ooo".to_string(),
+            title: response.question,
             platform: Platform::Manifold,
-            platform_id: id,
+            platform_id: response.id,
         })
     }
     market_data
@@ -94,11 +116,9 @@ struct MarketForDB {
 }
 
 fn main() {
-    // get cli arguments
     let args = Args::parse();
     println!("Initialization: {:?}", &args);
 
-    // get platform list
     let platforms: Vec<&Platform> = match &args.platform {
         Some(platform) => Vec::from([platform]),
         None => Vec::from([&Platform::Kalshi, &Platform::Manifold]),
@@ -137,7 +157,7 @@ fn main() {
         platforms.len(),
         collated_data.len()
     );
-    // save collated data - to database or file
+    // save collated data to database, stdout, or file
     match args.output.as_str() {
         OUTPUT_KEYWORD_DB => println!("Unimplemented."),
         OUTPUT_KEYWORD_STDOUT => {
