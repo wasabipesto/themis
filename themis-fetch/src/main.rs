@@ -1,6 +1,7 @@
 use clap::Parser;
 use serde_json::{to_string_pretty, to_writer_pretty};
 use std::fs::File;
+use std::time::Instant;
 
 pub mod platforms;
 use crate::platforms::manifold;
@@ -50,19 +51,27 @@ fn main() {
     // - kalshi credentials
 
     println!("Initialization: Processing platforms: {:?}", &platforms);
+    let total_timer = Instant::now();
     let mut markets: Vec<MarketForDB> = Vec::new();
     for platform in platforms.clone() {
+        let platform_timer = Instant::now();
         println!("{:?}: Processing started...", &platform);
-        markets.append(&mut match platform {
+        let platform_markets = match platform {
             Platform::Manifold => manifold::get_data(&filter_ids),
             _ => panic!("Unimplemented."),
-        });
-        println!("{:?}: Processing complete.", &platform);
+        };
+        println!(
+            "{:?}: Processing complete: {:?} markets processed in {:?}.",
+            &platform,
+            platform_markets.len(),
+            platform_timer.elapsed()
+        );
+        markets.extend(platform_markets);
     }
     println!(
-        "All processing complete: {:?} platforms processed. {:?} markets processed.",
-        platforms.len(),
-        markets.len()
+        "All processing complete: {:?} markets processed in {:?}.",
+        markets.len(),
+        total_timer.elapsed()
     );
     // save collated data to database, stdout, or file
     match args.output.as_str() {

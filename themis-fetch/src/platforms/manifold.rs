@@ -9,6 +9,7 @@ struct Market {
     isResolved: bool,
 }
 
+#[allow(unused_assignments)]
 fn get_markets_all() -> Vec<Market> {
     let api_url = "https://api.manifold.markets/v0/markets";
     let limit = 1000;
@@ -27,13 +28,13 @@ fn get_markets_all() -> Vec<Market> {
             .unwrap();
         if response.len() == limit {
             before = Some(response.last().unwrap().clone().id);
-            collated_responses.append(&mut response);
+            collated_responses.extend(response);
             println!(
                 "Manifold: Downloading bulk market data at {}",
                 before.clone().unwrap()
             );
         } else {
-            collated_responses.append(&mut response);
+            collated_responses.extend(response);
             break;
         }
     }
@@ -57,7 +58,7 @@ fn get_markets_by_id(ids: &Vec<String>) -> Vec<Market> {
     collated_responses
 }
 
-fn litemarkets_to_dbmarkets(response_markets: Vec<Market>) -> Vec<MarketForDB> {
+fn massage_markets(response_markets: Vec<Market>) -> Vec<MarketForDB> {
     let mut db_markets: Vec<MarketForDB> = Vec::with_capacity(response_markets.len());
     for market in response_markets {
         if market.isResolved {
@@ -77,5 +78,5 @@ pub fn get_data(filter_ids: &Option<Vec<String>>) -> Vec<MarketForDB> {
     } else {
         get_markets_all()
     };
-    litemarkets_to_dbmarkets(response_markets)
+    massage_markets(response_markets)
 }
