@@ -32,7 +32,9 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    println!("Initialization: {:?}", &args);
+    if args.verbose {
+        println!("Initialization: {:?}", &args);
+    }
 
     let platforms: Vec<&Platform> = match &args.platform {
         Some(platform) => Vec::from([platform]),
@@ -45,12 +47,16 @@ fn main() {
         None
     };
 
-    println!("Initialization: Checking environment variables...");
+    if args.verbose {
+        println!("Initialization: Checking environment variables...");
+    }
     // check environment variables
     // - database credentials
     // - kalshi credentials
 
-    println!("Initialization: Processing platforms: {:?}", &platforms);
+    if args.verbose {
+        println!("Initialization: Processing platforms: {:?}", &platforms);
+    }
     let total_timer = Instant::now();
     let mut markets: Vec<MarketForDB> = Vec::new();
     for platform in platforms.clone() {

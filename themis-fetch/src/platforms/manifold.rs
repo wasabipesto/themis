@@ -29,10 +29,6 @@ fn get_markets_all() -> Vec<Market> {
         if response.len() == limit {
             before = Some(response.last().unwrap().clone().id);
             collated_responses.extend(response);
-            println!(
-                "Manifold: Downloading bulk market data at {}",
-                before.clone().unwrap()
-            );
         } else {
             collated_responses.extend(response);
             break;
