@@ -1,6 +1,8 @@
-pub mod manifold;
 use clap::ValueEnum;
 use serde::Serialize;
+
+pub mod kalshi;
+pub mod manifold;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Serialize)]
 pub enum Platform {

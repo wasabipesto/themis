@@ -4,7 +4,6 @@ use std::fs::File;
 use std::time::Instant;
 
 pub mod platforms;
-use crate::platforms::manifold;
 use crate::platforms::{MarketForDB, Platform};
 
 const OUTPUT_KEYWORD_DB: &str = "db";
@@ -63,7 +62,8 @@ fn main() {
         let platform_timer = Instant::now();
         println!("{:?}: Processing started...", &platform);
         let platform_markets = match platform {
-            Platform::Manifold => manifold::get_data(&filter_ids),
+            Platform::Manifold => platforms::manifold::get_data(&filter_ids),
+            Platform::Kalshi => platforms::kalshi::get_data(&filter_ids),
             _ => panic!("Unimplemented."),
         };
         println!(
