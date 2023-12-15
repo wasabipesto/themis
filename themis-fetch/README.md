@@ -26,6 +26,7 @@ These should be platforms that have an established presence and an open API. I w
 - [ ] PredictIt
     - https://www.predictit.org
     - FAQ Topic: https://predictit.freshdesk.com/support/solutions/articles/12000001878-does-predictit-make-market-data-available-via-an-api-
+    - Past project: https://github.com/kiernann/predelect
     - Internal API: https://www.predictit.org/api/Public/GetMarketChartData
 
 ### Stage 2.

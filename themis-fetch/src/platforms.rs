@@ -1,4 +1,5 @@
 use clap::ValueEnum;
+use core::fmt;
 use serde::Serialize;
 
 pub mod kalshi;
@@ -18,4 +19,12 @@ pub struct MarketForDB {
     title: String,
     platform: Platform,
     platform_id: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct MarketConvertError;
+impl fmt::Display for MarketConvertError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "error during market conversion process")
+    }
 }
