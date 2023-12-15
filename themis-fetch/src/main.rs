@@ -40,8 +40,8 @@ fn main() {
         None => Vec::from([&Platform::Kalshi, &Platform::Manifold]),
     };
 
-    let filter_ids: Option<Vec<String>> = if let Some(filter_id) = &args.id {
-        Some(Vec::from([filter_id.clone()]))
+    let market_ids: Option<Vec<String>> = if let Some(market_ids) = &args.id {
+        Some(Vec::from([market_ids.clone()]))
     } else {
         None
     };
@@ -56,24 +56,36 @@ fn main() {
     if args.verbose {
         println!("Initialization: Processing platforms: {:?}", &platforms);
     }
+    let runtime = tokio::runtime::Runtime::new().unwrap();
     let total_timer = Instant::now();
     let mut markets: Vec<MarketForDB> = Vec::new();
-    for platform in platforms.clone() {
-        let platform_timer = Instant::now();
-        println!("{:?}: Processing started...", &platform);
-        let platform_markets = match platform {
-            Platform::Manifold => platforms::manifold::get_data(&filter_ids),
-            Platform::Kalshi => platforms::kalshi::get_data(&filter_ids),
-            _ => panic!("Unimplemented."),
-        };
-        println!(
-            "{:?}: Processing complete: {:?} markets processed in {:?}.",
-            &platform,
-            platform_markets.len(),
-            platform_timer.elapsed()
-        );
-        markets.extend(platform_markets);
-    }
+
+    markets = runtime.block_on(async {
+        for platform in platforms {
+            let platform_timer = Instant::now();
+            println!("{:?}: Processing started...", &platform);
+            let platform_markets = match platform {
+                Platform::Manifold => {
+                    if let Some(ids) = &market_ids {
+                        platforms::manifold::get_markets_by_id(&ids).await
+                    } else {
+                        platforms::manifold::get_markets_all().await
+                    }
+                }
+                Platform::Kalshi => platforms::kalshi::get_data(&market_ids).await,
+                _ => panic!("Unimplemented."),
+            };
+            println!(
+                "{:?}: Processing complete: {:?} markets processed in {:?}.",
+                &platform,
+                platform_markets.len(),
+                platform_timer.elapsed()
+            );
+            markets.extend(platform_markets);
+        }
+        markets
+    });
+
     println!(
         "All processing complete: {:?} markets processed in {:?}.",
         markets.len(),

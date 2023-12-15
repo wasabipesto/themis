@@ -1,5 +1,4 @@
 use super::*;
-use serde::Deserialize;
 
 #[allow(non_snake_case)]
 #[derive(Deserialize, Clone, Debug)]
@@ -26,31 +25,32 @@ impl TryInto<MarketForDB> for MarketFull {
     }
 }
 
-fn get_extended_data(market: MarketInfo) -> MarketFull {
+async fn get_extended_data(market: MarketInfo) -> MarketFull {
     MarketFull { market }
 }
 
 #[allow(unused_assignments)]
-fn get_markets_all() -> Vec<MarketFull> {
+pub async fn get_markets_all() -> Vec<MarketForDB> {
     let api_url = "https://api.manifold.markets/v0/markets";
     let limit = 1000;
     let mut before: Option<String> = None;
     let mut all_market_data: Vec<MarketFull> = Vec::new();
-    let client = reqwest::blocking::Client::new();
+    let client = reqwest::Client::new();
     loop {
-        let response: Vec<MarketInfo> = client
+        let query = client
             .get(api_url)
             .query(&[("limit", limit)])
-            .query(&[("before", before)])
+            .query(&[("before", before)]);
+        let response = query
             .send()
+            .await
             .unwrap()
             .json::<Vec<MarketInfo>>()
+            .await
             .unwrap();
         let response_len = response.len();
-        let market_data: Vec<MarketFull> = response
-            .into_iter()
-            .map(|market| get_extended_data(market))
-            .collect();
+        let market_data_futures = response.into_iter().map(|market| get_extended_data(market));
+        let market_data = join_all(market_data_futures).await;
         all_market_data.extend(market_data);
         if response_len == limit {
             before = Some(all_market_data.last().unwrap().market.id.clone());
@@ -59,33 +59,28 @@ fn get_markets_all() -> Vec<MarketFull> {
         }
     }
     all_market_data
+        .into_iter()
+        .filter(|m| m.market.isResolved)
+        .map(|m| m.try_into().unwrap())
+        .collect()
 }
 
-fn get_markets_by_id(ids: &Vec<String>) -> Vec<MarketFull> {
+pub async fn get_markets_by_id(ids: &Vec<String>) -> Vec<MarketForDB> {
     let api_url = "https://api.manifold.markets/v0/market";
-    let client = reqwest::blocking::Client::new();
+    let client = reqwest::Client::new();
     let mut all_market_data: Vec<MarketFull> = Vec::new();
     for id in ids {
         let response = client
             .get(api_url)
             .query(&[("id", id)])
             .send()
-            .unwrap()
-            .json::<MarketInfo>()
+            .await
             .unwrap();
-        let market_data = get_extended_data(response);
+        let response_json = response.json::<MarketInfo>().await.unwrap();
+        let market_data = get_extended_data(response_json).await;
         all_market_data.push(market_data);
     }
     all_market_data
-}
-
-pub fn get_data(filter_ids: &Option<Vec<String>>) -> Vec<MarketForDB> {
-    let markets = if let Some(ids) = filter_ids {
-        get_markets_by_id(&ids)
-    } else {
-        get_markets_all()
-    };
-    markets
         .into_iter()
         .filter(|m| m.market.isResolved)
         .map(|m| m.try_into().unwrap())
