@@ -76,31 +76,21 @@ fn get_login_token(client: &Client) -> String {
     response.token
 }
 
-pub fn get_markets_by_id(ids: &Vec<String>) -> Vec<MarketForDB> {
+pub fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
     let client = Client::new();
     let token = get_login_token(&client);
     let api_url = KALSHI_API_BASE.to_owned() + "/markets/";
-    let mut all_market_data: Vec<MarketFull> = Vec::new();
-    for id in ids {
-        let response = client
-            .get(api_url.clone() + id)
-            .bearer_auth(&token)
-            .send()
-            .unwrap()
-            .json::<SingleMarketResponse>()
-            .unwrap();
-        println!("{:?}", response);
-        let market_data = get_extended_data(response.market);
-        all_market_data.push(market_data);
-    }
-    all_market_data
-        .into_iter()
-        .map(|m| {
-            TryInto::<Option<MarketForDB>>::try_into(m)
-                .unwrap()
-                .unwrap()
-        })
-        .collect()
+    let response = client
+        .get(api_url.clone() + id)
+        .bearer_auth(&token)
+        .send()
+        .unwrap()
+        .json::<SingleMarketResponse>()
+        .unwrap();
+    let market_data = get_extended_data(response.market);
+    Vec::from([TryInto::<Option<MarketForDB>>::try_into(market_data)
+        .expect("Error processing market")
+        .expect("Market is not resolved.")])
 }
 
 pub fn get_markets_all() -> Vec<MarketForDB> {

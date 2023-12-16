@@ -40,16 +40,6 @@ fn main() {
         None => Vec::from([&Platform::Kalshi, &Platform::Manifold]),
     };
 
-    let market_ids: Option<Vec<String>> = if let Some(market_id) = &args.id {
-        Some(Vec::from([market_id.clone()]))
-    } else {
-        None
-    };
-
-    if args.verbose {
-        println!("Initialization: Checking environment variables...");
-    }
-
     if args.verbose {
         println!("Initialization: Processing platforms: {:?}", &platforms);
     }
@@ -58,22 +48,18 @@ fn main() {
     for platform in platforms.clone() {
         let platform_timer = Instant::now();
         println!("{:?}: Processing started...", &platform);
-        let platform_markets = match &platform {
-            Platform::Manifold => {
-                if let Some(ids) = &market_ids {
-                    platforms::manifold::get_markets_by_id(ids)
-                } else {
-                    platforms::manifold::get_markets_all()
-                }
+        let platform_markets = if let Some(id) = &args.id {
+            match &platform {
+                Platform::Manifold => platforms::manifold::get_market_by_id(id),
+                Platform::Kalshi => platforms::kalshi::get_market_by_id(id),
+                _ => panic!("Unimplemented."),
             }
-            Platform::Kalshi => {
-                if let Some(ids) = &market_ids {
-                    platforms::kalshi::get_markets_by_id(ids)
-                } else {
-                    platforms::kalshi::get_markets_all()
-                }
+        } else {
+            match &platform {
+                Platform::Manifold => platforms::manifold::get_markets_all(),
+                Platform::Kalshi => platforms::kalshi::get_markets_all(),
+                _ => panic!("Unimplemented."),
             }
-            _ => panic!("Unimplemented."),
         };
         println!(
             "{:?}: Processing complete: {:?} markets processed in {:?}.",

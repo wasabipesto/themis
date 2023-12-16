@@ -42,29 +42,20 @@ fn get_extended_data(market: MarketInfo) -> MarketFull {
     MarketFull { market }
 }
 
-pub fn get_markets_by_id(ids: &Vec<String>) -> Vec<MarketForDB> {
+pub fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
     let client = reqwest::blocking::Client::new();
     let api_url = MANIFOLD_API_BASE.to_owned() + "/market";
-    let mut all_market_data: Vec<MarketFull> = Vec::new();
-    for id in ids {
-        let response = client
-            .get(&api_url)
-            .query(&[("id", id)])
-            .send()
-            .unwrap()
-            .json::<MarketInfo>()
-            .unwrap();
-        let market_data = get_extended_data(response);
-        all_market_data.push(market_data);
-    }
-    all_market_data
-        .into_iter()
-        .map(|m| {
-            TryInto::<Option<MarketForDB>>::try_into(m)
-                .unwrap()
-                .unwrap()
-        })
-        .collect()
+    let response = client
+        .get(&api_url)
+        .query(&[("id", id)])
+        .send()
+        .unwrap()
+        .json::<MarketInfo>()
+        .unwrap();
+    let market_data = get_extended_data(response);
+    Vec::from([TryInto::<Option<MarketForDB>>::try_into(market_data)
+        .expect("Error processing market")
+        .expect("Market is not resolved.")])
 }
 
 pub fn get_markets_all() -> Vec<MarketForDB> {
