@@ -1,8 +1,9 @@
 use super::*;
+use regex::Regex;
 use reqwest::blocking::Client;
 
 const KALSHI_API_BASE: &str = "https://demo-api.kalshi.co/trade-api/v2";
-const KALSHI_SITE_BASE: &str = "https://kalshi.com/markets";
+const KALSHI_SITE_BASE: &str = "https://kalshi.com/markets/";
 
 #[derive(Serialize, Debug)]
 struct LoginCredentials {
@@ -18,7 +19,12 @@ struct LoginResponse {
 #[derive(Deserialize, Debug)]
 struct MarketInfo {
     ticker: String,
+    event_ticker: String,
+    //market_type: String,
     title: String,
+    //open_time: String,
+    //close_time: String,
+    status: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -41,12 +47,24 @@ struct MarketFull {
 impl TryInto<Option<MarketForDB>> for MarketFull {
     type Error = MarketConvertError;
     fn try_into(self) -> Result<Option<MarketForDB>, MarketConvertError> {
-        Ok(Some(MarketForDB {
-            title: self.market.title,
-            platform: Platform::Kalshi,
-            platform_id: self.market.ticker,
-            url: KALSHI_SITE_BASE.to_owned(), // TODO
-        }))
+        fn get_url(m: &MarketFull) -> String {
+            let re = Regex::new(r"^(\w+)-").unwrap();
+            KALSHI_SITE_BASE.to_owned()
+                + &re.captures(&m.market.event_ticker).unwrap()[1].to_lowercase()
+                + "/#"
+                + &m.market.event_ticker.to_lowercase()
+        }
+
+        if self.market.status == "finalized" {
+            Ok(Some(MarketForDB {
+                title: self.market.title.clone(),
+                platform: Platform::Kalshi,
+                platform_id: self.market.ticker.clone(),
+                url: get_url(&self), // TODO
+            }))
+        } else {
+            Ok(None)
+        }
     }
 }
 
