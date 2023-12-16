@@ -52,7 +52,6 @@ pub fn get_markets_by_id(ids: &Vec<String>) -> Vec<MarketForDB> {
     }
     all_market_data
         .into_iter()
-        .filter(|m| m.market.isResolved)
         .map(|m| {
             TryInto::<Option<MarketForDB>>::try_into(m)
                 .unwrap()

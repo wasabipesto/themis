@@ -14,19 +14,24 @@ struct LoginResponse {
     token: String,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug)]
 struct MarketInfo {
     ticker: String,
     title: String,
 }
 
-#[derive(Deserialize, Debug, Clone)]
-struct MarketInfoResponse {
+#[derive(Deserialize, Debug)]
+struct SingleMarketResponse {
+    market: MarketInfo,
+}
+
+#[derive(Deserialize, Debug)]
+struct BulkMarketResponse {
     markets: Vec<MarketInfo>,
     cursor: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct MarketFull {
     market: MarketInfo,
     //bets: Bet,
@@ -71,8 +76,29 @@ fn get_login_token(client: &Client) -> String {
 
 pub fn get_markets_by_id(ids: &Vec<String>) -> Vec<MarketForDB> {
     let client = Client::new();
-    let _token = get_login_token(&client);
-    Vec::new()
+    let token = get_login_token(&client);
+    let api_url = KALSHI_API_BASE.to_owned() + "/markets/";
+    let mut all_market_data: Vec<MarketFull> = Vec::new();
+    for id in ids {
+        let response = client
+            .get(api_url.clone() + id)
+            .bearer_auth(&token)
+            .send()
+            .unwrap()
+            .json::<SingleMarketResponse>()
+            .unwrap();
+        println!("{:?}", response);
+        let market_data = get_extended_data(response.market);
+        all_market_data.push(market_data);
+    }
+    all_market_data
+        .into_iter()
+        .map(|m| {
+            TryInto::<Option<MarketForDB>>::try_into(m)
+                .unwrap()
+                .unwrap()
+        })
+        .collect()
 }
 
 pub fn get_markets_all() -> Vec<MarketForDB> {
@@ -92,10 +118,9 @@ pub fn get_markets_all() -> Vec<MarketForDB> {
             .unwrap()
             .error_for_status()
             .unwrap_or_else(|e| panic!("Kalshi: Query failed: {:?}", e))
-            .json::<MarketInfoResponse>()
+            .json::<BulkMarketResponse>()
             .unwrap();
         let market_data: Vec<MarketFull> = response
-            .clone()
             .markets
             .into_iter()
             .map(|market| get_extended_data(market))
