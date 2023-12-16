@@ -16,14 +16,18 @@ struct MarketFull {
     //bets: Bet,
 }
 
-impl TryInto<MarketForDB> for MarketFull {
+impl TryInto<Option<MarketForDB>> for MarketFull {
     type Error = MarketConvertError;
-    fn try_into(self) -> Result<MarketForDB, MarketConvertError> {
-        Ok(MarketForDB {
-            title: self.market.question,
-            platform: Platform::Manifold,
-            platform_id: self.market.id,
-        })
+    fn try_into(self) -> Result<Option<MarketForDB>, MarketConvertError> {
+        if self.market.isResolved {
+            Ok(Some(MarketForDB {
+                title: self.market.question,
+                platform: Platform::Manifold,
+                platform_id: self.market.id,
+            }))
+        } else {
+            Ok(None)
+        }
     }
 }
 
@@ -49,7 +53,11 @@ pub fn get_markets_by_id(ids: &Vec<String>) -> Vec<MarketForDB> {
     all_market_data
         .into_iter()
         .filter(|m| m.market.isResolved)
-        .map(|m| m.try_into().unwrap())
+        .map(|m| {
+            TryInto::<Option<MarketForDB>>::try_into(m)
+                .unwrap()
+                .unwrap()
+        })
         .collect()
 }
 
@@ -83,6 +91,10 @@ pub fn get_markets_all() -> Vec<MarketForDB> {
     all_market_data
         .into_iter()
         .filter(|m| m.market.isResolved)
-        .map(|m| m.try_into().unwrap())
+        .map(|m| {
+            TryInto::<Option<MarketForDB>>::try_into(m)
+                .unwrap()
+                .unwrap()
+        })
         .collect()
 }

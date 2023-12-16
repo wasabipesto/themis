@@ -14,32 +14,32 @@ struct LoginResponse {
     token: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 struct MarketInfo {
     ticker: String,
     title: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 struct MarketInfoResponse {
     markets: Vec<MarketInfo>,
-    cursor: Option<String>,
+    cursor: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct MarketFull {
     market: MarketInfo,
     //bets: Bet,
 }
 
-impl TryInto<MarketForDB> for MarketFull {
+impl TryInto<Option<MarketForDB>> for MarketFull {
     type Error = MarketConvertError;
-    fn try_into(self) -> Result<MarketForDB, MarketConvertError> {
-        Ok(MarketForDB {
+    fn try_into(self) -> Result<Option<MarketForDB>, MarketConvertError> {
+        Ok(Some(MarketForDB {
             title: self.market.title,
             platform: Platform::Kalshi,
             platform_id: self.market.ticker,
-        })
+        }))
     }
 }
 
@@ -69,7 +69,7 @@ fn get_login_token(client: &Client) -> String {
     response.token
 }
 
-pub fn get_markets_by_id(_filter_ids: &Vec<String>) -> Vec<MarketForDB> {
+pub fn get_markets_by_id(ids: &Vec<String>) -> Vec<MarketForDB> {
     let client = Client::new();
     let _token = get_login_token(&client);
     Vec::new()
@@ -87,7 +87,7 @@ pub fn get_markets_all() -> Vec<MarketForDB> {
             .get(&api_url)
             .bearer_auth(&token)
             .query(&[("limit", limit)])
-            .query(&[("cursor", cursor)])
+            .query(&[("cursor", cursor.clone())])
             .send()
             .unwrap()
             .error_for_status()
@@ -95,19 +95,24 @@ pub fn get_markets_all() -> Vec<MarketForDB> {
             .json::<MarketInfoResponse>()
             .unwrap();
         let market_data: Vec<MarketFull> = response
+            .clone()
             .markets
             .into_iter()
             .map(|market| get_extended_data(market))
             .collect();
         all_market_data.extend(market_data);
-        if let Some(c) = response.cursor {
-            cursor = Some(c);
+        if response.cursor.len() > 1 {
+            cursor = Some(response.cursor);
         } else {
             break;
         }
     }
     all_market_data
         .into_iter()
-        .map(|m| m.try_into().unwrap())
+        .map(|m| {
+            TryInto::<Option<MarketForDB>>::try_into(m)
+                .unwrap()
+                .unwrap()
+        })
         .collect()
 }
