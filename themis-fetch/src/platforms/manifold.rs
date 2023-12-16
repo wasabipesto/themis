@@ -1,12 +1,15 @@
 use super::*;
 
 const MANIFOLD_API_BASE: &str = "https://api.manifold.markets/v0";
+const MANIFOLD_SITE_BASE: &str = "https://manifold.markets/";
 
 #[allow(non_snake_case)]
 #[derive(Deserialize, Debug)]
 struct MarketInfo {
     id: String,
     question: String,
+    slug: String,
+    creatorUsername: String,
     isResolved: bool,
 }
 
@@ -24,6 +27,10 @@ impl TryInto<Option<MarketForDB>> for MarketFull {
                 title: self.market.question,
                 platform: Platform::Manifold,
                 platform_id: self.market.id,
+                url: MANIFOLD_SITE_BASE.to_owned()
+                    + &self.market.creatorUsername
+                    + "/"
+                    + &self.market.slug,
             }))
         } else {
             Ok(None)

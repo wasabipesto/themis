@@ -2,6 +2,7 @@ use super::*;
 use reqwest::blocking::Client;
 
 const KALSHI_API_BASE: &str = "https://demo-api.kalshi.co/trade-api/v2";
+const KALSHI_SITE_BASE: &str = "https://kalshi.com/markets";
 
 #[derive(Serialize, Debug)]
 struct LoginCredentials {
@@ -44,6 +45,7 @@ impl TryInto<Option<MarketForDB>> for MarketFull {
             title: self.market.title,
             platform: Platform::Kalshi,
             platform_id: self.market.ticker,
+            url: KALSHI_SITE_BASE.to_owned(), // TODO
         }))
     }
 }

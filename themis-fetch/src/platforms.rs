@@ -20,6 +20,7 @@ pub struct MarketForDB {
     title: String,
     platform: Platform,
     platform_id: String,
+    url: String,
 }
 
 #[derive(Debug, Clone)]
