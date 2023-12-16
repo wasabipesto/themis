@@ -1,1 +1,4 @@
 */target
+.gitsecret/keys/random_seed
+!*.secret
+themis-fetch/.env

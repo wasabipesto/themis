@@ -1,6 +1,7 @@
 use clap::ValueEnum;
 use core::fmt;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use std::env::var;
 
 pub mod kalshi;
 pub mod manifold;

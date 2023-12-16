@@ -40,8 +40,8 @@ fn main() {
         None => Vec::from([&Platform::Kalshi, &Platform::Manifold]),
     };
 
-    let filter_ids: Option<Vec<String>> = if let Some(filter_id) = &args.id {
-        Some(Vec::from([filter_id.clone()]))
+    let market_ids: Option<Vec<String>> = if let Some(market_id) = &args.id {
+        Some(Vec::from([market_id.clone()]))
     } else {
         None
     };
@@ -49,9 +49,6 @@ fn main() {
     if args.verbose {
         println!("Initialization: Checking environment variables...");
     }
-    // check environment variables
-    // - database credentials
-    // - kalshi credentials
 
     if args.verbose {
         println!("Initialization: Processing platforms: {:?}", &platforms);
@@ -61,9 +58,21 @@ fn main() {
     for platform in platforms.clone() {
         let platform_timer = Instant::now();
         println!("{:?}: Processing started...", &platform);
-        let platform_markets = match platform {
-            Platform::Manifold => platforms::manifold::get_data(&filter_ids),
-            Platform::Kalshi => platforms::kalshi::get_data(&filter_ids),
+        let platform_markets = match &platform {
+            Platform::Manifold => {
+                if let Some(ids) = &market_ids {
+                    platforms::manifold::get_markets_by_id(ids)
+                } else {
+                    platforms::manifold::get_markets_all()
+                }
+            }
+            Platform::Kalshi => {
+                if let Some(ids) = &market_ids {
+                    platforms::kalshi::get_markets_by_id(ids)
+                } else {
+                    platforms::kalshi::get_markets_all()
+                }
+            }
             _ => panic!("Unimplemented."),
         };
         println!(

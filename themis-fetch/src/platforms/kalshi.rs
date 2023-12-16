@@ -1,5 +1,113 @@
 use super::*;
+use reqwest::blocking::Client;
 
-pub fn get_data(_filter_ids: &Option<Vec<String>>) -> Vec<MarketForDB> {
+const KALSHI_API_BASE: &str = "https://demo-api.kalshi.co/trade-api/v2";
+
+#[derive(Serialize, Debug)]
+struct LoginCredentials {
+    email: String,
+    password: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct LoginResponse {
+    token: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct MarketInfo {
+    ticker: String,
+    title: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct MarketInfoResponse {
+    markets: Vec<MarketInfo>,
+    cursor: Option<String>,
+}
+
+#[derive(Debug)]
+struct MarketFull {
+    market: MarketInfo,
+    //bets: Bet,
+}
+
+impl TryInto<MarketForDB> for MarketFull {
+    type Error = MarketConvertError;
+    fn try_into(self) -> Result<MarketForDB, MarketConvertError> {
+        Ok(MarketForDB {
+            title: self.market.title,
+            platform: Platform::Kalshi,
+            platform_id: self.market.ticker,
+        })
+    }
+}
+
+fn get_extended_data(market: MarketInfo) -> MarketFull {
+    MarketFull { market }
+}
+
+fn get_login_token(client: &Client) -> String {
+    let api_url = KALSHI_API_BASE.to_owned() + "/login";
+    let credentials = LoginCredentials {
+        email: var("KALSHI_USERNAME")
+            .expect("Required environment variable KALSHI_USERNAME not set."),
+        password: var("KALSHI_PASSWORD")
+            .expect("Required environment variable KALSHI_PASSWORD not set."),
+    };
+    //println!("Kalshi: Logging in with: {:?}", credentials);
+    let response = client
+        .post(api_url)
+        .json(&credentials)
+        .send()
+        .unwrap()
+        .error_for_status()
+        .unwrap_or_else(|e| panic!("Kalshi: Login failed: {:?}", e))
+        .json::<LoginResponse>()
+        .unwrap();
+    //println!("Kalshi: Logged in with token: {}", &response.token);
+    response.token
+}
+
+pub fn get_markets_by_id(_filter_ids: &Vec<String>) -> Vec<MarketForDB> {
+    let client = Client::new();
+    let _token = get_login_token(&client);
     Vec::new()
+}
+
+pub fn get_markets_all() -> Vec<MarketForDB> {
+    let client = Client::new();
+    let token = get_login_token(&client);
+    let api_url = KALSHI_API_BASE.to_owned() + "/markets";
+    let limit: usize = 1000;
+    let mut cursor: Option<String> = None;
+    let mut all_market_data: Vec<MarketFull> = Vec::new();
+    loop {
+        let response = client
+            .get(&api_url)
+            .bearer_auth(&token)
+            .query(&[("limit", limit)])
+            .query(&[("cursor", cursor)])
+            .send()
+            .unwrap()
+            .error_for_status()
+            .unwrap_or_else(|e| panic!("Kalshi: Query failed: {:?}", e))
+            .json::<MarketInfoResponse>()
+            .unwrap();
+        let market_data: Vec<MarketFull> = response
+            .markets
+            .into_iter()
+            .map(|market| get_extended_data(market))
+            .collect();
+        all_market_data.extend(market_data);
+        if let Some(c) = response.cursor {
+            cursor = Some(c);
+        } else {
+            break;
+        }
+    }
+    all_market_data
+        .into_iter()
+        .map(|m| m.try_into().unwrap())
+        .collect()
 }
