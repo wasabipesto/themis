@@ -92,11 +92,10 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
     }
     all_market_data
         .into_iter()
-        .filter(|m| m.market.isResolved)
         .map(|m| {
             TryInto::<Option<MarketForDB>>::try_into(m)
-                .unwrap()
-                .unwrap()
+                .expect("Error converting market into standard fields.")
         })
+        .filter_map(|i| i)
         .collect()
 }

@@ -71,7 +71,7 @@ fn get_extended_data(market: MarketInfo) -> MarketFull {
     MarketFull { market }
 }
 
-async fn get_login_token(client: &reqwest::Client) -> String {
+async fn get_login_token(client: &ClientWithMiddleware) -> String {
     let api_url = KALSHI_API_BASE.to_owned() + "/login";
     let credentials = LoginCredentials {
         email: var("KALSHI_USERNAME")
@@ -151,8 +151,8 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
         .into_iter()
         .map(|m| {
             TryInto::<Option<MarketForDB>>::try_into(m)
-                .unwrap()
-                .unwrap()
+                .expect("Error converting market into standard fields.")
         })
+        .filter_map(|i| i)
         .collect()
 }

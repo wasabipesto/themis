@@ -1,5 +1,8 @@
 use clap::ValueEnum;
 use core::fmt;
+use reqwest_leaky_bucket::leaky_bucket::RateLimiter;
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde::{Deserialize, Serialize};
 use std::env::var;
 
@@ -31,6 +34,14 @@ impl fmt::Display for MarketConvertError {
     }
 }
 
-fn get_default_client() -> reqwest::Client {
-    reqwest::Client::new()
+fn get_default_client() -> ClientWithMiddleware {
+    // retry requests that get server errors with an exponential backoff timer
+    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
+    //
+    let rate_limiter = RateLimiter::builder().max(10).initial(0).refill(5).build();
+
+    ClientBuilder::new(reqwest::Client::new())
+        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+        .with(reqwest_leaky_bucket::rate_limit_all(rate_limiter))
+        .build()
 }
