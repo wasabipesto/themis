@@ -47,9 +47,16 @@ impl TryInto<Option<MarketForDB>> for MarketFull {
     type Error = MarketConvertError;
     fn try_into(self) -> Result<Option<MarketForDB>, MarketConvertError> {
         fn build_url(m: &MarketFull) -> String {
-            let re = Regex::new(r"^(\w+)-").unwrap();
+            let ticker_regex = Regex::new(r"^(\w+)-").unwrap();
+            let ticker_prefix =
+                if let Some(ticker_regex_result) = ticker_regex.find(&m.market.event_ticker) {
+                    ticker_regex_result.as_str()
+                } else {
+                    // Some tickers do not have a prefix, just use the market ticker for both
+                    &m.market.event_ticker
+                };
             KALSHI_SITE_BASE.to_owned()
-                + &re.captures(&m.market.event_ticker).unwrap()[1].to_lowercase()
+                + &ticker_prefix.to_lowercase()
                 + "/#"
                 + &m.market.event_ticker.to_lowercase()
         }
