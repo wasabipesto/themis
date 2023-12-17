@@ -30,3 +30,7 @@ impl fmt::Display for MarketConvertError {
         write!(f, "error during market conversion process")
     }
 }
+
+fn get_default_client() -> reqwest::blocking::Client {
+    reqwest::blocking::Client::new()
+}

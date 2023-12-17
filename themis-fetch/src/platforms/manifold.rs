@@ -43,7 +43,7 @@ fn get_extended_data(market: MarketInfo) -> MarketFull {
 }
 
 pub fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
-    let client = reqwest::blocking::Client::new();
+    let client = get_default_client();
     let api_url = MANIFOLD_API_BASE.to_owned() + "/market";
     let response = client
         .get(&api_url)
@@ -59,7 +59,7 @@ pub fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
 }
 
 pub fn get_markets_all() -> Vec<MarketForDB> {
-    let client = reqwest::blocking::Client::new();
+    let client = get_default_client();
     let api_url = MANIFOLD_API_BASE.to_owned() + "/markets";
     let limit = 1000;
     let mut before: Option<String> = None;

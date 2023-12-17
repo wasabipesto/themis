@@ -95,7 +95,7 @@ fn get_login_token(client: &Client) -> String {
 }
 
 pub fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
-    let client = Client::new();
+    let client = get_default_client();
     let token = get_login_token(&client);
     let api_url = KALSHI_API_BASE.to_owned() + "/markets/";
     let response = client
@@ -112,7 +112,7 @@ pub fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
 }
 
 pub fn get_markets_all() -> Vec<MarketForDB> {
-    let client = Client::new();
+    let client = get_default_client();
     let token = get_login_token(&client);
     let api_url = KALSHI_API_BASE.to_owned() + "/markets";
     let limit: usize = 1000;
