@@ -22,15 +22,16 @@ struct MarketFull {
 impl TryInto<Option<MarketForDB>> for MarketFull {
     type Error = MarketConvertError;
     fn try_into(self) -> Result<Option<MarketForDB>, MarketConvertError> {
+        fn build_url(m: &MarketFull) -> String {
+            MANIFOLD_SITE_BASE.to_owned() + &m.market.creatorUsername + "/" + &m.market.slug
+        }
+
         if self.market.isResolved {
             Ok(Some(MarketForDB {
-                title: self.market.question,
+                title: self.market.question.clone(),
                 platform: Platform::Manifold,
-                platform_id: self.market.id,
-                url: MANIFOLD_SITE_BASE.to_owned()
-                    + &self.market.creatorUsername
-                    + "/"
-                    + &self.market.slug,
+                platform_id: self.market.id.clone(),
+                url: build_url(&self),
             }))
         } else {
             Ok(None)

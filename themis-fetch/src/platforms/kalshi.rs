@@ -46,7 +46,7 @@ struct MarketFull {
 impl TryInto<Option<MarketForDB>> for MarketFull {
     type Error = MarketConvertError;
     fn try_into(self) -> Result<Option<MarketForDB>, MarketConvertError> {
-        fn get_url(m: &MarketFull) -> String {
+        fn build_url(m: &MarketFull) -> String {
             let re = Regex::new(r"^(\w+)-").unwrap();
             KALSHI_SITE_BASE.to_owned()
                 + &re.captures(&m.market.event_ticker).unwrap()[1].to_lowercase()
@@ -59,7 +59,7 @@ impl TryInto<Option<MarketForDB>> for MarketFull {
                 title: self.market.title.clone(),
                 platform: Platform::Kalshi,
                 platform_id: self.market.ticker.clone(),
-                url: get_url(&self), // TODO
+                url: build_url(&self),
             }))
         } else {
             Ok(None)
