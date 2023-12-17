@@ -42,15 +42,17 @@ fn get_extended_data(market: MarketInfo) -> MarketFull {
     MarketFull { market }
 }
 
-pub fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
+pub async fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
     let client = get_default_client();
     let api_url = MANIFOLD_API_BASE.to_owned() + "/market";
     let response = client
         .get(&api_url)
         .query(&[("id", id)])
         .send()
+        .await
         .unwrap()
         .json::<MarketInfo>()
+        .await
         .unwrap();
     let market_data = get_extended_data(response);
     Vec::from([TryInto::<Option<MarketForDB>>::try_into(market_data)
@@ -58,7 +60,7 @@ pub fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
         .expect("Market is not resolved.")])
 }
 
-pub fn get_markets_all() -> Vec<MarketForDB> {
+pub async fn get_markets_all() -> Vec<MarketForDB> {
     let client = get_default_client();
     let api_url = MANIFOLD_API_BASE.to_owned() + "/markets";
     let limit = 1000;
@@ -70,8 +72,10 @@ pub fn get_markets_all() -> Vec<MarketForDB> {
             .query(&[("limit", limit)])
             .query(&[("before", before)])
             .send()
+            .await
             .unwrap()
             .json::<Vec<MarketInfo>>()
+            .await
             .unwrap();
         let response_len = response.len();
         let market_data: Vec<MarketFull> = response

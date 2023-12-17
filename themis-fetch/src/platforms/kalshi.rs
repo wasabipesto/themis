@@ -1,6 +1,5 @@
 use super::*;
 use regex::Regex;
-use reqwest::blocking::Client;
 
 const KALSHI_API_BASE: &str = "https://demo-api.kalshi.co/trade-api/v2";
 const KALSHI_SITE_BASE: &str = "https://kalshi.com/markets/";
@@ -72,7 +71,7 @@ fn get_extended_data(market: MarketInfo) -> MarketFull {
     MarketFull { market }
 }
 
-fn get_login_token(client: &Client) -> String {
+async fn get_login_token(client: &reqwest::Client) -> String {
     let api_url = KALSHI_API_BASE.to_owned() + "/login";
     let credentials = LoginCredentials {
         email: var("KALSHI_USERNAME")
@@ -85,25 +84,29 @@ fn get_login_token(client: &Client) -> String {
         .post(api_url)
         .json(&credentials)
         .send()
+        .await
         .unwrap()
         .error_for_status()
         .unwrap_or_else(|e| panic!("Kalshi: Login failed: {:?}", e))
         .json::<LoginResponse>()
+        .await
         .unwrap();
     //println!("Kalshi: Logged in with token: {}", &response.token);
     response.token
 }
 
-pub fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
+pub async fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
     let client = get_default_client();
-    let token = get_login_token(&client);
+    let token = get_login_token(&client).await;
     let api_url = KALSHI_API_BASE.to_owned() + "/markets/";
     let response = client
         .get(api_url.clone() + id)
         .bearer_auth(&token)
         .send()
+        .await
         .unwrap()
         .json::<SingleMarketResponse>()
+        .await
         .unwrap();
     let market_data = get_extended_data(response.market);
     Vec::from([TryInto::<Option<MarketForDB>>::try_into(market_data)
@@ -111,9 +114,9 @@ pub fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
         .expect("Market is not resolved.")])
 }
 
-pub fn get_markets_all() -> Vec<MarketForDB> {
+pub async fn get_markets_all() -> Vec<MarketForDB> {
     let client = get_default_client();
-    let token = get_login_token(&client);
+    let token = get_login_token(&client).await;
     let api_url = KALSHI_API_BASE.to_owned() + "/markets";
     let limit: usize = 1000;
     let mut cursor: Option<String> = None;
@@ -125,10 +128,12 @@ pub fn get_markets_all() -> Vec<MarketForDB> {
             .query(&[("limit", limit)])
             .query(&[("cursor", cursor.clone())])
             .send()
+            .await
             .unwrap()
             .error_for_status()
             .unwrap_or_else(|e| panic!("Kalshi: Query failed: {:?}", e))
             .json::<BulkMarketResponse>()
+            .await
             .unwrap();
         let market_data: Vec<MarketFull> = response
             .markets

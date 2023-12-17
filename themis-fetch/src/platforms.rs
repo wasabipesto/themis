@@ -31,6 +31,6 @@ impl fmt::Display for MarketConvertError {
     }
 }
 
-fn get_default_client() -> reqwest::blocking::Client {
-    reqwest::blocking::Client::new()
+fn get_default_client() -> reqwest::Client {
+    reqwest::Client::new()
 }
