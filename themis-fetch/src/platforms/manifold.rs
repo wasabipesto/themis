@@ -45,10 +45,9 @@ fn get_extended_data(market: MarketInfo) -> MarketFull {
 
 pub async fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
     let client = get_default_client();
-    let api_url = MANIFOLD_API_BASE.to_owned() + "/market";
+    let api_url = MANIFOLD_API_BASE.to_owned() + "/market/" + &id;
     let response = client
         .get(&api_url)
-        .query(&[("id", id)])
         .send()
         .await
         .unwrap()
