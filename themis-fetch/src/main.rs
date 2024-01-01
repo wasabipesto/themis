@@ -8,7 +8,7 @@ use std::fs::File;
 use std::time::Instant;
 
 mod platforms;
-use crate::platforms::{Market, MarketForDB, Platform};
+use crate::platforms::{market, MarketForDB, Platform};
 
 const OUTPUT_KEYWORD_DB: &str = "db";
 const OUTPUT_KEYWORD_STDOUT: &str = "stdout";
@@ -92,7 +92,7 @@ fn main() {
                 &var("DATABASE_URL").expect("Required environment variable DATABASE_URL not set."),
             )
             .expect("Error connecting to datbase.");
-            diesel::insert_into(Market::table)
+            diesel::insert_into(market::table)
                 .values(&markets)
                 .execute(&mut conn)
                 .expect("Failed to insert rows into table.");

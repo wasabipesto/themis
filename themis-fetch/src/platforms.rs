@@ -21,7 +21,7 @@ pub enum Platform {
 }
 
 #[derive(Debug, Serialize, Insertable, Queryable)]
-#[diesel(table_name = Market)]
+#[diesel(table_name = market)]
 pub struct MarketForDB {
     title: String,
     platform: String,
@@ -30,8 +30,7 @@ pub struct MarketForDB {
 }
 
 table! {
-    #[allow(non_snake_case)]
-    Market (id) {
+    market (id) {
         id -> Int4,
         title -> Varchar,
         platform -> Varchar,
