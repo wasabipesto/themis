@@ -13,29 +13,46 @@ struct MarketInfo {
     isResolved: bool,
 }
 
+impl MarketInfoDetails for MarketInfo {
+    fn is_valid(&self) -> bool {
+        self.isResolved
+    }
+}
+
 #[derive(Debug)]
 struct MarketFull {
     market: MarketInfo,
     //bets: Bet,
 }
 
-impl TryInto<Option<MarketForDB>> for MarketFull {
-    type Error = MarketConvertError;
-    fn try_into(self) -> Result<Option<MarketForDB>, MarketConvertError> {
-        fn build_url(m: &MarketFull) -> String {
-            MANIFOLD_SITE_BASE.to_owned() + &m.market.creatorUsername + "/" + &m.market.slug
-        }
+impl MarketFullDetails for MarketFull {
+    fn title(&self) -> String {
+        self.market.question.to_owned()
+    }
+    fn platform(&self) -> String {
+        "manifold".to_string()
+    }
+    fn platform_id(&self) -> String {
+        self.market.id.to_owned()
+    }
+    fn url(&self) -> String {
+        MANIFOLD_SITE_BASE.to_owned() + &self.market.creatorUsername + "/" + &self.market.slug
+    }
+    fn open_days(&self) -> f32 {
+        0.0
+    }
+}
 
-        if self.market.isResolved {
-            Ok(Some(MarketForDB {
-                title: self.market.question.clone(),
-                platform: "manifold".to_string(),
-                platform_id: self.market.id.clone(),
-                url: build_url(&self),
-            }))
-        } else {
-            Ok(None)
-        }
+impl TryInto<MarketForDB> for MarketFull {
+    type Error = MarketConvertError;
+    fn try_into(self) -> Result<MarketForDB, MarketConvertError> {
+        Ok(MarketForDB {
+            title: self.title(),
+            platform: self.platform(),
+            platform_id: self.platform_id(),
+            url: self.url(),
+            open_days: self.open_days(),
+        })
     }
 }
 
@@ -55,9 +72,7 @@ pub async fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
         .await
         .unwrap();
     let market_data = get_extended_data(response);
-    Vec::from([TryInto::<Option<MarketForDB>>::try_into(market_data)
-        .expect("Error processing market")
-        .expect("Market is not resolved.")])
+    Vec::from([market_data.try_into().expect("Error processing market")])
 }
 
 pub async fn get_markets_all() -> Vec<MarketForDB> {
@@ -80,6 +95,7 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
         let response_len = response.len();
         let market_data: Vec<MarketFull> = response
             .into_iter()
+            .filter(|market| market.is_valid())
             .map(|market| get_extended_data(market))
             .collect();
         all_market_data.extend(market_data);
@@ -91,10 +107,10 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
     }
     all_market_data
         .into_iter()
-        .map(|m| {
-            TryInto::<Option<MarketForDB>>::try_into(m)
+        .map(|market| {
+            market
+                .try_into()
                 .expect("Error converting market into standard fields.")
         })
-        .filter_map(|i| i)
         .collect()
 }

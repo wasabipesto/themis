@@ -27,6 +27,27 @@ pub struct MarketForDB {
     platform: String,
     platform_id: String,
     url: String,
+    open_days: f32,
+}
+
+pub trait MarketInfoDetails {
+    fn is_valid(&self) -> bool;
+}
+
+pub trait MarketFullDetails {
+    fn title(&self) -> String;
+    fn platform(&self) -> String;
+    fn platform_id(&self) -> String;
+    fn url(&self) -> String;
+    fn open_days(&self) -> f32;
+}
+
+#[derive(Debug, Clone)]
+pub struct MarketConvertError;
+impl fmt::Display for MarketConvertError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "error during market conversion process")
+    }
 }
 
 table! {
@@ -36,14 +57,7 @@ table! {
         platform -> Varchar,
         platform_id -> Varchar,
         url -> Varchar,
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct MarketConvertError;
-impl fmt::Display for MarketConvertError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "error during market conversion process")
+        open_days -> Float,
     }
 }
 

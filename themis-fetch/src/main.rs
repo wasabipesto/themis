@@ -23,7 +23,7 @@ struct Args {
     id: Option<String>,
 
     /// Redirect output to the database ["db"], the console ["stdout"], or a file [value used as filename]
-    #[arg(short, long, default_value = "db")]
+    #[arg(short, long, default_value = OUTPUT_KEYWORD_DB)]
     output: String,
 
     /// Show additional output for debugging

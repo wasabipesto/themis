@@ -26,6 +26,12 @@ struct MarketInfo {
     status: String,
 }
 
+impl MarketInfoDetails for MarketInfo {
+    fn is_valid(&self) -> bool {
+        self.status == "finalized"
+    }
+}
+
 #[derive(Deserialize, Debug)]
 struct SingleMarketResponse {
     market: MarketInfo,
@@ -43,34 +49,45 @@ struct MarketFull {
     //bets: Bet,
 }
 
-impl TryInto<Option<MarketForDB>> for MarketFull {
-    type Error = MarketConvertError;
-    fn try_into(self) -> Result<Option<MarketForDB>, MarketConvertError> {
-        fn build_url(m: &MarketFull) -> String {
-            let ticker_regex = Regex::new(r"^(\w+)-").unwrap();
-            let ticker_prefix =
-                if let Some(ticker_regex_result) = ticker_regex.find(&m.market.event_ticker) {
-                    ticker_regex_result.as_str()
-                } else {
-                    // Some tickers do not have a prefix, just use the market ticker for both
-                    &m.market.event_ticker
-                };
-            KALSHI_SITE_BASE.to_owned()
-                + &ticker_prefix.to_lowercase()
-                + "/#"
-                + &m.market.event_ticker.to_lowercase()
-        }
+impl MarketFullDetails for MarketFull {
+    fn title(&self) -> String {
+        self.market.title.to_owned()
+    }
+    fn platform(&self) -> String {
+        "kalshi".to_string()
+    }
+    fn platform_id(&self) -> String {
+        self.market.ticker.to_owned()
+    }
+    fn url(&self) -> String {
+        let ticker_regex = Regex::new(r"^(\w+)-").unwrap();
+        let ticker_prefix =
+            if let Some(ticker_regex_result) = ticker_regex.find(&self.market.event_ticker) {
+                ticker_regex_result.as_str()
+            } else {
+                // Some tickers do not have a prefix, just use the market ticker for both
+                &self.market.event_ticker
+            };
+        KALSHI_SITE_BASE.to_owned()
+            + &ticker_prefix.to_lowercase()
+            + "/#"
+            + &self.market.event_ticker.to_lowercase()
+    }
+    fn open_days(&self) -> f32 {
+        0.0
+    }
+}
 
-        if self.market.status == "finalized" {
-            Ok(Some(MarketForDB {
-                title: self.market.title.clone(),
-                platform: "kalshi".to_string(),
-                platform_id: self.market.ticker.clone(),
-                url: build_url(&self),
-            }))
-        } else {
-            Ok(None)
-        }
+impl TryInto<MarketForDB> for MarketFull {
+    type Error = MarketConvertError;
+    fn try_into(self) -> Result<MarketForDB, MarketConvertError> {
+        Ok(MarketForDB {
+            title: self.title(),
+            platform: self.platform(),
+            platform_id: self.platform_id(),
+            url: self.url(),
+            open_days: self.open_days(),
+        })
     }
 }
 
@@ -116,9 +133,7 @@ pub async fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
         .await
         .unwrap();
     let market_data = get_extended_data(response.market);
-    Vec::from([TryInto::<Option<MarketForDB>>::try_into(market_data)
-        .expect("Error processing market")
-        .expect("Market is not resolved.")])
+    Vec::from([market_data.try_into().expect("Error processing market")])
 }
 
 pub async fn get_markets_all() -> Vec<MarketForDB> {
@@ -145,6 +160,7 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
         let market_data: Vec<MarketFull> = response
             .markets
             .into_iter()
+            .filter(|market| market.is_valid())
             .map(|market| get_extended_data(market))
             .collect();
         all_market_data.extend(market_data);
@@ -156,10 +172,10 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
     }
     all_market_data
         .into_iter()
-        .map(|m| {
-            TryInto::<Option<MarketForDB>>::try_into(m)
+        .map(|market| {
+            market
+                .try_into()
                 .expect("Error converting market into standard fields.")
         })
-        .filter_map(|i| i)
         .collect()
 }
