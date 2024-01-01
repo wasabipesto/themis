@@ -64,7 +64,7 @@ impl TryInto<Option<MarketForDB>> for MarketFull {
         if self.market.status == "finalized" {
             Ok(Some(MarketForDB {
                 title: self.market.title.clone(),
-                platform: Platform::Kalshi,
+                platform: "kalshi".to_string(),
                 platform_id: self.market.ticker.clone(),
                 url: build_url(&self),
             }))

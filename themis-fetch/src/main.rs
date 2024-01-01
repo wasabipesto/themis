@@ -1,10 +1,14 @@
 use clap::Parser;
+use diesel::pg::PgConnection;
+use diesel::prelude::*;
+use diesel::Connection;
 use serde_json::{to_string_pretty, to_writer_pretty};
+use std::env::var;
 use std::fs::File;
 use std::time::Instant;
 
-pub mod platforms;
-use crate::platforms::{MarketForDB, Platform};
+mod platforms;
+use crate::platforms::{market, MarketForDB, Platform};
 
 const OUTPUT_KEYWORD_DB: &str = "db";
 const OUTPUT_KEYWORD_STDOUT: &str = "stdout";
@@ -31,10 +35,13 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
+    // print the user inputs for debug purposes
     if args.verbose {
         println!("Initialization: {:?}", &args);
     }
 
+    // if the user requested a specific platform, format it into a list
+    // otherwise, return the default platform list
     let platforms: Vec<&Platform> = match &args.platform {
         Some(platform) => Vec::from([platform]),
         None => Vec::from([&Platform::Kalshi, &Platform::Manifold]),
@@ -45,7 +52,6 @@ fn main() {
     }
     let total_timer = Instant::now();
     let mut markets: Vec<MarketForDB> = Vec::new();
-
     let runtime = tokio::runtime::Runtime::new().unwrap();
     runtime.block_on(async {
         for platform in platforms.clone() {
@@ -78,9 +84,19 @@ fn main() {
         markets.len(),
         total_timer.elapsed()
     );
+
     // save collated data to database, stdout, or file
     match args.output.as_str() {
-        OUTPUT_KEYWORD_DB => println!("Unimplemented."),
+        OUTPUT_KEYWORD_DB => {
+            let mut conn = PgConnection::establish(
+                &var("DATABASE_URL").expect("Required environment variable DATABASE_URL not set."),
+            )
+            .expect("Error connecting to datbase.");
+            diesel::insert_into(market::table)
+                .values(&markets)
+                .execute(&mut conn)
+                .expect("Failed to insert rows into table.");
+        }
         OUTPUT_KEYWORD_STDOUT => {
             println!("{}", to_string_pretty(&markets).unwrap())
         }

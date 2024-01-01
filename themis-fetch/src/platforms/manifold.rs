@@ -29,7 +29,7 @@ impl TryInto<Option<MarketForDB>> for MarketFull {
         if self.market.isResolved {
             Ok(Some(MarketForDB {
                 title: self.market.question.clone(),
-                platform: Platform::Manifold,
+                platform: "manifold".to_string(),
                 platform_id: self.market.id.clone(),
                 url: build_url(&self),
             }))

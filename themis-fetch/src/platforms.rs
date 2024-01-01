@@ -1,5 +1,7 @@
 use clap::ValueEnum;
 use core::fmt;
+use diesel::prelude::*;
+use diesel::{Insertable, Queryable};
 use reqwest_leaky_bucket::leaky_bucket::RateLimiter;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
@@ -18,12 +20,23 @@ pub enum Platform {
     PredictIt,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Insertable, Queryable)]
+#[diesel(table_name = market)]
 pub struct MarketForDB {
     title: String,
-    platform: Platform,
+    platform: String,
     platform_id: String,
     url: String,
+}
+
+table! {
+    market (id) {
+        id -> Int4,
+        title -> Varchar,
+        platform -> Varchar,
+        platform_id -> Varchar,
+        url -> Varchar,
+    }
 }
 
 #[derive(Debug, Clone)]
