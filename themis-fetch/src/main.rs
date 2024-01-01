@@ -1,7 +1,5 @@
 use clap::Parser;
-use diesel::pg::PgConnection;
-use diesel::prelude::*;
-use diesel::Connection;
+use diesel::{pg::PgConnection, prelude::*, Connection};
 use serde_json::{to_string_pretty, to_writer_pretty};
 use std::env::var;
 use std::fs::File;
@@ -92,10 +90,13 @@ fn main() {
                 &var("DATABASE_URL").expect("Required environment variable DATABASE_URL not set."),
             )
             .expect("Error connecting to datbase.");
-            diesel::insert_into(market::table)
-                .values(&markets)
-                .execute(&mut conn)
-                .expect("Failed to insert rows into table.");
+            for chunk in markets.chunks(1000) {
+                diesel::insert_into(market::table)
+                    .values(chunk)
+                    .on_conflict_do_nothing() // TODO: upsert
+                    .execute(&mut conn)
+                    .expect("Failed to insert rows into table.");
+            }
         }
         OUTPUT_KEYWORD_STDOUT => {
             println!("{}", to_string_pretty(&markets).unwrap())
