@@ -59,13 +59,11 @@ fn main() {
                 match &platform {
                     Platform::Manifold => platforms::manifold::get_market_by_id(id).await,
                     Platform::Kalshi => platforms::kalshi::get_market_by_id(id).await,
-                    _ => panic!("Unimplemented."),
                 }
             } else {
                 match &platform {
                     Platform::Manifold => platforms::manifold::get_markets_all().await,
                     Platform::Kalshi => platforms::kalshi::get_markets_all().await,
-                    _ => panic!("Unimplemented."),
                 }
             };
             println!(
@@ -86,6 +84,7 @@ fn main() {
     // save collated data to database, stdout, or file
     match args.output.as_str() {
         OUTPUT_KEYWORD_DB => {
+            println!("Database: Saving all markets to db...");
             let mut conn = PgConnection::establish(
                 &var("DATABASE_URL").expect("Required environment variable DATABASE_URL not set."),
             )
@@ -97,6 +96,7 @@ fn main() {
                     .execute(&mut conn)
                     .expect("Failed to insert rows into table.");
             }
+            println!("Database: All markets saved.");
         }
         OUTPUT_KEYWORD_STDOUT => {
             println!("{}", to_string_pretty(&markets).unwrap())

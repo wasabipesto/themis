@@ -1,8 +1,7 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use clap::ValueEnum;
 use core::fmt;
-use diesel::prelude::*;
-use diesel::{Insertable, Queryable};
+use diesel::{prelude::*, Insertable};
 use reqwest_leaky_bucket::leaky_bucket::RateLimiter;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
@@ -14,16 +13,19 @@ pub mod manifold;
 
 const SECS_PER_DAY: f32 = (60 * 60 * 24) as f32;
 
+/// All possible platforms that are supported by this application.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Serialize)]
 pub enum Platform {
     Kalshi,
     Manifold,
-    Metaculus,
-    Polymarket,
-    PredictIt,
+    //Metaculus,
+    //Polymarket,
+    //PredictIt,
 }
 
-#[derive(Debug, Serialize, Insertable, Queryable)]
+/// The central market type that all platform-specific objects are converted into.
+/// This is the object type that is sent to the database, file, or console.
+#[derive(Debug, Serialize, Insertable)]
 #[diesel(table_name = market)]
 pub struct MarketForDB {
     title: String,
@@ -34,10 +36,13 @@ pub struct MarketForDB {
     volume_usd: f32,
 }
 
+/// Common traits for the basic MarketInfo objects.
 pub trait MarketInfoDetails {
+    /// Represents if the market is valid for further processing or if it should be ignored.
     fn is_valid(&self) -> bool;
 }
 
+/// Common traits used to massage platform-specific market objects into the standard types.
 pub trait MarketFullDetails {
     fn title(&self) -> String;
     fn platform(&self) -> String;
@@ -51,6 +56,7 @@ pub trait MarketFullDetails {
     fn volume_usd(&self) -> f32;
 }
 
+/// Basic error type that returns the market as a debug string and a simple error message.
 #[derive(Debug, Clone)]
 pub struct MarketConvertError {
     message: String,
@@ -74,6 +80,7 @@ impl fmt::Display for MarketConvertError {
     }
 }
 
+// Diesel macro to save the markets to a datbase table.
 table! {
     market (id) {
         id -> Int4,
@@ -86,6 +93,7 @@ table! {
     }
 }
 
+/// A default API client with middleware to ratelimit and retry on failure. Sane defaults.
 fn get_default_client() -> ClientWithMiddleware {
     // retry requests that get server errors with an exponential backoff timer
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
