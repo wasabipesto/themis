@@ -3,7 +3,6 @@ use std::cmp;
 
 const MANIFOLD_API_BASE: &str = "https://api.manifold.markets/v0";
 const MANIFOLD_SITE_BASE: &str = "https://manifold.markets/";
-const MILLIS_PER_DAY: f32 = (1000 * 60 * 60 * 24) as f32;
 
 #[allow(non_snake_case)]
 #[derive(Deserialize, Debug)]
@@ -13,9 +12,9 @@ struct MarketInfo {
     slug: String,
     creatorUsername: String,
     isResolved: bool,
-    createdTime: u64,
-    closeTime: Option<i64>, // polls and bounties lack close times, can be in the past
-    resolutionTime: Option<u64>,
+    createdTime: i64,
+    closeTime: Option<i64>, // polls and bounties lack close times
+    resolutionTime: Option<i64>,
 }
 
 impl MarketInfoDetails for MarketInfo {
@@ -43,20 +42,46 @@ impl MarketFullDetails for MarketFull {
     fn url(&self) -> String {
         MANIFOLD_SITE_BASE.to_owned() + &self.market.creatorUsername + "/" + &self.market.slug
     }
-    fn open_days(&self) -> Result<f32, MarketConvertError> {
-        match (self.market.resolutionTime, self.market.closeTime) {
+    fn open_date(&self) -> Result<DateTime<Utc>, MarketConvertError> {
+        let ts = self.market.createdTime;
+        let dt = NaiveDateTime::from_timestamp_millis(ts);
+        match dt {
+            Some(dt) => Ok(DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)),
+            None => Err(MarketConvertError::new(
+                format!("{:?}", self),
+                "Manifold API createdTime could not be converted into DateTime",
+            )),
+        }
+    }
+    fn close_date(&self) -> Result<DateTime<Utc>, MarketConvertError> {
+        let ts = match (self.market.closeTime, self.market.resolutionTime) {
+            // both close and resolution times are present
+            (Some(close_time), Some(resolution_time)) => {
+                if close_time < self.market.createdTime {
+                    // close time was set in the past, use resolution time instead
+                    Ok(resolution_time)
+                } else {
+                    // close time and resolution time were both after created time, take whichever came first
+                    Ok(cmp::min(close_time, resolution_time))
+                }
+            }
+            // only resolution time is present
+            (Some(close_time), None) => Ok(close_time),
+            // only close time is present
+            (None, Some(resolution_time)) => Ok(resolution_time),
+            // neither is present
             (None, None) => Err(MarketConvertError::new(
                 format!("{:?}", self),
-                "Manifold API response did not include closeTime or resolutionTime for resolved market",
+                "Manifold API response did not include closeTime or resolutionTime",
             )),
-            (Some(resolution_time), None) => Ok((resolution_time - self.market.createdTime) as f32 / MILLIS_PER_DAY),
-            (None, Some(close_time)) => Ok((close_time.max(0) as u64 - self.market.createdTime) as f32 / MILLIS_PER_DAY),
-            (Some(resolution_time), Some(close_time)) => {
-                if (close_time.max(0) as u64) < self.market.createdTime {
-                    Ok((resolution_time - self.market.createdTime) as f32 / MILLIS_PER_DAY)
-                } else {
-                    Ok((cmp::min(close_time as u64, resolution_time) - self.market.createdTime) as f32 / MILLIS_PER_DAY)}
-                },
+        }?;
+        let dt = NaiveDateTime::from_timestamp_millis(ts);
+        match dt {
+            Some(dt) => Ok(DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)),
+            None => Err(MarketConvertError::new(
+                format!("{:?}", self),
+                "Manifold API closeTime or resolutionTime could not be converted into DateTime",
+            )),
         }
     }
 }

@@ -1,3 +1,4 @@
+use chrono::{DateTime, NaiveDateTime, Utc};
 use clap::ValueEnum;
 use core::fmt;
 use diesel::prelude::*;
@@ -10,6 +11,8 @@ use std::env::var;
 
 pub mod kalshi;
 pub mod manifold;
+
+const SECS_PER_DAY: f32 = (60 * 60 * 24) as f32;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Serialize)]
 pub enum Platform {
@@ -39,7 +42,11 @@ pub trait MarketFullDetails {
     fn platform(&self) -> String;
     fn platform_id(&self) -> String;
     fn url(&self) -> String;
-    fn open_days(&self) -> Result<f32, MarketConvertError>;
+    fn open_date(&self) -> Result<DateTime<Utc>, MarketConvertError>;
+    fn close_date(&self) -> Result<DateTime<Utc>, MarketConvertError>;
+    fn open_days(&self) -> Result<f32, MarketConvertError> {
+        Ok((self.close_date()? - self.open_date()?).num_seconds() as f32 / SECS_PER_DAY)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -51,7 +58,7 @@ impl MarketConvertError {
     pub fn new(market: String, message: &str) -> Self {
         MarketConvertError {
             message: message.to_string(),
-            market: market,
+            market,
         }
     }
 }

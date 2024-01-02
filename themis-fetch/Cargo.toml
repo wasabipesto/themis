@@ -15,4 +15,5 @@ tokio = "1.35.0"
 reqwest-retry = "0.3.0"
 reqwest-middleware = "0.2.4"
 reqwest-leaky-bucket = "0.1.0"
-diesel = { version = "2.1.0", features = ["postgres"] }
+diesel = { version = "2.1.0", features = ["postgres", "chrono"] }
+chrono = { version = "0.4.31", features = ["serde"] }

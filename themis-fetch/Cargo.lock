@@ -186,7 +186,10 @@ checksum = "7f2c685bad3eb3d45a01354cedb7d5faa66194d1d58ba6e267a8de788f79db38"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
+ "js-sys",
  "num-traits",
+ "serde",
+ "wasm-bindgen",
  "windows-targets 0.48.5",
 ]
 
@@ -260,6 +263,7 @@ checksum = "62c6fcf842f17f8c78ecf7c81d75c5ce84436b41ee07e03f490fbb5f5a8731d8"
 dependencies = [
  "bitflags 2.4.1",
  "byteorder",
+ "chrono",
  "diesel_derives",
  "itoa",
  "pq-sys",
@@ -1320,6 +1324,7 @@ dependencies = [
 name = "themis-fetch"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "clap",
  "diesel",
  "regex",

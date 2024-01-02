@@ -21,8 +21,8 @@ struct MarketInfo {
     event_ticker: String,
     //market_type: String,
     title: String,
-    //open_time: String,
-    //close_time: String,
+    open_time: DateTime<Utc>,
+    close_time: DateTime<Utc>,
     status: String,
 }
 
@@ -73,8 +73,11 @@ impl MarketFullDetails for MarketFull {
             + "/#"
             + &self.market.event_ticker.to_lowercase()
     }
-    fn open_days(&self) -> Result<f32, MarketConvertError> {
-        Ok(0.0)
+    fn open_date(&self) -> Result<DateTime<Utc>, MarketConvertError> {
+        Ok(self.market.open_time)
+    }
+    fn close_date(&self) -> Result<DateTime<Utc>, MarketConvertError> {
+        Ok(self.market.close_time)
     }
 }
 
