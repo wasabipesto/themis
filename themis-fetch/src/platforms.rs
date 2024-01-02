@@ -31,6 +31,7 @@ pub struct MarketForDB {
     platform_id: String,
     url: String,
     open_days: f32,
+    volume_usd: f32,
 }
 
 pub trait MarketInfoDetails {
@@ -47,6 +48,7 @@ pub trait MarketFullDetails {
     fn open_days(&self) -> Result<f32, MarketConvertError> {
         Ok((self.close_date()? - self.open_date()?).num_seconds() as f32 / SECS_PER_DAY)
     }
+    fn volume_usd(&self) -> f32;
 }
 
 #[derive(Debug, Clone)]
@@ -80,6 +82,7 @@ table! {
         platform_id -> Varchar,
         url -> Varchar,
         open_days -> Float,
+        volume_usd -> Float,
     }
 }
 

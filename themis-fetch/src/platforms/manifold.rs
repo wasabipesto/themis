@@ -3,6 +3,7 @@ use std::cmp;
 
 const MANIFOLD_API_BASE: &str = "https://api.manifold.markets/v0";
 const MANIFOLD_SITE_BASE: &str = "https://manifold.markets/";
+const MANIFOLD_EXCHANGE_RATE: f32 = 100.0;
 
 #[allow(non_snake_case)]
 #[derive(Deserialize, Debug)]
@@ -15,6 +16,7 @@ struct MarketInfo {
     createdTime: i64,
     closeTime: Option<i64>, // polls and bounties lack close times
     resolutionTime: Option<i64>,
+    volume: f32,
 }
 
 impl MarketInfoDetails for MarketInfo {
@@ -84,6 +86,9 @@ impl MarketFullDetails for MarketFull {
             )),
         }
     }
+    fn volume_usd(&self) -> f32 {
+        self.market.volume as f32 / MANIFOLD_EXCHANGE_RATE
+    }
 }
 
 impl TryInto<MarketForDB> for MarketFull {
@@ -95,6 +100,7 @@ impl TryInto<MarketForDB> for MarketFull {
             platform_id: self.platform_id(),
             url: self.url(),
             open_days: self.open_days()?,
+            volume_usd: self.volume_usd(),
         })
     }
 }

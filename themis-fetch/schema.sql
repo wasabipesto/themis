@@ -6,5 +6,6 @@ CREATE TABLE market (
     platform_id VARCHAR NOT NULL,
     url VARCHAR NOT NULL,
     open_days REAL NOT NULL,
+    volume_usd REAL NOT NULL,
     CONSTRAINT platform_unique_by_id UNIQUE (platform, platform_id)
 );

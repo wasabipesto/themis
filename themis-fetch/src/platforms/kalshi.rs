@@ -3,6 +3,7 @@ use regex::Regex;
 
 const KALSHI_API_BASE: &str = "https://demo-api.kalshi.co/trade-api/v2";
 const KALSHI_SITE_BASE: &str = "https://kalshi.com/markets/";
+const KALSHI_EXCHANGE_RATE: f32 = 100.0;
 
 #[derive(Serialize, Debug)]
 struct LoginCredentials {
@@ -24,6 +25,7 @@ struct MarketInfo {
     open_time: DateTime<Utc>,
     close_time: DateTime<Utc>,
     status: String,
+    volume: f32,
 }
 
 impl MarketInfoDetails for MarketInfo {
@@ -79,6 +81,9 @@ impl MarketFullDetails for MarketFull {
     fn close_date(&self) -> Result<DateTime<Utc>, MarketConvertError> {
         Ok(self.market.close_time)
     }
+    fn volume_usd(&self) -> f32 {
+        self.market.volume as f32 / KALSHI_EXCHANGE_RATE
+    }
 }
 
 impl TryInto<MarketForDB> for MarketFull {
@@ -90,6 +95,7 @@ impl TryInto<MarketForDB> for MarketFull {
             platform_id: self.platform_id(),
             url: self.url(),
             open_days: self.open_days()?,
+            volume_usd: self.volume_usd(),
         })
     }
 }
