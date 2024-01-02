@@ -73,8 +73,8 @@ impl MarketFullDetails for MarketFull {
             + "/#"
             + &self.market.event_ticker.to_lowercase()
     }
-    fn open_days(&self) -> f32 {
-        0.0
+    fn open_days(&self) -> Result<f32, MarketConvertError> {
+        Ok(0.0)
     }
 }
 
@@ -86,7 +86,7 @@ impl TryInto<MarketForDB> for MarketFull {
             platform: self.platform(),
             platform_id: self.platform_id(),
             url: self.url(),
-            open_days: self.open_days(),
+            open_days: self.open_days()?,
         })
     }
 }

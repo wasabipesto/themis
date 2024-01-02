@@ -39,14 +39,29 @@ pub trait MarketFullDetails {
     fn platform(&self) -> String;
     fn platform_id(&self) -> String;
     fn url(&self) -> String;
-    fn open_days(&self) -> f32;
+    fn open_days(&self) -> Result<f32, MarketConvertError>;
 }
 
 #[derive(Debug, Clone)]
-pub struct MarketConvertError;
+pub struct MarketConvertError {
+    message: String,
+    market: String,
+}
+impl MarketConvertError {
+    pub fn new(market: String, message: &str) -> Self {
+        MarketConvertError {
+            message: message.to_string(),
+            market: market,
+        }
+    }
+}
 impl fmt::Display for MarketConvertError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "error during market conversion process")
+        write!(
+            f,
+            "Market Conversion Error: {}: {}",
+            self.message, self.market
+        )
     }
 }
 
