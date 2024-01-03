@@ -7,6 +7,7 @@ use reqwest_leaky_bucket::leaky_bucket::RateLimiter;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde::{Deserialize, Serialize};
+use serde_json;
 use std::env::var;
 
 pub mod kalshi;
@@ -55,6 +56,13 @@ pub struct MarketForDB {
     prob_at_close: f32,
 }
 
+/// Simple struct for market events. The timestamp declares when the probability became that value.
+#[derive(Debug, Clone)]
+pub struct MarketEvent {
+    time: DateTime<Utc>,
+    prob: f32,
+}
+
 /// Common traits for the basic MarketInfo objects.
 pub trait MarketInfoDetails {
     /// Represents if the market is valid for further processing or if it should be ignored.
@@ -101,7 +109,7 @@ pub trait MarketFullDetails {
     /// Returns the last traded value if a time after market close is requested.
     fn prob_at_time(&self, time: DateTime<Utc>) -> Result<f32, MarketConvertError> {
         if time < self.open_dt()? {
-            // time is before market starts
+            // requested time is before market starts, throw error
             return Err(MarketConvertError::new(
                 self.debug(),
                 format!(
@@ -152,13 +160,13 @@ pub trait MarketFullDetails {
 /// Basic error type that returns the market as a debug string and a simple error message.
 #[derive(Debug, Clone)]
 pub struct MarketConvertError {
+    data: String,
     message: String,
-    market: String,
 }
 impl MarketConvertError {
-    pub fn new(market: String, message: &str) -> Self {
+    pub fn new(data: String, message: &str) -> Self {
         MarketConvertError {
-            market,
+            data,
             message: message.to_string(),
         }
     }
@@ -168,24 +176,22 @@ impl fmt::Display for MarketConvertError {
         write!(
             f,
             "Market Conversion Error: {}: {}",
-            self.message, self.market
+            self.message, self.data
         )
     }
 }
 
-/// Simple struct for market events. The timestamp declares when the probability became that value.
-#[derive(Debug, Clone)]
-pub struct MarketEvent {
-    time: DateTime<Utc>,
-    prob: f32,
-}
-
-/// A default API client with middleware to ratelimit and retry on failure. Sane defaults.
-fn get_default_client() -> ClientWithMiddleware {
+/// A default API client with middleware to ratelimit and retry on failure.
+fn get_reqwest_client_ratelimited(rps: usize) -> ClientWithMiddleware {
     // retry requests that get server errors with an exponential backoff timer
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-    // rate limit to 2 requests per 100ms (20rps) sustained with a max burst of 100 requests
-    let rate_limiter = RateLimiter::builder().max(100).initial(0).refill(2).build();
+    // rate limit to n requests per 100ms sustained with a max burst of 10x that
+    let req_per_100ms = rps / 10;
+    let rate_limiter = RateLimiter::builder()
+        .max(rps)
+        .initial(0)
+        .refill(req_per_100ms)
+        .build();
 
     ClientBuilder::new(reqwest::Client::new())
         .with(RetryTransientMiddleware::new_with_policy(retry_policy))

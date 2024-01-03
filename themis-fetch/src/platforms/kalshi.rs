@@ -4,6 +4,7 @@ use regex::Regex;
 const KALSHI_API_BASE: &str = "https://demo-api.kalshi.co/trade-api/v2";
 const KALSHI_SITE_BASE: &str = "https://kalshi.com/markets/";
 const KALSHI_EXCHANGE_RATE: f32 = 100.0;
+const KALSHI_RATELIMIT: usize = 10;
 
 #[derive(Serialize, Debug)]
 struct LoginCredentials {
@@ -142,25 +143,8 @@ async fn get_login_token(client: &ClientWithMiddleware) -> String {
     response.token
 }
 
-pub async fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
-    let client = get_default_client();
-    let token = get_login_token(&client).await;
-    let api_url = KALSHI_API_BASE.to_owned() + "/markets/";
-    let response = client
-        .get(api_url.clone() + id)
-        .bearer_auth(&token)
-        .send()
-        .await
-        .unwrap()
-        .json::<SingleMarketResponse>()
-        .await
-        .unwrap();
-    let market_data = get_extended_data(&client, &response.market).await;
-    Vec::from([market_data.try_into().expect("Error processing market")])
-}
-
 pub async fn get_markets_all() -> Vec<MarketForDB> {
-    let client = get_default_client();
+    let client = get_reqwest_client_ratelimited(KALSHI_RATELIMIT);
     let token = get_login_token(&client).await;
     let api_url = KALSHI_API_BASE.to_owned() + "/markets";
     let limit: usize = 1000;
@@ -201,4 +185,21 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
                 .expect("Error converting market into standard fields.")
         })
         .collect()
+}
+
+pub async fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
+    let client = get_reqwest_client_ratelimited(KALSHI_RATELIMIT);
+    let token = get_login_token(&client).await;
+    let api_url = KALSHI_API_BASE.to_owned() + "/markets/";
+    let response = client
+        .get(api_url.clone() + id)
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap()
+        .json::<SingleMarketResponse>()
+        .await
+        .unwrap();
+    let market_data = get_extended_data(&client, &response.market).await;
+    Vec::from([market_data.try_into().expect("Error processing market")])
 }

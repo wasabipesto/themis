@@ -4,6 +4,7 @@ use std::cmp;
 const MANIFOLD_API_BASE: &str = "https://api.manifold.markets/v0";
 const MANIFOLD_SITE_BASE: &str = "https://manifold.markets/";
 const MANIFOLD_EXCHANGE_RATE: f32 = 100.0;
+const MANIFOLD_RATELIMIT: usize = 100;
 
 #[allow(non_snake_case)]
 #[derive(Deserialize, Debug, Clone)]
@@ -160,7 +161,7 @@ async fn get_extended_data(
     let mut before: Option<String> = None;
     let mut all_bet_data: Vec<Bet> = Vec::new();
     loop {
-        let response: Vec<Bet> = client
+        let response_text = client
             .get(&api_url)
             .query(&[("contractId", &market.id)])
             .query(&[("limit", limit)])
@@ -168,11 +169,16 @@ async fn get_extended_data(
             .send()
             .await
             .unwrap()
-            .json::<Vec<Bet>>()
+            .text()
             .await
             .unwrap();
-        let response_len = response.len();
-        all_bet_data.extend(response);
+        let bet_data: Vec<Bet> =
+            serde_json::from_str(&response_text).map_err(|e| MarketConvertError {
+                data: format!("{:?}", response_text),
+                message: format!("Manifold Bet failed to deserialize: {:?}", e),
+            })?;
+        let response_len = bet_data.len();
+        all_bet_data.extend(bet_data);
         if response_len == limit {
             before = Some(all_bet_data.last().unwrap().id.clone());
         } else {
@@ -187,7 +193,7 @@ async fn get_extended_data(
 }
 
 pub async fn get_markets_all() -> Vec<MarketForDB> {
-    let client = get_default_client();
+    let client = get_reqwest_client_ratelimited(MANIFOLD_RATELIMIT);
     let api_url = MANIFOLD_API_BASE.to_owned() + "/markets";
     let limit = 1000;
     let mut before: Option<String> = None;
@@ -202,7 +208,7 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
             .unwrap()
             .json::<Vec<MarketInfo>>()
             .await
-            .unwrap();
+            .expect("Manifold Market failed to deserialize");
         let market_data_futures: Vec<_> = response
             .iter()
             .filter(|market| market.is_valid())
@@ -231,7 +237,7 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
 }
 
 pub async fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
-    let client = get_default_client();
+    let client = get_reqwest_client_ratelimited(MANIFOLD_RATELIMIT);
     let api_url = MANIFOLD_API_BASE.to_owned() + "/market/" + &id;
     let response = client
         .get(&api_url)
@@ -240,7 +246,7 @@ pub async fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
         .unwrap()
         .json::<MarketInfo>()
         .await
-        .unwrap();
+        .expect("Manifold Market failed to deserialize");
     let market_data = get_extended_data(&client, &response).await.unwrap();
     Vec::from([market_data.try_into().expect("Error processing market")])
 }
