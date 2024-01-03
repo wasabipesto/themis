@@ -29,12 +29,6 @@ struct MarketInfo {
     volume: f32,
 }
 
-impl MarketInfoDetails for MarketInfo {
-    fn is_valid(&self) -> bool {
-        self.status == "finalized"
-    }
-}
-
 #[derive(Deserialize, Debug)]
 struct SingleMarketResponse {
     market: MarketInfo,
@@ -109,6 +103,10 @@ impl TryInto<MarketForDB> for MarketFull {
     }
 }
 
+fn is_valid(market: &MarketInfo) -> bool {
+    market.status == "finalized"
+}
+
 async fn get_extended_data(client: &ClientWithMiddleware, market: &MarketInfo) -> MarketFull {
     MarketFull {
         market: market.clone(),
@@ -167,7 +165,7 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
         let market_data_futures: Vec<_> = response
             .markets
             .iter()
-            .filter(|market| market.is_valid())
+            .filter(|market| is_valid(market))
             .map(|market| get_extended_data(&client, market))
             .collect();
         all_market_data.extend(join_all(market_data_futures).await);

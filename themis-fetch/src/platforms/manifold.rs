@@ -20,12 +20,6 @@ struct MarketInfo {
     volume: f32,
 }
 
-impl MarketInfoDetails for MarketInfo {
-    fn is_valid(&self) -> bool {
-        self.isResolved
-    }
-}
-
 #[allow(non_snake_case)]
 #[derive(Deserialize, Debug)]
 struct Bet {
@@ -125,6 +119,10 @@ impl TryInto<MarketForDB> for MarketFull {
     }
 }
 
+fn is_valid(market: &MarketInfo) -> bool {
+    market.isResolved
+}
+
 fn get_datetime_from_millis(ts: i64) -> Result<DateTime<Utc>, ()> {
     let dt = NaiveDateTime::from_timestamp_millis(ts);
     match dt {
@@ -211,7 +209,7 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
             .expect("Manifold Market failed to deserialize");
         let market_data_futures: Vec<_> = response
             .iter()
-            .filter(|market| market.is_valid())
+            .filter(|market| is_valid(market))
             .map(|market| get_extended_data(&client, market))
             .collect();
         let market_data: Vec<MarketFull> = join_all(market_data_futures)

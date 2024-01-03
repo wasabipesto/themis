@@ -63,12 +63,6 @@ pub struct MarketEvent {
     prob: f32,
 }
 
-/// Common traits for the basic MarketInfo objects.
-pub trait MarketInfoDetails {
-    /// Represents if the market is valid for further processing or if it should be ignored.
-    fn is_valid(&self) -> bool;
-}
-
 /// Common traits used to massage platform-specific market objects into the standard types.
 pub trait MarketFullDetails {
     /// Get the string representation of the market for debug pruposes.
