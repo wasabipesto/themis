@@ -25,10 +25,21 @@ impl MarketInfoDetails for MarketInfo {
     }
 }
 
+#[allow(non_snake_case)]
+#[derive(Deserialize, Debug)]
+struct Bet {
+    id: String,
+    //amount: f32,
+    //shares: f32,
+    //outcome: f32,
+    //probBefore: Option<f32>,
+    //probAfter: Option<f32>,
+}
+
 #[derive(Debug)]
 struct MarketFull {
     market: MarketInfo,
-    //bets: Bet,
+    bets: Vec<Bet>,
 }
 
 impl MarketFullDetails for MarketFull {
@@ -106,8 +117,33 @@ impl TryInto<MarketForDB> for MarketFull {
 }
 
 async fn get_extended_data(client: &ClientWithMiddleware, market: &MarketInfo) -> MarketFull {
+    let api_url = MANIFOLD_API_BASE.to_owned() + "/bets";
+    let limit = 1000;
+    let mut before: Option<String> = None;
+    let mut all_bet_data: Vec<Bet> = Vec::new();
+    loop {
+        let response: Vec<Bet> = client
+            .get(&api_url)
+            .query(&[("contractId", &market.id)])
+            .query(&[("limit", limit)])
+            .query(&[("before", before)])
+            .send()
+            .await
+            .unwrap()
+            .json::<Vec<Bet>>()
+            .await
+            .unwrap();
+        let response_len = response.len();
+        all_bet_data.extend(response);
+        if response_len == limit {
+            before = Some(all_bet_data.last().unwrap().id.clone());
+        } else {
+            break;
+        }
+    }
     MarketFull {
         market: market.clone(),
+        bets: all_bet_data,
     }
 }
 
