@@ -16,7 +16,7 @@ struct LoginResponse {
     token: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 struct MarketInfo {
     ticker: String,
     event_ticker: String,
@@ -82,7 +82,7 @@ impl MarketFullDetails for MarketFull {
         Ok(self.market.close_time)
     }
     fn volume_usd(&self) -> f32 {
-        self.market.volume as f32 / KALSHI_EXCHANGE_RATE
+        self.market.volume / KALSHI_EXCHANGE_RATE
     }
 }
 
@@ -100,8 +100,10 @@ impl TryInto<MarketForDB> for MarketFull {
     }
 }
 
-fn get_extended_data(market: MarketInfo) -> MarketFull {
-    MarketFull { market }
+async fn get_extended_data(client: &ClientWithMiddleware, market: &MarketInfo) -> MarketFull {
+    MarketFull {
+        market: market.clone(),
+    }
 }
 
 async fn get_login_token(client: &ClientWithMiddleware) -> String {
@@ -141,7 +143,7 @@ pub async fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
         .json::<SingleMarketResponse>()
         .await
         .unwrap();
-    let market_data = get_extended_data(response.market);
+    let market_data = get_extended_data(&client, &response.market).await;
     Vec::from([market_data.try_into().expect("Error processing market")])
 }
 
@@ -166,13 +168,13 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
             .json::<BulkMarketResponse>()
             .await
             .unwrap();
-        let market_data: Vec<MarketFull> = response
+        let market_data_futures: Vec<_> = response
             .markets
-            .into_iter()
+            .iter()
             .filter(|market| market.is_valid())
-            .map(|market| get_extended_data(market))
+            .map(|market| get_extended_data(&client, market))
             .collect();
-        all_market_data.extend(market_data);
+        all_market_data.extend(join_all(market_data_futures).await);
         if response.cursor.len() > 1 {
             cursor = Some(response.cursor);
         } else {

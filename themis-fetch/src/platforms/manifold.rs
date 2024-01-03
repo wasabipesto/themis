@@ -6,7 +6,7 @@ const MANIFOLD_SITE_BASE: &str = "https://manifold.markets/";
 const MANIFOLD_EXCHANGE_RATE: f32 = 100.0;
 
 #[allow(non_snake_case)]
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 struct MarketInfo {
     id: String,
     question: String,
@@ -87,7 +87,7 @@ impl MarketFullDetails for MarketFull {
         }
     }
     fn volume_usd(&self) -> f32 {
-        self.market.volume as f32 / MANIFOLD_EXCHANGE_RATE
+        self.market.volume / MANIFOLD_EXCHANGE_RATE
     }
 }
 
@@ -105,8 +105,10 @@ impl TryInto<MarketForDB> for MarketFull {
     }
 }
 
-fn get_extended_data(market: MarketInfo) -> MarketFull {
-    MarketFull { market }
+async fn get_extended_data(client: &ClientWithMiddleware, market: &MarketInfo) -> MarketFull {
+    MarketFull {
+        market: market.clone(),
+    }
 }
 
 pub async fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
@@ -120,7 +122,7 @@ pub async fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
         .json::<MarketInfo>()
         .await
         .unwrap();
-    let market_data = get_extended_data(response);
+    let market_data = get_extended_data(&client, &response).await;
     Vec::from([market_data.try_into().expect("Error processing market")])
 }
 
@@ -141,14 +143,13 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
             .json::<Vec<MarketInfo>>()
             .await
             .unwrap();
-        let response_len = response.len();
-        let market_data: Vec<MarketFull> = response
-            .into_iter()
+        let market_data_futures: Vec<_> = response
+            .iter()
             .filter(|market| market.is_valid())
-            .map(|market| get_extended_data(market))
+            .map(|market| get_extended_data(&client, market))
             .collect();
-        all_market_data.extend(market_data);
-        if response_len == limit {
+        all_market_data.extend(join_all(market_data_futures).await);
+        if response.len() == limit {
             before = Some(all_market_data.last().unwrap().market.id.clone());
         } else {
             break;

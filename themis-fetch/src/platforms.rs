@@ -2,6 +2,7 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use clap::ValueEnum;
 use core::fmt;
 use diesel::{prelude::*, Insertable};
+use futures::future::join_all;
 use reqwest_leaky_bucket::leaky_bucket::RateLimiter;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};

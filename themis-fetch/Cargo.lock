@@ -1327,6 +1327,7 @@ dependencies = [
  "chrono",
  "clap",
  "diesel",
+ "futures",
  "regex",
  "reqwest",
  "reqwest-leaky-bucket",

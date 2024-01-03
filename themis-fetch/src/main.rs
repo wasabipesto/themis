@@ -52,7 +52,7 @@ fn main() {
     let mut markets: Vec<MarketForDB> = Vec::new();
     let runtime = tokio::runtime::Runtime::new().unwrap();
     runtime.block_on(async {
-        for platform in platforms.clone() {
+        for platform in platforms {
             let platform_timer = Instant::now();
             println!("{:?}: Processing started...", &platform);
             let platform_markets = if let Some(id) = &args.id {
