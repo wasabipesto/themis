@@ -53,30 +53,25 @@ fn main() {
     let runtime = tokio::runtime::Runtime::new().unwrap();
     runtime.block_on(async {
         for platform in platforms {
-            let platform_timer = Instant::now();
+            let timer = Instant::now();
             println!("{:?}: Processing started...", &platform);
-            let platform_markets = if let Some(id) = &args.id {
-                match &platform {
-                    Platform::Manifold => platforms::manifold::get_market_by_id(id).await,
-                    Platform::Kalshi => platforms::kalshi::get_market_by_id(id).await,
-                }
-            } else {
-                match &platform {
-                    Platform::Manifold => platforms::manifold::get_markets_all().await,
-                    Platform::Kalshi => platforms::kalshi::get_markets_all().await,
-                }
+            let platform_markets = match (&platform, &args.id) {
+                (Platform::Kalshi, None) => platforms::kalshi::get_markets_all().await,
+                (Platform::Kalshi, Some(id)) => platforms::kalshi::get_market_by_id(id).await,
+                (Platform::Manifold, None) => platforms::manifold::get_markets_all().await,
+                (Platform::Manifold, Some(id)) => platforms::manifold::get_market_by_id(id).await,
             };
             println!(
-                "{:?}: Processing complete: {:?} markets processed in {:?}.",
+                "{:?}: {} markets processed in {:?}.",
                 &platform,
                 platform_markets.len(),
-                platform_timer.elapsed()
+                timer.elapsed()
             );
             markets.extend(platform_markets);
         }
     });
     println!(
-        "All processing complete: {:?} markets processed in {:?}.",
+        "All processing complete: {} markets processed in {:?}.",
         markets.len(),
         total_timer.elapsed()
     );
