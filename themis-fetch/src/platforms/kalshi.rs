@@ -48,10 +48,13 @@ struct BulkMarketResponse {
 #[derive(Debug)]
 struct MarketFull {
     market: MarketInfo,
-    //bets: Bet,
+    events: Vec<MarketEvent>,
 }
 
 impl MarketFullDetails for MarketFull {
+    fn debug(&self) -> String {
+        format!("{:?}", self)
+    }
     fn title(&self) -> String {
         self.market.title.to_owned()
     }
@@ -75,14 +78,17 @@ impl MarketFullDetails for MarketFull {
             + "/#"
             + &self.market.event_ticker.to_lowercase()
     }
-    fn open_date(&self) -> Result<DateTime<Utc>, MarketConvertError> {
+    fn open_dt(&self) -> Result<DateTime<Utc>, MarketConvertError> {
         Ok(self.market.open_time)
     }
-    fn close_date(&self) -> Result<DateTime<Utc>, MarketConvertError> {
+    fn close_dt(&self) -> Result<DateTime<Utc>, MarketConvertError> {
         Ok(self.market.close_time)
     }
     fn volume_usd(&self) -> f32 {
         self.market.volume / KALSHI_EXCHANGE_RATE
+    }
+    fn events(&self) -> Vec<MarketEvent> {
+        self.events.to_owned()
     }
 }
 
@@ -96,6 +102,8 @@ impl TryInto<MarketForDB> for MarketFull {
             url: self.url(),
             open_days: self.open_days()?,
             volume_usd: self.volume_usd(),
+            prob_at_midpoint: self.prob_at_percent(0.5)?,
+            prob_at_close: self.prob_at_percent(1.0)?,
         })
     }
 }
@@ -103,6 +111,10 @@ impl TryInto<MarketForDB> for MarketFull {
 async fn get_extended_data(client: &ClientWithMiddleware, market: &MarketInfo) -> MarketFull {
     MarketFull {
         market: market.clone(),
+        events: Vec::from([MarketEvent {
+            time: market.open_time,
+            prob: 0.5,
+        }]),
     }
 }
 

@@ -29,20 +29,24 @@ impl MarketInfoDetails for MarketInfo {
 #[derive(Deserialize, Debug)]
 struct Bet {
     id: String,
+    createdTime: i64,
+    //probBefore: Option<f32>,
+    probAfter: Option<f32>,
     //amount: f32,
     //shares: f32,
     //outcome: f32,
-    //probBefore: Option<f32>,
-    //probAfter: Option<f32>,
 }
 
 #[derive(Debug)]
 struct MarketFull {
     market: MarketInfo,
-    bets: Vec<Bet>,
+    events: Vec<MarketEvent>,
 }
 
 impl MarketFullDetails for MarketFull {
+    fn debug(&self) -> String {
+        format!("{:?}", self)
+    }
     fn title(&self) -> String {
         self.market.question.to_owned()
     }
@@ -55,18 +59,18 @@ impl MarketFullDetails for MarketFull {
     fn url(&self) -> String {
         MANIFOLD_SITE_BASE.to_owned() + &self.market.creatorUsername + "/" + &self.market.slug
     }
-    fn open_date(&self) -> Result<DateTime<Utc>, MarketConvertError> {
+    fn open_dt(&self) -> Result<DateTime<Utc>, MarketConvertError> {
         let ts = self.market.createdTime;
         let dt = NaiveDateTime::from_timestamp_millis(ts);
         match dt {
             Some(dt) => Ok(DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)),
             None => Err(MarketConvertError::new(
-                format!("{:?}", self),
-                "Manifold API createdTime could not be converted into DateTime",
+                self.debug(),
+                "Manifold Market createdTime could not be converted into DateTime",
             )),
         }
     }
-    fn close_date(&self) -> Result<DateTime<Utc>, MarketConvertError> {
+    fn close_dt(&self) -> Result<DateTime<Utc>, MarketConvertError> {
         let ts = match (self.market.closeTime, self.market.resolutionTime) {
             // both close and resolution times are present
             (Some(close_time), Some(resolution_time)) => {
@@ -85,20 +89,22 @@ impl MarketFullDetails for MarketFull {
             // neither is present
             (None, None) => Err(MarketConvertError::new(
                 format!("{:?}", self),
-                "Manifold API response did not include closeTime or resolutionTime",
+                "Manifold Market response did not include closeTime or resolutionTime",
             )),
         }?;
-        let dt = NaiveDateTime::from_timestamp_millis(ts);
-        match dt {
-            Some(dt) => Ok(DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)),
-            None => Err(MarketConvertError::new(
-                format!("{:?}", self),
-                "Manifold API closeTime or resolutionTime could not be converted into DateTime",
+        match get_datetime_from_millis(ts) {
+            Ok(time) => Ok(time),
+            Err(_) => Err(MarketConvertError::new(
+                format!("{:?}", &self),
+                "Manifold Market closeTime or resolveTime could not be converted into DateTime",
             )),
         }
     }
     fn volume_usd(&self) -> f32 {
         self.market.volume / MANIFOLD_EXCHANGE_RATE
+    }
+    fn events(&self) -> Vec<MarketEvent> {
+        self.events.to_owned()
     }
 }
 
@@ -112,11 +118,43 @@ impl TryInto<MarketForDB> for MarketFull {
             url: self.url(),
             open_days: self.open_days()?,
             volume_usd: self.volume_usd(),
+            prob_at_midpoint: self.prob_at_percent(0.5)?,
+            prob_at_close: self.prob_at_percent(1.0)?,
         })
     }
 }
 
-async fn get_extended_data(client: &ClientWithMiddleware, market: &MarketInfo) -> MarketFull {
+fn get_datetime_from_millis(ts: i64) -> Result<DateTime<Utc>, ()> {
+    let dt = NaiveDateTime::from_timestamp_millis(ts);
+    match dt {
+        Some(dt) => Ok(DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)),
+        None => Err(()),
+    }
+}
+
+fn get_events_from_bets(mut bets: Vec<Bet>) -> Result<Vec<MarketEvent>, MarketConvertError> {
+    let mut result = Vec::new();
+    bets.sort_unstable_by_key(|b| b.createdTime);
+    for bet in bets {
+        if let Some(prob) = bet.probAfter {
+            if let Ok(time) = get_datetime_from_millis(bet.createdTime) {
+                result.push(MarketEvent { time, prob });
+            } else {
+                return Err(MarketConvertError::new(
+                    format!("{:?}", bet),
+                    "Manifold Bet createdTime timestamp could not be converted into DateTime",
+                ));
+            }
+        }
+    }
+
+    Ok(result)
+}
+
+async fn get_extended_data(
+    client: &ClientWithMiddleware,
+    market: &MarketInfo,
+) -> Result<MarketFull, MarketConvertError> {
     let api_url = MANIFOLD_API_BASE.to_owned() + "/bets";
     let limit = 1000;
     let mut before: Option<String> = None;
@@ -141,25 +179,11 @@ async fn get_extended_data(client: &ClientWithMiddleware, market: &MarketInfo) -
             break;
         }
     }
-    MarketFull {
-        market: market.clone(),
-        bets: all_bet_data,
-    }
-}
 
-pub async fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
-    let client = get_default_client();
-    let api_url = MANIFOLD_API_BASE.to_owned() + "/market/" + &id;
-    let response = client
-        .get(&api_url)
-        .send()
-        .await
-        .unwrap()
-        .json::<MarketInfo>()
-        .await
-        .unwrap();
-    let market_data = get_extended_data(&client, &response).await;
-    Vec::from([market_data.try_into().expect("Error processing market")])
+    Ok(MarketFull {
+        market: market.clone(),
+        events: get_events_from_bets(all_bet_data)?,
+    })
 }
 
 pub async fn get_markets_all() -> Vec<MarketForDB> {
@@ -184,7 +208,12 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
             .filter(|market| market.is_valid())
             .map(|market| get_extended_data(&client, market))
             .collect();
-        all_market_data.extend(join_all(market_data_futures).await);
+        let market_data: Vec<MarketFull> = join_all(market_data_futures)
+            .await
+            .into_iter()
+            .map(|i| i.expect("Error processing market"))
+            .collect();
+        all_market_data.extend(market_data);
         if response.len() == limit {
             before = Some(all_market_data.last().unwrap().market.id.clone());
         } else {
@@ -199,4 +228,19 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
                 .expect("Error converting market into standard fields.")
         })
         .collect()
+}
+
+pub async fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
+    let client = get_default_client();
+    let api_url = MANIFOLD_API_BASE.to_owned() + "/market/" + &id;
+    let response = client
+        .get(&api_url)
+        .send()
+        .await
+        .unwrap()
+        .json::<MarketInfo>()
+        .await
+        .unwrap();
+    let market_data = get_extended_data(&client, &response).await.unwrap();
+    Vec::from([market_data.try_into().expect("Error processing market")])
 }
