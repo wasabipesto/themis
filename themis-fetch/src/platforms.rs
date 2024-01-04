@@ -179,12 +179,10 @@ impl fmt::Display for MarketConvertError {
 fn get_reqwest_client_ratelimited(rps: usize) -> ClientWithMiddleware {
     // retry requests that get server errors with an exponential backoff timer
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-    // rate limit to n requests per 100ms sustained with a max burst of 10x that
-    let req_per_100ms = rps / 10;
+    // rate limit to n requests per second
     let rate_limiter = RateLimiter::builder()
-        .max(rps)
-        .initial(0)
-        .refill(req_per_100ms)
+        .interval(std::time::Duration::from_millis(1000))
+        .refill(rps)
         .build();
 
     ClientBuilder::new(reqwest::Client::new())

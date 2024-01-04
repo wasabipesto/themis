@@ -107,7 +107,7 @@ fn is_valid(market: &MarketInfo) -> bool {
     market.status == "finalized"
 }
 
-async fn get_extended_data(client: &ClientWithMiddleware, market: &MarketInfo) -> MarketFull {
+async fn get_extended_data(_client: &ClientWithMiddleware, market: &MarketInfo) -> MarketFull {
     MarketFull {
         market: market.clone(),
         events: Vec::from([MarketEvent {

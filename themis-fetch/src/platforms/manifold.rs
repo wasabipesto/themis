@@ -4,7 +4,7 @@ use std::cmp;
 const MANIFOLD_API_BASE: &str = "https://api.manifold.markets/v0";
 const MANIFOLD_SITE_BASE: &str = "https://manifold.markets/";
 const MANIFOLD_EXCHANGE_RATE: f32 = 100.0;
-const MANIFOLD_RATELIMIT: usize = 100;
+const MANIFOLD_RATELIMIT: usize = 20;
 
 #[allow(non_snake_case)]
 #[derive(Deserialize, Debug, Clone)]
@@ -195,7 +195,7 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
     let api_url = MANIFOLD_API_BASE.to_owned() + "/markets";
     let limit = 1000;
     let mut before: Option<String> = None;
-    let mut all_market_data: Vec<MarketFull> = Vec::new();
+    let mut all_market_data = Vec::new();
     loop {
         let response: Vec<MarketInfo> = client
             .get(&api_url)
@@ -212,31 +212,29 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
             .filter(|market| is_valid(market))
             .map(|market| get_extended_data(&client, market))
             .collect();
-        let market_data: Vec<MarketFull> = join_all(market_data_futures)
+        let market_data: Vec<MarketForDB> = join_all(market_data_futures)
             .await
             .into_iter()
             .map(|i| i.expect("Error processing market"))
+            .map(|market| {
+                market
+                    .try_into()
+                    .expect("Error converting market into standard fields.")
+            })
             .collect();
         all_market_data.extend(market_data);
         if response.len() == limit {
-            before = Some(all_market_data.last().unwrap().market.id.clone());
+            before = Some(response.last().unwrap().id.clone());
         } else {
             break;
         }
     }
     all_market_data
-        .into_iter()
-        .map(|market| {
-            market
-                .try_into()
-                .expect("Error converting market into standard fields.")
-        })
-        .collect()
 }
 
 pub async fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
     let client = get_reqwest_client_ratelimited(MANIFOLD_RATELIMIT);
-    let api_url = MANIFOLD_API_BASE.to_owned() + "/market/" + &id;
+    let api_url = MANIFOLD_API_BASE.to_owned() + "/market/" + id;
     let response = client
         .get(&api_url)
         .send()
@@ -245,6 +243,10 @@ pub async fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
         .json::<MarketInfo>()
         .await
         .expect("Manifold Market failed to deserialize");
-    let market_data = get_extended_data(&client, &response).await.unwrap();
-    Vec::from([market_data.try_into().expect("Error processing market")])
+    let market_data = get_extended_data(&client, &response)
+        .await
+        .unwrap()
+        .try_into()
+        .expect("Error processing market");
+    Vec::from([market_data])
 }
