@@ -46,7 +46,7 @@ struct MarketFull {
     events: Vec<MarketEvent>,
 }
 
-impl MarketFullDetails for MarketFull {
+impl MarketStandardizer for MarketFull {
     fn debug(&self) -> String {
         format!("{:?}", self)
     }
@@ -87,10 +87,10 @@ impl MarketFullDetails for MarketFull {
     }
 }
 
-impl TryInto<MarketForDB> for MarketFull {
+impl TryInto<MarketStandard> for MarketFull {
     type Error = MarketConvertError;
-    fn try_into(self) -> Result<MarketForDB, MarketConvertError> {
-        Ok(MarketForDB {
+    fn try_into(self) -> Result<MarketStandard, MarketConvertError> {
+        Ok(MarketStandard {
             title: self.title(),
             platform: self.platform(),
             platform_id: self.platform_id(),
@@ -107,14 +107,17 @@ fn is_valid(market: &MarketInfo) -> bool {
     market.status == "finalized" && market.market_type == "binary"
 }
 
-async fn get_extended_data(_client: &ClientWithMiddleware, market: &MarketInfo) -> MarketFull {
-    MarketFull {
+async fn get_extended_data(
+    _client: &ClientWithMiddleware,
+    market: &MarketInfo,
+) -> Result<MarketFull, MarketConvertError> {
+    Ok(MarketFull {
         market: market.clone(),
         events: Vec::from([MarketEvent {
             time: market.open_time,
             prob: 0.5,
         }]),
-    }
+    })
 }
 
 async fn get_login_token(client: &ClientWithMiddleware) -> String {
@@ -125,7 +128,6 @@ async fn get_login_token(client: &ClientWithMiddleware) -> String {
         password: var("KALSHI_PASSWORD")
             .expect("Required environment variable KALSHI_PASSWORD not set."),
     };
-    //println!("Kalshi: Logging in with: {:?}", credentials);
     let response = client
         .post(api_url)
         .json(&credentials)
@@ -137,17 +139,16 @@ async fn get_login_token(client: &ClientWithMiddleware) -> String {
         .json::<LoginResponse>()
         .await
         .unwrap();
-    //println!("Kalshi: Logged in with token: {}", &response.token);
     response.token
 }
 
-pub async fn get_markets_all() -> Vec<MarketForDB> {
+pub async fn get_markets_all() -> Vec<MarketStandard> {
     let client = get_reqwest_client_ratelimited(KALSHI_RATELIMIT);
     let token = get_login_token(&client).await;
     let api_url = KALSHI_API_BASE.to_owned() + "/markets";
     let limit: usize = 1000;
     let mut cursor: Option<String> = None;
-    let mut all_market_data: Vec<MarketFull> = Vec::new();
+    let mut all_market_data = Vec::new();
     loop {
         let response = client
             .get(&api_url)
@@ -156,9 +157,9 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
             .query(&[("cursor", cursor.clone())])
             .send()
             .await
-            .unwrap()
+            .expect("HTTP call failed to execute")
             .error_for_status()
-            .unwrap_or_else(|e| panic!("Kalshi: Query failed: {:?}", e))
+            .unwrap_or_else(|e| panic!("Query failed: {:?}", e))
             .json::<BulkMarketResponse>()
             .await
             .unwrap();
@@ -168,7 +169,17 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
             .filter(|market| is_valid(market))
             .map(|market| get_extended_data(&client, market))
             .collect();
-        all_market_data.extend(join_all(market_data_futures).await);
+        let market_data: Vec<MarketStandard> = join_all(market_data_futures)
+            .await
+            .into_iter()
+            .map(|i| i.expect("Error getting extended market data"))
+            .map(|market| {
+                market
+                    .try_into()
+                    .expect("Error converting market into standard fields")
+            })
+            .collect();
+        all_market_data.extend(market_data);
         if response.cursor.len() > 1 {
             cursor = Some(response.cursor);
         } else {
@@ -185,19 +196,27 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
         .collect()
 }
 
-pub async fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
+pub async fn get_market_by_id(id: &String) -> Vec<MarketStandard> {
     let client = get_reqwest_client_ratelimited(KALSHI_RATELIMIT);
     let token = get_login_token(&client).await;
     let api_url = KALSHI_API_BASE.to_owned() + "/markets/";
-    let response = client
+    let market_single = client
         .get(api_url.clone() + id)
         .bearer_auth(&token)
         .send()
         .await
-        .unwrap()
+        .expect("HTTP call failed to execute")
         .json::<SingleMarketResponse>()
         .await
-        .unwrap();
-    let market_data = get_extended_data(&client, &response.market).await;
-    Vec::from([market_data.try_into().expect("Error processing market")])
+        .expect("Market failed to deserialize")
+        .market;
+    if !is_valid(&market_single) {
+        println!("Market is not valid for processing, this may fail.")
+    }
+    let market_data = get_extended_data(&client, &market_single)
+        .await
+        .expect("Error getting extended market data")
+        .try_into()
+        .expect("ErError converting market into standard fields");
+    Vec::from([market_data])
 }

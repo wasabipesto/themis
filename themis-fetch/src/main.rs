@@ -6,7 +6,7 @@ use std::fs::File;
 use std::time::Instant;
 
 mod platforms;
-use crate::platforms::{market, MarketForDB, Platform};
+use crate::platforms::{market, MarketStandard, Platform};
 
 const OUTPUT_KEYWORD_DB: &str = "db";
 const OUTPUT_KEYWORD_STDOUT: &str = "stdout";
@@ -49,7 +49,7 @@ fn main() {
         println!("Initialization: Processing platforms: {:?}", &platforms);
     }
     let total_timer = Instant::now();
-    let mut markets: Vec<MarketForDB> = Vec::new();
+    let mut markets: Vec<MarketStandard> = Vec::new();
     let runtime = tokio::runtime::Runtime::new().unwrap();
     runtime.block_on(async {
         for platform in platforms {

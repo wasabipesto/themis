@@ -45,7 +45,7 @@ table! {
 /// This is the object type that is sent to the database, file, or console.
 #[derive(Debug, Serialize, Insertable)]
 #[diesel(table_name = market)]
-pub struct MarketForDB {
+pub struct MarketStandard {
     title: String,
     platform: String,
     platform_id: String,
@@ -63,8 +63,8 @@ pub struct MarketEvent {
     prob: f32,
 }
 
-/// Common traits used to massage platform-specific market objects into the standard types.
-pub trait MarketFullDetails {
+/// Common traits used to standardize platform-specific market objects into the standard types.
+pub trait MarketStandardizer {
     /// Get the string representation of the market for debug pruposes.
     fn debug(&self) -> String;
 

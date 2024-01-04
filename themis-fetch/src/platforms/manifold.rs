@@ -40,7 +40,7 @@ struct MarketFull {
     events: Vec<MarketEvent>,
 }
 
-impl MarketFullDetails for MarketFull {
+impl MarketStandardizer for MarketFull {
     fn debug(&self) -> String {
         format!("{:?}", self)
     }
@@ -109,10 +109,10 @@ impl MarketFullDetails for MarketFull {
     }
 }
 
-impl TryInto<MarketForDB> for MarketFull {
+impl TryInto<MarketStandard> for MarketFull {
     type Error = MarketConvertError;
-    fn try_into(self) -> Result<MarketForDB, MarketConvertError> {
-        Ok(MarketForDB {
+    fn try_into(self) -> Result<MarketStandard, MarketConvertError> {
+        Ok(MarketStandard {
             title: self.title(),
             platform: self.platform(),
             platform_id: self.platform_id(),
@@ -174,14 +174,14 @@ async fn get_extended_data(
             .query(&[("before", before)])
             .send()
             .await
-            .unwrap()
+            .expect("HTTP call failed to execute")
             .text()
             .await
-            .unwrap();
+            .expect("Failed to get response text");
         let bet_data: Vec<Bet> =
             serde_json::from_str(&response_text).map_err(|e| MarketConvertError {
                 data: format!("{:?}", response_text),
-                message: format!("Manifold Bet failed to deserialize: {:?}", e),
+                message: format!("Bet failed to deserialize: {:?}", e),
             })?;
         let response_len = bet_data.len();
         all_bet_data.extend(bet_data);
@@ -198,7 +198,7 @@ async fn get_extended_data(
     })
 }
 
-pub async fn get_markets_all() -> Vec<MarketForDB> {
+pub async fn get_markets_all() -> Vec<MarketStandard> {
     let client = get_reqwest_client_ratelimited(MANIFOLD_RATELIMIT);
     let api_url = MANIFOLD_API_BASE.to_owned() + "/markets";
     let limit = 1000;
@@ -211,19 +211,19 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
             .query(&[("before", before)])
             .send()
             .await
-            .unwrap()
+            .expect("HTTP call failed to execute")
             .json::<Vec<MarketInfo>>()
             .await
-            .expect("Manifold Market failed to deserialize");
+            .expect("Market failed to deserialize");
         let market_data_futures: Vec<_> = market_response
             .iter()
             .filter(|market| is_valid(market))
             .map(|market| get_extended_data(&client, market))
             .collect();
-        let market_data: Vec<MarketForDB> = join_all(market_data_futures)
+        let market_data: Vec<MarketStandard> = join_all(market_data_futures)
             .await
             .into_iter()
-            .map(|i| i.expect("Error processing market"))
+            .map(|i| i.expect("Error getting extended market data"))
             .map(|market| {
                 market
                     .try_into()
@@ -240,24 +240,24 @@ pub async fn get_markets_all() -> Vec<MarketForDB> {
     all_market_data
 }
 
-pub async fn get_market_by_id(id: &String) -> Vec<MarketForDB> {
+pub async fn get_market_by_id(id: &String) -> Vec<MarketStandard> {
     let client = get_reqwest_client_ratelimited(MANIFOLD_RATELIMIT);
     let api_url = MANIFOLD_API_BASE.to_owned() + "/market/" + id;
     let market_single = client
         .get(&api_url)
         .send()
         .await
-        .unwrap()
+        .expect("HTTP call failed to execute")
         .json::<MarketInfo>()
         .await
-        .expect("Manifold Market failed to deserialize");
+        .expect("Market failed to deserialize");
     if !is_valid(&market_single) {
         println!("Market is not valid for processing, this may fail.")
     }
     let market_data = get_extended_data(&client, &market_single)
         .await
-        .unwrap()
+        .expect("Error getting extended market data")
         .try_into()
-        .expect("Error processing market");
+        .expect("Error converting market into standard fields");
     Vec::from([market_data])
 }
