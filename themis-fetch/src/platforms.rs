@@ -104,15 +104,14 @@ pub trait MarketFullDetails {
     fn prob_at_time(&self, time: DateTime<Utc>) -> Result<f32, MarketConvertError> {
         if time < self.open_dt()? {
             // requested time is before market starts, throw error
-            return Err(MarketConvertError::new(
-                self.debug(),
-                format!(
+            return Err(MarketConvertError {
+                data: self.debug(),
+                message: format!(
                     "Requested probability at {:?} before market open at {:?}.",
                     time,
                     self.open_dt()?
-                )
-                .as_str(),
-            ));
+                ),
+            });
         }
         let mut prev_prob = DEFAULT_OPENING_PROB;
         for event in self.events() {
@@ -156,14 +155,6 @@ pub trait MarketFullDetails {
 pub struct MarketConvertError {
     data: String,
     message: String,
-}
-impl MarketConvertError {
-    pub fn new(data: String, message: &str) -> Self {
-        MarketConvertError {
-            data,
-            message: message.to_string(),
-        }
-    }
 }
 impl fmt::Display for MarketConvertError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

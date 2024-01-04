@@ -21,7 +21,7 @@ struct LoginResponse {
 struct MarketInfo {
     ticker: String,
     event_ticker: String,
-    //market_type: String,
+    market_type: String,
     title: String,
     open_time: DateTime<Utc>,
     close_time: DateTime<Utc>,
