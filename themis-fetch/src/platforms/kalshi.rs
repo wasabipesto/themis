@@ -104,7 +104,7 @@ impl TryInto<MarketForDB> for MarketFull {
 }
 
 fn is_valid(market: &MarketInfo) -> bool {
-    market.status == "finalized"
+    market.status == "finalized" && market.market_type == "binary"
 }
 
 async fn get_extended_data(_client: &ClientWithMiddleware, market: &MarketInfo) -> MarketFull {
