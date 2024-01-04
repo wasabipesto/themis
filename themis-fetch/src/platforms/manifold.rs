@@ -14,12 +14,14 @@ struct MarketInfo {
     slug: String,
     creatorUsername: String,
     mechanism: String,
+    volume: f32,
     outcomeType: String,
     isResolved: bool,
+    resolution: String,
+    resolutionProbability: Option<f32>,
     createdTime: i64,
     closeTime: Option<i64>, // polls and bounties lack close times
     resolutionTime: Option<i64>,
-    volume: f32,
 }
 
 #[allow(non_snake_case)]
@@ -107,6 +109,27 @@ impl MarketStandardizer for MarketFull {
     fn events(&self) -> Vec<MarketEvent> {
         self.events.to_owned()
     }
+    fn resolution(&self) -> Result<f32, MarketConvertError> {
+        match self.market.resolution.as_str() {
+            "YES" => Ok(1.0),
+            "NO" => Ok(0.0),
+            "MKT" => {
+                if let Some(res) = self.market.resolutionProbability {
+                    Ok(res)
+                } else {
+                    Err(MarketConvertError {
+                        data: self.debug(),
+                        message: "Market resolved to MKT but is missing resolutionProbability"
+                            .to_string(),
+                    })
+                }
+            }
+            _ => Err(MarketConvertError {
+                data: self.debug(),
+                message: "Market resolved to something besides YES, NO, or MKT".to_string(),
+            }),
+        }
+    }
 }
 
 impl TryInto<MarketStandard> for MarketFull {
@@ -121,12 +144,16 @@ impl TryInto<MarketStandard> for MarketFull {
             volume_usd: self.volume_usd(),
             prob_at_midpoint: self.prob_at_percent(0.5)?,
             prob_at_close: self.prob_at_percent(1.0)?,
+            resolution: self.resolution()?,
         })
     }
 }
 
 fn is_valid(market: &MarketInfo) -> bool {
-    market.isResolved && market.mechanism == "cpmm-1" && market.outcomeType == "BINARY"
+    market.isResolved
+        && market.mechanism == "cpmm-1"
+        && market.outcomeType == "BINARY"
+        && market.resolution != "CANCEL"
 }
 
 fn get_datetime_from_millis(ts: i64) -> Result<DateTime<Utc>, ()> {

@@ -27,6 +27,7 @@ struct MarketInfo {
     close_time: DateTime<Utc>,
     status: String,
     volume: f32,
+    result: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -85,6 +86,16 @@ impl MarketStandardizer for MarketFull {
     fn events(&self) -> Vec<MarketEvent> {
         self.events.to_owned()
     }
+    fn resolution(&self) -> Result<f32, MarketConvertError> {
+        match self.market.result.as_str() {
+            "yes" => Ok(1.0),
+            "no" => Ok(0.0),
+            _ => Err(MarketConvertError {
+                data: self.debug(),
+                message: "Market resolved to something besides YES or NO".to_string(),
+            }),
+        }
+    }
 }
 
 impl TryInto<MarketStandard> for MarketFull {
@@ -99,6 +110,7 @@ impl TryInto<MarketStandard> for MarketFull {
             volume_usd: self.volume_usd(),
             prob_at_midpoint: self.prob_at_percent(0.5)?,
             prob_at_close: self.prob_at_percent(1.0)?,
+            resolution: self.resolution()?,
         })
     }
 }

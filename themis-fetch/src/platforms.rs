@@ -38,6 +38,7 @@ table! {
         volume_usd -> Float,
         prob_at_midpoint -> Float,
         prob_at_close -> Float,
+        resolution -> Float,
     }
 }
 
@@ -54,6 +55,7 @@ pub struct MarketStandard {
     volume_usd: f32,
     prob_at_midpoint: f32,
     prob_at_close: f32,
+    resolution: f32,
 }
 
 /// Simple struct for market events. The timestamp declares when the probability became that value.
@@ -96,6 +98,9 @@ pub trait MarketStandardizer {
 
     /// Get a list of probability-affecting events during the market (derived from bets/trades).
     fn events(&self) -> Vec<MarketEvent>;
+
+    /// Get the actual resolved value (0 for no, 1 for yes, or in-between)
+    fn resolution(&self) -> Result<f32, MarketConvertError>;
 
     /// Get the market's probability at a specific time.
     /// If a time before the first event is requested, we use a default opening of 50%.
@@ -174,6 +179,7 @@ fn get_reqwest_client_ratelimited(rps: usize) -> ClientWithMiddleware {
     let rate_limiter = RateLimiter::builder()
         .interval(std::time::Duration::from_millis(1000))
         .refill(rps)
+        .max(rps)
         .build();
 
     ClientBuilder::new(reqwest::Client::new())
