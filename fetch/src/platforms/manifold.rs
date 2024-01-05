@@ -39,7 +39,7 @@ struct Bet {
 #[derive(Debug)]
 struct MarketFull {
     market: MarketInfo,
-    events: Vec<MarketEvent>,
+    events: Vec<ProbUpdate>,
 }
 
 impl MarketStandardizer for MarketFull {
@@ -106,7 +106,7 @@ impl MarketStandardizer for MarketFull {
     fn volume_usd(&self) -> f32 {
         self.market.volume / MANIFOLD_EXCHANGE_RATE
     }
-    fn events(&self) -> Vec<MarketEvent> {
+    fn events(&self) -> Vec<ProbUpdate> {
         self.events.to_owned()
     }
     fn resolution(&self) -> Result<f32, MarketConvertError> {
@@ -164,13 +164,13 @@ fn get_datetime_from_millis(ts: i64) -> Result<DateTime<Utc>, ()> {
     }
 }
 
-fn get_events_from_bets(mut bets: Vec<Bet>) -> Result<Vec<MarketEvent>, MarketConvertError> {
+fn get_events_from_bets(mut bets: Vec<Bet>) -> Result<Vec<ProbUpdate>, MarketConvertError> {
     let mut result = Vec::new();
     bets.sort_unstable_by_key(|b| b.createdTime);
     for bet in bets {
         if let Some(prob) = bet.probAfter {
             if let Ok(time) = get_datetime_from_millis(bet.createdTime) {
-                result.push(MarketEvent { time, prob });
+                result.push(ProbUpdate { time, prob });
             } else {
                 return Err(MarketConvertError {
                     data: format!("{:?}", bet),

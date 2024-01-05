@@ -60,7 +60,7 @@ pub struct MarketStandard {
 
 /// Simple struct for market events. The timestamp declares when the probability became that value.
 #[derive(Debug, Clone)]
-pub struct MarketEvent {
+pub struct ProbUpdate {
     time: DateTime<Utc>,
     prob: f32,
 }
@@ -97,7 +97,7 @@ pub trait MarketStandardizer {
     fn volume_usd(&self) -> f32;
 
     /// Get a list of probability-affecting events during the market (derived from bets/trades).
-    fn events(&self) -> Vec<MarketEvent>;
+    fn events(&self) -> Vec<ProbUpdate>;
 
     /// Get the actual resolved value (0 for no, 1 for yes, or in-between)
     fn resolution(&self) -> Result<f32, MarketConvertError>;

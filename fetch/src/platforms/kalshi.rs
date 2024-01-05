@@ -44,7 +44,7 @@ struct BulkMarketResponse {
 #[derive(Debug)]
 struct MarketFull {
     market: MarketInfo,
-    events: Vec<MarketEvent>,
+    events: Vec<ProbUpdate>,
 }
 
 impl MarketStandardizer for MarketFull {
@@ -83,7 +83,7 @@ impl MarketStandardizer for MarketFull {
     fn volume_usd(&self) -> f32 {
         self.market.volume / KALSHI_EXCHANGE_RATE
     }
-    fn events(&self) -> Vec<MarketEvent> {
+    fn events(&self) -> Vec<ProbUpdate> {
         self.events.to_owned()
     }
     fn resolution(&self) -> Result<f32, MarketConvertError> {
@@ -125,7 +125,7 @@ async fn get_extended_data(
 ) -> Result<MarketFull, MarketConvertError> {
     Ok(MarketFull {
         market: market.clone(),
-        events: Vec::from([MarketEvent {
+        events: Vec::from([ProbUpdate {
             time: market.open_time,
             prob: 0.5,
         }]),
