@@ -156,15 +156,7 @@ fn is_valid(market: &MarketInfo) -> bool {
         && market.resolution != "CANCEL"
 }
 
-fn get_datetime_from_millis(ts: i64) -> Result<DateTime<Utc>, ()> {
-    let dt = NaiveDateTime::from_timestamp_millis(ts);
-    match dt {
-        Some(dt) => Ok(DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)),
-        None => Err(()),
-    }
-}
-
-fn get_events_from_bets(mut bets: Vec<Bet>) -> Result<Vec<ProbUpdate>, MarketConvertError> {
+fn get_prob_updates(mut bets: Vec<Bet>) -> Result<Vec<ProbUpdate>, MarketConvertError> {
     let mut result = Vec::new();
     bets.sort_unstable_by_key(|b| b.createdTime);
     for bet in bets {
@@ -208,7 +200,7 @@ async fn get_extended_data(
         let bet_data: Vec<Bet> =
             serde_json::from_str(&response_text).map_err(|e| MarketConvertError {
                 data: format!("{:?}", response_text),
-                message: format!("Bet failed to deserialize: {:?}", e),
+                message: format!("Failed to deserialize: {:?}", e),
             })?;
         let response_len = bet_data.len();
         all_bet_data.extend(bet_data);
@@ -221,7 +213,7 @@ async fn get_extended_data(
 
     Ok(MarketFull {
         market: market.clone(),
-        events: get_events_from_bets(all_bet_data)?,
+        events: get_prob_updates(all_bet_data)?,
     })
 }
 

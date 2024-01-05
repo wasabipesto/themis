@@ -41,6 +41,22 @@ struct BulkMarketResponse {
     cursor: String,
 }
 
+#[derive(Deserialize, Debug)]
+struct EventInfo {
+    ts: i64,
+    //volume: u32,
+    //yes_ask: u32,
+    //yes_bid: u32,
+    yes_price: f32,
+    //open_interest: u32,
+}
+
+#[derive(Deserialize, Debug)]
+struct BulkEventResponse {
+    history: Vec<EventInfo>,
+    cursor: String,
+}
+
 #[derive(Debug)]
 struct MarketFull {
     market: MarketInfo,
@@ -119,19 +135,6 @@ fn is_valid(market: &MarketInfo) -> bool {
     market.status == "finalized" && market.market_type == "binary"
 }
 
-async fn get_extended_data(
-    _client: &ClientWithMiddleware,
-    market: &MarketInfo,
-) -> Result<MarketFull, MarketConvertError> {
-    Ok(MarketFull {
-        market: market.clone(),
-        events: Vec::from([ProbUpdate {
-            time: market.open_time,
-            prob: 0.5,
-        }]),
-    })
-}
-
 async fn get_login_token(client: &ClientWithMiddleware) -> String {
     let api_url = KALSHI_API_BASE.to_owned() + "/login";
     let credentials = LoginCredentials {
@@ -152,6 +155,69 @@ async fn get_login_token(client: &ClientWithMiddleware) -> String {
         .await
         .unwrap();
     response.token
+}
+
+fn get_prob_updates(mut events: Vec<EventInfo>) -> Result<Vec<ProbUpdate>, MarketConvertError> {
+    let mut result = Vec::new();
+    let mut prev_price = 0.0;
+    events.sort_unstable_by_key(|b| b.ts);
+    for event in events {
+        if event.yes_price != prev_price {
+            if let Ok(time) = get_datetime_from_secs(event.ts) {
+                result.push(ProbUpdate {
+                    time,
+                    prob: event.yes_price / 100.0,
+                })
+            } else {
+                return Err(MarketConvertError {
+                    data: format!("{:?}", event),
+                    message:
+                        "Manifold Bet createdTime timestamp could not be converted into DateTime"
+                            .to_string(),
+                });
+            }
+            prev_price = event.yes_price;
+        }
+    }
+
+    Ok(result)
+}
+
+async fn get_extended_data(
+    client: &ClientWithMiddleware,
+    token: &String,
+    market: &MarketInfo,
+) -> Result<MarketFull, MarketConvertError> {
+    let api_url = KALSHI_API_BASE.to_owned() + "/markets/" + &market.ticker + "/history";
+    let limit: usize = 1000;
+    let mut cursor: Option<String> = None;
+    let mut all_bet_data = Vec::new();
+    loop {
+        let response = client
+            .get(&api_url)
+            .bearer_auth(&token)
+            .query(&[("limit", limit)])
+            .query(&[("cursor", cursor.clone())])
+            .query(&[("min_ts", 0)])
+            .send()
+            .await
+            .expect("HTTP call failed to execute")
+            .error_for_status()
+            .unwrap_or_else(|e| panic!("Query failed: {:?}", e))
+            .json::<BulkEventResponse>()
+            .await
+            .unwrap();
+        all_bet_data.extend(response.history);
+        if response.cursor.len() > 1 {
+            cursor = Some(response.cursor);
+        } else {
+            break;
+        }
+    }
+    Ok(MarketFull {
+        market: market.clone(),
+        events: get_prob_updates(all_bet_data)?,
+    })
 }
 
 pub async fn get_markets_all() -> Vec<MarketStandard> {
@@ -179,7 +245,7 @@ pub async fn get_markets_all() -> Vec<MarketStandard> {
             .markets
             .iter()
             .filter(|market| is_valid(market))
-            .map(|market| get_extended_data(&client, market))
+            .map(|market| get_extended_data(&client, &token, market))
             .collect();
         let market_data: Vec<MarketStandard> = join_all(market_data_futures)
             .await
@@ -225,7 +291,7 @@ pub async fn get_market_by_id(id: &String) -> Vec<MarketStandard> {
     if !is_valid(&market_single) {
         println!("Market is not valid for processing, this may fail.")
     }
-    let market_data = get_extended_data(&client, &market_single)
+    let market_data = get_extended_data(&client, &token, &market_single)
         .await
         .expect("Error getting extended market data")
         .try_into()

@@ -187,3 +187,21 @@ fn get_reqwest_client_ratelimited(rps: usize) -> ClientWithMiddleware {
         .with(reqwest_leaky_bucket::rate_limit_all(rate_limiter))
         .build()
 }
+
+/// Convert timestamp (milliseconds) to datetime and error on failure
+fn get_datetime_from_millis(ts: i64) -> Result<DateTime<Utc>, ()> {
+    let dt = NaiveDateTime::from_timestamp_millis(ts);
+    match dt {
+        Some(dt) => Ok(DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)),
+        None => Err(()),
+    }
+}
+
+/// Convert timestamp (seconds) to datetime and error on failure
+fn get_datetime_from_secs(ts: i64) -> Result<DateTime<Utc>, ()> {
+    let dt = NaiveDateTime::from_timestamp_opt(ts, 0);
+    match dt {
+        Some(dt) => Ok(DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)),
+        None => Err(()),
+    }
+}
