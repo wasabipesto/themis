@@ -173,7 +173,7 @@ fn get_prob_updates(mut bets: Vec<Bet>) -> Result<Vec<ProbUpdate>, MarketConvert
                 return Err(MarketConvertError {
                     data: format!("{:?}", bet),
                     message:
-                        "Manifold Bet createdTime timestamp could not be converted into DateTime"
+                        "Manifold: Bet createdTime timestamp could not be converted into DateTime"
                             .to_string(),
                 });
             }
@@ -227,13 +227,13 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
     let client = get_reqwest_client_ratelimited(MANIFOLD_RATELIMIT);
     let api_url = MANIFOLD_API_BASE.to_owned() + "/markets";
     if verbose {
-        println!("Connecting to API at {}", api_url)
+        println!("Manifold: Connecting to API at {}", api_url)
     }
     let limit = 1000;
     let mut before: Option<String> = None;
     loop {
         if verbose {
-            println!("Getting markets starting at {:?}...", before)
+            println!("Manifold: Getting markets starting at {:?}...", before)
         }
         let market_response: Vec<MarketInfo> = client
             .get(&api_url)
@@ -246,7 +246,7 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
             .await
             .expect("Market failed to deserialize");
         if verbose {
-            println!("Processing {} markets...", market_response.len())
+            println!("Manifold: Processing {} markets...", market_response.len())
         }
         let market_data_futures: Vec<_> = market_response
             .iter()
@@ -265,7 +265,7 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
             .collect();
         if verbose {
             println!(
-                "Saving {} processed markets to {:?}...",
+                "Manifold: Saving {} processed markets to {:?}...",
                 market_data.len(),
                 output_method
             )
@@ -283,7 +283,7 @@ pub async fn get_market_by_id(id: &String, output_method: OutputMethod, verbose:
     let client = get_reqwest_client_ratelimited(MANIFOLD_RATELIMIT);
     let api_url = MANIFOLD_API_BASE.to_owned() + "/market/" + id;
     if verbose {
-        println!("Connecting to API at {}", api_url)
+        println!("Manifold: Connecting to API at {}", api_url)
     }
     let market_single = client
         .get(&api_url)
@@ -294,7 +294,7 @@ pub async fn get_market_by_id(id: &String, output_method: OutputMethod, verbose:
         .await
         .expect("Market failed to deserialize");
     if !is_valid(&market_single) {
-        println!("Market is not valid for processing, this may fail.")
+        println!("Manifold: Market is not valid for processing, this may fail.")
     }
     let market_data = get_extended_data(&client, &market_single)
         .await
@@ -302,7 +302,10 @@ pub async fn get_market_by_id(id: &String, output_method: OutputMethod, verbose:
         .try_into()
         .expect("Error converting market into standard fields");
     if verbose {
-        println!("Saving processed market to {:?}...", output_method)
+        println!(
+            "Manifold: Saving processed market to {:?}...",
+            output_method
+        )
     }
     save_markets(Vec::from([market_data]), output_method);
 }
