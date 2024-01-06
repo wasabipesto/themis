@@ -126,6 +126,7 @@ impl TryInto<MarketStandard> for MarketFull {
             volume_usd: self.volume_usd(),
             prob_at_midpoint: self.prob_at_percent(0.5)?,
             prob_at_close: self.prob_at_percent(1.0)?,
+            prob_time_weighted: self.prob_time_weighted()?,
             resolution: self.resolution()?,
         })
     }

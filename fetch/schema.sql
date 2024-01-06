@@ -9,6 +9,7 @@ CREATE TABLE market (
     volume_usd REAL NOT NULL,
     prob_at_midpoint REAL NOT NULL,
     prob_at_close REAL NOT NULL,
+    prob_time_weighted REAL NOT NULL,
     resolution REAL NOT NULL,
     CONSTRAINT platform_unique_by_id UNIQUE (platform, platform_id)
 );
