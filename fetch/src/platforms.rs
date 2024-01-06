@@ -167,7 +167,7 @@ pub trait MarketStandardizer {
 
     /// Get the market's probability at a specific percent of the way though the duration of a market.
     fn prob_time_weighted(&self) -> Result<f32, MarketConvertError> {
-        let prev_event: Option<ProbUpdate> = None;
+        let mut prev_event: Option<ProbUpdate> = None;
         let mut cumulative_prob: f32 = 0.0;
         let mut cumulative_time: f32 = 0.0;
         for event in self.events() {
@@ -185,6 +185,7 @@ pub trait MarketStandardizer {
                     cumulative_time += duration;
                 }
             }
+            prev_event = Some(event);
         }
         match &prev_event {
             Some(prev) => {
@@ -200,7 +201,7 @@ pub trait MarketStandardizer {
                 cumulative_time += duration;
             }
         }
-        Ok(cumulative_prob / cumulative_time as f32)
+        Ok(cumulative_prob / cumulative_time)
     }
 }
 
