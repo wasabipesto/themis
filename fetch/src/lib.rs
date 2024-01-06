@@ -1,9 +1,10 @@
-use std::time::Instant;
+//! This library is primarily for bulk-downloading data from several prediction market platforms.
+//! It also exposes `get_markets_all` and `get_market_by_id` for individual use.
 
 pub mod platforms;
 use platforms::{OutputMethod, Platform};
 
-/// The main path for processing markets by platform
+/// The main path for processing markets by platform.
 #[tokio::main]
 pub async fn run(
     platform: Option<Platform>,
@@ -21,7 +22,7 @@ pub async fn run(
     if verbose {
         println!("Initialization: Processing platforms: {:?}", &platforms);
     }
-    let total_timer = Instant::now();
+    let total_timer = std::time::Instant::now();
     let tasks: Vec<_> = platforms
         .into_iter()
         .map(|platform| {

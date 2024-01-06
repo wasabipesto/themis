@@ -1,3 +1,5 @@
+//! Tools to download and process markets from the Kalshi API.
+
 use super::*;
 use regex::Regex;
 
@@ -6,17 +8,20 @@ const KALSHI_SITE_BASE: &str = "https://kalshi.com/markets/";
 const KALSHI_EXCHANGE_RATE: f32 = 100.0;
 const KALSHI_RATELIMIT: usize = 10;
 
+/// Holds API login credentials to be submitted.
 #[derive(Serialize, Debug)]
 struct LoginCredentials {
     email: String,
     password: String,
 }
 
+/// API response after requesting an authorization token.
 #[derive(Deserialize, Debug)]
 struct LoginResponse {
     token: String,
 }
 
+/// (Indirect) API response with standard market info.
 #[derive(Deserialize, Debug, Clone)]
 struct MarketInfo {
     ticker: String,
@@ -30,17 +35,20 @@ struct MarketInfo {
     result: String,
 }
 
+/// API response after requesting a single market from `/market`.
 #[derive(Deserialize, Debug)]
 struct SingleMarketResponse {
     market: MarketInfo,
 }
 
+/// API response after requesting multiple markets from `/markets`.
 #[derive(Deserialize, Debug)]
 struct BulkMarketResponse {
     markets: Vec<MarketInfo>,
     cursor: String,
 }
 
+/// (Indirect) API response with standard event info.
 #[derive(Deserialize, Debug)]
 struct EventInfo {
     ts: i64,
@@ -51,12 +59,14 @@ struct EventInfo {
     //open_interest: u32,
 }
 
+/// API response after requesting market events from `/history`.
 #[derive(Deserialize, Debug)]
 struct BulkEventResponse {
     history: Vec<EventInfo>,
     cursor: String,
 }
 
+/// Container for market data and events, used to hold data for conversion.
 #[derive(Debug)]
 struct MarketFull {
     market: MarketInfo,
@@ -114,6 +124,7 @@ impl MarketStandardizer for MarketFull {
     }
 }
 
+/// Standard conversion setup (would move this up to `platforms` if I could).
 impl TryInto<MarketStandard> for MarketFull {
     type Error = MarketConvertError;
     fn try_into(self) -> Result<MarketStandard, MarketConvertError> {
@@ -132,10 +143,12 @@ impl TryInto<MarketStandard> for MarketFull {
     }
 }
 
+/// Test if a market is suitable for analysis.
 fn is_valid(market: &MarketInfo) -> bool {
     market.status == "finalized" && market.market_type == "binary"
 }
 
+/// Request an authorization token from email & password.
 async fn get_login_token(client: &ClientWithMiddleware) -> String {
     let api_url = KALSHI_API_BASE.to_owned() + "/login";
     let credentials = LoginCredentials {
@@ -158,6 +171,7 @@ async fn get_login_token(client: &ClientWithMiddleware) -> String {
     response.token
 }
 
+/// Convert API events into standard events.
 fn get_prob_updates(mut events: Vec<EventInfo>) -> Result<Vec<ProbUpdate>, MarketConvertError> {
     let mut result = Vec::new();
     let mut prev_price = 0.0;
@@ -184,6 +198,7 @@ fn get_prob_updates(mut events: Vec<EventInfo>) -> Result<Vec<ProbUpdate>, Marke
     Ok(result)
 }
 
+/// Download full market history and store events in the container.
 async fn get_extended_data(
     client: &ClientWithMiddleware,
     token: &String,
@@ -221,6 +236,7 @@ async fn get_extended_data(
     })
 }
 
+/// Download, process and store all valid markets from the platform.
 pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
     println!("Kalshi: Processing started...");
     let client = get_reqwest_client_ratelimited(KALSHI_RATELIMIT);
@@ -283,6 +299,7 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
     }
 }
 
+/// Download, process and store one market from the platform.
 pub async fn get_market_by_id(id: &String, output_method: OutputMethod, verbose: bool) {
     let client = get_reqwest_client_ratelimited(KALSHI_RATELIMIT);
     let token = get_login_token(&client).await;

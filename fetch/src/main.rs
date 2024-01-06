@@ -1,3 +1,5 @@
+//! This binary just parses CLI arguments and passes them to the library run process.
+
 use clap::Parser;
 use themis_fetch::platforms::{OutputMethod, Platform};
 

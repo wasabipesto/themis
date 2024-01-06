@@ -1,3 +1,5 @@
+//! This module has all of the common utilities and market standardization tools required to query the API and convert responses into DB rows.
+
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use clap::ValueEnum;
 use core::fmt;
@@ -35,7 +37,7 @@ pub enum OutputMethod {
     //File,
 }
 
-// Diesel macro to save the markets to a datbase table.
+// Diesel macro to save the markets to a database table.
 table! {
     market (id) {
         id -> Int4,

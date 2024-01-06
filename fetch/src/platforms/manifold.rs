@@ -1,3 +1,5 @@
+//! Tools to download and process markets from the Manifold API.
+
 use super::*;
 use std::cmp;
 
@@ -6,6 +8,7 @@ const MANIFOLD_SITE_BASE: &str = "https://manifold.markets/";
 const MANIFOLD_EXCHANGE_RATE: f32 = 100.0;
 const MANIFOLD_RATELIMIT: usize = 15;
 
+/// API response with standard market info from `/market` or `/markets`.
 #[allow(non_snake_case)]
 #[derive(Deserialize, Debug, Clone)]
 struct MarketInfo {
@@ -24,6 +27,7 @@ struct MarketInfo {
     resolutionTime: Option<i64>,
 }
 
+/// API response with standard bet info from `/bets`.
 #[allow(non_snake_case)]
 #[derive(Deserialize, Debug)]
 struct Bet {
@@ -36,6 +40,7 @@ struct Bet {
     //outcome: f32,
 }
 
+/// Container for market data and events, used to hold data for conversion.
 #[derive(Debug)]
 struct MarketFull {
     market: MarketInfo,
@@ -138,6 +143,7 @@ impl MarketStandardizer for MarketFull {
     }
 }
 
+/// Standard conversion setup (would move this up to `platforms` if I could).
 impl TryInto<MarketStandard> for MarketFull {
     type Error = MarketConvertError;
     fn try_into(self) -> Result<MarketStandard, MarketConvertError> {
@@ -156,6 +162,7 @@ impl TryInto<MarketStandard> for MarketFull {
     }
 }
 
+/// Test if a market is suitable for analysis.
 fn is_valid(market: &MarketInfo) -> bool {
     market.isResolved
         && market.mechanism == "cpmm-1"
@@ -163,6 +170,7 @@ fn is_valid(market: &MarketInfo) -> bool {
         && market.resolution != Some("CANCEL".to_string())
 }
 
+/// Convert API events into standard events.
 fn get_prob_updates(mut bets: Vec<Bet>) -> Result<Vec<ProbUpdate>, MarketConvertError> {
     let mut result = Vec::new();
     bets.sort_unstable_by_key(|b| b.createdTime);
@@ -184,6 +192,7 @@ fn get_prob_updates(mut bets: Vec<Bet>) -> Result<Vec<ProbUpdate>, MarketConvert
     Ok(result)
 }
 
+/// Download full market history and store events in the container.
 async fn get_extended_data(
     client: &ClientWithMiddleware,
     market: &MarketInfo,
@@ -224,6 +233,7 @@ async fn get_extended_data(
     })
 }
 
+/// Download, process and store all valid markets from the platform.
 pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
     println!("Manifold: Processing started...");
     let client = get_reqwest_client_ratelimited(MANIFOLD_RATELIMIT);
@@ -281,6 +291,7 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
     }
 }
 
+/// Download, process and store one market from the platform.
 pub async fn get_market_by_id(id: &str, output_method: OutputMethod, verbose: bool) {
     let client = get_reqwest_client_ratelimited(MANIFOLD_RATELIMIT);
     let api_url = MANIFOLD_API_BASE.to_owned() + "/market/" + id;
