@@ -221,6 +221,7 @@ async fn get_extended_data(
 }
 
 pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
+    println!("Kalshi: Processing started...");
     let client = get_reqwest_client_ratelimited(KALSHI_RATELIMIT);
     let token = get_login_token(&client).await;
     let api_url = KALSHI_API_BASE.to_owned() + "/markets";

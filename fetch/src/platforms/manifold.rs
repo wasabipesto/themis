@@ -4,7 +4,7 @@ use std::cmp;
 const MANIFOLD_API_BASE: &str = "https://api.manifold.markets/v0";
 const MANIFOLD_SITE_BASE: &str = "https://manifold.markets/";
 const MANIFOLD_EXCHANGE_RATE: f32 = 100.0;
-const MANIFOLD_RATELIMIT: usize = 20;
+const MANIFOLD_RATELIMIT: usize = 15;
 
 #[allow(non_snake_case)]
 #[derive(Deserialize, Debug, Clone)]
@@ -224,6 +224,7 @@ async fn get_extended_data(
 }
 
 pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
+    println!("Manifold: Processing started...");
     let client = get_reqwest_client_ratelimited(MANIFOLD_RATELIMIT);
     let api_url = MANIFOLD_API_BASE.to_owned() + "/markets";
     if verbose {
@@ -279,7 +280,7 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
     }
 }
 
-pub async fn get_market_by_id(id: &String, output_method: OutputMethod, verbose: bool) {
+pub async fn get_market_by_id(id: &str, output_method: OutputMethod, verbose: bool) {
     let client = get_reqwest_client_ratelimited(MANIFOLD_RATELIMIT);
     let api_url = MANIFOLD_API_BASE.to_owned() + "/market/" + id;
     if verbose {
