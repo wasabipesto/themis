@@ -1,15 +1,5 @@
 use clap::Parser;
-use diesel::{pg::PgConnection, prelude::*, Connection};
-use serde_json::{to_string_pretty, to_writer_pretty};
-use std::env::var;
-use std::fs::File;
-use std::time::Instant;
-
-mod platforms;
-use crate::platforms::{market, MarketStandard, Platform};
-
-const OUTPUT_KEYWORD_DB: &str = "db";
-const OUTPUT_KEYWORD_STDOUT: &str = "stdout";
+use themis_fetch::{platforms::Platform, OutputMethod};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -22,9 +12,9 @@ struct Args {
     #[arg(long)]
     id: Option<String>,
 
-    /// Redirect output to the database ["db"], the console ["stdout"], or a file [value used as filename]
-    #[arg(short, long, default_value = OUTPUT_KEYWORD_DB)]
-    output: String,
+    /// Where to redirect the output
+    #[arg(short, long, default_value = "database")]
+    output: OutputMethod,
 
     /// Show additional output for debugging
     #[arg(short, long)]
@@ -33,69 +23,5 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    // print the user inputs for debug purposes
-    if args.verbose {
-        println!("Initialization: {:?}", &args);
-    }
-
-    // if the user requested a specific platform, format it into a list
-    // otherwise, return the default platform list
-    let platforms: Vec<&Platform> = match &args.platform {
-        Some(platform) => Vec::from([platform]),
-        None => Vec::from([&Platform::Kalshi, &Platform::Manifold]),
-    };
-
-    if args.verbose {
-        println!("Initialization: Processing platforms: {:?}", &platforms);
-    }
-    let total_timer = Instant::now();
-    let mut markets: Vec<MarketStandard> = Vec::new();
-    let runtime = tokio::runtime::Runtime::new().unwrap();
-    runtime.block_on(async {
-        for platform in platforms {
-            let timer = Instant::now();
-            println!("{:?}: Processing started...", &platform);
-            let platform_markets = match (&platform, &args.id) {
-                (Platform::Kalshi, None) => platforms::kalshi::get_markets_all().await,
-                (Platform::Kalshi, Some(id)) => platforms::kalshi::get_market_by_id(id).await,
-                (Platform::Manifold, None) => platforms::manifold::get_markets_all().await,
-                (Platform::Manifold, Some(id)) => platforms::manifold::get_market_by_id(id).await,
-            };
-            println!(
-                "{:?}: {} markets processed in {:?}.",
-                &platform,
-                platform_markets.len(),
-                timer.elapsed()
-            );
-            markets.extend(platform_markets);
-        }
-    });
-    println!(
-        "All processing complete: {} markets processed in {:?}.",
-        markets.len(),
-        total_timer.elapsed()
-    );
-
-    // save collated data to database, stdout, or file
-    match args.output.as_str() {
-        OUTPUT_KEYWORD_DB => {
-            println!("Database: Saving all markets to db...");
-            let mut conn = PgConnection::establish(
-                &var("DATABASE_URL").expect("Required environment variable DATABASE_URL not set."),
-            )
-            .expect("Error connecting to datbase.");
-            for chunk in markets.chunks(1000) {
-                diesel::insert_into(market::table)
-                    .values(chunk)
-                    .on_conflict_do_nothing() // TODO: upsert
-                    .execute(&mut conn)
-                    .expect("Failed to insert rows into table.");
-            }
-            println!("Database: All markets saved.");
-        }
-        OUTPUT_KEYWORD_STDOUT => {
-            println!("{}", to_string_pretty(&markets).unwrap())
-        }
-        filename => to_writer_pretty(&File::create(filename).unwrap(), &markets).unwrap(),
-    }
+    themis_fetch::run(args.platform, args.id, args.output, args.verbose);
 }
