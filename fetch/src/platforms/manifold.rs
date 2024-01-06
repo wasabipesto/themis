@@ -17,7 +17,7 @@ struct MarketInfo {
     volume: f32,
     outcomeType: String,
     isResolved: bool,
-    resolution: String,
+    resolution: Option<String>,
     resolutionProbability: Option<f32>,
     createdTime: i64,
     closeTime: Option<i64>, // polls and bounties lack close times
@@ -110,23 +110,29 @@ impl MarketStandardizer for MarketFull {
         self.events.to_owned()
     }
     fn resolution(&self) -> Result<f32, MarketConvertError> {
-        match self.market.resolution.as_str() {
-            "YES" => Ok(1.0),
-            "NO" => Ok(0.0),
-            "MKT" => {
-                if let Some(res) = self.market.resolutionProbability {
-                    Ok(res)
-                } else {
-                    Err(MarketConvertError {
-                        data: self.debug(),
-                        message: "Market resolved to MKT but is missing resolutionProbability"
-                            .to_string(),
-                    })
+        match &self.market.resolution {
+            Some(resolution_text) => match resolution_text.as_str() {
+                "YES" => Ok(1.0),
+                "NO" => Ok(0.0),
+                "MKT" => {
+                    if let Some(res) = self.market.resolutionProbability {
+                        Ok(res)
+                    } else {
+                        Err(MarketConvertError {
+                            data: self.debug(),
+                            message: "Market resolved to MKT but is missing resolutionProbability"
+                                .to_string(),
+                        })
+                    }
                 }
-            }
+                _ => Err(MarketConvertError {
+                    data: self.debug(),
+                    message: "Market resolved to something besides YES, NO, or MKT".to_string(),
+                }),
+            },
             _ => Err(MarketConvertError {
                 data: self.debug(),
-                message: "Market resolved to something besides YES, NO, or MKT".to_string(),
+                message: "Market resolved without `resolution` value".to_string(),
             }),
         }
     }
@@ -153,7 +159,7 @@ fn is_valid(market: &MarketInfo) -> bool {
     market.isResolved
         && market.mechanism == "cpmm-1"
         && market.outcomeType == "BINARY"
-        && market.resolution != "CANCEL"
+        && market.resolution != Some("CANCEL".to_string())
 }
 
 fn get_prob_updates(mut bets: Vec<Bet>) -> Result<Vec<ProbUpdate>, MarketConvertError> {

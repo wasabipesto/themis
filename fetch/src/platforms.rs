@@ -1,8 +1,7 @@
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use clap::ValueEnum;
 use core::fmt;
-use diesel::{pg::PgConnection, prelude::*, Connection};
-use diesel::{prelude::*, Insertable};
+use diesel::{pg::PgConnection, prelude::*, Connection, Insertable};
 use futures::future::join_all;
 use reqwest_leaky_bucket::leaky_bucket::RateLimiter;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
