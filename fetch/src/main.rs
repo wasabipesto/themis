@@ -1,5 +1,5 @@
 use clap::Parser;
-use themis_fetch::{platforms::Platform, OutputMethod};
+use themis_fetch::platforms::{OutputMethod, Platform};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
