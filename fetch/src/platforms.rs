@@ -47,6 +47,7 @@ table! {
         volume_usd -> Float,
         prob_at_midpoint -> Float,
         prob_at_close -> Float,
+        prob_time_weighted -> Float,
         resolution -> Float,
     }
 }
@@ -64,6 +65,7 @@ pub struct MarketStandard {
     volume_usd: f32,
     prob_at_midpoint: f32,
     prob_at_close: f32,
+    prob_time_weighted: f32,
     resolution: f32,
 }
 
@@ -161,6 +163,44 @@ pub trait MarketStandardizer {
                 ((self.close_dt()? - self.open_dt()?).num_seconds() as f32 * pct) as i64,
             );
         self.prob_at_time(time)
+    }
+
+    /// Get the market's probability at a specific percent of the way though the duration of a market.
+    fn prob_time_weighted(&self) -> Result<f32, MarketConvertError> {
+        let prev_event: Option<ProbUpdate> = None;
+        let mut cumulative_prob: f32 = 0.0;
+        let mut cumulative_time: f32 = 0.0;
+        for event in self.events() {
+            match &prev_event {
+                None => {
+                    // add time between start time and first event
+                    let duration = (event.time - self.open_dt()?).num_seconds() as f32;
+                    cumulative_prob += DEFAULT_OPENING_PROB * duration;
+                    cumulative_time += duration;
+                }
+                Some(prev) => {
+                    // add time between last event and this one
+                    let duration = (event.time - prev.time).num_seconds() as f32;
+                    cumulative_prob += prev.prob * duration;
+                    cumulative_time += duration;
+                }
+            }
+        }
+        match &prev_event {
+            Some(prev) => {
+                // add time between last event and close time
+                let duration = (self.close_dt()? - prev.time).num_seconds() as f32;
+                cumulative_prob += prev.prob * duration;
+                cumulative_time += duration;
+            }
+            None => {
+                // there are no events whatsoever, just assume it was the default throughout
+                let duration = (self.close_dt()? - self.open_dt()?).num_seconds() as f32;
+                cumulative_prob += DEFAULT_OPENING_PROB * duration;
+                cumulative_time += duration;
+            }
+        }
+        Ok(cumulative_prob / cumulative_time as f32)
     }
 }
 

@@ -126,6 +126,7 @@ impl TryInto<MarketStandard> for MarketFull {
             volume_usd: self.volume_usd(),
             prob_at_midpoint: self.prob_at_percent(0.5)?,
             prob_at_close: self.prob_at_percent(1.0)?,
+            prob_time_weighted: self.prob_time_weighted()?,
             resolution: self.resolution()?,
         })
     }
@@ -172,7 +173,7 @@ fn get_prob_updates(mut events: Vec<EventInfo>) -> Result<Vec<ProbUpdate>, Marke
                 return Err(MarketConvertError {
                     data: format!("{:?}", event),
                     message:
-                        "Manifold Bet createdTime timestamp could not be converted into DateTime"
+                        "Kalshi: Bet createdTime timestamp could not be converted into DateTime"
                             .to_string(),
                 });
             }
@@ -221,17 +222,18 @@ async fn get_extended_data(
 }
 
 pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
+    println!("Kalshi: Processing started...");
     let client = get_reqwest_client_ratelimited(KALSHI_RATELIMIT);
     let token = get_login_token(&client).await;
     let api_url = KALSHI_API_BASE.to_owned() + "/markets";
     if verbose {
-        println!("Connecting to API at {}", api_url)
+        println!("Kalshi: Connecting to API at {}", api_url)
     }
     let limit: usize = 1000;
     let mut cursor: Option<String> = None;
     loop {
         if verbose {
-            println!("Getting markets starting at {:?}...", cursor)
+            println!("Kalshi: Getting markets starting at {:?}...", cursor)
         }
         let response = client
             .get(&api_url)
@@ -247,7 +249,7 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
             .await
             .unwrap();
         if verbose {
-            println!("Processing {} markets...", response.markets.len())
+            println!("Kalshi: Processing {} markets...", response.markets.len())
         }
         let market_data_futures: Vec<_> = response
             .markets
@@ -267,7 +269,7 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
             .collect();
         if verbose {
             println!(
-                "Saving {} processed markets to {:?}...",
+                "Kalshi: Saving {} processed markets to {:?}...",
                 market_data.len(),
                 output_method
             )
@@ -286,7 +288,7 @@ pub async fn get_market_by_id(id: &String, output_method: OutputMethod, verbose:
     let token = get_login_token(&client).await;
     let api_url = KALSHI_API_BASE.to_owned() + "/markets/";
     if verbose {
-        println!("Connecting to API at {}", api_url)
+        println!("Kalshi: Connecting to API at {}", api_url)
     }
     let market_single = client
         .get(api_url.clone() + id)
@@ -299,7 +301,7 @@ pub async fn get_market_by_id(id: &String, output_method: OutputMethod, verbose:
         .expect("Market failed to deserialize")
         .market;
     if !is_valid(&market_single) {
-        println!("Market is not valid for processing, this may fail.")
+        println!("Kalshi: Market is not valid for processing, this may fail.")
     }
     let market_data = get_extended_data(&client, &token, &market_single)
         .await
@@ -307,7 +309,7 @@ pub async fn get_market_by_id(id: &String, output_method: OutputMethod, verbose:
         .try_into()
         .expect("ErError converting market into standard fields");
     if verbose {
-        println!("Saving processed market to {:?}...", output_method)
+        println!("Kalshi: Saving processed market to {:?}...", output_method)
     }
     save_markets(Vec::from([market_data]), output_method);
 }
