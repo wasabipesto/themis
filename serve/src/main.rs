@@ -1,7 +1,10 @@
-use actix_web::{get, App, HttpResponse, HttpServer, Responder};
-use diesel::{pg::PgConnection, prelude::*, Connection};
+use actix_web::{get, middleware, web::Data, App, HttpResponse, HttpServer, Responder};
+use diesel::r2d2::{ConnectionManager, Pool};
+use diesel::{pg::PgConnection, prelude::*};
 use serde::Serialize;
 use std::env::var;
+
+mod helper;
 
 // Diesel macro to get markets from the database table.
 table! {
@@ -47,25 +50,15 @@ pub struct Plot {
     //point_descriptions: Vec<String>,
 }
 
-/// Renders a template by replacing text via a simple pattern.
 #[get("/calibration_plot")]
-async fn calibration_plot() -> impl Responder {
-    let mut conn = PgConnection::establish(
-        &var("DATABASE_URL").expect("Required environment variable DATABASE_URL not set."),
-    )
-    .expect("Error connecting to datbase.");
-
-    let result = match market::table
+async fn calibration_plot(pool: Data<Pool<ConnectionManager<PgConnection>>>) -> impl Responder {
+    let conn = &mut pool.get().expect("Failed to get connection from pool");
+    let markets = market::table
         .filter(market::open_days.ge(0.0))
         .filter(market::volume_usd.ge(0.0))
         .select(Market::as_select())
-        .load::<Market>(&mut conn)
-    {
-        Ok(result) => result,
-        Err(error) => {
-            panic!("{:?}", error);
-        }
-    };
+        .load::<Market>(conn)
+        .expect("Failed to query table.");
 
     let response = Plot {
         platform_name: "test".to_string(),
@@ -78,9 +71,21 @@ async fn calibration_plot() -> impl Responder {
 /// Server startup tasks.
 #[actix_web::main]
 async fn main() -> Result<(), std::io::Error> {
+    println!("Server starting...");
+    let database_url =
+        var("DATABASE_URL").expect("Required environment variable DATABASE_URL not set.");
+    let manager = ConnectionManager::<PgConnection>::new(database_url);
+    let pool = Pool::builder()
+        .build(manager)
+        .expect("Failed to create database connection pool.");
     println!("Server started.");
-    HttpServer::new(move || App::new().service(calibration_plot))
-        .bind(var("HTTP_BIND").unwrap_or(String::from("0.0.0.0:7041")))?
-        .run()
-        .await
+    HttpServer::new(move || {
+        App::new()
+            .app_data(Data::new(pool.clone()))
+            .wrap(middleware::Logger::default())
+            .service(calibration_plot)
+    })
+    .bind(var("HTTP_BIND").unwrap_or(String::from("0.0.0.0:7041")))?
+    .run()
+    .await
 }
