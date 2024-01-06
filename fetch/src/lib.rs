@@ -15,7 +15,13 @@ pub enum OutputMethod {
 }
 
 /// The main path for processing markets by platform
-pub fn run(platform: Option<Platform>, id: Option<String>, output: OutputMethod, verbose: bool) {
+#[tokio::main]
+pub async fn run(
+    platform: Option<Platform>,
+    id: Option<String>,
+    output: OutputMethod,
+    verbose: bool,
+) {
     // if the user requested a specific platform, format it into a list
     // otherwise, return the default platform list
     let platforms: Vec<&Platform> = match &platform {
@@ -28,26 +34,23 @@ pub fn run(platform: Option<Platform>, id: Option<String>, output: OutputMethod,
     }
     let total_timer = Instant::now();
     let mut markets: Vec<MarketStandard> = Vec::new();
-    let runtime = tokio::runtime::Runtime::new().unwrap();
-    runtime.block_on(async {
-        for platform in platforms {
-            let timer = Instant::now();
-            println!("{:?}: Processing started...", &platform);
-            let platform_markets = match (&platform, &id) {
-                (Platform::Kalshi, None) => platforms::kalshi::get_markets_all().await,
-                (Platform::Kalshi, Some(id)) => platforms::kalshi::get_market_by_id(id).await,
-                (Platform::Manifold, None) => platforms::manifold::get_markets_all().await,
-                (Platform::Manifold, Some(id)) => platforms::manifold::get_market_by_id(id).await,
-            };
-            println!(
-                "{:?}: {} markets processed in {:?}.",
-                &platform,
-                platform_markets.len(),
-                timer.elapsed()
-            );
-            markets.extend(platform_markets);
-        }
-    });
+    for platform in platforms {
+        let timer = Instant::now();
+        println!("{:?}: Processing started...", &platform);
+        let platform_markets = match (&platform, &id) {
+            (Platform::Kalshi, None) => platforms::kalshi::get_markets_all().await,
+            (Platform::Kalshi, Some(id)) => platforms::kalshi::get_market_by_id(id).await,
+            (Platform::Manifold, None) => platforms::manifold::get_markets_all().await,
+            (Platform::Manifold, Some(id)) => platforms::manifold::get_market_by_id(id).await,
+        };
+        println!(
+            "{:?}: {} markets processed in {:?}.",
+            &platform,
+            platform_markets.len(),
+            timer.elapsed()
+        );
+        markets.extend(platform_markets);
+    }
     println!(
         "All processing complete: {} markets processed in {:?}.",
         markets.len(),
