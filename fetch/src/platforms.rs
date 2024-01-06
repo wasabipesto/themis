@@ -1,13 +1,14 @@
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use clap::ValueEnum;
 use core::fmt;
-use diesel::{prelude::*, Insertable};
+use diesel::{pg::PgConnection, prelude::*, Connection, Insertable};
 use futures::future::join_all;
 use reqwest_leaky_bucket::leaky_bucket::RateLimiter;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde::{Deserialize, Serialize};
 use serde_json;
+use serde_json::to_string_pretty;
 use std::env::var;
 
 pub mod kalshi;
@@ -24,6 +25,14 @@ pub enum Platform {
     //Metaculus,
     //Polymarket,
     //PredictIt,
+}
+
+/// All possible methods to output markets.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, clap::ValueEnum)]
+pub enum OutputMethod {
+    Database,
+    Stdout,
+    //File,
 }
 
 // Diesel macro to save the markets to a datbase table.
@@ -152,6 +161,27 @@ pub trait MarketStandardizer {
                 ((self.close_dt()? - self.open_dt()?).num_seconds() as f32 * pct) as i64,
             );
         self.prob_at_time(time)
+    }
+}
+
+fn save_markets(markets: Vec<MarketStandard>, method: OutputMethod) {
+    match method {
+        OutputMethod::Database => {
+            let mut conn = PgConnection::establish(
+                &var("DATABASE_URL").expect("Required environment variable DATABASE_URL not set."),
+            )
+            .expect("Error connecting to datbase.");
+            for chunk in markets.chunks(1000) {
+                diesel::insert_into(market::table)
+                    .values(chunk)
+                    .on_conflict_do_nothing() // TODO: upsert
+                    .execute(&mut conn)
+                    .expect("Failed to insert rows into table.");
+            }
+        }
+        OutputMethod::Stdout => {
+            println!("{}", to_string_pretty(&markets).unwrap())
+        }
     }
 }
 
