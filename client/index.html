@@ -67,7 +67,15 @@
                 What's the Brier score?
               </v-expansion-panel-title>
               <v-expansion-panel-text>
-                <p class="my-2">good grade!</p>
+                <p class="my-2">
+                  These points are nice, but it's kind of hard to compare the platforms against each
+                  other based on the plot alone. We can give each platform a numeric score to show
+                  how accurate they were over all markets, properly penalizing them for incorrect
+                  guesses and rewarding them for accurate predictions. A Brier score is one such
+                  metric, which starts at 0 if you are perfectly calibrated and goes up the more
+                  incorrect predictions you make. Most prediction markets have a Brier score of
+                  between 0.1 and 0.2, and lower is always better!
+                </p>
               </v-expansion-panel-text>
             </v-expansion-panel>
             <v-expansion-panel>
@@ -77,9 +85,14 @@
               </v-expansion-panel-title>
               <v-expansion-panel-text>
                 <p class="my-2">
-                  <a href="https://academic.oup.com/ej/article-abstract/123/568/491/5079498"
-                    >Do Prediction Markets Produce Well-Calibrated Probability Forecasts?</a
-                  >
+                  <a href="https://academic.oup.com/ej/article-abstract/123/568/491/5079498">
+                    Do Prediction Markets Produce Well-Calibrated Probability Forecasts?
+                  </a>
+                </p>
+                <p class="my-2"></p>
+                  <a href="https://arxiv.org/abs/1808.07501v1">
+                    Calibration Scoring Rules for Practical Prediction Training
+                  </a>
                 </p>
               </v-expansion-panel-text>
             </v-expansion-panel>
@@ -273,17 +286,7 @@
         </v-main>
 
         <v-navigation-drawer location="right">
-          <v-list lines="five" select-strategy="classic">
-            <!--
-            <v-list-item class="text-h6 m-5"><span>Plot Settings</span></v-list-item>
-            <v-list-subheader>Reference</v-list-subheader>
-            <v-list-item value="ref" class="py-3">
-              <v-list-item-title>Reference Line</v-list-item-title>
-              <v-list-item-subtitle>
-                A line representing perfect calibration.
-              </v-list-item-subtitle>
-            </v-list-item>
-            -->
+          <v-list lines="five">
             <v-list-subheader>Platforms</v-list-subheader>
             <v-list-item v-for="(v,k) in sidebar_data" :value="k" class="py-4">
               <v-list-item-title>
@@ -350,7 +353,7 @@
             options: {
               bin_method: {
                 //prob_at_q1: { label: '25% of Market Duration' },
-                prob_at_midpoint: { label: 'Midpoint of Market Duration' },
+                prob_at_midpoint: { label: 'At Market Midpoint' },
                 //prob_at_q3: { label: '75% of Market Duration' },
                 //prob_at_1w: { label: '1 Week Before Close' },
                 //prob_at_1m: { label: '1 Month Before Close' },
