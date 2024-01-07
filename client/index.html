@@ -415,8 +415,10 @@
             await fetch(
               'https://api.calibration.city/calibration_plot?' +
                 new URLSearchParams(
-                  Object.entries(this.options_selected).filter(
-                    ([k, v]) => v == null || v.length > 0
+                  Object.entries(this.options_selected).filter(([k, v]) => 
+                    (typeof v === 'number') || 
+                    (typeof v === 'string' && v.trim() !== '') || 
+                    (Array.isArray(v) && v.length > 0)
                   )
                 )
             )

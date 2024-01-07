@@ -101,11 +101,11 @@ struct Trace {
     platform_description: String,
     platform_avatar_url: String,
     platform_color: String,
-    //num_markets: u32,
+    num_markets: usize,
     //brier_score: f32,
     x_series: Vec<f32>,
     y_series: Vec<f32>,
-    //point_sizes: Vec<f32>,
+    point_sizes: Vec<f32>,
     //point_descriptions: Vec<String>,
 }
 
@@ -134,6 +134,11 @@ fn get_platform_info(
             format!("could not find platform data for {platform_req}"),
         )),
     }
+}
+
+/// Scale a list of weights down to valid point sizes.
+fn scale_list(list: Vec<f32>) -> Vec<f32> {
+    list
 }
 
 #[get("/calibration_plot")]
@@ -230,7 +235,7 @@ async fn calibration_plot(
 
         // get weighted average values for all markets
         // this is a hot loop since we iterate over all markets
-        for market in market_list {
+        for market in market_list.iter() {
             // find the closest bin based on the market's resolution value
             let market_k = prob_to_k(&match bin_method.as_str() {
                 "prob_at_midpoint" => market.prob_at_midpoint,
@@ -275,7 +280,7 @@ async fn calibration_plot(
         }
 
         // divide out rolling averages into a single average value
-        let x_series = bins.iter().map(|x| k_to_prob(x)).collect();
+        let x_series = bins.iter().map(|bin| k_to_prob(bin)).collect();
         let y_series = bins
             .iter()
             .map(|bin| {
@@ -285,6 +290,11 @@ async fn calibration_plot(
                 sum / count
             })
             .collect();
+        let point_weights = bins
+            .iter()
+            .map(|bin| *weighted_counts.get(bin).unwrap())
+            .collect();
+        let point_sizes = scale_list(point_weights);
 
         // get cached platform info from database
         let platform_info = get_platform_info(conn, &platform)?;
@@ -295,8 +305,10 @@ async fn calibration_plot(
             platform_description: platform_info.platform_description,
             platform_avatar_url: platform_info.platform_avatar_url,
             platform_color: platform_info.platform_color,
+            num_markets: market_list.len(),
             x_series,
             y_series,
+            point_sizes,
         })
     }
 
