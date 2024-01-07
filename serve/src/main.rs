@@ -97,7 +97,7 @@ async fn calibration_plot(
                 "`bin_size` should be greater than 0".to_string(),
             ));
         }
-        if bs < 0.5 {
+        if bs > 0.5 {
             return Err(ApiError::new(
                 400,
                 "`bin_size` should be less than 0.5".to_string(),
@@ -150,13 +150,13 @@ async fn calibration_plot(
 
     // generate the x-value bins
     // note that we use u32 here instead of f32 since floating points are hard to use as keys
-    let bin_distance: i32 = prob_to_k(&0.10);
-    let bin_look = bin_distance / 2;
+    let bin_size: i32 = prob_to_k(&bin_size.unwrap_or(0.05));
+    let bin_look = bin_size / 2;
     let mut bins: Vec<i32> = Vec::new();
     let mut x = bin_look;
     while x <= prob_to_k(&1.0) {
         bins.push(x);
-        x += bin_distance;
+        x += bin_size;
     }
 
     let mut response = Vec::new();

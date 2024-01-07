@@ -3,6 +3,7 @@
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use clap::ValueEnum;
 use core::fmt;
+use diesel::upsert::excluded;
 use diesel::{pg::PgConnection, prelude::*, Connection, Insertable};
 use futures::future::join_all;
 use reqwest_leaky_bucket::leaky_bucket::RateLimiter;
@@ -56,7 +57,7 @@ table! {
 
 /// The central market type that all platform-specific objects are converted into.
 /// This is the object type that is sent to the database, file, or console.
-#[derive(Debug, Serialize, Insertable)]
+#[derive(Debug, Serialize, Insertable, AsChangeset)]
 #[diesel(table_name = market)]
 pub struct MarketStandard {
     title: String,
@@ -210,14 +211,24 @@ pub trait MarketStandardizer {
 fn save_markets(markets: Vec<MarketStandard>, method: OutputMethod) {
     match method {
         OutputMethod::Database => {
+            use crate::platforms::market::dsl::*;
             let mut conn = PgConnection::establish(
                 &var("DATABASE_URL").expect("Required environment variable DATABASE_URL not set."),
             )
             .expect("Error connecting to datbase.");
             for chunk in markets.chunks(1000) {
-                diesel::insert_into(market::table)
+                diesel::insert_into(market)
                     .values(chunk)
-                    .on_conflict_do_nothing() // TODO: upsert
+                    .on_conflict((platform, platform_id))
+                    .do_update()
+                    .set((
+                        open_days.eq(excluded(open_days)),
+                        volume_usd.eq(excluded(volume_usd)),
+                        prob_at_midpoint.eq(excluded(prob_at_midpoint)),
+                        prob_at_close.eq(excluded(prob_at_close)),
+                        prob_time_weighted.eq(excluded(prob_time_weighted)),
+                        resolution.eq(excluded(resolution)),
+                    ))
                     .execute(&mut conn)
                     .expect("Failed to insert rows into table.");
             }
