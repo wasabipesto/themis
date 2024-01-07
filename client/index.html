@@ -324,22 +324,7 @@
             loading: true,
             option_drawers_visible: true,
             option_drawers_open: [0],
-            sidebar_data: [
-              {
-                name: 'Manifold',
-                description: 'A play-money platform where anyone can make any market.',
-                icon_url: 'images/manifold.svg',
-                num_markets: 37555,
-                brier_score: 0.1635,
-              },
-              {
-                name: 'Kalshi',
-                description: 'A US-regulated exchange with limited real-money contracts.',
-                icon_url: 'images/kalshi.png',
-                num_markets: 4852,
-                brier_score: 0.1569,
-              },
-            ],
+            sidebar_data: [],
             options_selected: {
               bin_method: 'prob_time_weighted',
               weight_attribute: 'volume_usd',
@@ -426,9 +411,19 @@
               .then((data) => {
                 //this.api_data = data
                 this.updateGraph(data)
-                //this.updateSidebar(data)
+                this.updateSidebar(data)
               })
             this.loading = false
+          },
+
+          updateSidebar(data) {
+            this.sidebar_data = data.traces.map(p => ({
+              name: p.platform_name_fmt,
+              description: p.platform_description,
+              icon_url: p.platform_avatar_url,
+              num_markets: p.num_markets,
+              brier_score: 'wooloo'
+            }));
           },
 
           updateGraph(data) {
@@ -456,7 +451,7 @@
                 mode: 'markers',
                 marker: {
                   color: trace.platform_color,
-                  //size: data.point_size,
+                  size: trace.point_sizes,
                 },
               })
             }

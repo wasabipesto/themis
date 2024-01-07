@@ -137,8 +137,29 @@ fn get_platform_info(
 }
 
 /// Scale a list of weights down to valid point sizes.
-fn scale_list(list: Vec<f32>) -> Vec<f32> {
-    list
+fn scale_list(list: Vec<f32>, output_min: f32, output_max: f32, output_default: f32) -> Vec<f32> {
+    if list.is_empty() {
+        return Vec::new();
+    }
+
+    let input_min = *list
+        .iter()
+        .min_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap();
+    let input_max = *list
+        .iter()
+        .max_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap();
+
+    if input_min == input_max {
+        return vec![output_default; list.len()];
+    }
+
+    list.iter()
+        .map(|&value| {
+            ((value - input_min) / (input_max - input_min)) * (output_max - output_min) + output_min
+        })
+        .collect()
 }
 
 #[get("/calibration_plot")]
@@ -294,7 +315,7 @@ async fn calibration_plot(
             .iter()
             .map(|bin| *weighted_counts.get(bin).unwrap())
             .collect();
-        let point_sizes = scale_list(point_weights);
+        let point_sizes = scale_list(point_weights, 8.0, 32.0, 10.0);
 
         // get cached platform info from database
         let platform_info = get_platform_info(conn, &platform)?;
