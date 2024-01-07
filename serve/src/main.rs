@@ -230,20 +230,24 @@ async fn calibration_plot(
     let mut traces = Vec::new();
     for (platform, market_list) in markets_by_platform {
         // build sums and counts to use as rolling averages
-        let mut weighted_sums = HashMap::with_capacity(bins.len());
+        let mut weighted_resolution_sums = HashMap::with_capacity(bins.len());
         let mut weighted_counts = HashMap::with_capacity(bins.len());
         // populate each map with x-values from bins
         for bin in bins.clone() {
             let hash_value = bin;
-            weighted_sums.insert(hash_value, 0.0);
+            weighted_resolution_sums.insert(hash_value, 0.0);
             weighted_counts.insert(hash_value, 0.0);
         }
+
+        // set up brier counters
+        let mut weighted_brier_sum: f32 = 0.0;
+        let mut weighted_brier_count: f32 = 0.0;
 
         // get weighted average values for all markets
         // this is a hot loop since we iterate over all markets
         for market in market_list.iter() {
             // find the closest bin based on the market's selected x value
-            let market_k = prob_to_k(&match bin_method.as_str() {
+            let market_x_value = match bin_method.as_str() {
                 "prob_at_midpoint" => market.prob_at_midpoint,
                 "prob_at_close" => market.prob_at_close,
                 "prob_time_weighted" => market.prob_time_weighted,
@@ -253,7 +257,14 @@ async fn calibration_plot(
                         "the value provided for `bin_method` is not a valid option".to_string(),
                     ))
                 }
-            });
+            };
+            if market_x_value.is_nan() {
+                return Err(ApiError {
+                    status_code: 500,
+                    message: format!("Market X-Value is NaN: {:?}", market),
+                });
+            };
+            let market_k = prob_to_k(&market_x_value);
             let bin = bins
                 .iter()
                 .find(|&x| x - bin_look <= market_k && market_k <= x + bin_look)
@@ -268,6 +279,13 @@ async fn calibration_plot(
                 })?;
 
             // get the weighting value
+            let market_y_value = market.resolution;
+            if market_y_value.is_nan() {
+                return Err(ApiError {
+                    status_code: 500,
+                    message: format!("Market Y-Value is NaN: {:?}", market),
+                });
+            };
             let weight: f32 = match weight_attribute.as_str() {
                 "open_days" => market.open_days,
                 "volume_usd" => market.volume_usd,
@@ -282,8 +300,10 @@ async fn calibration_plot(
             };
 
             // add the market data to each counter
-            *weighted_sums.get_mut(&bin).unwrap() += weight * market.resolution;
+            *weighted_resolution_sums.get_mut(&bin).unwrap() += weight * market_y_value;
             *weighted_counts.get_mut(&bin).unwrap() += weight;
+            weighted_brier_sum += weight * (market_y_value - market_x_value).powf(2.0);
+            weighted_brier_count += weight;
         }
 
         // divide out rolling averages into a single average value
@@ -292,7 +312,7 @@ async fn calibration_plot(
             .iter()
             .map(|bin| {
                 // note that NaN is serialized as None, so if `count` is 0 the point won't be shown
-                let sum = weighted_sums.get(bin).unwrap();
+                let sum = weighted_resolution_sums.get(bin).unwrap();
                 let count = weighted_counts.get(bin).unwrap();
                 sum / count
             })
@@ -313,7 +333,7 @@ async fn calibration_plot(
             platform_avatar_url: platform_info.platform_avatar_url,
             platform_color: platform_info.platform_color,
             num_markets: market_list.len(),
-            brier_score: 0.0,
+            brier_score: weighted_brier_sum / weighted_brier_count,
             x_series,
             y_series,
             point_sizes,

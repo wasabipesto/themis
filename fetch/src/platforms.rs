@@ -204,7 +204,12 @@ pub trait MarketStandardizer {
                 cumulative_time += duration;
             }
         }
-        Ok(cumulative_prob / cumulative_time)
+        if cumulative_time > 60.0 {
+            Ok(cumulative_prob / cumulative_time)
+        } else {
+            //println!("Market was only open for {cumulative_time} seconds, using {DEFAULT_OPENING_PROB} as prob_time_weighted.");
+            Ok(DEFAULT_OPENING_PROB)
+        }
     }
 }
 

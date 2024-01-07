@@ -15,7 +15,7 @@ CREATE TABLE market (
 );
 DROP TABLE IF EXISTS platform;
 CREATE TABLE platform (
-    platform_name PRIMARY KEY,
+    platform_name VARCHAR PRIMARY KEY,
     platform_name_fmt VARCHAR NOT NULL,
     platform_description VARCHAR NOT NULL,
     platform_avatar_url VARCHAR NOT NULL,
