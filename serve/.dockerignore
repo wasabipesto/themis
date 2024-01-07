@@ -1,0 +1,10 @@
+target
+Dockerfile
+.dockerignore
+.git
+.gitignore
+*.md
+*.sh
+*.out
+*.svg
+perf.*
