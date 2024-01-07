@@ -8,12 +8,12 @@ This is the backend service that downloads data from each platform and saves it 
 
 These should be platforms that have an established presence and an open API. I would like to have 5 sites for the MVP.
 
-- [ ] Kalshi
+- [x] Kalshi
     - https://kalshi.com
     - API Docs: https://trading-api.readme.io/reference/getting-started
     - Python library: https://github.com/Kalshi/kalshi-python
-    - Note: API requires username/password from a verified account with 2FA disabled.
-- [ ] Manifold
+    - Note: API requires username/password from a verified account with 2FA *disabled*.
+- [x] Manifold
     - https://manifold.markets
     - API Docs: https://docs.manifold.markets/api
 - [ ] Metaculus

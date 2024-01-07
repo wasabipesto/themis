@@ -1,5 +1,5 @@
 use actix_web::web::{Data, Query};
-use actix_web::{get, middleware, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, middleware, App, HttpResponse, HttpServer};
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::{pg::PgConnection, prelude::*};
 use serde::{Deserialize, Serialize};
@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::env::var;
 
 mod helper;
+use helper::ApiError;
 
 const DEFAULT_BIN_METHOD: &str = "prob_time_weighted";
 const DEFAULT_WEIGHT_ATTR: &str = "count";
@@ -61,6 +62,7 @@ struct Plot {
 #[derive(Debug, Deserialize)]
 pub struct QueryParams {
     bin_method: Option<String>,
+    bin_size: Option<f32>,
     weight_attribute: Option<String>,
     min_open_days: Option<f32>,
     min_volume_usd: Option<f32>,
@@ -81,28 +83,59 @@ fn k_to_prob(k: &i32) -> f32 {
 async fn calibration_plot(
     query: Query<QueryParams>,
     pool: Data<Pool<ConnectionManager<PgConnection>>>,
-) -> impl Responder {
+) -> Result<HttpResponse, ApiError> {
     // get query parameters or defaults
     let bin_method = query
         .bin_method
         .clone()
         .unwrap_or(DEFAULT_BIN_METHOD.to_string());
+    let bin_size = query.bin_size.clone();
+    if let Some(bs) = bin_size {
+        if bs < 0.0 {
+            return Err(ApiError::new(
+                400,
+                "`bin_size` should be greater than 0".to_string(),
+            ));
+        }
+        if bs < 0.5 {
+            return Err(ApiError::new(
+                400,
+                "`bin_size` should be less than 0.5".to_string(),
+            ));
+        }
+    }
+
     let weight_attribute = query
         .weight_attribute
         .clone()
         .unwrap_or(DEFAULT_WEIGHT_ATTR.to_string());
+
     let min_open_days = query.min_open_days.clone().unwrap_or(0.0);
     let min_volume_usd = query.min_volume_usd.clone().unwrap_or(0.0);
 
     // get database connection from pool
-    let conn = &mut pool.get().expect("Failed to get connection from pool");
+    let conn = &mut match pool.get() {
+        Ok(conn) => conn,
+        Err(e) => {
+            return Err(ApiError::new(
+                500,
+                format!("failed to get connection from pool: {e}"),
+            ));
+        }
+    };
+
     // get all markets from database
-    let markets = market::table
+    let query = market::table
         .filter(market::open_days.ge(min_open_days))
         .filter(market::volume_usd.ge(min_volume_usd))
         .select(Market::as_select())
-        .load::<Market>(conn)
-        .expect("Failed to query table.");
+        .load::<Market>(conn);
+    let markets = match query {
+        Ok(m) => m,
+        Err(e) => {
+            return Err(ApiError::new(500, format!("failed to query markets: {e}")));
+        }
+    };
 
     // sort all markets based on the platform
     // this is a hot loop since we iterate over all markets
@@ -120,7 +153,7 @@ async fn calibration_plot(
     let bin_distance: i32 = prob_to_k(&0.10);
     let bin_look = bin_distance / 2;
     let mut bins: Vec<i32> = Vec::new();
-    let mut x = 0;
+    let mut x = bin_look;
     while x <= prob_to_k(&1.0) {
         bins.push(x);
         x += bin_distance;
@@ -146,22 +179,37 @@ async fn calibration_plot(
                 "prob_at_midpoint" => market.prob_at_midpoint,
                 "prob_at_close" => market.prob_at_close,
                 "prob_time_weighted" => market.prob_time_weighted,
-                _ => panic!("weight_attribute invalid"),
+                _ => {
+                    return Err(ApiError::new(
+                        400,
+                        "the value provided for `bin_method` is not a valid option".to_string(),
+                    ))
+                }
             });
-            let bin = bins
+            let bin_q = bins
                 .iter()
-                .find(|&x| x - bin_look <= market_k && market_k <= x + bin_look)
-                .expect(&format!(
-                    "Failed to find correct bin for {market_k} in {bins:?} with lookaround {bin_look}"
-                ));
-            //println!("{platform} market sorted into bin {}", k_to_prob(bin));
+                .find(|&x| x - bin_look <= market_k && market_k <= x + bin_look);
+            let bin = match bin_q {
+                Some(m) => m,
+                None => {
+                    return Err(ApiError::new(500, format!(
+                        "failed to find correct bin for {market_k} in {bins:?} with lookaround {bin_look}"
+                    )));
+                }
+            };
 
             // get the weighting value
             let weight: f32 = match weight_attribute.as_str() {
                 "open_days" => market.open_days,
                 "volume_usd" => market.volume_usd,
                 "count" => 1.0,
-                _ => panic!("weight_attribute invalid"),
+                _ => {
+                    return Err(ApiError::new(
+                        400,
+                        "the value provided for `weight_attribute` is not a valid option"
+                            .to_string(),
+                    ))
+                }
             };
 
             // add the market data to each counter
@@ -173,10 +221,10 @@ async fn calibration_plot(
         let x_series = bins.iter().map(|x| k_to_prob(x)).collect();
         let y_series = bins
             .iter()
-            .map(|x| {
+            .map(|bin| {
                 // note that NaN is serialized as None, so if `count` is 0 the point won't be shown
-                let sum = weighted_sums.get(x).unwrap();
-                let count = weighted_counts.get(x).unwrap();
+                let sum = weighted_sums.get(bin).unwrap();
+                let count = weighted_counts.get(bin).unwrap();
                 sum / count
             })
             .collect();
@@ -188,7 +236,7 @@ async fn calibration_plot(
         })
     }
 
-    HttpResponse::Ok().json(response)
+    Ok(HttpResponse::Ok().json(response))
 }
 
 /// Server startup tasks.
