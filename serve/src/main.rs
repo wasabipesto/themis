@@ -72,7 +72,7 @@ pub struct QueryParams {
     bin_size: Option<f32>,
     weight_attribute: Option<String>,
     min_open_days: Option<f32>,
-    nim_num_traders: Option<u32>,
+    min_num_traders: Option<u32>,
     min_volume_usd: Option<f32>,
     is_predictive: Option<String>,
     title_contains: Option<String>,

@@ -205,8 +205,8 @@ async fn get_extended_data(
         let response_text = client
             .get(&api_url)
             .query(&[("contractId", &market.id)])
-            .query(&[("limit", limit)])
-            .query(&[("before", before)])
+            .query(&[("limit", &limit)])
+            .query(&[("before", &before)])
             .send()
             .await
             .expect("HTTP call failed to execute")
@@ -215,8 +215,11 @@ async fn get_extended_data(
             .expect("Failed to get response text");
         let bet_data: Vec<Bet> =
             serde_json::from_str(&response_text).map_err(|e| MarketConvertError {
-                data: format!("{:?}", response_text),
-                message: format!("Failed to deserialize: {:?}", e),
+                data: format!("{:?}", market),
+                message: format!(
+                    "Failed to deserialize: response = {:?}, error = {:?}, before = {:?}",
+                    response_text, e, before
+                ),
             })?;
         let response_len = bet_data.len();
         all_bet_data.extend(bet_data);
@@ -268,12 +271,26 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
         let market_data: Vec<MarketStandard> = join_all(market_data_futures)
             .await
             .into_iter()
-            .map(|i| i.expect("Error getting extended market data"))
-            .map(|market| {
-                market
-                    .try_into()
-                    .expect("Error converting market into standard fields.")
+            .map(|market_downloaded_result| match market_downloaded_result {
+                Ok(market_downloaded) => {
+                    // market downloaded successfully
+                    match market_downloaded.try_into() {
+                        // market processed successfully
+                        Ok(market_converted) => Some(market_converted),
+                        // market failed processing
+                        Err(e) => {
+                            eprintln!("Error converting market into standard fields: {e}");
+                            None
+                        }
+                    }
+                }
+                Err(e) => {
+                    // market failed downloadng
+                    eprintln!("Error downloading full market data: {e}");
+                    return None;
+                }
             })
+            .flatten()
             .collect();
         if verbose {
             println!(

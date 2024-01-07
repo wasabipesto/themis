@@ -3,7 +3,7 @@
 use super::*;
 use regex::Regex;
 
-const KALSHI_API_BASE: &str = "https://demo-api.kalshi.co/trade-api/v2";
+const KALSHI_API_BASE: &str = "https://trading-api.kalshi.com/trade-api/v2";
 const KALSHI_SITE_BASE: &str = "https://kalshi.com/markets/";
 const KALSHI_EXCHANGE_RATE: f32 = 100.0;
 const KALSHI_RATELIMIT: usize = 10;
@@ -276,12 +276,26 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
         let market_data: Vec<MarketStandard> = join_all(market_data_futures)
             .await
             .into_iter()
-            .map(|i| i.expect("Error getting extended market data"))
-            .map(|market| {
-                market
-                    .try_into()
-                    .expect("Error converting market into standard fields")
+            .map(|market_downloaded_result| match market_downloaded_result {
+                Ok(market_downloaded) => {
+                    // market downloaded successfully
+                    match market_downloaded.try_into() {
+                        // market processed successfully
+                        Ok(market_converted) => Some(market_converted),
+                        // market failed processing
+                        Err(e) => {
+                            eprintln!("Error converting market into standard fields: {e}");
+                            None
+                        }
+                    }
+                }
+                Err(e) => {
+                    // market failed downloadng
+                    eprintln!("Error downloading full market data: {e}");
+                    return None;
+                }
             })
+            .flatten()
             .collect();
         if verbose {
             println!(

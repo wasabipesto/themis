@@ -41,4 +41,11 @@ VALUES (
         'A US-regulated exchange with limited real-money contracts.',
         'images/kalshi.png',
         '#00d298'
+    ),
+    (
+        'metaculus',
+        'Metaculus',
+        'A forecasting platform focused on calibration instead of bets.',
+        'images/metaculus.png',
+        '#283441'
     );
