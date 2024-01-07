@@ -188,6 +188,7 @@ async fn calibration_plot(
 
     let min_open_days = query.min_open_days.clone().unwrap_or(0.0);
     let min_volume_usd = query.min_volume_usd.clone().unwrap_or(0.0);
+    let title_contains = "%".to_string() + &query.title_contains.clone().unwrap_or_default() + "%";
 
     // get database connection from pool
     let conn = &mut pool.get().or_else(|e| {
@@ -201,6 +202,7 @@ async fn calibration_plot(
     let markets = market::table
         .filter(market::open_days.ge(min_open_days))
         .filter(market::volume_usd.ge(min_volume_usd))
+        .filter(market::title.ilike(title_contains))
         .select(Market::as_select())
         .load::<Market>(conn)
         .or_else(|e| Err(ApiError::new(500, format!("failed to query markets: {e}"))))?;

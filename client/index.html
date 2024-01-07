@@ -328,8 +328,8 @@
             options_selected: {
               bin_method: 'prob_time_weighted',
               weight_attribute: 'volume_usd',
-              min_open_days: 7,
-              min_num_traders: 1,
+              min_open_days: 0,
+              min_num_traders: 0,
               min_volume_usd: 10,
               is_predictive: 'predictive',
               title_contains: '',
@@ -421,7 +421,7 @@
               description: p.platform_description,
               icon_url: p.platform_avatar_url,
               num_markets: p.num_markets,
-              brier_score: 'wooloo'
+              brier_score: p.brier_score,
             }));
           },
 
