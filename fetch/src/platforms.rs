@@ -193,9 +193,12 @@ pub trait MarketStandardizer {
         match &prev_event {
             Some(prev) => {
                 // add time between last event and close time
-                let duration = (self.close_dt()? - prev.time).num_seconds() as f32;
-                cumulative_prob += prev.prob * duration;
-                cumulative_time += duration;
+                // if the close time was moved to before the last event then we can't determine how long the last bet was valid for
+                if self.close_dt()? > prev.time {
+                    let duration = (self.close_dt()? - prev.time).num_seconds() as f32;
+                    cumulative_prob += prev.prob * duration;
+                    cumulative_time += duration;
+                }
             }
             None => {
                 // there are no events whatsoever, just assume it was the default throughout

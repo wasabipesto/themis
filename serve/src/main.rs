@@ -76,7 +76,7 @@ pub struct QueryParams {
     min_volume_usd: Option<f32>,
     is_predictive: Option<String>,
     title_contains: Option<String>,
-    categories: Option<Vec<String>>,
+    categories: Option<String>,
 }
 
 /// Metadata to help label a plot.
