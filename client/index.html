@@ -338,39 +338,39 @@
             ],
             options_selected: {
               bin_method: 'prob_time_weighted',
-              weighting: 'num_traders',
-              min_open_length: 7,
+              weight_attribute: 'volume_usd',
+              min_open_days: 7,
               min_num_traders: 1,
-              min_volume: 10,
+              min_volume_usd: 10,
               is_predictive: 'predictive',
               title_contains: '',
               categories: [],
             },
             options: {
               bin_method: {
+                //prob_at_q1: { label: '25% of Market Duration' },
+                prob_at_midpoint: { label: 'Midpoint of Market Duration' },
+                //prob_at_q3: { label: '75% of Market Duration' },
+                //prob_at_1w: { label: '1 Week Before Close' },
+                //prob_at_1m: { label: '1 Month Before Close' },
+                //prob_at_1y: { label: '1 Year Before Close' },
+                prob_at_close: { label: 'At Market Close' },
                 prob_time_weighted: { label: 'Time-Weighted Average' },
-                prob_trade_weighted: { label: 'Trade-Weighted Average' },
-                prob_at_q1: { label: '25% of Market Duration' },
-                prob_at_q2: { label: '50% of Market Duration' },
-                prob_at_q3: { label: '75% of Market Duration' },
-                prob_at_1w: { label: '1 Week Before Resolution' },
-                prob_at_1m: { label: '1 Month Before Resolution' },
-                prob_at_1y: { label: '1 Year Before Resolution' },
-                resolution: { label: 'At Market Resolution' },
+                //prob_trade_weighted: { label: 'Trade-Weighted Average' },
               },
-              weighting: {
+              weight_attribute: {
                 none: { label: 'None' },
-                volume: { label: 'Market Volume' },
+                volume_usd: { label: 'Market Volume' },
                 open_days: { label: 'Market Length' },
-                num_traders: { label: 'Number of Traders' },
+                //num_traders: { label: 'Number of Traders' },
               },
-              min_open_length: {
+              min_open_days: {
                 range: [0, 90],
               },
               min_num_traders: {
                 range: [0, 50],
               },
-              min_volume: {
+              min_volume_usd: {
                 range: [0, 500],
               },
               is_predictive: {
@@ -408,10 +408,7 @@
 
           async updatePage() {
             this.loading = true
-            await fetch('https://api.calibration.city/calibration_plot', {
-              method: 'GET',
-              //body: options_selected,
-            })
+            await fetch('https://example.com?' + new URLSearchParams(this.options_selected))
               .then((response) => response.json())
               .then((data) => {
                 //this.api_data = data

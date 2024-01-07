@@ -10,7 +10,7 @@ mod helper;
 use helper::ApiError;
 
 const DEFAULT_BIN_METHOD: &str = "prob_time_weighted";
-const DEFAULT_WEIGHT_ATTR: &str = "count";
+const DEFAULT_WEIGHT_ATTR: &str = "none";
 
 // Diesel macro to get markets from the database table.
 table! {
@@ -72,7 +72,11 @@ pub struct QueryParams {
     bin_size: Option<f32>,
     weight_attribute: Option<String>,
     min_open_days: Option<f32>,
+    nim_num_traders: Option<u32>,
     min_volume_usd: Option<f32>,
+    is_predictive: Option<String>,
+    title_contains: Option<String>,
+    categories: Option<Vec<String>>,
 }
 
 /// Metadata to help label a plot.
@@ -255,7 +259,7 @@ async fn calibration_plot(
             let weight: f32 = match weight_attribute.as_str() {
                 "open_days" => market.open_days,
                 "volume_usd" => market.volume_usd,
-                "count" => 1.0,
+                "none" => 1.0,
                 _ => {
                     return Err(ApiError::new(
                         400,
@@ -307,7 +311,7 @@ async fn calibration_plot(
         y_title: match weight_attribute.as_str() {
             "open_days" => format!("Resolution, Weighted by Duration"),
             "volume_usd" => format!("Resolution, Weighted by Volume"),
-            "count" => format!("Resolution, Unweighted"),
+            "none" => format!("Resolution, Unweighted"),
             _ => panic!(""),
         },
     };
