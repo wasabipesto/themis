@@ -257,6 +257,7 @@ async fn main() -> Result<(), std::io::Error> {
     HttpServer::new(move || {
         App::new()
             .app_data(Data::new(pool.clone()))
+            .wrap(actix_cors::Cors::permissive())
             .wrap(middleware::Logger::default())
             .service(calibration_plot)
     })

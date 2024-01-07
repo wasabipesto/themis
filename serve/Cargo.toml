@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+actix-cors = { version = "0.7.0" }
 actix-web = { version = "4.4" }
 diesel = { version = "2.1.4", features = ["postgres", "r2d2"] }
 env_logger = { version = "0.10.1" }
