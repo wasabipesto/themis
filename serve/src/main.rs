@@ -86,14 +86,6 @@ struct Metadata {
     x_title: String,
     y_title: String,
 }
-
-/// Full response for a calibration plot.
-#[derive(Debug, Serialize)]
-struct CalibrationPlot {
-    metadata: Metadata,
-    traces: Vec<Trace>,
-}
-
 /// Data sent to the client to render a plot, one plot per platform.
 #[derive(Debug, Serialize)]
 struct Trace {
@@ -102,11 +94,18 @@ struct Trace {
     platform_avatar_url: String,
     platform_color: String,
     num_markets: usize,
-    //brier_score: f32,
+    brier_score: f32,
     x_series: Vec<f32>,
     y_series: Vec<f32>,
     point_sizes: Vec<f32>,
     //point_descriptions: Vec<String>,
+}
+
+/// Full response for a calibration plot.
+#[derive(Debug, Serialize)]
+struct CalibrationPlot {
+    metadata: Metadata,
+    traces: Vec<Trace>,
 }
 
 /// A quick and dirty f32 mask into u32 for key lookup.
@@ -174,16 +173,10 @@ async fn calibration_plot(
         .unwrap_or(DEFAULT_BIN_METHOD.to_string());
     let bin_size = query.bin_size.clone();
     if let Some(bs) = bin_size {
-        if bs < 0.0 {
+        if bs < 0.0 || bs > 0.5 {
             return Err(ApiError::new(
                 400,
-                "`bin_size` should be greater than 0".to_string(),
-            ));
-        }
-        if bs > 0.5 {
-            return Err(ApiError::new(
-                400,
-                "`bin_size` should be less than 0.5".to_string(),
+                format!("`bin_size` should be between 0.0 and 0.5"),
             ));
         }
     }
@@ -197,28 +190,20 @@ async fn calibration_plot(
     let min_volume_usd = query.min_volume_usd.clone().unwrap_or(0.0);
 
     // get database connection from pool
-    let conn = &mut match pool.get() {
-        Ok(conn) => conn,
-        Err(e) => {
-            return Err(ApiError::new(
-                500,
-                format!("failed to get connection from pool: {e}"),
-            ));
-        }
-    };
+    let conn = &mut pool.get().or_else(|e| {
+        Err(ApiError::new(
+            500,
+            format!("failed to get connection from pool: {e}"),
+        ))
+    })?;
 
     // get all markets from database
-    let query = market::table
+    let markets = market::table
         .filter(market::open_days.ge(min_open_days))
         .filter(market::volume_usd.ge(min_volume_usd))
         .select(Market::as_select())
-        .load::<Market>(conn);
-    let markets = match query {
-        Ok(m) => m,
-        Err(e) => {
-            return Err(ApiError::new(500, format!("failed to query markets: {e}")));
-        }
-    };
+        .load::<Market>(conn)
+        .or_else(|e| Err(ApiError::new(500, format!("failed to query markets: {e}"))))?;
 
     // sort all markets based on the platform
     // this is a hot loop since we iterate over all markets
@@ -257,7 +242,7 @@ async fn calibration_plot(
         // get weighted average values for all markets
         // this is a hot loop since we iterate over all markets
         for market in market_list.iter() {
-            // find the closest bin based on the market's resolution value
+            // find the closest bin based on the market's selected x value
             let market_k = prob_to_k(&match bin_method.as_str() {
                 "prob_at_midpoint" => market.prob_at_midpoint,
                 "prob_at_close" => market.prob_at_close,
@@ -269,17 +254,18 @@ async fn calibration_plot(
                     ))
                 }
             });
-            let bin_q = bins
+            let bin = bins
                 .iter()
-                .find(|&x| x - bin_look <= market_k && market_k <= x + bin_look);
-            let bin = match bin_q {
-                Some(m) => m,
-                None => {
-                    return Err(ApiError::new(500, format!(
-                        "failed to find correct bin for {market_k} in {bins:?} with lookaround {bin_look}"
-                    )));
-                }
-            };
+                .find(|&x| x - bin_look <= market_k && market_k <= x + bin_look)
+                .ok_or_else(|| {
+                    ApiError::new(
+                        500,
+                        format!(
+                            "failed to find correct bin for {} in {:?} with lookaround {}",
+                            market_k, bins, bin_look
+                        ),
+                    )
+                })?;
 
             // get the weighting value
             let weight: f32 = match weight_attribute.as_str() {
@@ -327,6 +313,7 @@ async fn calibration_plot(
             platform_avatar_url: platform_info.platform_avatar_url,
             platform_color: platform_info.platform_color,
             num_markets: market_list.len(),
+            brier_score: 0.0,
             x_series,
             y_series,
             point_sizes,

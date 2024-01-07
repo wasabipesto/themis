@@ -409,7 +409,6 @@
             )
               .then((response) => response.json())
               .then((data) => {
-                //this.api_data = data
                 this.updateGraph(data)
                 this.updateSidebar(data)
               })
@@ -443,10 +442,10 @@
             for (var i = 0; i < data.traces.length; i++) {
               trace = data.traces[i]
               traces.push({
+                name: trace.platform_name_fmt,
                 x: trace.x_series,
                 y: trace.y_series,
-                name: trace.platform_name_fmt,
-                //text: data.point_desc,
+                //text: trace.point_descriptions,
                 type: 'scatter',
                 mode: 'markers',
                 marker: {
