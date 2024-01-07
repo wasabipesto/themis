@@ -435,15 +435,14 @@
                 },
               },
             ]
-            for (var i = 0; i < data.length; i++) {
-              plot = data[i]
-              console.log(plot)
+            for (var i = 0; i < data.traces.length; i++) {
+              trace = data.traces[i]
               traces.push({
-                x: plot.x_series,
-                y: plot.y_series,
+                x: trace.x_series,
+                y: trace.y_series,
                 //text: data.point_desc,
                 //name: 'Manifold <br>n=' + data.num_markets_total + ' b=' + data.brier_score,
-                name: plot.platform,
+                name: trace.platform,
                 type: 'scatter',
                 mode: 'markers',
                 marker: {
@@ -453,17 +452,14 @@
               })
             }
             var layout = {
-              //title: data.title,
-              title: 'Calibration Plot',
+              title: data.metadata.title,
               xaxis: {
-                //title: data.xlabel,
-                title: 'Time-Weighted Probability',
+                title: data.metadata.x_title,
                 range: [0, 1],
                 tickformat: ',.0%',
               },
               yaxis: {
-                //title: data.ylabel,
-                title: 'Resolved Probability',
+                title: data.metadata.y_title,
                 range: [0, 1],
                 tickformat: ',.0%',
               },

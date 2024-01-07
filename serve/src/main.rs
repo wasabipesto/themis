@@ -45,19 +45,6 @@ struct Market {
     resolution: f32,
 }
 
-/// Data sent to the client to render a plot, one plot per platform.
-#[derive(Debug, Serialize)]
-struct Plot {
-    platform: String,
-    //platform_description: String,
-    //platform_avatar_url: String,
-    //brier_score: f32,
-    x_series: Vec<f32>,
-    y_series: Vec<f32>,
-    //point_sizes: Vec<f32>,
-    //point_descriptions: Vec<String>,
-}
-
 /// Parameters passed to the calibration function.
 #[derive(Debug, Deserialize)]
 pub struct QueryParams {
@@ -66,6 +53,34 @@ pub struct QueryParams {
     weight_attribute: Option<String>,
     min_open_days: Option<f32>,
     min_volume_usd: Option<f32>,
+}
+
+/// Metadata to help label a plot.
+#[derive(Debug, Serialize)]
+struct Metadata {
+    title: String,
+    x_title: String,
+    y_title: String,
+}
+
+/// Full response for a calibration plot.
+#[derive(Debug, Serialize)]
+struct CalibrationPlot {
+    metadata: Metadata,
+    traces: Vec<Trace>,
+}
+
+/// Data sent to the client to render a plot, one plot per platform.
+#[derive(Debug, Serialize)]
+struct Trace {
+    platform: String,
+    //platform_description: String,
+    //platform_avatar_url: String,
+    //brier_score: f32,
+    x_series: Vec<f32>,
+    y_series: Vec<f32>,
+    //point_sizes: Vec<f32>,
+    //point_descriptions: Vec<String>,
 }
 
 /// A quick and dirty f32 mask into u32 for key lookup.
@@ -159,7 +174,7 @@ async fn calibration_plot(
         x += bin_size;
     }
 
-    let mut response = Vec::new();
+    let mut traces = Vec::new();
     for (platform, market_list) in markets_by_platform {
         // build sums and counts to use as rolling averages
         let mut weighted_sums = HashMap::with_capacity(bins.len());
@@ -229,12 +244,30 @@ async fn calibration_plot(
             })
             .collect();
 
-        response.push(Plot {
+        traces.push(Trace {
             platform,
             x_series,
             y_series,
         })
     }
+
+    let metadata = Metadata {
+        title: format!("Calibration Plot"),
+        x_title: match bin_method.as_str() {
+            "prob_at_midpoint" => format!("Probability at Midpoint"),
+            "prob_at_close" => format!("Probability at Close"),
+            "prob_time_weighted" => format!("Time-Weighted Probability"),
+            _ => panic!(""),
+        },
+        y_title: match weight_attribute.as_str() {
+            "open_days" => format!("Resolution, Weighted by Duration"),
+            "volume_usd" => format!("Resolution, Weighted by Volume"),
+            "count" => format!("Resolution, Unweighted"),
+            _ => panic!(""),
+        },
+    };
+
+    let response = CalibrationPlot { metadata, traces };
 
     Ok(HttpResponse::Ok().json(response))
 }
