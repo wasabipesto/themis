@@ -336,13 +336,6 @@
                 num_markets: 4852,
                 brier_score: 0.1569,
               },
-              {
-                name: 'PredictIt',
-                description: '',
-                icon_url: 'https://manifold.markets/welcome/manipurple.png',
-                num_markets: 14029,
-                brier_score: 0.1867,
-              },
             ],
             options_selected: {
               bin_method: 'prob_time_weighted',
@@ -416,8 +409,8 @@
 
           async updatePage() {
             this.loading = true
-            await fetch('https://calibration.city/manifold/get_data', {
-              method: 'POST',
+            await fetch('https://api.calibration.city/calibration_plot', {
+              method: 'GET',
               //body: options_selected,
             })
               .then((response) => response.json())
@@ -442,27 +435,35 @@
                 },
               },
             ]
-            traces.push({
-              x: data.x,
-              y: data.y,
-              text: data.point_desc,
-              name: 'Manifold <br>n=' + data.num_markets_total + ' b=' + data.brier_score,
-              type: 'scatter',
-              mode: 'markers',
-              marker: {
-                color: 'rgb(72, 95, 199)',
-                size: data.point_size,
-              },
-            })
+            for (var i = 0; i < data.length; i++) {
+              plot = data[i]
+              console.log(plot)
+              traces.push({
+                x: plot.x_series,
+                y: plot.y_series,
+                //text: data.point_desc,
+                //name: 'Manifold <br>n=' + data.num_markets_total + ' b=' + data.brier_score,
+                name: plot.platform,
+                type: 'scatter',
+                mode: 'markers',
+                marker: {
+                  color: 'rgb(72, 95, 199)',
+                  //size: data.point_size,
+                },
+              })
+            }
             var layout = {
-              title: data.title,
+              //title: data.title,
+              title: 'Calibration Plot',
               xaxis: {
-                title: data.xlabel,
+                //title: data.xlabel,
+                title: 'Time-Weighted Probability',
                 range: [0, 1],
                 tickformat: ',.0%',
               },
               yaxis: {
-                title: data.ylabel,
+                //title: data.ylabel,
+                title: 'Resolved Probability',
                 range: [0, 1],
                 tickformat: ',.0%',
               },
