@@ -1,11 +1,15 @@
-use actix_web::{get, middleware, web::Data, App, HttpResponse, HttpServer, Responder};
+use actix_web::web::{Data, Query};
+use actix_web::{get, middleware, App, HttpResponse, HttpServer, Responder};
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::{pg::PgConnection, prelude::*};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env::var;
 
 mod helper;
+
+const DEFAULT_BIN_METHOD: &str = "prob_time_weighted";
+const DEFAULT_WEIGHT_ATTR: &str = "count";
 
 // Diesel macro to get markets from the database table.
 table! {
@@ -24,6 +28,7 @@ table! {
     }
 }
 
+/// Data returned from the database, same as what we inserted.
 #[derive(Debug, Queryable, Serialize, Selectable)]
 #[diesel(table_name = market)]
 struct Market {
@@ -39,6 +44,7 @@ struct Market {
     resolution: f32,
 }
 
+/// Data sent to the client to render a plot, one plot per platform.
 #[derive(Debug, Serialize)]
 struct Plot {
     platform: String,
@@ -49,6 +55,15 @@ struct Plot {
     y_series: Vec<f32>,
     //point_sizes: Vec<f32>,
     //point_descriptions: Vec<String>,
+}
+
+/// Parameters passed to the calibration function.
+#[derive(Debug, Deserialize)]
+pub struct QueryParams {
+    bin_method: Option<String>,
+    weight_attribute: Option<String>,
+    min_open_days: Option<f32>,
+    min_volume_usd: Option<f32>,
 }
 
 /// A quick and dirty f32 mask into u32 for key lookup.
@@ -63,16 +78,28 @@ fn k_to_prob(k: &i32) -> f32 {
 }
 
 #[get("/calibration_plot")]
-async fn calibration_plot(pool: Data<Pool<ConnectionManager<PgConnection>>>) -> impl Responder {
-    // get weight from query (and more eventually)
-    let weight_attribute = "market";
+async fn calibration_plot(
+    query: Query<QueryParams>,
+    pool: Data<Pool<ConnectionManager<PgConnection>>>,
+) -> impl Responder {
+    // get query parameters or defaults
+    let bin_method = query
+        .bin_method
+        .clone()
+        .unwrap_or(DEFAULT_BIN_METHOD.to_string());
+    let weight_attribute = query
+        .weight_attribute
+        .clone()
+        .unwrap_or(DEFAULT_WEIGHT_ATTR.to_string());
+    let min_open_days = query.min_open_days.clone().unwrap_or(0.0);
+    let min_volume_usd = query.min_volume_usd.clone().unwrap_or(0.0);
 
     // get database connection from pool
     let conn = &mut pool.get().expect("Failed to get connection from pool");
     // get all markets from database
     let markets = market::table
-        //.filter(market::open_days.ge(0.0))
-        //.filter(market::volume_usd.ge(0.0))
+        .filter(market::open_days.ge(min_open_days))
+        .filter(market::volume_usd.ge(min_volume_usd))
         .select(Market::as_select())
         .load::<Market>(conn)
         .expect("Failed to query table.");
@@ -115,7 +142,12 @@ async fn calibration_plot(pool: Data<Pool<ConnectionManager<PgConnection>>>) -> 
         // this is a hot loop since we iterate over all markets
         for market in market_list {
             // find the closest bin based on the market's resolution value
-            let market_k = prob_to_k(&market.prob_time_weighted);
+            let market_k = prob_to_k(&match bin_method.as_str() {
+                "prob_at_midpoint" => market.prob_at_midpoint,
+                "prob_at_close" => market.prob_at_close,
+                "prob_time_weighted" => market.prob_time_weighted,
+                _ => panic!("weight_attribute invalid"),
+            });
             let bin = bins
                 .iter()
                 .find(|&x| x - bin_look <= market_k && market_k <= x + bin_look)
@@ -125,8 +157,10 @@ async fn calibration_plot(pool: Data<Pool<ConnectionManager<PgConnection>>>) -> 
             //println!("{platform} market sorted into bin {}", k_to_prob(bin));
 
             // get the weighting value
-            let weight: f32 = match weight_attribute {
-                "market" => 1.0,
+            let weight: f32 = match weight_attribute.as_str() {
+                "open_days" => market.open_days,
+                "volume_usd" => market.volume_usd,
+                "count" => 1.0,
                 _ => panic!("weight_attribute invalid"),
             };
 
@@ -134,9 +168,6 @@ async fn calibration_plot(pool: Data<Pool<ConnectionManager<PgConnection>>>) -> 
             *weighted_sums.get_mut(&bin).unwrap() += weight * market.resolution;
             *weighted_counts.get_mut(&bin).unwrap() += weight;
         }
-
-        println!("{platform} sums {:?}", weighted_sums);
-        println!("{platform} counts {:?}", weighted_counts);
 
         // divide out rolling averages into a single average value
         let x_series = bins.iter().map(|x| k_to_prob(x)).collect();
@@ -156,7 +187,6 @@ async fn calibration_plot(pool: Data<Pool<ConnectionManager<PgConnection>>>) -> 
             y_series,
         })
     }
-    println!("{:?}", response);
 
     HttpResponse::Ok().json(response)
 }
