@@ -97,16 +97,16 @@ struct CalibrationPlot {
 /// Data sent to the client to render a plot, one plot per platform.
 #[derive(Debug, Serialize)]
 struct Trace {
-    //platform: String,
     platform_name_fmt: String,
     platform_description: String,
     platform_avatar_url: String,
     platform_color: String,
+    //num_markets: u32,
+    //brier_score: f32,
     x_series: Vec<f32>,
     y_series: Vec<f32>,
     //point_sizes: Vec<f32>,
     //point_descriptions: Vec<String>,
-    //brier_score: f32,
 }
 
 /// A quick and dirty f32 mask into u32 for key lookup.
@@ -299,6 +299,8 @@ async fn calibration_plot(
             y_series,
         })
     }
+
+    traces.sort_unstable_by_key(|t| t.platform_name_fmt.clone());
 
     let metadata = Metadata {
         title: format!("Calibration Plot"),

@@ -109,7 +109,8 @@
             <v-expansion-panel>
               <v-expansion-panel-title>
                 <v-icon class="mr-3">mdi-globe-model</v-icon>
-                Weighting: {{ getOptionLabel("weighting", options_selected.weighting) }}
+                Weighting: {{ getOptionLabel("weight_attribute", options_selected.weight_attribute)
+                }}
               </v-expansion-panel-title>
               <v-expansion-panel-text>
                 <p class="my-2">
@@ -117,9 +118,9 @@
                   averaged evenly. Weighting gives more importance to markets meeting certain
                   criteria.
                 </p>
-                <v-radio-group v-model="options_selected.weighting">
+                <v-radio-group v-model="options_selected.weight_attribute">
                   <v-radio
-                    v-for="(v,k) in options.weighting"
+                    v-for="(v,k) in options.weight_attribute"
                     :key="k"
                     :value="k"
                     :label="v.label"
@@ -130,7 +131,7 @@
             <v-expansion-panel>
               <v-expansion-panel-title>
                 <v-icon class="mr-3">mdi-calendar</v-icon>
-                Minimum Open Length: {{ options_selected.min_open_length }} days
+                Minimum Open Length: {{ options_selected.min_open_days }} days
               </v-expansion-panel-title>
               <v-expansion-panel-text>
                 <p class="my-2">
@@ -138,9 +139,9 @@
                   of days. Useful to filter out markets that were quickly or fradulently resolved.
                 </p>
                 <v-slider
-                  v-model="options_selected.min_open_length"
-                  :min="options.min_open_length.range[0]"
-                  :max="options.min_open_length.range[1]"
+                  v-model="options_selected.min_open_days"
+                  :min="options.min_open_days.range[0]"
+                  :max="options.min_open_days.range[1]"
                   step="1"
                   class="pt-8"
                   density="compact"
@@ -174,7 +175,7 @@
             <v-expansion-panel>
               <v-expansion-panel-title>
                 <v-icon class="mr-3">mdi-cash</v-icon>
-                Minimum Market Volume: ${{ options_selected.min_volume }}
+                Minimum Market Volume: ${{ options_selected.min_volume_usd }}
               </v-expansion-panel-title>
               <v-expansion-panel-text>
                 <p class="my-2">
@@ -183,9 +184,9 @@
                   measured in USD.
                 </p>
                 <v-slider
-                  v-model="options_selected.min_volume"
-                  :min="options.min_volume.range[0]"
-                  :max="options.min_volume.range[1]"
+                  v-model="options_selected.min_volume_usd"
+                  :min="options.min_volume_usd.range[0]"
+                  :max="options.min_volume_usd.range[1]"
                   step="10"
                   class="pt-8"
                   density="compact"
@@ -408,11 +409,19 @@
 
           async updatePage() {
             this.loading = true
-            await fetch('https://example.com?' + new URLSearchParams(this.options_selected))
+            await fetch(
+              'https://api.calibration.city/calibration_plot?' +
+                new URLSearchParams(
+                  Object.entries(this.options_selected).filter(
+                    ([k, v]) => v == null || v.length > 0
+                  )
+                )
+            )
               .then((response) => response.json())
               .then((data) => {
                 //this.api_data = data
                 this.updateGraph(data)
+                //this.updateSidebar(data)
               })
             this.loading = false
           },
@@ -481,7 +490,7 @@
             deep: true,
             handler: _.debounce(function () {
               this.updatePage()
-            }, 500), // debounce timeout
+            }, 100), // debounce timeout
           },
         },
       })
