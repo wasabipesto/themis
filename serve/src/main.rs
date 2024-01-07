@@ -1,6 +1,6 @@
 use actix_web::web::{Data, Query};
 use actix_web::{get, middleware, App, HttpResponse, HttpServer};
-use diesel::r2d2::{ConnectionManager, Pool};
+use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::{pg::PgConnection, prelude::*};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -28,6 +28,15 @@ table! {
         resolution -> Float,
     }
 }
+table! {
+    platform (platform_name) {
+        platform_name -> Varchar,
+        platform_name_fmt -> Varchar,
+        platform_description -> Varchar,
+        platform_avatar_url -> Varchar,
+        platform_color -> Varchar,
+    }
+}
 
 /// Data returned from the database, same as what we inserted.
 #[derive(Debug, Queryable, Serialize, Selectable)]
@@ -43,6 +52,17 @@ struct Market {
     prob_at_close: f32,
     prob_time_weighted: f32,
     resolution: f32,
+}
+
+/// Data about a platform cached in the database.
+#[derive(Debug, Queryable, Serialize, Selectable)]
+#[diesel(table_name = platform)]
+struct Platform {
+    platform_name: String,
+    platform_name_fmt: String,
+    platform_description: String,
+    platform_avatar_url: String,
+    platform_color: String,
 }
 
 /// Parameters passed to the calibration function.
@@ -73,14 +93,16 @@ struct CalibrationPlot {
 /// Data sent to the client to render a plot, one plot per platform.
 #[derive(Debug, Serialize)]
 struct Trace {
-    platform: String,
-    //platform_description: String,
-    //platform_avatar_url: String,
-    //brier_score: f32,
+    //platform: String,
+    platform_name_fmt: String,
+    platform_description: String,
+    platform_avatar_url: String,
+    platform_color: String,
     x_series: Vec<f32>,
     y_series: Vec<f32>,
     //point_sizes: Vec<f32>,
     //point_descriptions: Vec<String>,
+    //brier_score: f32,
 }
 
 /// A quick and dirty f32 mask into u32 for key lookup.
@@ -92,6 +114,22 @@ fn prob_to_k(f: &f32) -> i32 {
 /// Inverse of the above function.
 fn k_to_prob(k: &i32) -> f32 {
     *k as f32 / 1000.0
+}
+
+/// Get information about a platform from the database to send to the client.
+fn get_platform_info(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+    platform_req: &String,
+) -> Result<Platform, ApiError> {
+    use crate::platform::dsl::*;
+    let query = platform.find(&platform_req).first(conn);
+    match query {
+        Ok(p) => Ok(p),
+        Err(_) => Err(ApiError::new(
+            500,
+            format!("could not find platform data for {platform_req}"),
+        )),
+    }
 }
 
 #[get("/calibration_plot")]
@@ -244,8 +282,15 @@ async fn calibration_plot(
             })
             .collect();
 
+        // get cached platform info from database
+        let platform_info = get_platform_info(conn, &platform)?;
+
+        // save it all to the trace and push it to result
         traces.push(Trace {
-            platform,
+            platform_name_fmt: platform_info.platform_name_fmt,
+            platform_description: platform_info.platform_description,
+            platform_avatar_url: platform_info.platform_avatar_url,
+            platform_color: platform_info.platform_color,
             x_series,
             y_series,
         })

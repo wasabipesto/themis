@@ -13,3 +13,32 @@ CREATE TABLE market (
     resolution REAL NOT NULL,
     CONSTRAINT platform_unique_by_id UNIQUE (platform, platform_id)
 );
+DROP TABLE IF EXISTS platform;
+CREATE TABLE platform (
+    platform_name PRIMARY KEY,
+    platform_name_fmt VARCHAR NOT NULL,
+    platform_description VARCHAR NOT NULL,
+    platform_avatar_url VARCHAR NOT NULL,
+    platform_color VARCHAR NOT NULL
+);
+INSERT INTO platform (
+        platform_name,
+        platform_name_fmt,
+        platform_description,
+        platform_avatar_url,
+        platform_color
+    )
+VALUES (
+        'manifold',
+        'Manifold',
+        'A play-money platform where anyone can make any market.',
+        'images/manifold.svg',
+        '#4337c9'
+    ),
+    (
+        'kalshi',
+        'Kalshi',
+        'A US-regulated exchange with limited real-money contracts.',
+        'images/kalshi.png',
+        '#00d298'
+    );

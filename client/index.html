@@ -324,15 +324,14 @@
               {
                 name: 'Manifold',
                 description: 'A play-money platform where anyone can make any market.',
-                icon_url: 'https://manifold.markets/welcome/manipurple.png',
+                icon_url: 'images/manifold.svg',
                 num_markets: 37555,
                 brier_score: 0.1635,
               },
               {
                 name: 'Kalshi',
                 description: 'A US-regulated exchange with limited real-money contracts.',
-                icon_url:
-                  'https://kalshi-public-images.s3.us-east-2.amazonaws.com/illustrations/halftone/bear-small.png',
+                icon_url: 'images/kalshi.png',
                 num_markets: 4852,
                 brier_score: 0.1569,
               },
@@ -440,13 +439,12 @@
               traces.push({
                 x: trace.x_series,
                 y: trace.y_series,
+                name: trace.platform_name_fmt,
                 //text: data.point_desc,
-                //name: 'Manifold <br>n=' + data.num_markets_total + ' b=' + data.brier_score,
-                name: trace.platform,
                 type: 'scatter',
                 mode: 'markers',
                 marker: {
-                  color: 'rgb(72, 95, 199)',
+                  color: trace.platform_color,
                   //size: data.point_size,
                 },
               })
