@@ -109,6 +109,12 @@ impl MarketStandardizer for MarketFull {
     fn volume_usd(&self) -> f32 {
         self.market.volume / KALSHI_EXCHANGE_RATE
     }
+    fn num_traders(&self) -> i32 {
+        0
+    }
+    fn is_predictive(&self) -> bool {
+        true
+    }
     fn events(&self) -> Vec<ProbUpdate> {
         self.events.to_owned()
     }
@@ -135,6 +141,8 @@ impl TryInto<MarketStandard> for MarketFull {
             url: self.url(),
             open_days: self.open_days()?,
             volume_usd: self.volume_usd(),
+            num_traders: self.num_traders(),
+            is_predictive: self.is_predictive(),
             prob_at_midpoint: self.prob_at_percent(0.5)?,
             prob_at_close: self.prob_at_percent(1.0)?,
             prob_time_weighted: self.prob_time_weighted()?,

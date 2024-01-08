@@ -29,9 +29,10 @@ struct MarketInfo {
 
 /// API response with standard bet info from `/bets`.
 #[allow(non_snake_case)]
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 struct Bet {
     id: String,
+    userId: String,
     createdTime: i64,
     //probBefore: Option<f32>,
     probAfter: Option<f32>,
@@ -44,6 +45,7 @@ struct Bet {
 #[derive(Debug)]
 struct MarketFull {
     market: MarketInfo,
+    bets: Vec<Bet>,
     events: Vec<ProbUpdate>,
 }
 
@@ -111,6 +113,20 @@ impl MarketStandardizer for MarketFull {
     fn volume_usd(&self) -> f32 {
         self.market.volume / MANIFOLD_EXCHANGE_RATE
     }
+    fn num_traders(&self) -> i32 {
+        let mut traders: Vec<String> = Vec::new();
+        let mut count: i32 = 0;
+        for bet in self.bets.iter() {
+            if !traders.contains(&bet.userId) {
+                traders.push(bet.userId.clone());
+                count += 1;
+            }
+        }
+        count
+    }
+    fn is_predictive(&self) -> bool {
+        true
+    }
     fn events(&self) -> Vec<ProbUpdate> {
         self.events.to_owned()
     }
@@ -154,6 +170,8 @@ impl TryInto<MarketStandard> for MarketFull {
             url: self.url(),
             open_days: self.open_days()?,
             volume_usd: self.volume_usd(),
+            num_traders: self.num_traders(),
+            is_predictive: self.is_predictive(),
             prob_at_midpoint: self.prob_at_percent(0.5)?,
             prob_at_close: self.prob_at_percent(1.0)?,
             prob_time_weighted: self.prob_time_weighted()?,
@@ -232,6 +250,7 @@ async fn get_extended_data(
 
     Ok(MarketFull {
         market: market.clone(),
+        bets: all_bet_data.clone(),
         events: get_prob_updates(all_bet_data)?,
     })
 }

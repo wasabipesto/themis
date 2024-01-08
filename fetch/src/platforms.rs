@@ -51,6 +51,8 @@ table! {
         url -> Varchar,
         open_days -> Float,
         volume_usd -> Float,
+        num_traders -> Integer,
+        is_predictive -> Bool,
         prob_at_midpoint -> Float,
         prob_at_close -> Float,
         prob_time_weighted -> Float,
@@ -69,6 +71,8 @@ pub struct MarketStandard {
     url: String,
     open_days: f32,
     volume_usd: f32,
+    num_traders: i32,
+    is_predictive: bool,
     prob_at_midpoint: f32,
     prob_at_close: f32,
     prob_time_weighted: f32,
@@ -112,6 +116,12 @@ pub trait MarketStandardizer {
 
     /// Get the total traded market volume in USD.
     fn volume_usd(&self) -> f32;
+
+    /// Get the number of unique traders on the market.
+    fn num_traders(&self) -> i32;
+
+    /// Get if the market is designated "predictive" by the platform.
+    fn is_predictive(&self) -> bool;
 
     /// Get a list of probability-affecting events during the market (derived from bets/trades).
     fn events(&self) -> Vec<ProbUpdate>;
@@ -239,6 +249,8 @@ fn save_markets(markets: Vec<MarketStandard>, method: OutputMethod) {
                     .set((
                         open_days.eq(excluded(open_days)),
                         volume_usd.eq(excluded(volume_usd)),
+                        num_traders.eq(excluded(num_traders)),
+                        is_predictive.eq(excluded(is_predictive)),
                         prob_at_midpoint.eq(excluded(prob_at_midpoint)),
                         prob_at_close.eq(excluded(prob_at_close)),
                         prob_time_weighted.eq(excluded(prob_time_weighted)),
