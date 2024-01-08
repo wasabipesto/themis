@@ -125,7 +125,7 @@ impl MarketStandardizer for MarketFull {
         count
     }
     fn is_predictive(&self) -> bool {
-        true
+        true // TODO
     }
     fn events(&self) -> Vec<ProbUpdate> {
         self.events.to_owned()

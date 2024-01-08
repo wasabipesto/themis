@@ -110,10 +110,10 @@ impl MarketStandardizer for MarketFull {
         self.market.volume / KALSHI_EXCHANGE_RATE
     }
     fn num_traders(&self) -> i32 {
-        0
+        0 // TODO
     }
     fn is_predictive(&self) -> bool {
-        true
+        true // TODO
     }
     fn events(&self) -> Vec<ProbUpdate> {
         self.events.to_owned()
