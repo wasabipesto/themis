@@ -149,7 +149,12 @@ fn is_valid(market: &MarketInfo) -> bool {
 }
 
 /// Request an authorization token from email & password.
-async fn get_login_token(client: &ClientWithMiddleware) -> String {
+async fn get_login_token(client_opt: Option<ClientWithMiddleware>) -> String {
+    let client = match client_opt {
+        Some(client) => client,
+        None => get_reqwest_client_ratelimited(KALSHI_RATELIMIT),
+    };
+
     let api_url = KALSHI_API_BASE.to_owned() + "/login";
     let credentials = LoginCredentials {
         email: var("KALSHI_USERNAME")
@@ -240,7 +245,7 @@ async fn get_extended_data(
 pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
     println!("Kalshi: Processing started...");
     let client = get_reqwest_client_ratelimited(KALSHI_RATELIMIT);
-    let token = get_login_token(&client).await;
+    let token = get_login_token(Some(client.clone())).await;
     let api_url = KALSHI_API_BASE.to_owned() + "/markets";
     if verbose {
         println!("Kalshi: Connecting to API at {}", api_url)
@@ -316,7 +321,7 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
 /// Download, process and store one market from the platform.
 pub async fn get_market_by_id(id: &String, output_method: OutputMethod, verbose: bool) {
     let client = get_reqwest_client_ratelimited(KALSHI_RATELIMIT);
-    let token = get_login_token(&client).await;
+    let token = get_login_token(Some(client.clone())).await;
     let api_url = KALSHI_API_BASE.to_owned() + "/markets/";
     if verbose {
         println!("Kalshi: Connecting to API at {}", api_url)
@@ -343,4 +348,30 @@ pub async fn get_market_by_id(id: &String, output_method: OutputMethod, verbose:
         println!("Kalshi: Saving processed market to {:?}...", output_method)
     }
     save_markets(Vec::from([market_data]), output_method);
+}
+
+/// Get a new token if the old one expired.
+struct FetchTokenMiddleware;
+
+#[async_trait::async_trait]
+impl Chainer for FetchTokenMiddleware {
+    type State = ();
+
+    async fn chain(
+        &self,
+        result: Result<reqwest::Response, Error>,
+        _state: &mut Self::State,
+        request: &mut reqwest::Request,
+    ) -> Result<Option<reqwest::Response>, Error> {
+        let response = result?;
+        if response.status() != StatusCode::UNAUTHORIZED {
+            return Ok(Some(response));
+        };
+        request.headers_mut().insert(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", get_login_token(None).await))
+                .expect("invalid header value"),
+        );
+        Ok(None)
+    }
 }
