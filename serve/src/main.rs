@@ -359,13 +359,14 @@ async fn calibration_plot(
             "prob_at_midpoint" => format!("Probability at Midpoint"),
             "prob_at_close" => format!("Probability at Close"),
             "prob_time_weighted" => format!("Time-Weighted Probability"),
-            _ => panic!(""),
+            _ => panic!("given bin_method not in x_title map"),
         },
         y_title: match weight_attribute.as_str() {
             "open_days" => format!("Resolution, Weighted by Duration"),
+            "num_traders" => format!("Resolution, Weighted by Traders"),
             "volume_usd" => format!("Resolution, Weighted by Volume"),
             "none" => format!("Resolution, Unweighted"),
-            _ => panic!(""),
+            _ => panic!("given weight_attribute not in y_title map"),
         },
     };
 

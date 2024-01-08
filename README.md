@@ -9,6 +9,7 @@ This is a work-in-progress rewrite of [Calibration City](https://github.com/wasa
 ## Roadmap
 
 ### Kalshi
+- Fix hangup on GPT%
 - Investigate getting the number of unique traders
 - Investigate how to determine is_predictive
 
@@ -16,7 +17,7 @@ This is a work-in-progress rewrite of [Calibration City](https://github.com/wasa
 - Call `/market` to get groups, save to MarketFull for is_predictive
 
 ### Metaculus
-- Begin implementing API calls
+- Fix hangup on `avg` field
 
 ### Client
 - Add a dedicated explainer page with a walkthough on calibration
