@@ -25,6 +25,7 @@ struct MarketInfo {
     createdTime: i64,
     closeTime: Option<i64>, // polls and bounties lack close times
     resolutionTime: Option<i64>,
+    groupSlugs: Vec<String>,
 }
 
 /// API response with standard bet info from `/bets`.
@@ -114,18 +115,17 @@ impl MarketStandardizer for MarketFull {
         self.market.volume / MANIFOLD_EXCHANGE_RATE
     }
     fn num_traders(&self) -> i32 {
-        let mut traders: Vec<String> = Vec::new();
-        let mut count: i32 = 0;
-        for bet in self.bets.iter() {
-            if !traders.contains(&bet.userId) {
-                traders.push(bet.userId.clone());
-                count += 1;
-            }
-        }
-        count
+        self.bets
+            .iter()
+            .map(|bet| bet.userId.clone())
+            .collect::<std::collections::HashSet<_>>()
+            .len() as i32
     }
     fn is_predictive(&self) -> bool {
-        true // TODO
+        !self
+            .market
+            .groupSlugs
+            .contains(&"nonpredictive".to_string())
     }
     fn events(&self) -> Vec<ProbUpdate> {
         self.events.to_owned()
