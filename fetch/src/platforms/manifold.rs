@@ -25,7 +25,7 @@ struct MarketInfo {
     createdTime: i64,
     closeTime: Option<i64>, // polls and bounties lack close times
     resolutionTime: Option<i64>,
-    groupSlugs: Vec<String>,
+    //groupSlugs: Vec<String>,
 }
 
 /// API response with standard bet info from `/bets`.
@@ -122,10 +122,12 @@ impl MarketStandardizer for MarketFull {
             .len() as i32
     }
     fn is_predictive(&self) -> bool {
+        /*
         !self
-            .market
-            .groupSlugs
+            .groups
             .contains(&"nonpredictive".to_string())
+        */
+        true // TODO
     }
     fn events(&self) -> Vec<ProbUpdate> {
         self.events.to_owned()

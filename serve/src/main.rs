@@ -298,6 +298,7 @@ async fn calibration_plot(
             };
             let weight: f32 = match weight_attribute.as_str() {
                 "open_days" => market.open_days,
+                "num_traders" => market.num_traders as f32,
                 "volume_usd" => market.volume_usd,
                 "none" => 1.0,
                 _ => {
