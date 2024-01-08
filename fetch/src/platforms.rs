@@ -19,6 +19,7 @@ use std::env::var;
 
 pub mod kalshi;
 pub mod manifold;
+pub mod metaculus;
 
 const DEFAULT_OPENING_PROB: f32 = 0.5;
 const SECS_PER_DAY: f32 = (60 * 60 * 24) as f32;
@@ -28,9 +29,7 @@ const SECS_PER_DAY: f32 = (60 * 60 * 24) as f32;
 pub enum Platform {
     Kalshi,
     Manifold,
-    //Metaculus,
-    //Polymarket,
-    //PredictIt,
+    Metaculus,
 }
 
 /// All possible methods to output markets.

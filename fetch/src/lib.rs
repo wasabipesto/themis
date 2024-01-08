@@ -41,6 +41,12 @@ pub async fn run(
                     (Platform::Manifold, Some(id)) => {
                         platforms::manifold::get_market_by_id(id, output, verbose).await
                     }
+                    (Platform::Metaculus, None) => {
+                        platforms::metaculus::get_markets_all(output, verbose).await
+                    }
+                    (Platform::Metaculus, Some(id)) => {
+                        platforms::metaculus::get_market_by_id(id, output, verbose).await
+                    }
                 }
             })
         })
