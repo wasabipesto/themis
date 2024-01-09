@@ -213,7 +213,8 @@ async fn get_extended_data(
     token: &String,
     market: &MarketInfo,
 ) -> Result<MarketFull, MarketConvertError> {
-    let api_url = KALSHI_API_BASE.to_owned() + "/markets/" + &market.ticker + "/history";
+    let ticker_urlencoded = Regex::new(r"%").unwrap().replace_all(&market.ticker, "%25");
+    let api_url = KALSHI_API_BASE.to_owned() + "/markets/" + &ticker_urlencoded + "/history";
     let limit: usize = 1000;
     let mut cursor: Option<String> = None;
     let mut all_bet_data = Vec::new();

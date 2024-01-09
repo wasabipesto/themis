@@ -62,7 +62,6 @@ When standardizing things across platforms we ran into some edge cases, I've tri
 - Hardcode maps of site categories to standard categories
 
 #### Kalshi
-- Fix hangup on GPT%
 - Investigate getting the number of unique traders
 
 #### Manifold
@@ -87,7 +86,7 @@ When standardizing things across platforms we ran into some edge cases, I've tri
 - Investigate Polymarket
 - Investigate PredictIt
 - List all market types on all platforms
-- Set up docker containers for fetch and client with a sample compose file
+- Set up docker container for client and a sample compose file
 - Return a list of markets in each sample
 - Plot Brier score against any x-axis (closed date, number of traders, market volume)
 - Investigate a standardized corpus of questions across platforms
