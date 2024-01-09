@@ -266,8 +266,7 @@
 
         <v-navigation-drawer location="right">
           <v-list lines="five">
-            <v-list-subheader>Platforms</v-list-subheader>
-            <v-list-item v-for="(v,k) in sidebar_data" :value="k" class="py-4">
+            <v-list-item v-for="(v,k) in sidebar_data" class="py-4">
               <v-list-item-title>
                 <div>
                   <img :src="v.icon_url" width="25" class="mx-1" />
@@ -276,7 +275,7 @@
               </v-list-item-title>
               <v-list-item-subtitle>
                 <div><span>{{v.description}}</span></div>
-                <div v-if="!loading" class="my-1">
+                <div class="my-1">
                   <div><span>Markets: </span><span>{{v.num_markets}}</span></div>
                   <div><span>Brier Score: </span><span>{{v.brier_score}}</span></div>
                 </div>
@@ -394,7 +393,7 @@
               description: p.platform_description,
               icon_url: p.platform_avatar_url,
               num_markets: p.num_markets,
-              brier_score: p.brier_score,
+              brier_score: Math.ceil(p.brier_score * 10000) / 10000,
             }));
           },
 

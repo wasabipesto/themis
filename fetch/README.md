@@ -1,6 +1,17 @@
 # themis-fetch
 
-This is the backend service that downloads data from each platform and saves it to a database for querying later. It will probably be the most annoying thing to write so I'm breaking it out from the API service.
+This is the backend service that downloads data from each platform and saves it to a database for querying later. 
+
+## Usage
+
+```
+  -p, --platform <PLATFORM>  Override the default platform list to only pull from one provider
+      --id <ID>              Only pull market data for a single market - requires a single platform to be specified
+  -o, --output <OUTPUT>      Where to redirect the output [default: database] [possible values: database, stdout]
+  -v, --verbose              Show additional output for debugging
+  -h, --help                 Print help
+  -V, --version              Print version
+```
 
 ## Platforms
 

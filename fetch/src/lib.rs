@@ -16,7 +16,7 @@ pub async fn run(
     // otherwise, return the default platform list
     let platforms: Vec<Platform> = match platform.clone() {
         Some(platform) => Vec::from([platform]),
-        None => Vec::from([Platform::Kalshi, Platform::Manifold]),
+        None => Vec::from([Platform::Kalshi, Platform::Manifold, Platform::Metaculus]),
     };
 
     if verbose {

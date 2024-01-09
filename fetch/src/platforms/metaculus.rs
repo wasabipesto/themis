@@ -4,7 +4,7 @@ use super::*;
 
 const METACULUS_API_BASE: &str = "https://www.metaculus.com/api2";
 const METACULUS_SITE_BASE: &str = "https://www.metaculus.com";
-const METACULUS_USD_PER_FORECAST: f32 = 0.05;
+const METACULUS_USD_PER_FORECAST: f32 = 0.10;
 const METACULUS_RATELIMIT: usize = 100;
 
 #[derive(Deserialize, Debug, Clone)]
@@ -32,7 +32,7 @@ struct MarketInfo {
 
 #[derive(Deserialize, Debug, Clone)]
 struct MarketTypePossibilities {
-    r#type: String,
+    r#type: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -48,7 +48,7 @@ struct PredictionPoint {
 
 #[derive(Deserialize, Debug, Clone)]
 struct PredictionPointX2 {
-    avg: f32,
+    avg: Option<f32>,
     //var: f32,
     //weighted_avg: f32,
 }
@@ -140,7 +140,7 @@ impl TryInto<MarketStandard> for MarketFull {
 /// Test if a market is suitable for analysis.
 fn is_valid(market: &MarketInfo) -> bool {
     market.active_state == "RESOLVED"
-        && market.possibilities.r#type == "binary"
+        && market.possibilities.r#type == Some("binary".to_string())
         && market.resolution >= Some(0.0)
 }
 
@@ -152,15 +152,20 @@ fn get_prob_updates(
     points.sort_unstable_by_key(|point| point.t as i64);
     for point in points {
         if let Ok(time) = get_datetime_from_secs(point.t as i64) {
-            result.push(ProbUpdate {
-                time,
-                prob: point.x2.avg,
-            });
+            if let Some(prob) = point.x2.avg {
+                result.push(ProbUpdate { time, prob });
+            } else {
+                return Err(MarketConvertError {
+                    data: format!("{:?}", point),
+                    message: format!("Metaculus: History event point.x2.avg is missing"),
+                });
+            }
         } else {
             return Err(MarketConvertError {
                 data: format!("{:?}", point),
-                message: "Metaculus: History event timestamp could not be converted into DateTime"
-                    .to_string(),
+                message: format!(
+                    "Metaculus: History event timestamp could not be converted into DateTime"
+                ),
             });
         }
     }

@@ -4,6 +4,8 @@ This is the backend service that serves data straight from the database.
 
 ## Routes
 
+All routes are currently "v0" and may change without notice.
+
 ### `GET /calibration_plot`
 
 This route returns a list of plots, one per platform. If filters are applied, any platforms with 0 valid markets are excluded.
