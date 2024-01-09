@@ -60,6 +60,7 @@ When standardizing things across platforms we ran into some edge cases, I've tri
 
 ### Fetch
 - Hardcode maps of site categories to standard categories
+- Add error importance, hide low importance, eprint on medium, and panic on high
 
 #### Kalshi
 - Investigate getting the number of unique traders
