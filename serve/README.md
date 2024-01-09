@@ -19,7 +19,6 @@ Query parameters:
     - `min_open_days`: minimum market duration in days, can be a decimal
     - `min_num_traders`: minimum number of unique traders
     - `min_volume_usd`: minimum market volume in usd, can be a decimal
-    - `is_predictive`: unimplemented
     - `title_contains`: given text occurs in the title
     - `categories`: unimplemented
 

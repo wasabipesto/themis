@@ -23,7 +23,6 @@ table! {
         open_days -> Float,
         volume_usd -> Float,
         num_traders -> Integer,
-        is_predictive -> Bool,
         prob_at_midpoint -> Float,
         prob_at_close -> Float,
         prob_time_weighted -> Float,
@@ -51,7 +50,6 @@ struct Market {
     open_days: f32,
     volume_usd: f32,
     num_traders: i32,
-    is_predictive: bool,
     prob_at_midpoint: f32,
     prob_at_close: f32,
     prob_time_weighted: f32,
@@ -78,7 +76,6 @@ pub struct QueryParams {
     min_open_days: Option<f32>,
     min_num_traders: Option<i32>,
     min_volume_usd: Option<f32>,
-    is_predictive: Option<String>,
     title_contains: Option<String>,
     categories: Option<String>,
 }
@@ -193,7 +190,6 @@ async fn calibration_plot(
     let min_open_days = query.min_open_days.clone().unwrap_or(0.0);
     let min_volume_usd = query.min_volume_usd.clone().unwrap_or(0.0);
     let min_num_traders = query.min_num_traders.clone().unwrap_or(0);
-    //let is_predictive = match query.is_predictive {};
     let title_contains = "%".to_string() + &query.title_contains.clone().unwrap_or_default() + "%";
 
     // get database connection from pool
@@ -209,7 +205,6 @@ async fn calibration_plot(
         .filter(market::open_days.ge(min_open_days))
         .filter(market::volume_usd.ge(min_volume_usd))
         .filter(market::num_traders.ge(min_num_traders))
-        //.filter(market::is_predictive.eq(is_predictive))
         .filter(market::title.ilike(title_contains))
         .select(Market::as_select())
         .load::<Market>(conn)

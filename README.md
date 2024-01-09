@@ -10,11 +10,12 @@ This is a work-in-progress rewrite of [Calibration City](https://github.com/wasa
 
 ### Kalshi
 - Fix hangup on GPT%
+- Verify operation of re-auth
 - Investigate getting the number of unique traders
-- Investigate how to determine is_predictive
 
 ### Manifold
-- Call `/market` to get groups, save to MarketFull for is_predictive
+- Call `/market` to get groups, save to MarketFull
+- Investigate including linked and unlinked multiple choice
 
 ### Metaculus
 - Fix hangup on `avg` field

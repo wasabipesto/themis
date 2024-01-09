@@ -210,27 +210,6 @@
             </v-expansion-panel>
             <v-expansion-panel>
               <v-expansion-panel-title>
-                <v-icon class="mr-3">mdi-gavel</v-icon>
-                Predictive Label: {{ getOptionLabel("is_predictive", options_selected.is_predictive)
-                }}
-              </v-expansion-panel-title>
-              <v-expansion-panel-text>
-                <p class="my-2">
-                  Many sites allow non-predictive markets and label them as such. This option
-                  follows how each site distinguishes markets.
-                </p>
-                <v-radio-group v-model="options_selected.is_predictive">
-                  <v-radio
-                    v-for="(v,k) in options.is_predictive"
-                    :key="k"
-                    :value="k"
-                    :label="v.label"
-                  ></v-radio>
-                </v-radio-group>
-              </v-expansion-panel-text>
-            </v-expansion-panel>
-            <v-expansion-panel>
-              <v-expansion-panel-title>
                 <v-icon class="mr-3">mdi-message-outline</v-icon>
                 Title Contains: {{ options_selected.title_contains || 'None' }}
               </v-expansion-panel-title>
@@ -331,7 +310,6 @@
               min_open_days: 0,
               min_num_traders: 0,
               min_volume_usd: 10,
-              is_predictive: 'predictive',
               title_contains: '',
               categories: [],
             },
@@ -361,11 +339,6 @@
               },
               min_volume_usd: {
                 range: [0, 500],
-              },
-              is_predictive: {
-                predictive: { label: 'Predictive Only' },
-                all: { label: 'All Markets' },
-                non_predictive: { label: 'Non-Predictive' },
               },
               categories: [
                 'Sports',
