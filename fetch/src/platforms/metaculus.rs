@@ -250,6 +250,7 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
             break;
         }
     }
+    println!("Metaculus: Processing complete.");
 }
 
 /// Download, process and store one market from the platform.
