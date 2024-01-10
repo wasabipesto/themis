@@ -91,3 +91,7 @@ When standardizing things across platforms we ran into some edge cases, I've tri
 - Return a list of markets in each sample
 - Plot Brier score against any x-axis (closed date, number of traders, market volume)
 - Investigate a standardized corpus of questions across platforms
+
+## Disclaimer
+
+I use Manifold much more than any of the other platforms included in this analysis, and have received bounties from the Manifold team in both mana (play money) and real money. Their contributions did not affect the contents of this site in any way.
