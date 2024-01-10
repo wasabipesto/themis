@@ -8,6 +8,7 @@
       href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css"
     />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vuetify@3.4.4/dist/vuetify.min.css" />
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico">
     <title>Calibration City</title>
   </head>
 
@@ -283,6 +284,47 @@
             </v-list-item>
           </v-list>
         </v-navigation-drawer>
+
+        <v-footer>
+          <v-row justify="center" no-gutters>
+            <v-btn 
+              variant="text" 
+              class="mx-2" 
+              prepend-icon="mdi-github"
+              href="https://github.com/wasabipesto/themis" 
+              target="_blank"
+            >
+              Source
+            </v-btn>
+            <v-btn 
+              variant="text" 
+              class="mx-2" 
+              prepend-icon="mdi-robot" 
+              href="https://api.calibration.city/calibration_plot" 
+              target="_blank"
+            >
+              API
+            </v-btn>
+            <v-btn 
+              variant="text" 
+              class="mx-2" 
+              prepend-icon="mdi-history" 
+              href="https://old.calibration.city/manifold" 
+              target="_blank"
+            >
+              Old Version
+            </v-btn>
+            <v-btn 
+              variant="text" 
+              class="mx-2" 
+              prepend-icon="mdi-account" 
+              href="https://wasabipesto.com" 
+              target="_blank"
+            >
+              Made By
+            </v-btn>
+          </v-row>
+        </v-footer>
       </v-app>
     </div>
 

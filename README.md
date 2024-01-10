@@ -78,7 +78,6 @@ When standardizing things across platforms we ran into some edge cases, I've tri
 
 ### Client
 - Add a dedicated explainer page with a walkthough on calibration
-- Add links to the github repo, old site, my homepage, etc
 - Add a way to share a link to the current view with weights & filters
 - Investigate mobile support: dragging slider moves sidebar, can't re-enter sidebar
 - Investigate swapping out plotly for a custom D3 component
