@@ -27,7 +27,7 @@ These should be platforms that have an established presence and an open API. I w
 - [x] Manifold
     - https://manifold.markets
     - API Docs: https://docs.manifold.markets/api
-- [ ] Metaculus
+- [x] Metaculus
     - https://www.metaculus.com
     - API Docs: https://www.metaculus.com/api2/schema/redoc
 - [ ] Polymarket

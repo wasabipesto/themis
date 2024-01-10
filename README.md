@@ -29,18 +29,15 @@ The `client` subproject is actually just a single HTML file that pulls a few scr
 When standardizing things across platforms we ran into some edge cases, I've tried to detail them all here. When in doubt, you can always check the source to see how we compute a specific attribute.
 
 ## All
-
 - `prob_time_weighted` is not computed for markets open for less than 60 seconds
 
 ## Kalshi
-
 - We use the current YES price for the probability
 - `num_traders` is currently unimplemented
 - Supported market types:
     - [x] Binary
 
 ## Manifold
-
 - `volume` is directly as reported by the API
 - Supported market types: 
     - [x] CPMM-1 Binary
@@ -50,7 +47,6 @@ When standardizing things across platforms we ran into some edge cases, I've tri
     - [ ] DPM-2 Binary
 
 ## Metaculus
-
 - We use the `community_prediction.history.x2.avg` series for the probability
 - Since Metaculus does not have bets, we use the number of forecasts at 10 cents each for `volume_usd`
 - Supported market types: 
@@ -72,6 +68,9 @@ When standardizing things across platforms we ran into some edge cases, I've tri
 #### Metaculus
 - None
 
+#### Polymarket
+- Begin implementing Gamma API
+
 ### Serve
 - Compute log score (maybe with transformation)
 - Add optional KDE smoothing to calibration
@@ -83,14 +82,13 @@ When standardizing things across platforms we ran into some edge cases, I've tri
 - Investigate swapping out plotly for a custom D3 component
 
 ### Other
-- Investigate Polymarket
 - Investigate PredictIt
 - List all market types on all platforms
+- Save open & close times to the database and add client filter
 - Set up docker container for client and a sample compose file
 - Return a list of markets in each sample
 - Plot Brier score against any x-axis (closed date, number of traders, market volume)
 - Investigate a standardized corpus of questions across platforms
 
 ## Disclaimer
-
 I use Manifold much more than any of the other platforms included in this analysis, and have received bounties from the Manifold team in both mana (play money) and real money. Their contributions did not affect the contents of this site in any way.
