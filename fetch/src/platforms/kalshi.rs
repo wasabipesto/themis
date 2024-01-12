@@ -121,7 +121,7 @@ impl MarketStandardizer for MarketFull {
             "no" => Ok(0.0),
             _ => Err(MarketConvertError {
                 data: self.debug(),
-                message: "Market resolved to something besides YES or NO".to_string(),
+                message: "Kalshi: Market resolved to something besides YES or NO".to_string(),
             }),
         }
     }

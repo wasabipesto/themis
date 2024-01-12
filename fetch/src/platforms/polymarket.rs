@@ -142,7 +142,7 @@ impl MarketStandardizer for MarketFull {
         } else {
             Err(MarketConvertError {
                 data: self.debug(),
-                message: format!("Polymarket: market field endDate is empty."),
+                message: format!("Polymarket: Market field endDate is empty."),
             })
         }
     }
@@ -164,13 +164,13 @@ impl MarketStandardizer for MarketFull {
             } else {
                 Err(MarketConvertError {
                 data: self.debug(),
-                message: format!("Polymarket: current prices are not close enough to bounds to guarantee resolution status."),
+                message: format!("Polymarket: Current prices are not close enough to bounds to guarantee resolution status."),
             })
             }
         } else {
             Err(MarketConvertError {
                 data: self.debug(),
-                message: format!("Polymarket: market field outcomePrices is empty."),
+                message: format!("Polymarket: Market field outcomePrices is empty."),
             })
         }
     }
@@ -241,7 +241,7 @@ async fn get_extended_data(
         Some(id) => Ok(id),
         None => Err(MarketConvertError {
             data: format!("{:?}", market),
-            message: format!("Polymarket: market field clobTokenIds is empty."),
+            message: format!("Polymarket: Market field clobTokenIds is empty."),
         }),
     }?;
     let response = client

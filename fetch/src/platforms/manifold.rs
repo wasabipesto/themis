@@ -73,7 +73,7 @@ impl MarketStandardizer for MarketFull {
             Some(dt) => Ok(DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)),
             None => Err(MarketConvertError {
                 data: self.debug(),
-                message: "Manifold Market createdTime could not be converted into DateTime"
+                message: "Manifold: Market createdTime could not be converted into DateTime"
                     .to_string(),
             }),
         }
@@ -97,7 +97,7 @@ impl MarketStandardizer for MarketFull {
             // neither is present
             (None, None) => Err(MarketConvertError {
                 data: format!("{:?}", self),
-                message: "Manifold Market response did not include closeTime or resolutionTime"
+                message: "Manifold: Market response did not include closeTime or resolutionTime"
                     .to_string(),
             }),
         }?;
@@ -106,7 +106,7 @@ impl MarketStandardizer for MarketFull {
             Err(_) => Err(MarketConvertError {
                 data: format!("{:?}", &self),
                 message:
-                    "Manifold Market closeTime or resolveTime could not be converted into DateTime"
+                    "Manifold: Market closeTime or resolveTime could not be converted into DateTime"
                         .to_string(),
             }),
         }
@@ -135,19 +135,20 @@ impl MarketStandardizer for MarketFull {
                     } else {
                         Err(MarketConvertError {
                             data: self.debug(),
-                            message: "Market resolved to MKT but is missing resolutionProbability"
+                            message: "Manifold: Market resolved to MKT but is missing resolutionProbability"
                                 .to_string(),
                         })
                     }
                 }
                 _ => Err(MarketConvertError {
                     data: self.debug(),
-                    message: "Market resolved to something besides YES, NO, or MKT".to_string(),
+                    message: "Manifold: Market resolved to something besides YES, NO, or MKT"
+                        .to_string(),
                 }),
             },
             _ => Err(MarketConvertError {
                 data: self.debug(),
-                message: "Market resolved without `resolution` value".to_string(),
+                message: "Manifold: Market resolved without `resolution` value".to_string(),
             }),
         }
     }
@@ -178,6 +179,7 @@ fn is_valid(market: &MarketInfo) -> bool {
     market.isResolved
         && market.mechanism == "cpmm-1"
         && market.outcomeType == "BINARY"
+        && market.volume > 0.0
         && market.resolution != Some("CANCEL".to_string())
 }
 
@@ -228,7 +230,7 @@ async fn get_extended_data(
             serde_json::from_str(&response_text).map_err(|e| MarketConvertError {
                 data: format!("{:?}", market),
                 message: format!(
-                    "Failed to deserialize: response = {:?}, error = {:?}, before = {:?}",
+                    "Manifold: Failed to deserialize: response = {:?}, error = {:?}, before = {:?}",
                     response_text, e, before
                 ),
             })?;

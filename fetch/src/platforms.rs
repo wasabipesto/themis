@@ -135,7 +135,7 @@ pub trait MarketStandardizer {
             return Err(MarketConvertError {
                 data: self.debug(),
                 message: format!(
-                    "Requested probability at {:?} before market open at {:?}.",
+                    "General: Requested probability at {:?} before market open at {:?}.",
                     time,
                     self.open_dt()?
                 ),
@@ -147,7 +147,10 @@ pub trait MarketStandardizer {
                 // prob is out of bounds, throw error
                 return Err(MarketConvertError {
                     data: self.debug(),
-                    message: format!("Event probability {} is out of bounds.", event.prob),
+                    message: format!(
+                        "General: Event probability {} is out of bounds.",
+                        event.prob
+                    ),
                 });
             }
             // once we find an after the requested time, return the prob from the previous event
@@ -236,7 +239,7 @@ pub trait MarketStandardizer {
             Err(MarketConvertError {
                 data: self.debug(),
                 message: format!(
-                    "prob_time_weighted calculation result was out of bounds: {prob_time_weighted}."
+                    "General: prob_time_weighted calculation result was out of bounds: {prob_time_weighted}."
                 ),
             })
         }
@@ -283,11 +286,7 @@ pub struct MarketConvertError {
 }
 impl fmt::Display for MarketConvertError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "Market Conversion Error: {}: {}",
-            self.message, self.data
-        )
+        write!(f, "{}: {}", self.message, self.data)
     }
 }
 
