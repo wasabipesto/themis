@@ -143,6 +143,13 @@ pub trait MarketStandardizer {
         }
         let mut prev_prob = DEFAULT_OPENING_PROB;
         for event in self.events() {
+            if event.prob < 0.0 || 1.0 <= event.prob {
+                // prob is out of bounds, throw error
+                return Err(MarketConvertError {
+                    data: self.debug(),
+                    message: format!("Event probability {} is out of bounds.", event.prob),
+                });
+            }
             // once we find an after the requested time, return the prob from the previous event
             if event.time > time {
                 return Ok(prev_prob);
