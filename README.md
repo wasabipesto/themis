@@ -18,7 +18,7 @@ In the default flow we spin up a group of async tasks to recursively download al
 
 ### Serve
 
-`serve` queries an external Postgres database with saved markets, calculates calibration points and Brier score, and ships it off to the client. Right now it only has a single route but it is extremely fast, usually completing a request in under 250ms. You can find the API schema in the serve README.
+Subproject `serve` queries an external Postgres database with saved markets, calculates calibration points and Brier score, and ships it off to the client. Right now it only has a single route but it is extremely fast, usually completing a request in under 250ms. You can find the API schema in the serve README.
 
 ### Client
 
@@ -32,13 +32,12 @@ When standardizing things across platforms we ran into some edge cases, I've tri
 - To calculate `prob_time_weighted`, we assume the market opens at 50%. Once the first trade occurs, we track the probability at each trade and the cumulative durations to generate an average.
 
 ### Kalshi
-- We use the current YES price for the probability
-- `num_traders` is currently unimplemented
+- We use the YES price from the most recently executed trade as the probability at any point in time.
+- The counter for `num_traders` is currently unimplemented.
 - Supported market types:
     - [x] Binary
 
 ### Manifold
-- `volume` is directly as reported by the API
 - Supported market types: 
     - [x] CPMM-1 Binary
     - [ ] CPMM-1 Pseudo-Numeric
@@ -55,6 +54,7 @@ When standardizing things across platforms we ran into some edge cases, I've tri
 ### Polymarket
 - Getting resolution data is quite difficult due to the oracle resolution process. Since markets never close (traders just redeem their tokens for USDC) then they stabilize at the extremes pretty consistently - 96% of all closed markets were trading at less than $0.0001 from an extreme. Some markets sit at 50/50 - these likely had no activity at all. If we filter markets to just those trading at less than $0.0001 from an extreme, we can be confident they have been resolved in that direction.
 - Many markets (around 22%) lack `startDate` and around 1% lack `endDate`, and both of those are merely suggestions. `createdAt` is mandatory on all markets, and it is usually less than five days before `startDate` (when present). For our market open and close times, we use `startDate` when it is available and `createdAt` when it is not.
+- The counter for `num_traders` is currently unimplemented.
 - Supported market types:
     - [x] Two-outcome linked
     - [ ] Two-outcome unlinked
@@ -69,16 +69,17 @@ We also do not support old markets that used a previous order system, only those
 
 #### Kalshi
 - Investigate getting the number of unique traders
+- Investigate additional market types
 
 #### Manifold
-- Call `/market` to get groups
 - Investigate including linked and unlinked multiple choice
 
 #### Metaculus
-- None
+- Investigate additional market types
 
 #### Polymarket
-- Begin implementing Gamma API
+- Investigate getting the number of unique traders
+- Investigate including linked and unlinked multiple choice
 
 ### Serve
 - Compute log score (maybe with transformation)
@@ -92,7 +93,6 @@ We also do not support old markets that used a previous order system, only those
 
 ### Other
 - Investigate PredictIt
-- List all market types on all platforms
 - Save open & close times to the database and add client filter
 - Set up docker container for client and a sample compose file
 - Return a list of markets in each sample
