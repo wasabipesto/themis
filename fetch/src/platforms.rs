@@ -194,7 +194,7 @@ pub trait MarketStandardizer {
         let mut cumulative_time: f32 = 0.0;
         for event in self.events() {
             // make sure we haven't passed outside the market open window
-            if &self.close_dt()? < &event.time {
+            if self.close_dt()? < event.time {
                 break;
             }
             // check if this is the first event

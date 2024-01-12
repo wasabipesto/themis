@@ -14,7 +14,7 @@ pub async fn run(
 ) {
     // if the user requested a specific platform, format it into a list
     // otherwise, return the default platform list
-    let platforms: Vec<Platform> = match platform.clone() {
+    let platforms: Vec<Platform> = match platform {
         Some(platform) => Vec::from([platform]),
         None => Vec::from([
             Platform::Kalshi,

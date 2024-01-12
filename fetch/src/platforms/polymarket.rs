@@ -211,9 +211,9 @@ fn get_prob_updates(
     mut points: Vec<PricesHistoryPoint>,
 ) -> Result<Vec<ProbUpdate>, MarketConvertError> {
     let mut result = Vec::new();
-    points.sort_unstable_by_key(|point| point.t as i64);
+    points.sort_unstable_by_key(|point| point.t);
     for point in points {
-        if let Ok(time) = get_datetime_from_secs(point.t as i64) {
+        if let Ok(time) = get_datetime_from_secs(point.t) {
             result.push(ProbUpdate {
                 time,
                 prob: point.p,
@@ -323,7 +323,7 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
         let market_data: Vec<MarketStandard> = join_all(market_data_futures)
             .await
             .into_iter()
-            .map(|market_downloaded_result| match market_downloaded_result {
+            .filter_map(|market_downloaded_result| match market_downloaded_result {
                 Ok(market_downloaded) => {
                     // market downloaded successfully
                     match market_downloaded.try_into() {
@@ -339,10 +339,9 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
                 Err(e) => {
                     // market failed downloadng
                     eprintln!("Error downloading full market data: {e}");
-                    return None;
+                    None
                 }
             })
-            .flatten()
             .collect();
         if verbose {
             println!(
@@ -402,10 +401,10 @@ pub async fn get_market_by_id(id: &String, output_method: OutputMethod, verbose:
         .markets
         .first()
         .expect("Polymarket: Gamma market query response was empty.");
-    if !is_valid(&single_market) {
+    if !is_valid(single_market) {
         println!("Polymarket: Market is not valid for processing, this may fail.")
     }
-    let market_data = get_extended_data(&client, &single_market)
+    let market_data = get_extended_data(&client, single_market)
         .await
         .expect("Error getting extended market data")
         .try_into()

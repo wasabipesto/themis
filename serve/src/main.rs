@@ -77,7 +77,7 @@ pub struct QueryParams {
     min_num_traders: Option<i32>,
     min_volume_usd: Option<f32>,
     title_contains: Option<String>,
-    categories: Option<String>,
+    //categories: Option<String>,
 }
 
 /// Metadata to help label a plot.
@@ -172,7 +172,7 @@ async fn calibration_plot(
         .bin_method
         .clone()
         .unwrap_or(DEFAULT_BIN_METHOD.to_string());
-    let bin_size = query.bin_size.clone();
+    let bin_size = query.bin_size;
     if let Some(bs) = bin_size {
         if bs < 0.0 || bs > 0.5 {
             return Err(ApiError::new(
@@ -184,21 +184,18 @@ async fn calibration_plot(
 
     let weight_attribute = query
         .weight_attribute
-        .clone()
+        .to_owned()
         .unwrap_or(DEFAULT_WEIGHT_ATTR.to_string());
 
-    let min_open_days = query.min_open_days.clone().unwrap_or(0.0);
-    let min_volume_usd = query.min_volume_usd.clone().unwrap_or(0.0);
-    let min_num_traders = query.min_num_traders.clone().unwrap_or(0);
+    let min_open_days = query.min_open_days.unwrap_or(0.0);
+    let min_volume_usd = query.min_volume_usd.unwrap_or(0.0);
+    let min_num_traders = query.min_num_traders.unwrap_or(0);
     let title_contains = "%".to_string() + &query.title_contains.clone().unwrap_or_default() + "%";
 
     // get database connection from pool
-    let conn = &mut pool.get().or_else(|e| {
-        Err(ApiError::new(
-            500,
-            format!("failed to get connection from pool: {e}"),
-        ))
-    })?;
+    let conn = &mut pool
+        .get()
+        .map_err(|e| ApiError::new(500, format!("failed to get connection from pool: {e}")))?;
 
     // get all markets from database
     let markets = market::table
@@ -208,7 +205,7 @@ async fn calibration_plot(
         .filter(market::title.ilike(title_contains))
         .select(Market::as_select())
         .load::<Market>(conn)
-        .or_else(|e| Err(ApiError::new(500, format!("failed to query markets: {e}"))))?;
+        .map_err(|e| ApiError::new(500, format!("failed to query markets: {e}")))?;
 
     // sort all markets based on the platform
     // this is a hot loop since we iterate over all markets
@@ -307,14 +304,14 @@ async fn calibration_plot(
             };
 
             // add the market data to each counter
-            *weighted_resolution_sums.get_mut(&bin).unwrap() += weight * market_y_value;
-            *weighted_counts.get_mut(&bin).unwrap() += weight;
+            *weighted_resolution_sums.get_mut(bin).unwrap() += weight * market_y_value;
+            *weighted_counts.get_mut(bin).unwrap() += weight;
             weighted_brier_sum += weight * (market_y_value - market_x_value).powf(2.0);
             weighted_brier_count += weight;
         }
 
         // divide out rolling averages into a single average value
-        let x_series = bins.iter().map(|bin| k_to_prob(bin)).collect();
+        let x_series = bins.iter().map(k_to_prob).collect();
         let y_series = bins
             .iter()
             .map(|bin| {

@@ -285,7 +285,7 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
         let market_data: Vec<MarketStandard> = join_all(market_data_futures)
             .await
             .into_iter()
-            .map(|market_downloaded_result| match market_downloaded_result {
+            .filter_map(|market_downloaded_result| match market_downloaded_result {
                 Ok(market_downloaded) => {
                     // market downloaded successfully
                     match market_downloaded.try_into() {
@@ -301,10 +301,9 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
                 Err(e) => {
                     // market failed downloadng
                     eprintln!("Error downloading full market data: {e}");
-                    return None;
+                    None
                 }
             })
-            .flatten()
             .collect();
         if verbose {
             println!(
