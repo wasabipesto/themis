@@ -20,6 +20,7 @@ use std::env::var;
 pub mod kalshi;
 pub mod manifold;
 pub mod metaculus;
+pub mod polymarket;
 
 const DEFAULT_OPENING_PROB: f32 = 0.5;
 const SECS_PER_DAY: f32 = (60 * 60 * 24) as f32;
@@ -30,6 +31,7 @@ pub enum Platform {
     Kalshi,
     Manifold,
     Metaculus,
+    Polymarket,
 }
 
 /// All possible methods to output markets.
@@ -141,6 +143,13 @@ pub trait MarketStandardizer {
         }
         let mut prev_prob = DEFAULT_OPENING_PROB;
         for event in self.events() {
+            if event.prob < 0.0 || 1.0 <= event.prob {
+                // prob is out of bounds, throw error
+                return Err(MarketConvertError {
+                    data: self.debug(),
+                    message: format!("Event probability {} is out of bounds.", event.prob),
+                });
+            }
             // once we find an after the requested time, return the prob from the previous event
             if event.time > time {
                 return Ok(prev_prob);
@@ -181,6 +190,11 @@ pub trait MarketStandardizer {
         let mut cumulative_prob: f32 = 0.0;
         let mut cumulative_time: f32 = 0.0;
         for event in self.events() {
+            // make sure we haven't passed outside the market open window
+            if &self.close_dt()? < &event.time {
+                break;
+            }
+            // check if this is the first event
             match &prev_event {
                 None => {
                     // add time between start time and first event
@@ -195,6 +209,7 @@ pub trait MarketStandardizer {
                     cumulative_time += duration;
                 }
             }
+            // save the previous event
             prev_event = Some(event);
         }
         match &prev_event {
@@ -210,17 +225,18 @@ pub trait MarketStandardizer {
             None => {
                 // there are no events whatsoever, just assume it was the default throughout
                 let duration = (self.close_dt()? - self.open_dt()?).num_seconds() as f32;
-                cumulative_prob += DEFAULT_OPENING_PROB * duration;
-                cumulative_time += duration;
+                cumulative_prob = DEFAULT_OPENING_PROB * duration;
+                cumulative_time = duration;
             }
         }
-        if cumulative_time > 10.0 {
-            Ok(cumulative_prob / cumulative_time)
+        let prob_time_weighted = cumulative_prob / cumulative_time;
+        if 0.0 <= prob_time_weighted && prob_time_weighted <= 1.0 {
+            Ok(prob_time_weighted)
         } else {
             Err(MarketConvertError {
                 data: self.debug(),
                 message: format!(
-                    "Market was only open for {cumulative_time} seconds, can't get proper prob_time_weighted."
+                    "prob_time_weighted calculation result was out of bounds: {prob_time_weighted}."
                 ),
             })
         }

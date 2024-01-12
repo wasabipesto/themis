@@ -49,4 +49,11 @@ VALUES (
         'A forecasting platform focused on calibration instead of bets.',
         'images/metaculus.png',
         '#283441'
+    ),
+    (
+        'polymarket',
+        'Polymarket',
+        'A high-volume cryptocurrency exchange backed by USDC.',
+        'images/polymarket.png',
+        '#0072f9'
     );

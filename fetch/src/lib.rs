@@ -16,7 +16,12 @@ pub async fn run(
     // otherwise, return the default platform list
     let platforms: Vec<Platform> = match platform.clone() {
         Some(platform) => Vec::from([platform]),
-        None => Vec::from([Platform::Kalshi, Platform::Manifold, Platform::Metaculus]),
+        None => Vec::from([
+            Platform::Kalshi,
+            Platform::Manifold,
+            Platform::Metaculus,
+            Platform::Polymarket,
+        ]),
     };
 
     if verbose {
@@ -46,6 +51,12 @@ pub async fn run(
                     }
                     (Platform::Metaculus, Some(id)) => {
                         platforms::metaculus::get_market_by_id(id, output, verbose).await
+                    }
+                    (Platform::Polymarket, None) => {
+                        platforms::polymarket::get_markets_all(output, verbose).await
+                    }
+                    (Platform::Polymarket, Some(id)) => {
+                        platforms::polymarket::get_market_by_id(id, output, verbose).await
                     }
                 }
             })
