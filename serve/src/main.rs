@@ -270,18 +270,19 @@ async fn calibration_plot(
                 });
             };
             let market_k = prob_to_k(&market_x_value);
-            let bin = bins
+            let bin_opt = bins
                 .iter()
-                .find(|&x| x - bin_look <= market_k && market_k <= x + bin_look)
-                .ok_or_else(|| {
-                    ApiError::new(
-                        500,
-                        format!(
-                            "failed to find correct bin for {} in {:?} with lookaround {}",
-                            market_k, bins, bin_look
-                        ),
-                    )
-                })?;
+                .find(|&x| x - bin_look <= market_k && market_k <= x + bin_look);
+            let bin = match bin_opt {
+                Some(bin) => bin,
+                None => {
+                    eprintln!(
+                        "failed to find correct bin for {} in {:?} with lookaround {}",
+                        market_k, bins, bin_look
+                    );
+                    continue;
+                }
+            };
 
             // get the weighting value
             let market_y_value = market.resolution;
