@@ -30,10 +30,12 @@ These should be platforms that have an established presence and an open API. I w
 - [x] Metaculus
     - https://www.metaculus.com
     - API Docs: https://www.metaculus.com/api2/schema/redoc
-- [ ] Polymarket
+- [x] Polymarket
     - https://polymarket.com
     - API Docs: https://docs.polymarket.com/#introduction
-    - GraphQL Playground: https://gamma-api.polymarket.com
+    - GraphQL: https://gamma-api.polymarket.com
+    - CLOB API: https://clob.polymarket.com
+    - StrAPI: https://trapi-matic.poly.market/markets
 - [ ] PredictIt
     - https://www.predictit.org
     - FAQ Topic: https://predictit.freshdesk.com/support/solutions/articles/12000001878-does-predictit-make-market-data-available-via-an-api-

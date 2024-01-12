@@ -47,6 +47,12 @@ pub async fn run(
                     (Platform::Metaculus, Some(id)) => {
                         platforms::metaculus::get_market_by_id(id, output, verbose).await
                     }
+                    (Platform::Polymarket, None) => {
+                        platforms::polymarket::get_markets_all(output, verbose).await
+                    }
+                    (Platform::Polymarket, Some(id)) => {
+                        platforms::polymarket::get_market_by_id(id, output, verbose).await
+                    }
                 }
             })
         })
