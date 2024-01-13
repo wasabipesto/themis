@@ -53,7 +53,7 @@ When standardizing things across platforms we ran into some edge cases, I've tri
 
 ### Polymarket
 - Getting resolution data is quite difficult due to the oracle resolution process. Since markets never close (traders just redeem their tokens for USDC) then they stabilize at the extremes pretty consistently - 96% of all closed markets were trading at less than $0.0001 from an extreme. Some markets sit at 50/50 - these likely had no activity at all. If we filter markets to just those trading at less than $0.0001 from an extreme, we can be confident they have been resolved in that direction.
-- Many markets (around 22%) lack `startDate` and around 1% lack `endDate`, and both of those are merely suggestions. `createdAt` is mandatory on all markets, and it is usually less than five days before `startDate` (when present). For our market open and close times, we use `startDate` when it is available and `createdAt` when it is not.
+- Many markets (around 22%) lack `startDate` and around 1% lack `endDate`, and both of those are merely suggestions. `createdAt` is mandatory on all markets, and it is usually less than five days before `startDate` (when present). For our market open and close times, we use `createdAt` since trading can start at that point and `endDate` since that is the closest thing to a "known" endpoint.
 - The counter for `num_traders` is currently unimplemented.
 - Supported market types:
     - [x] Two-outcome linked

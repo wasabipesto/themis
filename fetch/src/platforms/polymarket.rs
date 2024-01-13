@@ -131,8 +131,8 @@ impl MarketStandardizer for MarketFull {
     }
     fn open_dt(&self) -> Result<DateTime<Utc>, MarketConvertError> {
         /*
-        if let Some(start_date) = self.market.startDate {
-            Ok(start_date)
+        if let Some(open_dt) = self.market.startDate {
+            Ok(open_dt)
         } else {
             Ok(self.market.createdAt)
         }
@@ -140,8 +140,8 @@ impl MarketStandardizer for MarketFull {
         Ok(self.market.createdAt)
     }
     fn close_dt(&self) -> Result<DateTime<Utc>, MarketConvertError> {
-        if let Some(end_date) = self.market.endDate {
-            Ok(end_date)
+        if let Some(close_dt) = self.market.endDate {
+            Ok(close_dt)
         } else {
             Err(MarketConvertError {
                 data: self.debug(),
@@ -406,22 +406,22 @@ pub async fn get_market_by_id(id: &String, output_method: OutputMethod, verbose:
     }
     let query = format!(
         "query {{
-        markets(
-            where: \"id = {id}\"
-        ) {{
-            id,
-            question,
-            slug,
-            createdAt,
-            startDate,
-            endDate,
-            category,
-            liquidity,
-            volume,
-            outcomePrices,
-            clobTokenIds,
-        }}
-    }}"
+            markets(
+                where: \"id = {id}\"
+            ) {{
+                id,
+                question,
+                slug,
+                createdAt,
+                startDate,
+                endDate,
+                category,
+                liquidity,
+                volume,
+                outcomePrices,
+                clobTokenIds,
+            }}
+        }}"
     );
     let response = client
         .get(&api_url)
