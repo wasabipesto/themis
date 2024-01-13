@@ -149,7 +149,7 @@ pub trait MarketStandardizer {
         }
         let mut prev_prob = DEFAULT_OPENING_PROB;
         for event in self.events() {
-            if event.prob < 0.0 || 1.0 <= event.prob {
+            if event.prob < 0.0 || 1.0 < event.prob {
                 // prob is out of bounds, throw error
                 return Err(MarketConvertError {
                     data: self.debug(),
@@ -218,10 +218,22 @@ pub trait MarketStandardizer {
             // check if this is the first event
             match &prev_event {
                 None => {
-                    // add time between start time and first event
-                    let duration = (event.time - self.open_dt()?).num_seconds() as f32;
-                    cumulative_prob += DEFAULT_OPENING_PROB * duration;
-                    cumulative_time += duration;
+                    if event.time > self.open_dt()? {
+                        // add time between start time and first event
+                        let duration = (event.time - self.open_dt()?).num_seconds() as f32;
+                        cumulative_prob += DEFAULT_OPENING_PROB * duration;
+                        cumulative_time += duration;
+                    } else {
+                        return Err(MarketConvertError {
+                            data: self.debug(),
+                            message: format!(
+                                "General: Market event {:?} occured before market start {:?}.",
+                                event,
+                                self.open_dt()?
+                            ),
+                            level: 1,
+                        });
+                    }
                 }
                 Some(prev) => {
                     if event.time > prev.time {
@@ -233,7 +245,7 @@ pub trait MarketStandardizer {
                         return Err(MarketConvertError {
                             data: self.debug(),
                             message: format!(
-                                "General: Market events were not sorted properly, event at {:?} preceeded earlier event {:?}.",
+                                "General: Market events were not sorted properly, event {:?} occured before earlier event {:?}.",
                                 event, prev
                             ),
                             level: 4,
@@ -263,7 +275,7 @@ pub trait MarketStandardizer {
                             "General: Market had {} events but none fell within open duration.",
                             self.events().len()
                         ),
-                        level: 3,
+                        level: 1,
                     });
                 } else {
                     // there are no events whatsoever, just assume it was the default throughout
@@ -277,13 +289,23 @@ pub trait MarketStandardizer {
         if 0.0 <= prob_time_weighted && prob_time_weighted <= 1.0 {
             Ok(prob_time_weighted)
         } else {
-            Err(MarketConvertError {
-                data: self.debug(),
-                message: format!(
-                    "General: prob_time_weighted calculation result was out of bounds: {prob_time_weighted}."
-                ),
-                level: 2,
-            })
+            if prob_time_weighted.is_nan() {
+                Err(MarketConvertError {
+                    data: self.debug(),
+                    message: format!(
+                        "General: prob_time_weighted is NaN: {cumulative_prob} / {cumulative_time}."
+                    ),
+                    level: 1,
+                })
+            } else {
+                Err(MarketConvertError {
+                    data: self.debug(),
+                    message: format!(
+                        "General: prob_time_weighted calculation result was out of bounds: {cumulative_prob} / {cumulative_time} = {prob_time_weighted}."
+                    ),
+                    level: 2,
+                })
+            }
         }
     }
 }

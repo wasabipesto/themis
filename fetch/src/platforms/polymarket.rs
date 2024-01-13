@@ -4,7 +4,6 @@ use super::*;
 
 const POLYMARKET_GAMMA_API_BASE: &str = "https://gamma-api.polymarket.com/query";
 const POLYMARKET_CLOB_API_BASE: &str = "https://clob.polymarket.com";
-const POLYMARKET_CLOB_FIDELITY: u32 = 60;
 const POLYMARKET_SITE_BASE: &str = "https://polymarket.com";
 const POLYMARKET_RATELIMIT: usize = 100;
 const POLYMARKET_EPSILON: f32 = 0.0001;
@@ -255,31 +254,49 @@ async fn get_extended_data(
             level: 3,
         }),
     }?;
-    let response = client
-        .get(&api_url)
-        .query(&[("interval", "all")])
-        .query(&[("market", clob_id)])
-        .query(&[("fidelity", POLYMARKET_CLOB_FIDELITY)])
-        .send()
-        .await
-        .expect("HTTP call failed to execute")
-        .error_for_status()
-        .unwrap_or_else(|e| panic!("Query failed: {:?}", e))
-        .json::<PricesHistoryResponse>()
-        .await
-        .unwrap();
+    let mut events = Vec::new();
+    for i in 0..=5 {
+        // get fidelity window
+        let fidelity = match i {
+            0 => 10,
+            1 => 60,
+            2 => 180,
+            3 => 360,
+            4 => 1200,
+            5 => 3600,
+            _ => 999999,
+        };
+        // make the request
+        let response = client
+            .get(&api_url)
+            .query(&[("interval", "all")])
+            .query(&[("market", clob_id)])
+            .query(&[("fidelity", fidelity)])
+            .send()
+            .await
+            .expect("HTTP call failed to execute")
+            .error_for_status()
+            .unwrap_or_else(|e| panic!("Query failed: {:?}", e))
+            .json::<PricesHistoryResponse>()
+            .await
+            .unwrap();
 
-    if response.history.len() == 0 {
-        return Err(MarketConvertError {
-            data: format!("{:?}", market),
-            message: format!("Polymarket: CLOB returned empty list for price history."),
-            level: 3,
-        });
+        // break out if we get data
+        if response.history.len() > 0 {
+            events.extend(response.history);
+            break;
+        } else if i >= 5 {
+            return Err(MarketConvertError {
+                data: format!("{:?}", market),
+                message: format!("Polymarket: CLOB returned empty list for price history, even at fidelity = {fidelity}."),
+                level: 3,
+            });
+        }
     }
 
     Ok(MarketFull {
         market: market.clone(),
-        events: get_prob_updates(response.history)?,
+        events: get_prob_updates(events)?,
     })
 }
 
