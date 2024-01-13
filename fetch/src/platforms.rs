@@ -226,10 +226,21 @@ pub trait MarketStandardizer {
                 }
             }
             None => {
-                // there are no events whatsoever, just assume it was the default throughout
-                let duration = (self.close_dt()? - self.open_dt()?).num_seconds() as f32;
-                cumulative_prob = DEFAULT_OPENING_PROB * duration;
-                cumulative_time = duration;
+                if self.events().len() > 0 {
+                    // there are some events but they're all outside the market window
+                    return Err(MarketConvertError {
+                        data: self.debug(),
+                        message: format!(
+                            "General: Market had {} events but none fell within open duration.",
+                            self.events().len()
+                        ),
+                    });
+                } else {
+                    // there are no events whatsoever, just assume it was the default throughout
+                    let duration = (self.close_dt()? - self.open_dt()?).num_seconds() as f32;
+                    cumulative_prob = DEFAULT_OPENING_PROB * duration;
+                    cumulative_time = duration;
+                }
             }
         }
         let prob_time_weighted = cumulative_prob / cumulative_time;

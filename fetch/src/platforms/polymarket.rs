@@ -4,6 +4,7 @@ use super::*;
 
 const POLYMARKET_GAMMA_API_BASE: &str = "https://gamma-api.polymarket.com/query";
 const POLYMARKET_CLOB_API_BASE: &str = "https://clob.polymarket.com";
+const POLYMARKET_CLOB_FIDELITY: u32 = 60;
 const POLYMARKET_SITE_BASE: &str = "https://polymarket.com";
 const POLYMARKET_RATELIMIT: usize = 100;
 const POLYMARKET_EPSILON: f32 = 0.0001;
@@ -16,7 +17,7 @@ struct MarketInfo {
     question: String,
     slug: String,
     createdAt: DateTime<Utc>,
-    startDate: Option<DateTime<Utc>>,
+    //startDate: Option<DateTime<Utc>>,
     endDate: Option<DateTime<Utc>>,
     //category: String,
     #[serde(deserialize_with = "deserialize_f32_remove_quotes")]
@@ -130,11 +131,14 @@ impl MarketStandardizer for MarketFull {
         POLYMARKET_SITE_BASE.to_owned() + "/event/" + &self.market.slug
     }
     fn open_dt(&self) -> Result<DateTime<Utc>, MarketConvertError> {
+        /*
         if let Some(start_date) = self.market.startDate {
             Ok(start_date)
         } else {
             Ok(self.market.createdAt)
         }
+        */
+        Ok(self.market.createdAt)
     }
     fn close_dt(&self) -> Result<DateTime<Utc>, MarketConvertError> {
         if let Some(end_date) = self.market.endDate {
@@ -248,6 +252,7 @@ async fn get_extended_data(
         .get(&api_url)
         .query(&[("interval", "all")])
         .query(&[("market", clob_id)])
+        .query(&[("fidelity", POLYMARKET_CLOB_FIDELITY)])
         .send()
         .await
         .expect("HTTP call failed to execute")
@@ -256,6 +261,13 @@ async fn get_extended_data(
         .json::<PricesHistoryResponse>()
         .await
         .unwrap();
+
+    if response.history.len() == 0 {
+        return Err(MarketConvertError {
+            data: format!("{:?}", market),
+            message: format!("Polymarket: CLOB returned empty list for price history."),
+        });
+    }
 
     Ok(MarketFull {
         market: market.clone(),
@@ -382,6 +394,7 @@ pub async fn get_market_by_id(id: &String, output_method: OutputMethod, verbose:
             liquidity,
             volume,
             outcomePrices,
+            clobTokenIds,
         }}
     }}"
     );
