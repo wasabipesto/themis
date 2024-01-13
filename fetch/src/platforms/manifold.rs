@@ -75,6 +75,7 @@ impl MarketStandardizer for MarketFull {
                 data: self.debug(),
                 message: "Manifold: Market createdTime could not be converted into DateTime"
                     .to_string(),
+                level: 3,
             }),
         }
     }
@@ -99,6 +100,7 @@ impl MarketStandardizer for MarketFull {
                 data: format!("{:?}", self),
                 message: "Manifold: Market response did not include closeTime or resolutionTime"
                     .to_string(),
+                level: 3,
             }),
         }?;
         match get_datetime_from_millis(ts) {
@@ -108,6 +110,7 @@ impl MarketStandardizer for MarketFull {
                 message:
                     "Manifold: Market closeTime or resolveTime could not be converted into DateTime"
                         .to_string(),
+                level: 3,
             }),
         }
     }
@@ -137,6 +140,7 @@ impl MarketStandardizer for MarketFull {
                             data: self.debug(),
                             message: "Manifold: Market resolved to MKT but is missing resolutionProbability"
                                 .to_string(),
+                                level: 3,
                         })
                     }
                 }
@@ -144,11 +148,13 @@ impl MarketStandardizer for MarketFull {
                     data: self.debug(),
                     message: "Manifold: Market resolved to something besides YES, NO, or MKT"
                         .to_string(),
+                    level: 3,
                 }),
             },
             _ => Err(MarketConvertError {
                 data: self.debug(),
                 message: "Manifold: Market resolved without `resolution` value".to_string(),
+                level: 3,
             }),
         }
     }
@@ -163,6 +169,8 @@ impl TryInto<MarketStandard> for MarketFull {
             platform: self.platform(),
             platform_id: self.platform_id(),
             url: self.url(),
+            open_dt: self.open_dt()?,
+            close_dt: self.close_dt()?,
             open_days: self.open_days()?,
             volume_usd: self.volume_usd(),
             num_traders: self.num_traders(),
@@ -197,6 +205,7 @@ fn get_prob_updates(mut bets: Vec<Bet>) -> Result<Vec<ProbUpdate>, MarketConvert
                     message:
                         "Manifold: Bet createdTime timestamp could not be converted into DateTime"
                             .to_string(),
+                    level: 3,
                 });
             }
         }
@@ -233,6 +242,7 @@ async fn get_extended_data(
                     "Manifold: Failed to deserialize: response = {:?}, error = {:?}, before = {:?}",
                     response_text, e, before
                 ),
+                level: 3,
             })?;
         let response_len = bet_data.len();
         all_bet_data.extend(bet_data);
@@ -292,15 +302,15 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
                         // market processed successfully
                         Ok(market_converted) => Some(market_converted),
                         // market failed processing
-                        Err(e) => {
-                            eprintln!("Error converting market into standard fields: {e}");
+                        Err(error) => {
+                            eval_error(error, verbose);
                             None
                         }
                     }
                 }
-                Err(e) => {
+                Err(error) => {
                     // market failed downloadng
-                    eprintln!("Error downloading full market data: {e}");
+                    eval_error(error, verbose);
                     None
                 }
             })

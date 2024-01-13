@@ -147,6 +147,7 @@ impl MarketStandardizer for MarketFull {
             Err(MarketConvertError {
                 data: self.debug(),
                 message: format!("Polymarket: Market field endDate is empty."),
+                level: 3,
             })
         }
     }
@@ -169,12 +170,14 @@ impl MarketStandardizer for MarketFull {
                 Err(MarketConvertError {
                 data: self.debug(),
                 message: format!("Polymarket: Current prices are not close enough to bounds to guarantee resolution status."),
+                level: 1,
             })
             }
         } else {
             Err(MarketConvertError {
                 data: self.debug(),
                 message: format!("Polymarket: Market field outcomePrices is empty."),
+                level: 3,
             })
         }
     }
@@ -189,6 +192,8 @@ impl TryInto<MarketStandard> for MarketFull {
             platform: self.platform(),
             platform_id: self.platform_id(),
             url: self.url(),
+            open_dt: self.open_dt()?,
+            close_dt: self.close_dt()?,
             open_days: self.open_days()?,
             volume_usd: self.volume_usd(),
             num_traders: self.num_traders(),
@@ -228,6 +233,7 @@ fn get_prob_updates(
                 message: format!(
                     "Polymarket: History event timestamp could not be converted into DateTime"
                 ),
+                level: 3,
             });
         }
     }
@@ -246,6 +252,7 @@ async fn get_extended_data(
         None => Err(MarketConvertError {
             data: format!("{:?}", market),
             message: format!("Polymarket: Market field clobTokenIds is empty."),
+            level: 3,
         }),
     }?;
     let response = client
@@ -266,6 +273,7 @@ async fn get_extended_data(
         return Err(MarketConvertError {
             data: format!("{:?}", market),
             message: format!("Polymarket: CLOB returned empty list for price history."),
+            level: 3,
         });
     }
 
@@ -342,15 +350,15 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
                         // market processed successfully
                         Ok(market_converted) => Some(market_converted),
                         // market failed processing
-                        Err(e) => {
-                            eprintln!("Error converting market into standard fields: {e}");
+                        Err(error) => {
+                            eval_error(error, verbose);
                             None
                         }
                     }
                 }
-                Err(e) => {
+                Err(error) => {
                     // market failed downloadng
-                    eprintln!("Error downloading full market data: {e}");
+                    eval_error(error, verbose);
                     None
                 }
             })

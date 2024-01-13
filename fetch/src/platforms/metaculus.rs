@@ -86,6 +86,7 @@ impl MarketStandardizer for MarketFull {
             Err(MarketConvertError {
                 data: self.debug(),
                 message: format!("Metaculus: effected_close_time is missing from closed market"),
+                level: 3,
             })
         }
     }
@@ -106,12 +107,14 @@ impl MarketStandardizer for MarketFull {
                 Err(MarketConvertError {
                     data: self.debug(),
                     message: format!("Metaculus: Market resolution value out of bounds"),
+                    level: 3,
                 })
             }
         } else {
             Err(MarketConvertError {
                 data: self.debug(),
                 message: format!("Metaculus: Market resolution value is null"),
+                level: 3,
             })
         }
     }
@@ -126,6 +129,8 @@ impl TryInto<MarketStandard> for MarketFull {
             platform: self.platform(),
             platform_id: self.platform_id(),
             url: self.url(),
+            open_dt: self.open_dt()?,
+            close_dt: self.close_dt()?,
             open_days: self.open_days()?,
             volume_usd: self.volume_usd(),
             num_traders: self.num_traders(),
@@ -158,6 +163,7 @@ fn get_prob_updates(
                 return Err(MarketConvertError {
                     data: format!("{:?}", point),
                     message: format!("Metaculus: History event point.x2.avg is missing"),
+                    level: 3,
                 });
             }
         } else {
@@ -166,6 +172,7 @@ fn get_prob_updates(
                 message: format!(
                     "Metaculus: History event timestamp could not be converted into DateTime"
                 ),
+                level: 4,
             });
         }
     }
@@ -222,15 +229,15 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
                         // market processed successfully
                         Ok(market_converted) => Some(market_converted),
                         // market failed processing
-                        Err(e) => {
-                            eprintln!("Error converting market into standard fields: {e}");
+                        Err(error) => {
+                            eval_error(error, verbose);
                             None
                         }
                     }
                 }
-                Err(e) => {
+                Err(error) => {
                     // market failed downloadng
-                    eprintln!("Error downloading full market data: {e}");
+                    eval_error(error, verbose);
                     None
                 }
             })

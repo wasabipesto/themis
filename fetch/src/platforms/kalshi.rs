@@ -122,6 +122,7 @@ impl MarketStandardizer for MarketFull {
             _ => Err(MarketConvertError {
                 data: self.debug(),
                 message: "Kalshi: Market resolved to something besides YES or NO".to_string(),
+                level: 0,
             }),
         }
     }
@@ -136,6 +137,8 @@ impl TryInto<MarketStandard> for MarketFull {
             platform: self.platform(),
             platform_id: self.platform_id(),
             url: self.url(),
+            open_dt: self.open_dt()?,
+            close_dt: self.close_dt()?,
             open_days: self.open_days()?,
             volume_usd: self.volume_usd(),
             num_traders: self.num_traders(),
@@ -198,6 +201,7 @@ fn get_prob_updates(mut events: Vec<EventInfo>) -> Result<Vec<ProbUpdate>, Marke
                     message:
                         "Kalshi: Bet createdTime timestamp could not be converted into DateTime"
                             .to_string(),
+                    level: 3,
                 });
             }
             prev_price = event.yes_price;
@@ -293,15 +297,15 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
                         // market processed successfully
                         Ok(market_converted) => Some(market_converted),
                         // market failed processing
-                        Err(e) => {
-                            eprintln!("Error converting market into standard fields: {e}");
+                        Err(error) => {
+                            eval_error(error, verbose);
                             None
                         }
                     }
                 }
-                Err(e) => {
+                Err(error) => {
                     // market failed downloadng
-                    eprintln!("Error downloading full market data: {e}");
+                    eval_error(error, verbose);
                     None
                 }
             })
@@ -344,11 +348,11 @@ pub async fn get_market_by_id(id: &String, output_method: OutputMethod, verbose:
     if !is_valid(&market_single) {
         println!("Kalshi: Market is not valid for processing, this may fail.")
     }
-    let market_data = get_extended_data(&client, &token, &market_single)
+    let market_data: MarketStandard = get_extended_data(&client, &token, &market_single)
         .await
         .expect("Error getting extended market data")
         .try_into()
-        .expect("ErError converting market into standard fields");
+        .expect("Error converting market into standard fields");
     if verbose {
         println!("Kalshi: Saving processed market to {:?}...", output_method)
     }

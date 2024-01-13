@@ -39,6 +39,7 @@ pub enum Platform {
 pub enum OutputMethod {
     Database,
     Stdout,
+    Null,
     //File,
 }
 
@@ -50,6 +51,8 @@ table! {
         platform -> Varchar,
         platform_id -> Varchar,
         url -> Varchar,
+        open_dt -> Timestamptz,
+        close_dt -> Timestamptz,
         open_days -> Float,
         volume_usd -> Float,
         num_traders -> Integer,
@@ -69,6 +72,8 @@ pub struct MarketStandard {
     platform: String,
     platform_id: String,
     url: String,
+    open_dt: DateTime<Utc>,
+    close_dt: DateTime<Utc>,
     open_days: f32,
     volume_usd: f32,
     num_traders: i32,
@@ -139,6 +144,7 @@ pub trait MarketStandardizer {
                     time,
                     self.open_dt()?
                 ),
+                level: 3,
             });
         }
         let mut prev_prob = DEFAULT_OPENING_PROB;
@@ -151,6 +157,7 @@ pub trait MarketStandardizer {
                         "General: Event probability {} is out of bounds.",
                         event.prob
                     ),
+                    level: 3,
                 });
             }
             // once we find an after the requested time, return the prob from the previous event
@@ -180,10 +187,21 @@ pub trait MarketStandardizer {
 
     /// Get the market's probability at a specific percent of the way though the duration of a market.
     fn prob_at_percent(&self, pct: f32) -> Result<f32, MarketConvertError> {
-        let time = self.open_dt()?
-            + Duration::seconds(
-                ((self.close_dt()? - self.open_dt()?).num_seconds() as f32 * pct) as i64,
-            );
+        if self.close_dt()? < self.open_dt()? {
+            // close time is before market starts, throw error
+            return Err(MarketConvertError {
+                data: self.debug(),
+                message: format!(
+                    "General: Close time of {:?} is before market open at {:?}.",
+                    self.close_dt()?,
+                    self.open_dt()?
+                ),
+                level: 1,
+            });
+        }
+        // calculate duration from start
+        let duration_from_start = (self.close_dt()? - self.open_dt()?).num_seconds() as f32 * pct;
+        let time = self.open_dt()? + Duration::seconds(duration_from_start as i64);
         self.prob_at_time(time)
     }
 
@@ -206,10 +224,21 @@ pub trait MarketStandardizer {
                     cumulative_time += duration;
                 }
                 Some(prev) => {
-                    // add time between last event and this one
-                    let duration = (event.time - prev.time).num_seconds() as f32;
-                    cumulative_prob += prev.prob * duration;
-                    cumulative_time += duration;
+                    if event.time > prev.time {
+                        // add time between last event and this one
+                        let duration = (event.time - prev.time).num_seconds() as f32;
+                        cumulative_prob += prev.prob * duration;
+                        cumulative_time += duration;
+                    } else {
+                        return Err(MarketConvertError {
+                            data: self.debug(),
+                            message: format!(
+                                "General: Market events were not sorted properly, event at {:?} preceeded earlier event {:?}.",
+                                event, prev
+                            ),
+                            level: 4,
+                        });
+                    }
                 }
             }
             // save the previous event
@@ -234,6 +263,7 @@ pub trait MarketStandardizer {
                             "General: Market had {} events but none fell within open duration.",
                             self.events().len()
                         ),
+                        level: 3,
                     });
                 } else {
                     // there are no events whatsoever, just assume it was the default throughout
@@ -252,6 +282,7 @@ pub trait MarketStandardizer {
                 message: format!(
                     "General: prob_time_weighted calculation result was out of bounds: {prob_time_weighted}."
                 ),
+                level: 2,
             })
         }
     }
@@ -271,6 +302,8 @@ fn save_markets(markets: Vec<MarketStandard>, method: OutputMethod) {
                     .on_conflict((platform, platform_id))
                     .do_update()
                     .set((
+                        open_dt.eq(excluded(open_dt)),
+                        close_dt.eq(excluded(close_dt)),
                         open_days.eq(excluded(open_days)),
                         volume_usd.eq(excluded(volume_usd)),
                         num_traders.eq(excluded(num_traders)),
@@ -286,6 +319,7 @@ fn save_markets(markets: Vec<MarketStandard>, method: OutputMethod) {
         OutputMethod::Stdout => {
             println!("{}", to_string_pretty(&markets).unwrap())
         }
+        OutputMethod::Null => (),
     }
 }
 
@@ -294,6 +328,7 @@ fn save_markets(markets: Vec<MarketStandard>, method: OutputMethod) {
 pub struct MarketConvertError {
     data: String,
     message: String,
+    level: u8,
 }
 impl fmt::Display for MarketConvertError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -333,5 +368,25 @@ fn get_datetime_from_secs(ts: i64) -> Result<DateTime<Utc>, ()> {
     match dt {
         Some(dt) => Ok(DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)),
         None => Err(()),
+    }
+}
+
+/// Evaluate processing errors based on their level.
+/// Level 0 is for expected events like market validity
+/// Level 1 is for things that probably shouldn't happen but are uncommon
+/// Level 2 is for events that should be brought to the user's attention
+/// Level 3 is for actual processing errors which can be ignored
+/// Level 4+ is for actual processing errors which should not be ignored
+fn eval_error(error: MarketConvertError, verbose: bool) {
+    let error_level = match verbose {
+        false => error.level,
+        true => error.level + 1,
+    };
+    match error_level {
+        0 => (),
+        1 => (),
+        2 => eprintln!("{}", error),
+        3 => eprintln!("{}", error),
+        _ => panic!("{}", error),
     }
 }
