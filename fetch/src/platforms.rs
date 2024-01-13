@@ -241,6 +241,9 @@ pub trait MarketStandardizer {
                         let duration = (event.time - prev.time).num_seconds() as f32;
                         cumulative_prob += prev.prob * duration;
                         cumulative_time += duration;
+                    } else if event.time == prev.time {
+                        // this event happened at the exact same moment as the last, let's assume the probs are equal and move on
+                        continue;
                     } else {
                         return Err(MarketConvertError {
                             data: self.debug(),
