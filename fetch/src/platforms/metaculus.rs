@@ -17,17 +17,20 @@ struct BulkMarketResponse {
 struct MarketInfo {
     id: u32,
     title: String,
-    //group_label: String,
     active_state: String,
     page_url: String,
     number_of_forecasters: i32,
     prediction_count: u32,
     created_time: DateTime<Utc>,
-    //publish_time: DateTime<Utc>,
     effected_close_time: Option<DateTime<Utc>>,
     possibilities: MarketTypePossibilities,
     community_prediction: PredictionHistory,
     resolution: Option<f32>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+struct MarketInfoExtra {
+    categories: Vec<String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -57,6 +60,7 @@ struct PredictionPointX2 {
 #[derive(Debug)]
 struct MarketFull {
     market: MarketInfo,
+    market_extra: MarketInfoExtra,
     events: Vec<ProbUpdate>,
 }
 
@@ -97,7 +101,43 @@ impl MarketStandardizer for MarketFull {
         self.market.number_of_forecasters
     }
     fn category(&self) -> String {
-        "None".to_string() // TODO
+        for category in &self.market_extra.categories {
+            match category.as_str() {
+                "bio--bioengineering" => return "Science".to_string(),
+                "bio--infectious-disease" => return "Science".to_string(),
+                "bio--medicine" => return "Science".to_string(),
+                "business" => return "Economics".to_string(),
+                "category--scientific-discoveries" => return "Science".to_string(),
+                "category--technological-advances" => return "Technology".to_string(),
+                "comp-sci--ai-and-machinelearning" => return "AI".to_string(),
+                "computing--ai" => return "AI".to_string(),
+                "computing--blockchain" => return "Crypto".to_string(),
+                "contests--cryptocurrency" => return "Crypto".to_string(),
+                "economy" => return "Economics".to_string(),
+                "elections--us--president" => return "Politics".to_string(),
+                "environment--climate" => return "Climate".to_string(),
+                "finance" => return "Economics".to_string(),
+                "finance--cryptocurrencies" => return "Crypto".to_string(),
+                "finance--market" => return "Economics".to_string(),
+                "geopolitics" => return "Politics".to_string(),
+                "geopolitics--armedconflict" => return "Politics".to_string(),
+                "industry--space" => return "Science".to_string(),
+                "industry--transportation" => return "Technology".to_string(),
+                "phys-sci--astro-and-cosmo" => return "Science".to_string(),
+                "politics" => return "Politics".to_string(),
+                "politics--europe" => return "Politics".to_string(),
+                "politics--us" => return "Politics".to_string(),
+                "series--aimilestones" => return "AI".to_string(),
+                "series--spacex" => return "Technology".to_string(),
+                "sports" => return "Sports".to_string(),
+                "tech--automotive" => return "Technology".to_string(),
+                "tech--energy" => return "Technology".to_string(),
+                "tech--general" => return "Technology".to_string(),
+                "tech--space" => return "Technology".to_string(),
+                _ => continue,
+            }
+        }
+        "None".to_string()
     }
     fn events(&self) -> Vec<ProbUpdate> {
         self.events.to_owned()
@@ -185,9 +225,24 @@ fn get_prob_updates(
 }
 
 /// Download full market history and store events in the container.
-fn get_extended_data(market: &MarketInfo) -> Result<MarketFull, MarketConvertError> {
+async fn get_extended_data(
+    client: &ClientWithMiddleware,
+    market: &MarketInfo,
+) -> Result<MarketFull, MarketConvertError> {
+    let api_url = METACULUS_API_BASE.to_owned() + "/questions/" + &market.id.to_string();
+    let market_extra = client
+        .get(&api_url)
+        .send()
+        .await
+        .expect("HTTP call failed to execute")
+        .error_for_status()
+        .unwrap_or_else(|e| panic!("Query failed: {:?}", e))
+        .json::<MarketInfoExtra>()
+        .await
+        .unwrap();
     Ok(MarketFull {
         market: market.clone(),
+        market_extra,
         events: get_prob_updates(market.community_prediction.history.clone())?,
     })
 }
@@ -222,11 +277,16 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
                 market_response.results.len()
             )
         }
-        let market_data: Vec<MarketStandard> = market_response
+        let market_data_futures: Vec<_> = market_response
             .results
             .iter()
             .filter(|market| is_valid(market))
-            .filter_map(|market| match get_extended_data(market) {
+            .map(|market| get_extended_data(&client, market))
+            .collect();
+        let market_data: Vec<MarketStandard> = join_all(market_data_futures)
+            .await
+            .into_iter()
+            .filter_map(|market_downloaded_result| match market_downloaded_result {
                 Ok(market_downloaded) => {
                     // market downloaded successfully
                     match market_downloaded.try_into() {
@@ -281,7 +341,8 @@ pub async fn get_market_by_id(id: &str, output_method: OutputMethod, verbose: bo
     if !is_valid(&market_single) {
         println!("Metaculus: Market is not valid for processing, this may fail.")
     }
-    let market_data = get_extended_data(&market_single)
+    let market_data = get_extended_data(&client, &market_single)
+        .await
         .expect("Error getting extended market data")
         .try_into()
         .expect("Error converting market into standard fields");

@@ -8,7 +8,7 @@ const MANIFOLD_SITE_BASE: &str = "https://manifold.markets/";
 const MANIFOLD_EXCHANGE_RATE: f32 = 100.0;
 const MANIFOLD_RATELIMIT: usize = 15;
 
-/// API response with standard market info from `/market` or `/markets`.
+/// API response with standard market info from `/markets`.
 #[allow(non_snake_case)]
 #[derive(Deserialize, Debug, Clone)]
 struct MarketInfo {
@@ -25,7 +25,13 @@ struct MarketInfo {
     createdTime: i64,
     closeTime: Option<i64>, // polls and bounties lack close times
     resolutionTime: Option<i64>,
-    //groupSlugs: Vec<String>,
+}
+
+/// API response with extended info from `/market`.
+#[allow(non_snake_case)]
+#[derive(Deserialize, Debug, Clone)]
+struct MarketInfoExtra {
+    groupSlugs: Option<Vec<String>>,
 }
 
 /// API response with standard bet info from `/bets`.
@@ -46,6 +52,7 @@ struct Bet {
 #[derive(Debug)]
 struct MarketFull {
     market: MarketInfo,
+    market_extra: MarketInfoExtra,
     bets: Vec<Bet>,
     events: Vec<ProbUpdate>,
 }
@@ -125,7 +132,67 @@ impl MarketStandardizer for MarketFull {
             .len() as i32
     }
     fn category(&self) -> String {
-        "None".to_string() // TODO
+        if let Some(categories) = &self.market_extra.groupSlugs {
+            for category in categories {
+                match category.as_str() {
+                    "2024-us-presidential-election" => return "Politics".to_string(),
+                    "ai" => return "AI".to_string(),
+                    "ai-alignment" => return "AI".to_string(),
+                    "ai-safety" => return "AI".to_string(),
+                    "apple" => return "Technology".to_string(),
+                    "baseball" => return "Sports".to_string(),
+                    "basketball" => return "Sports".to_string(),
+                    "biotech" => return "Science".to_string(),
+                    "bitcoin" => return "Crypto".to_string(),
+                    "chatgpt" => return "AI".to_string(),
+                    "chess" => return "Sports".to_string(),
+                    "climate" => return "Climate".to_string(),
+                    "crypto-speculation" => return "Crypto".to_string(),
+                    "culture-default" => return "Culture".to_string(),
+                    "donald-trump" => return "Politics".to_string(),
+                    "economics-default" => return "Economics".to_string(),
+                    "finance" => return "Economics".to_string(),
+                    "football" => return "Sports".to_string(),
+                    "formula-1" => return "Sports".to_string(),
+                    "gaming" => return "Culture".to_string(),
+                    "gpt4-speculation" => return "AI".to_string(),
+                    "internet" => return "Technology".to_string(),
+                    "israelhamas-conflict-2023" => return "Politics".to_string(),
+                    "israeli-politics" => return "Politics".to_string(),
+                    "medicine" => return "Science".to_string(),
+                    "movies" => return "Culture".to_string(),
+                    "music-f213cbf1eab5" => return "Culture".to_string(),
+                    "nfl" => return "Sports".to_string(),
+                    "nuclear" => return "Science".to_string(),
+                    "openai" => return "AI".to_string(),
+                    "openai-9e1c42b2bb1e" => return "AI".to_string(),
+                    "physics" => return "Science".to_string(),
+                    "politics-default" => return "Politics".to_string(),
+                    "programming" => return "Technology".to_string(),
+                    "sam-altman" => return "Technology".to_string(),
+                    "science-default" => return "Science".to_string(),
+                    "soccer" => return "Sports".to_string(),
+                    "space" => return "Science".to_string(),
+                    "speaker-of-the-house-election" => return "Politics".to_string(),
+                    "sports-default" => return "Sports".to_string(),
+                    "startups" => return "Economics".to_string(),
+                    "stocks" => return "Economics".to_string(),
+                    "technical-ai-timelines" => return "AI".to_string(),
+                    "technology-default" => return "Technology".to_string(),
+                    "tennis" => return "Sports".to_string(),
+                    "time-person-of-the-year" => return "Culture".to_string(),
+                    "tv" => return "Culture".to_string(),
+                    "twitter" => return "Technology".to_string(),
+                    "uk-politics" => return "Politics".to_string(),
+                    "ukraine" => return "Politics".to_string(),
+                    "ukrainerussia-war" => return "Politics".to_string(),
+                    "us-politics" => return "Politics".to_string(),
+                    "wars" => return "Politics".to_string(),
+                    _ => continue,
+                }
+            }
+        }
+        "None".to_string()
     }
     fn events(&self) -> Vec<ProbUpdate> {
         self.events.to_owned()
@@ -257,8 +324,21 @@ async fn get_extended_data(
         }
     }
 
+    let api_url = MANIFOLD_API_BASE.to_owned() + "/market/" + &market.id;
+    let market_extra = client
+        .get(&api_url)
+        .send()
+        .await
+        .expect("HTTP call failed to execute")
+        .error_for_status()
+        .unwrap_or_else(|e| panic!("Query failed: {:?}", e))
+        .json::<MarketInfoExtra>()
+        .await
+        .unwrap();
+
     Ok(MarketFull {
         market: market.clone(),
+        market_extra,
         bets: all_bet_data.clone(),
         events: get_prob_updates(all_bet_data)?,
     })
