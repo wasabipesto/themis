@@ -226,20 +226,19 @@
                 ></v-text-field>
               </v-expansion-panel-text>
             </v-expansion-panel>
-            <!--
             <v-expansion-panel>
               <v-expansion-panel-title>
                 <v-icon class="mr-3">mdi-group</v-icon>
-                Categories: {{ getCategoryLabel(options_selected.categories) }}
+                Category: {{ options_selected.category_contains || 'None' }}
               </v-expansion-panel-title>
               <v-expansion-panel-text>
                 <p class="my-2">
-                  Filter the markets in the sample to only those in certain categories.
+                  Filter the markets in the sample to only those in a certain category.
                 </p>
                 <v-chip-group
-                  v-model="options_selected.categories"
+                  v-model="options_selected.category_contains"
                   selected-class="text-deep-purple-accent-4"
-                  multiple
+                  filter
                 >
                   <v-chip v-for="cat in options.categories" :key="cat" :value="cat">
                     {{ cat }}
@@ -247,7 +246,6 @@
                 </v-chip-group>
               </v-expansion-panel-text>
             </v-expansion-panel>
-            -->
           </v-expansion-panels>
         </v-navigation-drawer>
 
@@ -353,7 +351,7 @@
               min_num_traders: 0,
               min_volume_usd: 10,
               title_contains: '',
-              categories: [],
+              category_contains: '',
             },
             options: {
               bin_method: {
@@ -400,13 +398,6 @@
               return this['options'][option][value]['label']
             } catch {
               return '¯\\_(ツ)_/¯'
-            }
-          },
-          getCategoryLabel(list) {
-            if (list.length === 0) {
-              return 'None'
-            } else {
-              return list.join(', ')
             }
           },
 

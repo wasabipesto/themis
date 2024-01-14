@@ -10,6 +10,7 @@ CREATE TABLE market (
     open_days REAL NOT NULL,
     volume_usd REAL NOT NULL,
     num_traders INTEGER NOT NULL,
+    category VARCHAR NOT NULL DEFAULT None,
     prob_at_midpoint REAL NOT NULL,
     prob_at_close REAL NOT NULL,
     prob_time_weighted REAL NOT NULL,
