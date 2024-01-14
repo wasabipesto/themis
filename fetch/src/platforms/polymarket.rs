@@ -271,19 +271,14 @@ async fn get_extended_data(
             _ => 999999,
         };
         // make the request
-        let response = client
-            .get(&api_url)
-            .query(&[("interval", "all")])
-            .query(&[("market", clob_id)])
-            .query(&[("fidelity", fidelity)])
-            .send()
-            .await
-            .expect("HTTP call failed to execute")
-            .error_for_status()
-            .unwrap_or_else(|e| panic!("Query failed: {:?}", e))
-            .json::<PricesHistoryResponse>()
-            .await
-            .unwrap();
+        let response: PricesHistoryResponse = send_request(
+            client
+                .get(&api_url)
+                .query(&[("interval", "all")])
+                .query(&[("market", clob_id)])
+                .query(&[("fidelity", fidelity)]),
+        )
+        .await?;
 
         // break out if we get data
         if response.history.len() > 0 {
@@ -337,17 +332,10 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
                 clobTokenIds,
             }}
         }}");
-        let response = client
-            .get(&api_url)
-            .query(&[("query", query)])
-            .send()
-            .await
-            .expect("HTTP call failed to execute")
-            .error_for_status()
-            .unwrap_or_else(|e| panic!("Query failed: {:?}", e))
-            .json::<GammaResposneLv1>()
-            .await
-            .unwrap();
+        let response: GammaResposneLv1 =
+            send_request(client.get(&api_url).query(&[("query", query)]))
+                .await
+                .expect("Polymarket: API query error.");
         if verbose {
             println!(
                 "Polymarket: Processing {} markets...",
@@ -427,17 +415,9 @@ pub async fn get_market_by_id(id: &String, output_method: OutputMethod, verbose:
             }}
         }}"
     );
-    let response = client
-        .get(&api_url)
-        .query(&[("query", query)])
-        .send()
+    let response: GammaResposneLv1 = send_request(client.get(&api_url).query(&[("query", query)]))
         .await
-        .expect("HTTP call failed to execute")
-        .error_for_status()
-        .unwrap_or_else(|e| panic!("Query failed: {:?}", e))
-        .json::<GammaResposneLv1>()
-        .await
-        .unwrap();
+        .expect("Polymarket: API query error.");
     let single_market = response
         .data
         .markets

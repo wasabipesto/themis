@@ -318,52 +318,34 @@ async fn get_extended_data(
     client: &ClientWithMiddleware,
     market: &MarketInfo,
 ) -> Result<MarketFull, MarketConvertError> {
+    // get trade info from /bets
     let api_url = MANIFOLD_API_BASE.to_owned() + "/bets";
     let limit = 1000;
     let mut before: Option<String> = None;
     let mut all_bet_data: Vec<Bet> = Vec::new();
     loop {
-        let response_text = client
-            .get(&api_url)
-            .query(&[("contractId", &market.id)])
-            .query(&[("limit", &limit)])
-            .query(&[("before", &before)])
-            .send()
-            .await
-            .expect("HTTP call failed to execute")
-            .text()
-            .await
-            .expect("Failed to get response text");
-        let bet_data: Vec<Bet> =
-            serde_json::from_str(&response_text).map_err(|e| MarketConvertError {
-                data: format!("{:?}", market),
-                message: format!(
-                    "Manifold: Failed to deserialize: response = {:?}, error = {:?}, before = {:?}",
-                    response_text, e, before
-                ),
-                level: 3,
-            })?;
-        let response_len = bet_data.len();
-        all_bet_data.extend(bet_data);
-        if response_len == limit {
+        let bet_data: Vec<Bet> = send_request(
+            client
+                .get(&api_url)
+                .query(&[("contractId", &market.id)])
+                .query(&[("limit", &limit)])
+                .query(&[("before", &before)]),
+        )
+        .await?;
+        if bet_data.len() == limit {
+            all_bet_data.extend(bet_data);
             before = Some(all_bet_data.last().unwrap().id.clone());
         } else {
+            all_bet_data.extend(bet_data);
             break;
         }
     }
 
+    // get extra data from /market
     let api_url = MANIFOLD_API_BASE.to_owned() + "/market/" + &market.id;
-    let market_extra = client
-        .get(&api_url)
-        .send()
-        .await
-        .expect("HTTP call failed to execute")
-        .error_for_status()
-        .unwrap_or_else(|e| panic!("Query failed: {:?}", e))
-        .json::<MarketInfoExtra>()
-        .await
-        .unwrap();
+    let market_extra: MarketInfoExtra = send_request(client.get(&api_url)).await?;
 
+    // save
     Ok(MarketFull {
         market: market.clone(),
         market_extra,
@@ -386,16 +368,14 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
         if verbose {
             println!("Manifold: Getting markets starting at {:?}...", before)
         }
-        let market_response: Vec<MarketInfo> = client
-            .get(&api_url)
-            .query(&[("limit", limit)])
-            .query(&[("before", before)])
-            .send()
-            .await
-            .expect("HTTP call failed to execute")
-            .json::<Vec<MarketInfo>>()
-            .await
-            .expect("Market failed to deserialize");
+        let market_response: Vec<MarketInfo> = send_request(
+            client
+                .get(&api_url)
+                .query(&[("limit", limit)])
+                .query(&[("before", before)]),
+        )
+        .await
+        .expect("Manifold: API query error.");
         if verbose {
             println!("Manifold: Processing {} markets...", market_response.len())
         }
@@ -451,14 +431,9 @@ pub async fn get_market_by_id(id: &str, output_method: OutputMethod, verbose: bo
     if verbose {
         println!("Manifold: Connecting to API at {}", api_url)
     }
-    let market_single = client
-        .get(&api_url)
-        .send()
+    let market_single: MarketInfo = send_request(client.get(&api_url))
         .await
-        .expect("HTTP call failed to execute")
-        .json::<MarketInfo>()
-        .await
-        .expect("Market failed to deserialize");
+        .expect("Manifold: API query error.");
     if !is_valid(&market_single) {
         println!("Manifold: Market is not valid for processing, this may fail.")
     }

@@ -59,15 +59,16 @@ When standardizing things across platforms we ran into some edge cases, I've tri
     - [x] Two-outcome linked
     - [ ] Two-outcome unlinked
     - [ ] More than two outcomes
-We also do not support old markets that used a previous order system, only those that use the newer CLOB system.
+- We also do not support old markets that used a previous order system, only those that use the newer CLOB system.
 
 ## Roadmap
 
+These are the things I plan to add in the near future.
+
 ### Fetch
-- Hardcode maps of site categories to standard categories
-- Add error importance, hide low importance, eprint on medium, and panic on high
 
 #### Kalshi
+- Add market categories
 - Investigate getting the number of unique traders
 - Investigate additional market types
 
@@ -78,6 +79,7 @@ We also do not support old markets that used a previous order system, only those
 - Investigate additional market types
 
 #### Polymarket
+- Add market categories
 - Investigate getting the number of unique traders
 - Investigate including linked and unlinked multiple choice
 
@@ -86,6 +88,7 @@ We also do not support old markets that used a previous order system, only those
 - Add optional KDE smoothing to calibration
 
 ### Client
+- Add a filter for open & close times
 - Add a dedicated explainer page with a walkthough on calibration
 - Add a way to share a link to the current view with weights & filters
 - Investigate mobile support: dragging slider moves sidebar, can't re-enter sidebar
@@ -93,7 +96,6 @@ We also do not support old markets that used a previous order system, only those
 
 ### Other
 - Investigate PredictIt
-- Save open & close times to the database and add client filter
 - Set up docker container for client and a sample compose file
 - Return a list of markets in each sample
 - Plot Brier score against any x-axis (closed date, number of traders, market volume)

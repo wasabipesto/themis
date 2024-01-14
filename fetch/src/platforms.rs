@@ -384,7 +384,38 @@ fn get_reqwest_client_ratelimited(rps: usize) -> ClientWithMiddleware {
         .build()
 }
 
-/// Convert timestamp (milliseconds) to datetime and error on failure
+/// Send the request, check for common errors, and parse the response.
+async fn send_request<T: for<'de> serde::Deserialize<'de>>(
+    req: reqwest_middleware::RequestBuilder,
+) -> Result<T, MarketConvertError> {
+    let response = match req.send().await {
+        Ok(r) => Ok(r),
+        Err(e) => Err(MarketConvertError {
+            data: e.to_string(),
+            message: format!("Failed to execute HTTP call."),
+            level: 5,
+        }),
+    }?;
+
+    let status = response.status();
+    let response_text = response.text().await.unwrap();
+
+    if !status.is_success() {
+        return Err(MarketConvertError {
+            data: response_text.to_owned(),
+            message: format!("Query returned status code {status}."),
+            level: 4,
+        });
+    }
+
+    serde_json::from_str(&response_text).map_err(|e| MarketConvertError {
+        data: response_text.to_owned(),
+        message: format!("Failed to deserialize: {e}."),
+        level: 4,
+    })
+}
+
+/// Convert timestamp (milliseconds) to datetime and error on failure.
 fn get_datetime_from_millis(ts: i64) -> Result<DateTime<Utc>, ()> {
     let dt = NaiveDateTime::from_timestamp_millis(ts);
     match dt {
@@ -393,7 +424,7 @@ fn get_datetime_from_millis(ts: i64) -> Result<DateTime<Utc>, ()> {
     }
 }
 
-/// Convert timestamp (seconds) to datetime and error on failure
+/// Convert timestamp (seconds) to datetime and error on failure.
 fn get_datetime_from_secs(ts: i64) -> Result<DateTime<Utc>, ()> {
     let dt = NaiveDateTime::from_timestamp_opt(ts, 0);
     match dt {

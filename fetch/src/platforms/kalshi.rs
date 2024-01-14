@@ -173,17 +173,9 @@ async fn get_login_token(client_opt: Option<ClientWithMiddleware>) -> String {
         password: var("KALSHI_PASSWORD")
             .expect("Required environment variable KALSHI_PASSWORD not set."),
     };
-    let response = client
-        .post(api_url)
-        .json(&credentials)
-        .send()
+    let response: LoginResponse = send_request(client.post(api_url).json(&credentials))
         .await
-        .unwrap()
-        .error_for_status()
-        .unwrap_or_else(|e| panic!("Kalshi: Login failed: {:?}", e))
-        .json::<LoginResponse>()
-        .await
-        .unwrap();
+        .expect("Kalshi: Login failed.");
     response.token
 }
 
@@ -227,20 +219,15 @@ async fn get_extended_data(
     let mut cursor: Option<String> = None;
     let mut all_bet_data = Vec::new();
     loop {
-        let response = client
-            .get(&api_url)
-            .bearer_auth(token)
-            .query(&[("limit", limit)])
-            .query(&[("cursor", cursor.clone())])
-            .query(&[("min_ts", 0)])
-            .send()
-            .await
-            .expect("HTTP call failed to execute")
-            .error_for_status()
-            .unwrap_or_else(|e| panic!("Query failed: {:?}", e))
-            .json::<BulkEventResponse>()
-            .await
-            .unwrap();
+        let response: BulkEventResponse = send_request(
+            client
+                .get(&api_url)
+                .bearer_auth(token)
+                .query(&[("limit", limit)])
+                .query(&[("cursor", cursor.clone())])
+                .query(&[("min_ts", 0)]),
+        )
+        .await?;
         all_bet_data.extend(response.history);
         if response.cursor.len() > 1 {
             cursor = Some(response.cursor);
@@ -269,19 +256,15 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
         if verbose {
             println!("Kalshi: Getting markets starting at {:?}...", cursor)
         }
-        let response = client
-            .get(&api_url)
-            .bearer_auth(&token)
-            .query(&[("limit", limit)])
-            .query(&[("cursor", cursor.clone())])
-            .send()
-            .await
-            .expect("HTTP call failed to execute")
-            .error_for_status()
-            .unwrap_or_else(|e| panic!("Query failed: {:?}", e))
-            .json::<BulkMarketResponse>()
-            .await
-            .unwrap();
+        let response: BulkMarketResponse = send_request(
+            client
+                .get(&api_url)
+                .bearer_auth(&token)
+                .query(&[("limit", limit)])
+                .query(&[("cursor", cursor.clone())]),
+        )
+        .await
+        .expect("Kalshi: API query error.");
         if verbose {
             println!("Kalshi: Processing {} markets...", response.markets.len())
         }
@@ -339,20 +322,14 @@ pub async fn get_market_by_id(id: &String, output_method: OutputMethod, verbose:
     if verbose {
         println!("Kalshi: Connecting to API at {}", api_url)
     }
-    let market_single = client
-        .get(api_url.clone() + id)
-        .bearer_auth(&token)
-        .send()
-        .await
-        .expect("HTTP call failed to execute")
-        .json::<SingleMarketResponse>()
-        .await
-        .expect("Market failed to deserialize")
-        .market;
-    if !is_valid(&market_single) {
+    let market_single: SingleMarketResponse =
+        send_request(client.get(api_url.clone() + id).bearer_auth(&token))
+            .await
+            .expect("Kalshi: API query error.");
+    if !is_valid(&market_single.market) {
         println!("Kalshi: Market is not valid for processing, this may fail.")
     }
-    let market_data: MarketStandard = get_extended_data(&client, &token, &market_single)
+    let market_data: MarketStandard = get_extended_data(&client, &token, &market_single.market)
         .await
         .expect("Error getting extended market data")
         .try_into()

@@ -230,16 +230,7 @@ async fn get_extended_data(
     market: &MarketInfo,
 ) -> Result<MarketFull, MarketConvertError> {
     let api_url = METACULUS_API_BASE.to_owned() + "/questions/" + &market.id.to_string();
-    let market_extra = client
-        .get(&api_url)
-        .send()
-        .await
-        .expect("HTTP call failed to execute")
-        .error_for_status()
-        .unwrap_or_else(|e| panic!("Query failed: {:?}", e))
-        .json::<MarketInfoExtra>()
-        .await
-        .unwrap();
+    let market_extra: MarketInfoExtra = send_request(client.get(&api_url)).await?;
     Ok(MarketFull {
         market: market.clone(),
         market_extra,
@@ -261,16 +252,14 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
         if verbose {
             println!("Metaculus: Getting markets starting at {:?}...", offset)
         }
-        let market_response = client
-            .get(&api_url)
-            .query(&[("limit", limit)])
-            .query(&[("offset", offset)])
-            .send()
-            .await
-            .expect("HTTP call failed to execute")
-            .json::<BulkMarketResponse>()
-            .await
-            .expect("Market failed to deserialize");
+        let market_response: BulkMarketResponse = send_request(
+            client
+                .get(&api_url)
+                .query(&[("limit", limit)])
+                .query(&[("offset", offset)]),
+        )
+        .await
+        .expect("Metaculus: API query error.");
         if verbose {
             println!(
                 "Metaculus: Processing {} markets...",
@@ -330,14 +319,9 @@ pub async fn get_market_by_id(id: &str, output_method: OutputMethod, verbose: bo
     if verbose {
         println!("Metaculus: Connecting to API at {}", api_url)
     }
-    let market_single = client
-        .get(&api_url)
-        .send()
+    let market_single: MarketInfo = send_request(client.get(&api_url))
         .await
-        .expect("HTTP call failed to execute")
-        .json::<MarketInfo>()
-        .await
-        .expect("Market failed to deserialize");
+        .expect("Metaculus: API query error.");
     if !is_valid(&market_single) {
         println!("Metaculus: Market is not valid for processing, this may fail.")
     }
