@@ -56,6 +56,7 @@ table! {
         open_days -> Float,
         volume_usd -> Float,
         num_traders -> Integer,
+        category -> Varchar,
         prob_at_midpoint -> Float,
         prob_at_close -> Float,
         prob_time_weighted -> Float,
@@ -77,6 +78,7 @@ pub struct MarketStandard {
     open_days: f32,
     volume_usd: f32,
     num_traders: i32,
+    category: String,
     prob_at_midpoint: f32,
     prob_at_close: f32,
     prob_time_weighted: f32,
@@ -123,6 +125,9 @@ pub trait MarketStandardizer {
 
     /// Get the number of unique traders on the market.
     fn num_traders(&self) -> i32;
+
+    /// Get which category the market is in.
+    fn category(&self) -> String;
 
     /// Get a list of probability-affecting events during the market (derived from bets/trades).
     fn events(&self) -> Vec<ProbUpdate>;
@@ -332,6 +337,7 @@ fn save_markets(markets: Vec<MarketStandard>, method: OutputMethod) {
                         open_days.eq(excluded(open_days)),
                         volume_usd.eq(excluded(volume_usd)),
                         num_traders.eq(excluded(num_traders)),
+                        category.eq(excluded(category)),
                         prob_at_midpoint.eq(excluded(prob_at_midpoint)),
                         prob_at_close.eq(excluded(prob_at_close)),
                         prob_time_weighted.eq(excluded(prob_time_weighted)),
