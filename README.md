@@ -80,6 +80,7 @@ These are the things I plan to add in the near future.
 
 #### Polymarket
 - Add market categories
+- Swap to using CLOB API for market resolutions
 - Investigate getting the number of unique traders
 - Investigate including linked and unlinked multiple choice
 
@@ -89,6 +90,7 @@ These are the things I plan to add in the near future.
 
 ### Client
 - Add a filter for open & close times
+- Revise to clarify Brier score is for accuracy, not calibration
 - Add a dedicated explainer page with a walkthough on calibration
 - Add a way to share a link to the current view with weights & filters
 - Investigate mobile support: dragging slider moves sidebar, can't re-enter sidebar
@@ -97,6 +99,7 @@ These are the things I plan to add in the near future.
 ### Other
 - Investigate PredictIt
 - Add an x-method for a random point along the market duration
+- Add an x-method with time-based probability spread
 - Set up docker container for client and a sample compose file
 - Return a list of markets in each sample
 - Plot Brier score against any x-axis (closed date, number of traders, market volume)

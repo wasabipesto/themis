@@ -101,7 +101,8 @@
             <v-expansion-panel>
               <v-expansion-panel-title>
                 <v-icon class="mr-3">mdi-ruler-square-compass</v-icon>
-                Bin Method: {{ getOptionLabel("bin_method", options_selected.bin_method) }}
+                X-Axis Bin Method: <br>
+                {{ getOptionLabel("bin_method", options_selected.bin_method) }}
               </v-expansion-panel-title>
               <v-expansion-panel-text>
                 <p class="my-2">
@@ -126,14 +127,13 @@
                   </template>
                   </v-radio>
                 </v-radio-group>
-                
               </v-expansion-panel-text>
             </v-expansion-panel>
             <v-expansion-panel>
               <v-expansion-panel-title>
                 <v-icon class="mr-3">mdi-globe-model</v-icon>
-                Weighting: {{ getOptionLabel("weight_attribute", options_selected.weight_attribute)
-                }}
+                Y-Axis Resolution Weighting: <br>
+                {{ getOptionLabel("weight_attribute", options_selected.weight_attribute) }}
               </v-expansion-panel-title>
               <v-expansion-panel-text>
                 <p class="my-2">
