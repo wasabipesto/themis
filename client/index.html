@@ -106,18 +106,27 @@
               <v-expansion-panel-text>
                 <p class="my-2">
                   The binning method determines where on the x-axis each market is placed. This
-                  metric should represent the market's true belief or predicted value. We usually
-                  care about how accurate the market was on average over the course of the market,
-                  so the default is time-weighted.
+                  metric should represent the market's true belief or predicted value.
                 </p>
                 <v-radio-group v-model="options_selected.bin_method">
                   <v-radio
-                    v-for="(v,k) in options.bin_method"
+                    v-for="(v, k) in options.bin_method"
                     :key="k"
                     :value="k"
-                    :label="v.label"
-                  ></v-radio>
+                  >
+                  <template v-slot:label>
+                    {{ v.label }}
+                    <v-tooltip
+                      v-if="v.tooltip"
+                      activator="parent"
+                      location="end"
+                    >
+                      <span v-html="v.tooltip"></span>
+                    </v-tooltip>
+                  </template>
+                  </v-radio>
                 </v-radio-group>
+                
               </v-expansion-panel-text>
             </v-expansion-panel>
             <v-expansion-panel>
@@ -355,15 +364,14 @@
             },
             options: {
               bin_method: {
-                //prob_at_q1: { label: '25% of Market Duration' },
-                prob_at_midpoint: { label: 'At Market Midpoint' },
-                //prob_at_q3: { label: '75% of Market Duration' },
-                //prob_at_1w: { label: '1 Week Before Close' },
-                //prob_at_1m: { label: '1 Month Before Close' },
-                //prob_at_1y: { label: '1 Year Before Close' },
-                prob_at_close: { label: 'At Market Close' },
-                prob_time_weighted: { label: 'Time-Weighted Average' },
-                //prob_trade_weighted: { label: 'Trade-Weighted Average' },
+                prob_at_midpoint: { label: 'Probability at Market Midpoint' },
+                prob_at_close: { label: 'Probability at Market Close' },
+                prob_time_weighted: { 
+                  label: 'Market Time-Averaged Probability',
+                  tooltip: 
+                    'For each market, this is the probability averaged over time. <br>\
+                    Each market is only counted once.',
+                },
               },
               weight_attribute: {
                 none: { label: 'None' },

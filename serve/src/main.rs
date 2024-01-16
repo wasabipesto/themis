@@ -364,9 +364,9 @@ async fn calibration_plot(
     let metadata = Metadata {
         title: format!("Calibration Plot"),
         x_title: match bin_method.as_str() {
-            "prob_at_midpoint" => format!("Probability at Midpoint"),
-            "prob_at_close" => format!("Probability at Close"),
-            "prob_time_weighted" => format!("Time-Weighted Probability"),
+            "prob_at_midpoint" => format!("Probability at Market Midpoint"),
+            "prob_at_close" => format!("Probability at Market Close"),
+            "prob_time_weighted" => format!("Market Time-Averaged Probability"),
             _ => panic!("given bin_method not in x_title map"),
         },
         y_title: match weight_attribute.as_str() {

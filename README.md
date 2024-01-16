@@ -96,6 +96,7 @@ These are the things I plan to add in the near future.
 
 ### Other
 - Investigate PredictIt
+- Add an x-method for a random point along the market duration
 - Set up docker container for client and a sample compose file
 - Return a list of markets in each sample
 - Plot Brier score against any x-axis (closed date, number of traders, market volume)
