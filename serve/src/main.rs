@@ -1,5 +1,6 @@
 use actix_web::web::{Data, Query};
 use actix_web::{get, middleware, App, HttpResponse, HttpServer};
+//use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::{pg::PgConnection, prelude::*};
 use serde::{Deserialize, Serialize};
@@ -20,9 +21,12 @@ table! {
         platform -> Varchar,
         platform_id -> Varchar,
         url -> Varchar,
+        //open_dt -> Timestamptz,
+        //close_dt -> Timestamptz,
         open_days -> Float,
         volume_usd -> Float,
         num_traders -> Integer,
+        category -> Varchar,
         prob_at_midpoint -> Float,
         prob_at_close -> Float,
         prob_time_weighted -> Float,
@@ -47,9 +51,12 @@ struct Market {
     platform: String,
     platform_id: String,
     url: String,
+    //open_dt: DateTime<Utc>,
+    //close_dt: DateTime<Utc>,
     open_days: f32,
     volume_usd: f32,
     num_traders: i32,
+    category: String,
     prob_at_midpoint: f32,
     prob_at_close: f32,
     prob_time_weighted: f32,
@@ -73,11 +80,15 @@ pub struct QueryParams {
     bin_method: Option<String>,
     bin_size: Option<f32>,
     weight_attribute: Option<String>,
+    //min_open_dt: DateTime<Utc>,
+    //max_open_dt: DateTime<Utc>,
+    //min_close_dt: DateTime<Utc>,
+    //max_close_dt: DateTime<Utc>,
     min_open_days: Option<f32>,
     min_num_traders: Option<i32>,
     min_volume_usd: Option<f32>,
     title_contains: Option<String>,
-    //categories: Option<String>,
+    category_contains: Option<String>,
 }
 
 /// Metadata to help label a plot.
@@ -190,7 +201,10 @@ async fn calibration_plot(
     let min_open_days = query.min_open_days.unwrap_or(0.0);
     let min_volume_usd = query.min_volume_usd.unwrap_or(0.0);
     let min_num_traders = query.min_num_traders.unwrap_or(0);
-    let title_contains = "%".to_string() + &query.title_contains.clone().unwrap_or_default() + "%";
+    let title_contains =
+        "%".to_string() + &query.title_contains.to_owned().unwrap_or_default() + "%";
+    let category_contains =
+        "%".to_string() + &query.category_contains.to_owned().unwrap_or_default() + "%";
 
     // get database connection from pool
     let conn = &mut pool
@@ -203,6 +217,7 @@ async fn calibration_plot(
         .filter(market::volume_usd.ge(min_volume_usd))
         .filter(market::num_traders.ge(min_num_traders))
         .filter(market::title.ilike(title_contains))
+        .filter(market::category.ilike(category_contains))
         .select(Market::as_select())
         .load::<Market>(conn)
         .map_err(|e| ApiError::new(500, format!("failed to query markets: {e}")))?;
@@ -349,9 +364,9 @@ async fn calibration_plot(
     let metadata = Metadata {
         title: format!("Calibration Plot"),
         x_title: match bin_method.as_str() {
-            "prob_at_midpoint" => format!("Probability at Midpoint"),
-            "prob_at_close" => format!("Probability at Close"),
-            "prob_time_weighted" => format!("Time-Weighted Probability"),
+            "prob_at_midpoint" => format!("Probability at Market Midpoint"),
+            "prob_at_close" => format!("Probability at Market Close"),
+            "prob_time_weighted" => format!("Market Time-Averaged Probability"),
             _ => panic!("given bin_method not in x_title map"),
         },
         y_title: match weight_attribute.as_str() {

@@ -10,6 +10,7 @@ CREATE TABLE market (
     open_days REAL NOT NULL,
     volume_usd REAL NOT NULL,
     num_traders INTEGER NOT NULL,
+    category VARCHAR DEFAULT 'None' NOT NULL,
     prob_at_midpoint REAL NOT NULL,
     prob_at_close REAL NOT NULL,
     prob_time_weighted REAL NOT NULL,
@@ -21,6 +22,7 @@ CREATE TABLE platform (
     platform_name VARCHAR PRIMARY KEY,
     platform_name_fmt VARCHAR NOT NULL,
     platform_description VARCHAR NOT NULL,
+    platform_site_url VARCHAR NOT NULL,
     platform_avatar_url VARCHAR NOT NULL,
     platform_color VARCHAR NOT NULL
 );
@@ -28,6 +30,7 @@ INSERT INTO platform (
         platform_name,
         platform_name_fmt,
         platform_description,
+        platform_site_url,
         platform_avatar_url,
         platform_color
     )
@@ -35,6 +38,7 @@ VALUES (
         'manifold',
         'Manifold',
         'A play-money platform where anyone can make any market.',
+        'https://manifold.markets/',
         'images/manifold.svg',
         '#4337c9'
     ),
@@ -42,6 +46,7 @@ VALUES (
         'kalshi',
         'Kalshi',
         'A US-regulated exchange with limited real-money contracts.',
+        'https://kalshi.com/',
         'images/kalshi.png',
         '#00d298'
     ),
@@ -49,6 +54,7 @@ VALUES (
         'metaculus',
         'Metaculus',
         'A forecasting platform focused on calibration instead of bets.',
+        'https://www.metaculus.com/home/',
         'images/metaculus.png',
         '#283441'
     ),
@@ -56,6 +62,7 @@ VALUES (
         'polymarket',
         'Polymarket',
         'A high-volume cryptocurrency exchange backed by USDC.',
+        'https://polymarket.com/',
         'images/polymarket.png',
         '#0072f9'
     );

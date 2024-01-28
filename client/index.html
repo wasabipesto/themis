@@ -101,30 +101,39 @@
             <v-expansion-panel>
               <v-expansion-panel-title>
                 <v-icon class="mr-3">mdi-ruler-square-compass</v-icon>
-                Bin Method: {{ getOptionLabel("bin_method", options_selected.bin_method) }}
+                X-Axis Bin Method: <br>
+                {{ getOptionLabel("bin_method", options_selected.bin_method) }}
               </v-expansion-panel-title>
               <v-expansion-panel-text>
                 <p class="my-2">
                   The binning method determines where on the x-axis each market is placed. This
-                  metric should represent the market's true belief or predicted value. We usually
-                  care about how accurate the market was on average over the course of the market,
-                  so the default is time-weighted.
+                  metric should represent the market's true belief or predicted value.
                 </p>
                 <v-radio-group v-model="options_selected.bin_method">
                   <v-radio
-                    v-for="(v,k) in options.bin_method"
+                    v-for="(v, k) in options.bin_method"
                     :key="k"
                     :value="k"
-                    :label="v.label"
-                  ></v-radio>
+                  >
+                  <template v-slot:label>
+                    {{ v.label }}
+                    <v-tooltip
+                      v-if="v.tooltip"
+                      activator="parent"
+                      location="end"
+                    >
+                      <span v-html="v.tooltip"></span>
+                    </v-tooltip>
+                  </template>
+                  </v-radio>
                 </v-radio-group>
               </v-expansion-panel-text>
             </v-expansion-panel>
             <v-expansion-panel>
               <v-expansion-panel-title>
                 <v-icon class="mr-3">mdi-globe-model</v-icon>
-                Weighting: {{ getOptionLabel("weight_attribute", options_selected.weight_attribute)
-                }}
+                Y-Axis (Resolution) Weighting: <br>
+                {{ getOptionLabel("weight_attribute", options_selected.weight_attribute) }}
               </v-expansion-panel-title>
               <v-expansion-panel-text>
                 <p class="my-2">
@@ -226,20 +235,19 @@
                 ></v-text-field>
               </v-expansion-panel-text>
             </v-expansion-panel>
-            <!--
             <v-expansion-panel>
               <v-expansion-panel-title>
                 <v-icon class="mr-3">mdi-group</v-icon>
-                Categories: {{ getCategoryLabel(options_selected.categories) }}
+                Category: {{ options_selected.category_contains || 'None' }}
               </v-expansion-panel-title>
               <v-expansion-panel-text>
                 <p class="my-2">
-                  Filter the markets in the sample to only those in certain categories.
+                  Filter the markets in the sample to only those in a certain category.
                 </p>
                 <v-chip-group
-                  v-model="options_selected.categories"
+                  v-model="options_selected.category_contains"
                   selected-class="text-deep-purple-accent-4"
-                  multiple
+                  filter
                 >
                   <v-chip v-for="cat in options.categories" :key="cat" :value="cat">
                     {{ cat }}
@@ -247,7 +255,6 @@
                 </v-chip-group>
               </v-expansion-panel-text>
             </v-expansion-panel>
-            -->
           </v-expansion-panels>
         </v-navigation-drawer>
 
@@ -347,25 +354,24 @@
             option_drawers_open: [0],
             sidebar_data: [],
             options_selected: {
-              bin_method: 'prob_time_weighted',
+              bin_method: 'prob_at_midpoint',
               weight_attribute: 'none',
               min_open_days: 0,
               min_num_traders: 0,
-              min_volume_usd: 10,
+              min_volume_usd: 0,
               title_contains: '',
-              categories: [],
+              category_contains: '',
             },
             options: {
               bin_method: {
-                //prob_at_q1: { label: '25% of Market Duration' },
-                prob_at_midpoint: { label: 'At Market Midpoint' },
-                //prob_at_q3: { label: '75% of Market Duration' },
-                //prob_at_1w: { label: '1 Week Before Close' },
-                //prob_at_1m: { label: '1 Month Before Close' },
-                //prob_at_1y: { label: '1 Year Before Close' },
-                prob_at_close: { label: 'At Market Close' },
-                prob_time_weighted: { label: 'Time-Weighted Average' },
-                //prob_trade_weighted: { label: 'Trade-Weighted Average' },
+                prob_at_midpoint: { label: 'Probability at Market Midpoint' },
+                prob_at_close: { label: 'Probability at Market Close' },
+                prob_time_weighted: { 
+                  label: 'Market Time-Averaged Probability',
+                  tooltip: 
+                    'For each market, this is the probability averaged over time. <br>\
+                    Each market is only counted once.',
+                },
               },
               weight_attribute: {
                 none: { label: 'None' },
@@ -383,13 +389,15 @@
                 range: [0, 500],
               },
               categories: [
-                'Sports',
-                'Elections',
-                'Finance',
                 'AI',
-                'Entertainment',
-                'Technology',
                 'Climate',
+                'Culture',
+                'Crypto',
+                'Economics',
+                'Politics',
+                'Science',
+                'Sports',
+                'Technology',
               ],
             },
           }
@@ -400,13 +408,6 @@
               return this['options'][option][value]['label']
             } catch {
               return '¯\\_(ツ)_/¯'
-            }
-          },
-          getCategoryLabel(list) {
-            if (list.length === 0) {
-              return 'None'
-            } else {
-              return list.join(', ')
             }
           },
 

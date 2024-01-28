@@ -33,9 +33,9 @@ These should be platforms that have an established presence and an open API. I w
 - [x] Polymarket
     - https://polymarket.com
     - API Docs: https://docs.polymarket.com/#introduction
-    - GraphQL: https://gamma-api.polymarket.com
+    - GraphQL (removed): https://gamma-api.polymarket.com
     - CLOB API: https://clob.polymarket.com
-    - StrAPI: https://trapi-matic.poly.market/markets
+    - StrAPI: https://strapi-matic.poly.market/markets
 - [ ] PredictIt
     - https://www.predictit.org
     - FAQ Topic: https://predictit.freshdesk.com/support/solutions/articles/12000001878-does-predictit-make-market-data-available-via-an-api-
@@ -76,6 +76,7 @@ Same as stage 2 but with lower-volume or otherwise lower-priority sites.
 - [ ] Iowa Electronic Markets
     - https://iem.uiowa.edu/iem
     - Example: https://iemweb.biz.uiowa.edu/iem_market_info/2024-u-s-presidential-winner-takes-all-market
+    - Analysis Repo: https://github.com/mickbransfield/IEM
     - Low-volume student exchange.
     - Does not appear to have an API.
 - [ ] Infer

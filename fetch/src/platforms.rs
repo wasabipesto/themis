@@ -56,6 +56,7 @@ table! {
         open_days -> Float,
         volume_usd -> Float,
         num_traders -> Integer,
+        category -> Varchar,
         prob_at_midpoint -> Float,
         prob_at_close -> Float,
         prob_time_weighted -> Float,
@@ -77,6 +78,7 @@ pub struct MarketStandard {
     open_days: f32,
     volume_usd: f32,
     num_traders: i32,
+    category: String,
     prob_at_midpoint: f32,
     prob_at_close: f32,
     prob_time_weighted: f32,
@@ -123,6 +125,9 @@ pub trait MarketStandardizer {
 
     /// Get the number of unique traders on the market.
     fn num_traders(&self) -> i32;
+
+    /// Get which category the market is in.
+    fn category(&self) -> String;
 
     /// Get a list of probability-affecting events during the market (derived from bets/trades).
     fn events(&self) -> Vec<ProbUpdate>;
@@ -205,7 +210,9 @@ pub trait MarketStandardizer {
         self.prob_at_time(time)
     }
 
-    /// Get the market's probability at a specific percent of the way though the duration of a market.
+    /// Get the market's average probability over the course of the market.
+    /// This is calculated by taking the average of all market probabilities
+    /// weighted by how long the market was at that probability.
     fn prob_time_weighted(&self) -> Result<f32, MarketConvertError> {
         let mut prev_event: Option<ProbUpdate> = None;
         let mut cumulative_prob: f32 = 0.0;
@@ -223,6 +230,8 @@ pub trait MarketStandardizer {
                         let duration = (event.time - self.open_dt()?).num_seconds() as f32;
                         cumulative_prob += DEFAULT_OPENING_PROB * duration;
                         cumulative_time += duration;
+                    } else if event.time == self.open_dt()? {
+                        // no time between start time and first event, skip
                     } else {
                         return Err(MarketConvertError {
                             data: self.debug(),
@@ -332,6 +341,7 @@ fn save_markets(markets: Vec<MarketStandard>, method: OutputMethod) {
                         open_days.eq(excluded(open_days)),
                         volume_usd.eq(excluded(volume_usd)),
                         num_traders.eq(excluded(num_traders)),
+                        category.eq(excluded(category)),
                         prob_at_midpoint.eq(excluded(prob_at_midpoint)),
                         prob_at_close.eq(excluded(prob_at_close)),
                         prob_time_weighted.eq(excluded(prob_time_weighted)),
@@ -362,12 +372,19 @@ impl fmt::Display for MarketConvertError {
 }
 
 /// A default API client with middleware to ratelimit and retry on failure.
-fn get_reqwest_client_ratelimited(rps: usize) -> ClientWithMiddleware {
+/// If no period is supplied, the rate limit is per second.
+fn get_reqwest_client_ratelimited(rps: usize, period: Option<u64>) -> ClientWithMiddleware {
+    // get default period
+    let interval_duration = if let Some(interval) = period {
+        std::time::Duration::from_millis(interval)
+    } else {
+        std::time::Duration::from_millis(1000)
+    };
     // retry requests that get server errors with an exponential backoff timer
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
     // rate limit to n requests per second
     let rate_limiter = RateLimiter::builder()
-        .interval(std::time::Duration::from_millis(1000))
+        .interval(interval_duration)
         .refill(rps)
         .max(rps)
         .build();
@@ -378,7 +395,38 @@ fn get_reqwest_client_ratelimited(rps: usize) -> ClientWithMiddleware {
         .build()
 }
 
-/// Convert timestamp (milliseconds) to datetime and error on failure
+/// Send the request, check for common errors, and parse the response.
+async fn send_request<T: for<'de> serde::Deserialize<'de>>(
+    req: reqwest_middleware::RequestBuilder,
+) -> Result<T, MarketConvertError> {
+    let response = match req.send().await {
+        Ok(r) => Ok(r),
+        Err(e) => Err(MarketConvertError {
+            data: e.to_string(),
+            message: format!("Failed to execute HTTP call."),
+            level: 5,
+        }),
+    }?;
+
+    let status = response.status();
+    let response_text = response.text().await.unwrap();
+
+    if !status.is_success() {
+        return Err(MarketConvertError {
+            data: response_text.to_owned(),
+            message: format!("Query returned status code {status}."),
+            level: 4,
+        });
+    }
+
+    serde_json::from_str(&response_text).map_err(|e| MarketConvertError {
+        data: response_text.to_owned(),
+        message: format!("Failed to deserialize: {e}."),
+        level: 4,
+    })
+}
+
+/// Convert timestamp (milliseconds) to datetime and error on failure.
 fn get_datetime_from_millis(ts: i64) -> Result<DateTime<Utc>, ()> {
     let dt = NaiveDateTime::from_timestamp_millis(ts);
     match dt {
@@ -387,7 +435,7 @@ fn get_datetime_from_millis(ts: i64) -> Result<DateTime<Utc>, ()> {
     }
 }
 
-/// Convert timestamp (seconds) to datetime and error on failure
+/// Convert timestamp (seconds) to datetime and error on failure.
 fn get_datetime_from_secs(ts: i64) -> Result<DateTime<Utc>, ()> {
     let dt = NaiveDateTime::from_timestamp_opt(ts, 0);
     match dt {
