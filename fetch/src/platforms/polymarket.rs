@@ -48,63 +48,6 @@ struct PricesHistoryResponse {
     history: Vec<PricesHistoryPoint>,
 }
 
-/// Deserialize f32 from a string wrapped in quotes.
-pub fn deserialize_f32_remove_quotes<'de, D>(deserializer: D) -> Result<f32, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let s: String = Deserialize::deserialize(deserializer)?;
-    s.trim_matches('"')
-        .parse()
-        .map_err(|_| serde::de::Error::custom(format!("invalid f32: {}", s)))
-}
-
-/// Deserialize Vec<f32> from a string wrapped in quotes.
-pub fn deserialize_vec_f32_remove_quotes<'de, D>(deserializer: D) -> Result<Vec<f32>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let s: String = Deserialize::deserialize(deserializer)?;
-    let values: Result<Vec<f32>, _> = s
-        .trim_matches(|c| char::is_ascii_punctuation(&c))
-        .split(',')
-        .map(|value| {
-            let cleaned_value = value
-                .trim()
-                .trim_matches(|c| char::is_ascii_punctuation(&c));
-            cleaned_value.parse().map_err(|_| {
-                <D::Error as serde::de::Error>::custom(format!("invalid value: {}", cleaned_value))
-            })
-        })
-        .collect();
-
-    values.map_err(|e| serde::de::Error::custom(format!("invalid Vec<f32>: {} from {}", e, s)))
-}
-
-/// Deserialize Vec<String> from a string wrapped in quotes.
-pub fn deserialize_vec_string_remove_quotes<'de, D>(
-    deserializer: D,
-) -> Result<Vec<String>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let s: String = Deserialize::deserialize(deserializer)?;
-    let values: Result<Vec<String>, _> = s
-        .trim_matches(|c| char::is_ascii_punctuation(&c))
-        .split(',')
-        .map(|value| {
-            let cleaned_value = value
-                .trim()
-                .trim_matches(|c| char::is_ascii_punctuation(&c));
-            cleaned_value.parse().map_err(|_| {
-                <D::Error as serde::de::Error>::custom(format!("invalid value: {}", cleaned_value))
-            })
-        })
-        .collect();
-
-    values.map_err(|e| serde::de::Error::custom(format!("invalid Vec<String>: {} from {}", e, s)))
-}
-
 /// Container for market data and events, used to hold data for conversion.
 #[derive(Debug)]
 struct MarketFull {
@@ -146,7 +89,7 @@ impl MarketStandardizer for MarketFull {
             Err(MarketConvertError {
                 data: self.debug(),
                 message: format!("Polymarket: Market field end_date_iso is empty."),
-                level: 3,
+                level: 0,
             })
         }
     }
@@ -171,12 +114,12 @@ impl MarketStandardizer for MarketFull {
                 (true, true) => Err(MarketConvertError {
                     data: self.debug(),
                     message: format!("Polymarket: Both tokens are winners."),
-                    level: 3,
+                    level: 1,
                 }),
                 (false, false) => Err(MarketConvertError {
                     data: self.debug(),
                     message: format!("Polymarket: Neither token is a winner."),
-                    level: 3,
+                    level: 1,
                 }),
             },
             _ => Err(MarketConvertError {
@@ -213,16 +156,22 @@ impl TryInto<MarketStandard> for MarketFull {
 
 /// Test if a market is suitable for analysis.
 fn is_valid(market: &MarketInfo) -> bool {
-    market.closed == true && market.tokens.len() == 2
+    market.closed == true && market.tokens.len() == 2 && market.end_date_iso < Some(Utc::now())
 }
 
 /// Convert API events into standard events.
 fn get_prob_updates(
     mut points: Vec<PricesHistoryPoint>,
 ) -> Result<Vec<ProbUpdate>, MarketConvertError> {
-    let mut result = Vec::new();
+    let mut result: Vec<ProbUpdate> = Vec::new();
     points.sort_unstable_by_key(|point| point.t);
     for point in points {
+        if let Some(last_point) = result.last() {
+            if last_point.prob == point.p {
+                // skip adding to the list if the prob is the same
+                continue;
+            }
+        }
         if let Ok(time) = get_datetime_from_secs(point.t) {
             result.push(ProbUpdate {
                 time,
@@ -252,7 +201,7 @@ async fn get_extended_data(
         Some(token) => Ok(token.token_id.to_owned()),
         None => Err(MarketConvertError {
             data: format!("{:?}", market),
-            message: format!("Polymarket: Market field clobTokenIds is empty."),
+            message: format!("Polymarket: Market field `tokens` is empty."),
             level: 3,
         }),
     }?;
@@ -286,7 +235,7 @@ async fn get_extended_data(
             return Err(MarketConvertError {
                 data: format!("{:?}", market),
                 message: format!("Polymarket: CLOB returned empty list for price history, even at fidelity = {fidelity}."),
-                level: 3,
+                level: 2,
             });
         }
     }
@@ -301,11 +250,11 @@ async fn get_extended_data(
 pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
     println!("Polymarket: Processing started...");
     let client = get_reqwest_client_ratelimited(POLYMARKET_RATELIMIT, None);
-    let api_url = POLYMARKET_GAMMA_API_BASE.to_owned();
+    let api_url = POLYMARKET_CLOB_API_BASE.to_owned() + "/markets";
     if verbose {
         println!("Polymarket: Connecting to API at {}", api_url)
     }
-    let limit: usize = 1000;
+    let limit: usize = 100;
     let mut cursor: Option<String> = None;
     loop {
         if verbose {
@@ -367,7 +316,7 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
 /// Download, process and store one market from the platform.
 pub async fn get_market_by_id(id: &String, output_method: OutputMethod, verbose: bool) {
     let client = get_reqwest_client_ratelimited(POLYMARKET_RATELIMIT, None);
-    let api_url = POLYMARKET_GAMMA_API_BASE.to_owned() + "/markets/" + id;
+    let api_url = POLYMARKET_CLOB_API_BASE.to_owned() + "/markets/" + id;
     if verbose {
         println!("Polymarket: Connecting to API at {}", api_url)
     }

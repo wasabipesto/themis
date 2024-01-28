@@ -230,6 +230,8 @@ pub trait MarketStandardizer {
                         let duration = (event.time - self.open_dt()?).num_seconds() as f32;
                         cumulative_prob += DEFAULT_OPENING_PROB * duration;
                         cumulative_time += duration;
+                    } else if event.time == self.open_dt()? {
+                        // no time between start time and first event, skip
                     } else {
                         return Err(MarketConvertError {
                             data: self.debug(),
