@@ -373,20 +373,19 @@ impl fmt::Display for MarketConvertError {
 
 /// A default API client with middleware to ratelimit and retry on failure.
 /// If no period is supplied, the rate limit is per second.
-fn get_reqwest_client_ratelimited(rps: usize, period: Option<u64>) -> ClientWithMiddleware {
-    // get default period
-    let interval_duration = if let Some(interval) = period {
-        std::time::Duration::from_millis(interval)
-    } else {
-        std::time::Duration::from_millis(1000)
-    };
+fn get_reqwest_client_ratelimited(
+    request_count: usize,
+    interval_ms: Option<u64>,
+) -> ClientWithMiddleware {
+    // get requested period or default
+    let interval_duration = std::time::Duration::from_millis(interval_ms.unwrap_or(1000));
     // retry requests that get server errors with an exponential backoff timer
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
     // rate limit to n requests per second
     let rate_limiter = RateLimiter::builder()
         .interval(interval_duration)
-        .refill(rps)
-        .max(rps)
+        .refill(request_count)
+        .max(request_count)
         .build();
 
     ClientBuilder::new(reqwest::Client::new())
