@@ -408,7 +408,11 @@ async fn send_request<T: for<'de> serde::Deserialize<'de>>(
     }?;
 
     let status = response.status();
-    let response_text = response.text().await.unwrap();
+    let response_text = response.text().await.map_err(|e| MarketConvertError {
+        data: e.to_string(),
+        message: format!("Failed to get response body text."),
+        level: 4,
+    })?;
 
     if !status.is_success() {
         return Err(MarketConvertError {
