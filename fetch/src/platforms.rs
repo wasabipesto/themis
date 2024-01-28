@@ -210,7 +210,9 @@ pub trait MarketStandardizer {
         self.prob_at_time(time)
     }
 
-    /// Get the market's probability at a specific percent of the way though the duration of a market.
+    /// Get the market's average probability over the course of the market.
+    /// This is calculated by taking the average of all market probabilities
+    /// weighted by how long the market was at that probability.
     fn prob_time_weighted(&self) -> Result<f32, MarketConvertError> {
         let mut prev_event: Option<ProbUpdate> = None;
         let mut cumulative_prob: f32 = 0.0;
@@ -368,6 +370,7 @@ impl fmt::Display for MarketConvertError {
 }
 
 /// A default API client with middleware to ratelimit and retry on failure.
+/// If no period is supplied, the rate limit is per second.
 fn get_reqwest_client_ratelimited(rps: usize, period: Option<u64>) -> ClientWithMiddleware {
     // get default period
     let interval_duration = if let Some(interval) = period {
