@@ -33,6 +33,7 @@ struct MarketInfo {
     status: String,
     volume: f32,
     result: String,
+    category: String,
 }
 
 /// API response after requesting a single market from `/market`.
@@ -113,7 +114,20 @@ impl MarketStandardizer for MarketFull {
         0 // TODO
     }
     fn category(&self) -> String {
-        "None".to_string() // TODO
+        match self.market.category.as_str() {
+            "COVID-19" => return "Science".to_string(),
+            "Climate and Weather" => return "Climate".to_string(),
+            "Companies" => return "Economics".to_string(),
+            "Economics" => return "Economics".to_string(),
+            "Entertainment" => return "Culture".to_string(),
+            "Financials" => return "Economics".to_string(),
+            "Health" => return "Science".to_string(),
+            "Politics" => return "Politics".to_string(),
+            "Science & Technology" => return "Science".to_string(),
+            "Science and Technology" => return "Science".to_string(),
+            "Transportation" => return "Politics".to_string(),
+            _ => "None".to_string(),
+        }
     }
     fn events(&self) -> Vec<ProbUpdate> {
         self.events.to_owned()

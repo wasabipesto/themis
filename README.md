@@ -68,7 +68,6 @@ These are the things I plan to add in the near future.
 ### Fetch
 
 #### Kalshi
-- Add market categories
 - Investigate getting the number of unique traders
 - Investigate additional market types
 
@@ -79,10 +78,9 @@ These are the things I plan to add in the near future.
 - Investigate additional market types
 
 #### Polymarket
-- Add market categories
-- Swap to using CLOB API for market resolutions
+- Investigate getting market volume
 - Investigate getting the number of unique traders
-- Investigate including linked and unlinked multiple choice
+- Investigate including multiple choice
 
 ### Serve
 - Compute log score (maybe with transformation)
