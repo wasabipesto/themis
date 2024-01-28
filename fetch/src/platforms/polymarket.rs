@@ -248,7 +248,7 @@ async fn get_extended_data(
             return Err(MarketConvertError {
                 data: format!("{:?}", market),
                 message: format!("Polymarket: CLOB returned empty list for price history, even at fidelity = {fidelity}."),
-                level: 2,
+                level: 1,
             });
         }
     }
