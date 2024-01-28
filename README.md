@@ -50,15 +50,15 @@ When standardizing things across platforms we ran into some edge cases, I've tri
 - Since Metaculus does not have bets, we use the number of forecasts at 10 cents each for `volume_usd`
 - Supported market types: 
     - [x] Binary
+    - [ ] Multiple-Choice
 
 ### Polymarket
-- Getting resolution data is quite difficult due to the oracle resolution process. Since markets never close (traders just redeem their tokens for USDC) then they stabilize at the extremes pretty consistently - 96% of all closed markets were trading at less than $0.0001 from an extreme. Some markets sit at 50/50 - these likely had no activity at all. If we filter markets to just those trading at less than $0.0001 from an extreme, we can be confident they have been resolved in that direction.
-- Many markets (around 22%) lack `startDate` and around 1% lack `endDate`, and both of those are merely suggestions. `createdAt` is mandatory on all markets, and it is usually less than five days before `startDate` (when present). For our market open and close times, we use `createdAt` since trading can start at that point and `endDate` since that is the closest thing to a "known" endpoint.
+- We used to use the Gamma API which had defined start and end dates, but that functionality has been removed. We declare a market has started when the first trade occurs and end at the date noted by `end_date_iso`. This field is optional and markets without it are not counted.
+- The counter for `volume` is currently unimplemented.
 - The counter for `num_traders` is currently unimplemented.
 - Supported market types:
-    - [x] Two-outcome linked
-    - [ ] Two-outcome unlinked
-    - [ ] More than two outcomes
+    - [x] Binary
+    - [ ] Multiple-Choice
 - We also do not support old markets that used a previous order system, only those that use the newer CLOB system.
 
 ## Roadmap

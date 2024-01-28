@@ -2,39 +2,38 @@
 
 use super::*;
 
-const POLYMARKET_GAMMA_API_BASE: &str = "https://gamma-api.polymarket.com/query";
+//const POLYMARKET_GAMMA_API_BASE: &str = "https://gamma-api.polymarket.com/query";
 const POLYMARKET_CLOB_API_BASE: &str = "https://clob.polymarket.com";
 const POLYMARKET_SITE_BASE: &str = "https://polymarket.com";
 const POLYMARKET_RATELIMIT: usize = 100;
-const POLYMARKET_EPSILON: f32 = 0.0001;
+//const POLYMARKET_EPSILON: f32 = 0.0001;
 
 /// (Indirect) API response with standard market info.
 #[allow(non_snake_case)]
 #[derive(Deserialize, Debug, Clone)]
 struct MarketInfo {
-    id: String,
+    condition_id: String,
     question: String,
-    slug: String,
-    createdAt: DateTime<Utc>,
-    //startDate: Option<DateTime<Utc>>,
-    endDate: Option<DateTime<Utc>>,
-    //category: String,
-    #[serde(deserialize_with = "deserialize_f32_remove_quotes")]
-    volume: f32,
-    #[serde(deserialize_with = "deserialize_vec_f32_remove_quotes")]
-    outcomePrices: Vec<f32>,
-    #[serde(deserialize_with = "deserialize_vec_string_remove_quotes")]
-    clobTokenIds: Vec<String>,
+    market_slug: String,
+    //active: bool,
+    closed: bool,
+    end_date_iso: Option<DateTime<Utc>>,
+    //categories: Vec<String>,
+    //parent_categories: Vec<String>,
+    tokens: Vec<TokenData>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-struct GammaResposneLv1 {
-    data: GammaResposneLv2,
+struct TokenData {
+    token_id: String,
+    //outcome: String,
+    winner: bool,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-struct GammaResposneLv2 {
-    markets: Vec<MarketInfo>,
+struct CLOBResponse {
+    next_cursor: String,
+    data: Vec<MarketInfo>,
 }
 
 /// API response with market history point.
@@ -124,34 +123,36 @@ impl MarketStandardizer for MarketFull {
         "polymarket".to_string()
     }
     fn platform_id(&self) -> String {
-        self.market.id.to_owned()
+        self.market.condition_id.to_owned()
     }
     fn url(&self) -> String {
-        POLYMARKET_SITE_BASE.to_owned() + "/event/" + &self.market.slug
+        POLYMARKET_SITE_BASE.to_owned() + "/event/" + &self.market.market_slug
     }
     fn open_dt(&self) -> Result<DateTime<Utc>, MarketConvertError> {
-        /*
-        if let Some(open_dt) = self.market.startDate {
-            Ok(open_dt)
+        if let Some(first_event) = self.events().first() {
+            Ok(first_event.time)
         } else {
-            Ok(self.market.createdAt)
+            Err(MarketConvertError {
+                data: self.debug(),
+                message: format!("Polymarket: No events in event list (cannot get market bounds)."),
+                level: 3,
+            })
         }
-        */
-        Ok(self.market.createdAt)
     }
     fn close_dt(&self) -> Result<DateTime<Utc>, MarketConvertError> {
-        if let Some(close_dt) = self.market.endDate {
+        if let Some(close_dt) = self.market.end_date_iso {
             Ok(close_dt)
         } else {
             Err(MarketConvertError {
                 data: self.debug(),
-                message: format!("Polymarket: Market field endDate is empty."),
+                message: format!("Polymarket: Market field end_date_iso is empty."),
                 level: 3,
             })
         }
     }
     fn volume_usd(&self) -> f32 {
-        self.market.volume
+        //self.market.volume
+        0.0 // TODO
     }
     fn num_traders(&self) -> i32 {
         0 // TODO
@@ -163,24 +164,26 @@ impl MarketStandardizer for MarketFull {
         self.events.to_owned()
     }
     fn resolution(&self) -> Result<f32, MarketConvertError> {
-        if let Some(price) = self.market.outcomePrices.first() {
-            if price < &POLYMARKET_EPSILON {
-                Ok(0.0)
-            } else if price > &(1.0 - POLYMARKET_EPSILON) {
-                Ok(1.0)
-            } else {
-                Err(MarketConvertError {
+        match (self.market.tokens.first(), self.market.tokens.last()) {
+            (Some(token_1), Some(token_2)) => match (token_1.winner, token_2.winner) {
+                (true, false) => Ok(1.0),
+                (false, true) => Ok(0.0),
+                (true, true) => Err(MarketConvertError {
+                    data: self.debug(),
+                    message: format!("Polymarket: Both tokens are winners."),
+                    level: 3,
+                }),
+                (false, false) => Err(MarketConvertError {
+                    data: self.debug(),
+                    message: format!("Polymarket: Neither token is a winner."),
+                    level: 3,
+                }),
+            },
+            _ => Err(MarketConvertError {
                 data: self.debug(),
-                message: format!("Polymarket: Current prices are not close enough to bounds to guarantee resolution status."),
-                level: 1,
-            })
-            }
-        } else {
-            Err(MarketConvertError {
-                data: self.debug(),
-                message: format!("Polymarket: Market field outcomePrices is empty."),
+                message: format!("Polymarket: Market field `tokens` has less than two values."),
                 level: 3,
-            })
+            }),
         }
     }
 }
@@ -210,12 +213,7 @@ impl TryInto<MarketStandard> for MarketFull {
 
 /// Test if a market is suitable for analysis.
 fn is_valid(market: &MarketInfo) -> bool {
-    match (market.outcomePrices.first(), market.outcomePrices.last()) {
-        (Some(price_a), Some(price_b)) => 1.0 - price_a - price_b < POLYMARKET_EPSILON,
-        (Some(_), None) => false,
-        (None, Some(_)) => false,
-        (None, None) => false,
-    }
+    market.closed == true && market.tokens.len() == 2
 }
 
 /// Convert API events into standard events.
@@ -250,8 +248,8 @@ async fn get_extended_data(
     market: &MarketInfo,
 ) -> Result<MarketFull, MarketConvertError> {
     let api_url = POLYMARKET_CLOB_API_BASE.to_owned() + "/prices-history";
-    let clob_id = match market.clobTokenIds.first() {
-        Some(id) => Ok(id),
+    let clob_id = match market.tokens.first() {
+        Some(token) => Ok(token.token_id.to_owned()),
         None => Err(MarketConvertError {
             data: format!("{:?}", market),
             message: format!("Polymarket: Market field clobTokenIds is empty."),
@@ -275,7 +273,7 @@ async fn get_extended_data(
             client
                 .get(&api_url)
                 .query(&[("interval", "all")])
-                .query(&[("market", clob_id)])
+                .query(&[("market", clob_id.to_owned())])
                 .query(&[("fidelity", fidelity)]),
         )
         .await?;
@@ -308,43 +306,20 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
         println!("Polymarket: Connecting to API at {}", api_url)
     }
     let limit: usize = 1000;
-    let mut offset: usize = 0;
+    let mut cursor: Option<String> = None;
     loop {
         if verbose {
-            println!("Polymarket: Getting markets starting at {:?}...", offset)
+            println!("Polymarket: Getting markets starting at {:?}...", cursor)
         }
-        let query = format!("query {{
-            markets(
-                limit: {limit},
-                offset: {offset}
-                where: \"active = true and closed = true and end_date < now() and volume_num > 0 and enable_order_book = true and jsonb_array_length(clob_token_ids) = 2\"
-            ) {{
-                id,
-                question,
-                slug,
-                createdAt,
-                startDate,
-                endDate,
-                category,
-                liquidity,
-                volume,
-                outcomePrices,
-                clobTokenIds,
-            }}
-        }}");
-        let response: GammaResposneLv1 =
-            send_request(client.get(&api_url).query(&[("query", query)]))
+        let response: CLOBResponse =
+            send_request(client.get(&api_url).query(&[("next_cursor", cursor)]))
                 .await
                 .expect("Polymarket: API query error.");
         if verbose {
-            println!(
-                "Polymarket: Processing {} markets...",
-                response.data.markets.len()
-            )
+            println!("Polymarket: Processing {} markets...", response.data.len())
         }
         let market_data_futures: Vec<_> = response
             .data
-            .markets
             .iter()
             .filter(|market| is_valid(market))
             .map(|market| get_extended_data(&client, market))
@@ -380,8 +355,8 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
             )
         }
         save_markets(market_data, output_method);
-        if response.data.markets.len() == limit {
-            offset += limit;
+        if response.data.len() == limit {
+            cursor = Some(response.next_cursor);
         } else {
             break;
         }
@@ -392,41 +367,17 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
 /// Download, process and store one market from the platform.
 pub async fn get_market_by_id(id: &String, output_method: OutputMethod, verbose: bool) {
     let client = get_reqwest_client_ratelimited(POLYMARKET_RATELIMIT, None);
-    let api_url = POLYMARKET_GAMMA_API_BASE.to_owned();
+    let api_url = POLYMARKET_GAMMA_API_BASE.to_owned() + "/markets/" + id;
     if verbose {
         println!("Polymarket: Connecting to API at {}", api_url)
     }
-    let query = format!(
-        "query {{
-            markets(
-                where: \"id = {id}\"
-            ) {{
-                id,
-                question,
-                slug,
-                createdAt,
-                startDate,
-                endDate,
-                category,
-                liquidity,
-                volume,
-                outcomePrices,
-                clobTokenIds,
-            }}
-        }}"
-    );
-    let response: GammaResposneLv1 = send_request(client.get(&api_url).query(&[("query", query)]))
+    let single_market: MarketInfo = send_request(client.get(&api_url))
         .await
         .expect("Polymarket: API query error.");
-    let single_market = response
-        .data
-        .markets
-        .first()
-        .expect("Polymarket: Gamma market query response was empty.");
-    if !is_valid(single_market) {
+    if !is_valid(&single_market) {
         println!("Polymarket: Market is not valid for processing, this may fail.")
     }
-    let market_data = get_extended_data(&client, single_market)
+    let market_data = get_extended_data(&client, &single_market)
         .await
         .expect("Error getting extended market data")
         .try_into()
