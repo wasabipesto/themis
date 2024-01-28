@@ -76,6 +76,7 @@ Same as stage 2 but with lower-volume or otherwise lower-priority sites.
 - [ ] Iowa Electronic Markets
     - https://iem.uiowa.edu/iem
     - Example: https://iemweb.biz.uiowa.edu/iem_market_info/2024-u-s-presidential-winner-takes-all-market
+    - Analysis Repo: https://github.com/mickbransfield/IEM
     - Low-volume student exchange.
     - Does not appear to have an API.
 - [ ] Infer

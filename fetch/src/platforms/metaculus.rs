@@ -5,7 +5,8 @@ use super::*;
 const METACULUS_API_BASE: &str = "https://www.metaculus.com/api2";
 const METACULUS_SITE_BASE: &str = "https://www.metaculus.com";
 const METACULUS_USD_PER_FORECAST: f32 = 0.10;
-const METACULUS_RATELIMIT: usize = 100;
+const METACULUS_RATELIMIT: usize = 15;
+const METACULUS_RATELIMIT_PERIOD_SECS: u64 = 60;
 
 #[derive(Deserialize, Debug, Clone)]
 struct BulkMarketResponse {
@@ -241,7 +242,8 @@ async fn get_extended_data(
 /// Download, process and store all valid markets from the platform.
 pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
     println!("Metaculus: Processing started...");
-    let client = get_reqwest_client_ratelimited(METACULUS_RATELIMIT);
+    let client =
+        get_reqwest_client_ratelimited(METACULUS_RATELIMIT, Some(METACULUS_RATELIMIT_PERIOD_SECS));
     let api_url = METACULUS_API_BASE.to_owned() + "/questions";
     if verbose {
         println!("Metaculus: Connecting to API at {}", api_url)
@@ -314,7 +316,8 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
 
 /// Download, process and store one market from the platform.
 pub async fn get_market_by_id(id: &str, output_method: OutputMethod, verbose: bool) {
-    let client = get_reqwest_client_ratelimited(METACULUS_RATELIMIT);
+    let client =
+        get_reqwest_client_ratelimited(METACULUS_RATELIMIT, Some(METACULUS_RATELIMIT_PERIOD_SECS));
     let api_url = METACULUS_API_BASE.to_owned() + "/questions/" + id;
     if verbose {
         println!("Metaculus: Connecting to API at {}", api_url)

@@ -302,7 +302,7 @@ async fn get_extended_data(
 /// Download, process and store all valid markets from the platform.
 pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
     println!("Polymarket: Processing started...");
-    let client = get_reqwest_client_ratelimited(POLYMARKET_RATELIMIT);
+    let client = get_reqwest_client_ratelimited(POLYMARKET_RATELIMIT, None);
     let api_url = POLYMARKET_GAMMA_API_BASE.to_owned();
     if verbose {
         println!("Polymarket: Connecting to API at {}", api_url)
@@ -391,7 +391,7 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
 
 /// Download, process and store one market from the platform.
 pub async fn get_market_by_id(id: &String, output_method: OutputMethod, verbose: bool) {
-    let client = get_reqwest_client_ratelimited(POLYMARKET_RATELIMIT);
+    let client = get_reqwest_client_ratelimited(POLYMARKET_RATELIMIT, None);
     let api_url = POLYMARKET_GAMMA_API_BASE.to_owned();
     if verbose {
         println!("Polymarket: Connecting to API at {}", api_url)

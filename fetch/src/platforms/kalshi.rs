@@ -163,7 +163,7 @@ fn is_valid(market: &MarketInfo) -> bool {
 async fn get_login_token(client_opt: Option<ClientWithMiddleware>) -> String {
     let client = match client_opt {
         Some(client) => client,
-        None => get_reqwest_client_ratelimited(KALSHI_RATELIMIT),
+        None => get_reqwest_client_ratelimited(KALSHI_RATELIMIT, None),
     };
 
     let api_url = KALSHI_API_BASE.to_owned() + "/login";
@@ -244,7 +244,7 @@ async fn get_extended_data(
 /// Download, process and store all valid markets from the platform.
 pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
     println!("Kalshi: Processing started...");
-    let client = get_reqwest_client_ratelimited(KALSHI_RATELIMIT);
+    let client = get_reqwest_client_ratelimited(KALSHI_RATELIMIT, None);
     let token = get_login_token(Some(client.clone())).await;
     let api_url = KALSHI_API_BASE.to_owned() + "/markets";
     if verbose {
@@ -316,7 +316,7 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
 
 /// Download, process and store one market from the platform.
 pub async fn get_market_by_id(id: &String, output_method: OutputMethod, verbose: bool) {
-    let client = get_reqwest_client_ratelimited(KALSHI_RATELIMIT);
+    let client = get_reqwest_client_ratelimited(KALSHI_RATELIMIT, None);
     let token = get_login_token(Some(client.clone())).await;
     let api_url = KALSHI_API_BASE.to_owned() + "/markets/";
     if verbose {
