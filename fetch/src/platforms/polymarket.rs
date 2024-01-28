@@ -18,8 +18,7 @@ struct MarketInfo {
     //active: bool,
     closed: bool,
     end_date_iso: Option<DateTime<Utc>>,
-    //categories: Vec<String>,
-    //parent_categories: Vec<String>,
+    parent_categories: Vec<String>,
     tokens: Vec<TokenData>,
 }
 
@@ -101,7 +100,21 @@ impl MarketStandardizer for MarketFull {
         0 // TODO
     }
     fn category(&self) -> String {
-        "None".to_string() // TODO
+        for category in &self.market.parent_categories {
+            match category.as_str() {
+                "AI" => return "AI".to_string(),
+                "Business" => return "Economics".to_string(),
+                "Coronavirus" => return "Science".to_string(),
+                "Crypto" => return "Crypto".to_string(),
+                "NFTs" => return "Crypto".to_string(),
+                "Politics" => return "Politics".to_string(),
+                "Pop Culture" => return "Culture".to_string(),
+                "Science" => return "Science".to_string(),
+                "Sports" => return "Sports".to_string(),
+                _ => continue,
+            }
+        }
+        "None".to_string()
     }
     fn events(&self) -> Vec<ProbUpdate> {
         self.events.to_owned()
