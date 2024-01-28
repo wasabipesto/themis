@@ -132,7 +132,7 @@
             <v-expansion-panel>
               <v-expansion-panel-title>
                 <v-icon class="mr-3">mdi-globe-model</v-icon>
-                Y-Axis Resolution Weighting: <br>
+                Y-Axis (Resolution) Weighting: <br>
                 {{ getOptionLabel("weight_attribute", options_selected.weight_attribute) }}
               </v-expansion-panel-title>
               <v-expansion-panel-text>
@@ -354,11 +354,11 @@
             option_drawers_open: [0],
             sidebar_data: [],
             options_selected: {
-              bin_method: 'prob_time_weighted',
+              bin_method: 'prob_at_midpoint',
               weight_attribute: 'none',
               min_open_days: 0,
               min_num_traders: 0,
-              min_volume_usd: 10,
+              min_volume_usd: 0,
               title_contains: '',
               category_contains: '',
             },
