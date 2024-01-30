@@ -1,5 +1,6 @@
 //! This module has all of the common utilities and market standardization tools required to query the API and convert responses into DB rows.
 
+use chrono::serde::{ts_milliseconds, ts_milliseconds_option, ts_seconds};
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use clap::ValueEnum;
 use core::fmt;
@@ -427,24 +428,6 @@ async fn send_request<T: for<'de> serde::Deserialize<'de>>(
         message: format!("Failed to deserialize: {e}."),
         level: 4,
     })
-}
-
-/// Convert timestamp (milliseconds) to datetime and error on failure.
-fn get_datetime_from_millis(ts: i64) -> Result<DateTime<Utc>, ()> {
-    let dt = NaiveDateTime::from_timestamp_millis(ts);
-    match dt {
-        Some(dt) => Ok(DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)),
-        None => Err(()),
-    }
-}
-
-/// Convert timestamp (seconds) to datetime and error on failure.
-fn get_datetime_from_secs(ts: i64) -> Result<DateTime<Utc>, ()> {
-    let dt = NaiveDateTime::from_timestamp_opt(ts, 0);
-    match dt {
-        Some(dt) => Ok(DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)),
-        None => Err(()),
-    }
 }
 
 /// Evaluate processing errors based on their level.
