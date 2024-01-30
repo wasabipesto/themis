@@ -1,6 +1,6 @@
 use actix_web::web::{Data, Query};
 use actix_web::{get, middleware, App, HttpResponse, HttpServer};
-//use chrono::{DateTime, Duration, NaiveDateTime, Utc};
+use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::{pg::PgConnection, prelude::*};
 use serde::{Deserialize, Serialize};
@@ -10,9 +10,6 @@ use std::env::var;
 mod helper;
 use helper::ApiError;
 
-const DEFAULT_BIN_METHOD: &str = "prob_time_weighted";
-const DEFAULT_WEIGHT_ATTR: &str = "none";
-
 // Diesel macro to get markets from the database table.
 table! {
     market (id) {
@@ -21,8 +18,8 @@ table! {
         platform -> Varchar,
         platform_id -> Varchar,
         url -> Varchar,
-        //open_dt -> Timestamptz,
-        //close_dt -> Timestamptz,
+        open_dt -> Timestamptz,
+        close_dt -> Timestamptz,
         open_days -> Float,
         volume_usd -> Float,
         num_traders -> Integer,
@@ -51,8 +48,8 @@ struct Market {
     platform: String,
     platform_id: String,
     url: String,
-    //open_dt: DateTime<Utc>,
-    //close_dt: DateTime<Utc>,
+    open_dt: DateTime<Utc>,
+    close_dt: DateTime<Utc>,
     open_days: f32,
     volume_usd: f32,
     num_traders: i32,
@@ -74,26 +71,65 @@ struct Platform {
     platform_color: String,
 }
 
-/// Parameters passed to the calibration function.
+/// Filter parameters common to all queries.
+/// Numeric filters are formatted as Vecs:
+/// - If the list is empty or not supplied, no filtering is done.
+/// - If the list has one parameter, it is taken as the minimum.
+/// - If the list has more than one parameter, the last is taken as the maximum.
+/// - All numeric values in the schema are positive, so if you want to only limit
+///   by the maximum, set the first value to -1.
 #[derive(Debug, Deserialize)]
-pub struct QueryParams {
-    bin_method: Option<String>,
-    bin_size: Option<f32>,
-    weight_attribute: Option<String>,
-    //min_open_dt: DateTime<Utc>,
-    //max_open_dt: DateTime<Utc>,
-    //min_close_dt: DateTime<Utc>,
-    //max_close_dt: DateTime<Utc>,
-    min_open_days: Option<f32>,
-    min_num_traders: Option<i32>,
-    min_volume_usd: Option<f32>,
+struct CommonFilterParams {
     title_contains: Option<String>,
-    category_contains: Option<String>,
+    platform_select: Option<String>,
+    category_select: Option<String>,
+    #[serde(default)]
+    open_dt: Vec<DateTime<Utc>>,
+    #[serde(default)]
+    close_dt: Vec<DateTime<Utc>>,
+    #[serde(default)]
+    open_days: Vec<f32>,
+    #[serde(default)]
+    volume_usd: Vec<f32>,
+    #[serde(default)]
+    num_traders: Vec<i32>,
+    #[serde(default)]
+    prob_at_midpoint: Vec<f32>,
+    #[serde(default)]
+    prob_at_close: Vec<f32>,
+    #[serde(default)]
+    prob_time_weighted: Vec<f32>,
+    #[serde(default)]
+    resolution: Vec<f32>,
+}
+
+/// Parameters passed to the calibration function.
+/// If the parameter is not supplied, the default values are used.
+/// TODO: Change calibration_bin_method and calibration_weight_attribute to enums
+#[derive(Debug, Deserialize)]
+struct CalibrationQueryParams {
+    #[serde(default = "default_calibration_bin_method")]
+    calibration_bin_method: String,
+    #[serde(default = "default_calibration_bin_size")]
+    calibration_bin_size: f32,
+    #[serde(default = "default_calibration_weight_attribute")]
+    calibration_weight_attribute: String,
+    #[serde(flatten)]
+    filters: CommonFilterParams,
+}
+fn default_calibration_bin_method() -> String {
+    "prob_time_weighted".to_string()
+}
+fn default_calibration_bin_size() -> f32 {
+    0.05
+}
+fn default_calibration_weight_attribute() -> String {
+    "none".to_string()
 }
 
 /// Metadata to help label a plot.
 #[derive(Debug, Serialize)]
-struct Metadata {
+struct PlotMetadata {
     title: String,
     x_title: String,
     y_title: String,
@@ -116,7 +152,7 @@ struct Trace {
 /// Full response for a calibration plot.
 #[derive(Debug, Serialize)]
 struct CalibrationPlot {
-    metadata: Metadata,
+    metadata: PlotMetadata,
     traces: Vec<Trace>,
 }
 
@@ -173,54 +209,27 @@ fn scale_list(list: Vec<f32>, output_min: f32, output_max: f32, output_default: 
         .collect()
 }
 
+fn get_markets_filtered(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+    params: &CommonFilterParams,
+) -> Result<Vec<Market>, ApiError> {
+    market::table
+        .load::<Market>(conn)
+        .map_err(|e| ApiError::new(500, format!("failed to query markets: {e}")))
+}
+
 #[get("/calibration_plot")]
 async fn calibration_plot(
-    query: Query<QueryParams>,
+    query: Query<CalibrationQueryParams>,
     pool: Data<Pool<ConnectionManager<PgConnection>>>,
 ) -> Result<HttpResponse, ApiError> {
-    // get query parameters or defaults
-    let bin_method = query
-        .bin_method
-        .clone()
-        .unwrap_or(DEFAULT_BIN_METHOD.to_string());
-    let bin_size = query.bin_size;
-    if let Some(bs) = bin_size {
-        if bs < 0.0 || bs > 0.5 {
-            return Err(ApiError::new(
-                400,
-                format!("`bin_size` should be between 0.0 and 0.5"),
-            ));
-        }
-    }
-
-    let weight_attribute = query
-        .weight_attribute
-        .to_owned()
-        .unwrap_or(DEFAULT_WEIGHT_ATTR.to_string());
-
-    let min_open_days = query.min_open_days.unwrap_or(0.0);
-    let min_volume_usd = query.min_volume_usd.unwrap_or(0.0);
-    let min_num_traders = query.min_num_traders.unwrap_or(0);
-    let title_contains =
-        "%".to_string() + &query.title_contains.to_owned().unwrap_or_default() + "%";
-    let category_contains =
-        "%".to_string() + &query.category_contains.to_owned().unwrap_or_default() + "%";
-
     // get database connection from pool
     let conn = &mut pool
         .get()
         .map_err(|e| ApiError::new(500, format!("failed to get connection from pool: {e}")))?;
 
     // get all markets from database
-    let markets = market::table
-        .filter(market::open_days.ge(min_open_days))
-        .filter(market::volume_usd.ge(min_volume_usd))
-        .filter(market::num_traders.ge(min_num_traders))
-        .filter(market::title.ilike(title_contains))
-        .filter(market::category.ilike(category_contains))
-        .select(Market::as_select())
-        .load::<Market>(conn)
-        .map_err(|e| ApiError::new(500, format!("failed to query markets: {e}")))?;
+    let markets = get_markets_filtered(conn, &query.filters)?;
 
     // sort all markets based on the platform
     // this is a hot loop since we iterate over all markets
@@ -235,7 +244,7 @@ async fn calibration_plot(
 
     // generate the x-value bins
     // note that we use u32 here instead of f32 since floating points are hard to use as keys
-    let bin_size: i32 = prob_to_k(&bin_size.unwrap_or(0.05));
+    let bin_size: i32 = prob_to_k(&query.calibration_bin_size);
     let bin_look = bin_size / 2;
     let mut bins: Vec<i32> = Vec::new();
     let mut x = bin_look;
@@ -264,7 +273,7 @@ async fn calibration_plot(
         // this is a hot loop since we iterate over all markets
         for market in market_list.iter() {
             // find the closest bin based on the market's selected x value
-            let market_x_value = match bin_method.as_str() {
+            let market_x_value = match query.calibration_bin_method.as_str() {
                 "prob_at_midpoint" => market.prob_at_midpoint,
                 "prob_at_close" => market.prob_at_close,
                 "prob_time_weighted" => market.prob_time_weighted,
@@ -304,7 +313,7 @@ async fn calibration_plot(
                     message: format!("Market Y-Value is NaN: {:?}", market),
                 });
             };
-            let weight: f32 = match weight_attribute.as_str() {
+            let weight: f32 = match query.calibration_weight_attribute.as_str() {
                 "open_days" => market.open_days,
                 "num_traders" => market.num_traders as f32,
                 "volume_usd" => market.volume_usd,
@@ -361,15 +370,15 @@ async fn calibration_plot(
 
     traces.sort_unstable_by_key(|t| t.platform_name_fmt.clone());
 
-    let metadata = Metadata {
+    let metadata = PlotMetadata {
         title: format!("Calibration Plot"),
-        x_title: match bin_method.as_str() {
+        x_title: match query.calibration_bin_method.as_str() {
             "prob_at_midpoint" => format!("Probability at Market Midpoint"),
             "prob_at_close" => format!("Probability at Market Close"),
             "prob_time_weighted" => format!("Market Time-Averaged Probability"),
             _ => panic!("given bin_method not in x_title map"),
         },
-        y_title: match weight_attribute.as_str() {
+        y_title: match query.calibration_weight_attribute.as_str() {
             "open_days" => format!("Resolution, Weighted by Duration"),
             "num_traders" => format!("Resolution, Weighted by Traders"),
             "volume_usd" => format!("Resolution, Weighted by Volume"),
