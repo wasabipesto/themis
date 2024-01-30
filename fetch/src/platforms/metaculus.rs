@@ -201,7 +201,9 @@ fn get_prob_updates(
     let mut result = Vec::new();
     points.sort_unstable_by_key(|point| point.t as i64);
     for point in points {
-        if let Ok(time) = get_datetime_from_secs(point.t as i64) {
+        let dt_opt = NaiveDateTime::from_timestamp_opt(point.t as i64, 0);
+        if let Some(dt) = dt_opt {
+            let time = DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc);
             if let Some(prob) = point.x2.avg {
                 result.push(ProbUpdate { time, prob });
             } else {

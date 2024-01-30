@@ -22,9 +22,14 @@ struct MarketInfo {
     isResolved: bool,
     resolution: Option<String>,
     resolutionProbability: Option<f32>,
-    createdTime: i64,
-    closeTime: Option<i64>, // polls and bounties lack close times
-    resolutionTime: Option<i64>,
+    #[serde(with = "ts_milliseconds")]
+    createdTime: DateTime<Utc>,
+    #[serde(with = "ts_milliseconds_option")]
+    #[serde(default)]
+    closeTime: Option<DateTime<Utc>>,
+    #[serde(with = "ts_milliseconds_option")]
+    #[serde(default)]
+    resolutionTime: Option<DateTime<Utc>>,
 }
 
 /// API response with extended info from `/market`.
@@ -40,7 +45,8 @@ struct MarketInfoExtra {
 struct Bet {
     id: String,
     userId: String,
-    createdTime: i64,
+    #[serde(with = "ts_milliseconds")]
+    createdTime: DateTime<Utc>,
     //probBefore: Option<f32>,
     probAfter: Option<f32>,
     //amount: f32,
@@ -74,20 +80,10 @@ impl MarketStandardizer for MarketFull {
         MANIFOLD_SITE_BASE.to_owned() + &self.market.creatorUsername + "/" + &self.market.slug
     }
     fn open_dt(&self) -> Result<DateTime<Utc>, MarketConvertError> {
-        let ts = self.market.createdTime;
-        let dt = NaiveDateTime::from_timestamp_millis(ts);
-        match dt {
-            Some(dt) => Ok(DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)),
-            None => Err(MarketConvertError {
-                data: self.debug(),
-                message: "Manifold: Market createdTime could not be converted into DateTime"
-                    .to_string(),
-                level: 3,
-            }),
-        }
+        Ok(self.market.createdTime)
     }
     fn close_dt(&self) -> Result<DateTime<Utc>, MarketConvertError> {
-        let ts = match (self.market.closeTime, self.market.resolutionTime) {
+        match (self.market.closeTime, self.market.resolutionTime) {
             // both close and resolution times are present
             (Some(close_time), Some(resolution_time)) => {
                 if close_time < self.market.createdTime {
@@ -107,16 +103,6 @@ impl MarketStandardizer for MarketFull {
                 data: format!("{:?}", self),
                 message: "Manifold: Market response did not include closeTime or resolutionTime"
                     .to_string(),
-                level: 3,
-            }),
-        }?;
-        match get_datetime_from_millis(ts) {
-            Ok(time) => Ok(time),
-            Err(_) => Err(MarketConvertError {
-                data: format!("{:?}", &self),
-                message:
-                    "Manifold: Market closeTime or resolveTime could not be converted into DateTime"
-                        .to_string(),
                 level: 3,
             }),
         }
@@ -296,17 +282,10 @@ fn get_prob_updates(mut bets: Vec<Bet>) -> Result<Vec<ProbUpdate>, MarketConvert
     bets.sort_unstable_by_key(|b| b.createdTime);
     for bet in bets {
         if let Some(prob) = bet.probAfter {
-            if let Ok(time) = get_datetime_from_millis(bet.createdTime) {
-                result.push(ProbUpdate { time, prob });
-            } else {
-                return Err(MarketConvertError {
-                    data: format!("{:?}", bet),
-                    message:
-                        "Manifold: Bet createdTime timestamp could not be converted into DateTime"
-                            .to_string(),
-                    level: 3,
-                });
-            }
+            result.push(ProbUpdate {
+                time: bet.createdTime,
+                prob,
+            });
         }
     }
 

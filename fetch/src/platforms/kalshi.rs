@@ -52,7 +52,8 @@ struct BulkMarketResponse {
 /// (Indirect) API response with standard event info.
 #[derive(Deserialize, Debug)]
 struct EventInfo {
-    ts: i64,
+    #[serde(with = "ts_seconds")]
+    ts: DateTime<Utc>,
     //volume: u32,
     //yes_ask: u32,
     //yes_bid: u32,
@@ -200,20 +201,10 @@ fn get_prob_updates(mut events: Vec<EventInfo>) -> Result<Vec<ProbUpdate>, Marke
     events.sort_unstable_by_key(|b| b.ts);
     for event in events {
         if event.yes_price != prev_price {
-            if let Ok(time) = get_datetime_from_secs(event.ts) {
-                result.push(ProbUpdate {
-                    time,
-                    prob: event.yes_price / 100.0,
-                })
-            } else {
-                return Err(MarketConvertError {
-                    data: format!("{:?}", event),
-                    message:
-                        "Kalshi: Bet createdTime timestamp could not be converted into DateTime"
-                            .to_string(),
-                    level: 3,
-                });
-            }
+            result.push(ProbUpdate {
+                time: event.ts,
+                prob: event.yes_price / 100.0,
+            });
             prev_price = event.yes_price;
         }
     }

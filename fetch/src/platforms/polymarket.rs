@@ -38,7 +38,8 @@ struct CLOBResponse {
 /// API response with market history point.
 #[derive(Deserialize, Debug, Clone)]
 struct PricesHistoryPoint {
-    t: i64,
+    #[serde(with = "ts_seconds")]
+    t: DateTime<Utc>,
     p: f32,
 }
 
@@ -185,20 +186,10 @@ fn get_prob_updates(
                 continue;
             }
         }
-        if let Ok(time) = get_datetime_from_secs(point.t) {
-            result.push(ProbUpdate {
-                time,
-                prob: point.p,
-            });
-        } else {
-            return Err(MarketConvertError {
-                data: format!("{:?}", point),
-                message: format!(
-                    "Polymarket: History event timestamp could not be converted into DateTime"
-                ),
-                level: 3,
-            });
-        }
+        result.push(ProbUpdate {
+            time: point.t,
+            prob: point.p,
+        });
     }
 
     Ok(result)
