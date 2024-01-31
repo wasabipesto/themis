@@ -42,6 +42,13 @@ const ListAPI = {
         })
       })
 
+      const attributes_to_usd = ['volume_usd']
+      items.forEach((obj) => {
+        attributes_to_usd.forEach((attribute) => {
+          obj[attribute] = "$" + obj[attribute]
+        })
+      })
+
       const attributes_to_pct = ["prob_at_midpoint", "prob_at_close", "prob_time_avg", "resolution"]
       items.forEach((obj) => {
         attributes_to_pct.forEach((attribute) => {
@@ -71,9 +78,9 @@ const headers = ref([
   { title: 'Category', key: 'category', align: 'start' },
   //{ title: 'Open Date', key: 'open_dt', align: 'start' },
   //{ title: 'Close Date', key: 'close_dt', align: 'start' },
+  { title: 'Traders', key: 'num_traders', align: 'end' },
   { title: 'Days Open', key: 'open_days', align: 'end' },
   { title: 'Volume', key: 'volume_usd', align: 'end' },
-  { title: 'Traders', key: 'num_traders', align: 'end' },
   { title: 'Midpoint', key: 'prob_at_midpoint', align: 'end' },
   { title: 'Close', key: 'prob_at_close', align: 'end' },
   { title: 'Time Average', key: 'prob_time_avg', align: 'end' },
