@@ -9,6 +9,7 @@ use market_calibration::{build_calibration_plot, CalibrationQueryParams};
 use market_filter::{get_markets_filtered, CommonFilterParams, PageSortParams};
 use market_list::{build_market_list, MarketListQueryParams};
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DisplayFromStr};
 use std::collections::HashMap;
 use std::env::var;
 
