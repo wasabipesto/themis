@@ -1,5 +1,9 @@
 use super::*;
 
+// have to use serde_with to get values out from serde flattening
+//https://github.com/nox/serde_urlencoded/issues/33
+use serde_with::{serde_as, DisplayFromStr};
+
 /// Filter parameters common to all queries.
 #[serde_as]
 #[derive(Debug, Deserialize, Clone, Serialize)]
