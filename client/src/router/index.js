@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import CalibrationView from '../views/CalibrationView.vue'
 import AccuracyView from '../views/AccuracyView.vue'
+import ListView from '../views/ListView.vue'
 import AboutView from '../views/AboutView.vue'
 
 const router = createRouter({
@@ -21,6 +22,11 @@ const router = createRouter({
       path: '/about',
       name: 'about',
       component: AboutView
+    },
+    {
+      path: '/list',
+      name: 'list',
+      component: ListView
     }
   ]
 })

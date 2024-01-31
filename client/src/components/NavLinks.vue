@@ -6,6 +6,7 @@ import { RouterLink } from 'vue-router'
   <nav>
     <RouterLink to="/calibration">Calibration</RouterLink>
     <RouterLink to="/accuracy">Accuracy</RouterLink>
+    <RouterLink to="/list">List</RouterLink>
     <RouterLink to="/about">About</RouterLink>
     <a href="https://github.com/wasabipesto/themis" target="_blank">
       Github
