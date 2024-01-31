@@ -1,6 +1,6 @@
 use actix_web::web::{Data, Query};
 use actix_web::{get, middleware, App, HttpResponse, HttpServer};
-use chrono::{DateTime, Duration, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::{pg::PgConnection, prelude::*};
 use serde::{Deserialize, Serialize};
@@ -78,7 +78,7 @@ struct Platform {
 /// - If the list has more than one parameter, the last is taken as the maximum.
 /// - All numeric values in the schema are positive, so if you want to only limit
 ///   by the maximum, set the first value to -1.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 struct CommonFilterParams {
     title_contains: Option<String>,
     platform_select: Option<String>,
@@ -211,9 +211,96 @@ fn scale_list(list: Vec<f32>, output_min: f32, output_max: f32, output_default: 
 
 fn get_markets_filtered(
     conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
-    params: &CommonFilterParams,
+    params: CommonFilterParams,
 ) -> Result<Vec<Market>, ApiError> {
-    market::table
+    let mut query = market::table.into_boxed();
+
+    if let Some(title_contains) = params.title_contains {
+        query = query.filter(market::title.ilike(title_contains))
+    }
+
+    if let Some(platform_select) = params.platform_select {
+        query = query.filter(market::platform.eq(platform_select))
+    }
+
+    if let Some(category_select) = params.category_select {
+        query = query.filter(market::category.eq(category_select))
+    }
+
+    if let Some(min) = params.open_dt.first() {
+        query = query.filter(market::open_dt.ge(min))
+    }
+    if params.open_dt.len() > 1 {
+        let max = params.open_dt.last().unwrap();
+        query = query.filter(market::open_dt.le(max))
+    }
+
+    if let Some(min) = params.close_dt.first() {
+        query = query.filter(market::close_dt.ge(min))
+    }
+    if params.close_dt.len() > 1 {
+        let max = params.close_dt.last().unwrap();
+        query = query.filter(market::close_dt.le(max))
+    }
+
+    if let Some(min) = params.open_days.first() {
+        query = query.filter(market::open_days.ge(min))
+    }
+    if params.open_days.len() > 1 {
+        let max = params.open_days.last().unwrap();
+        query = query.filter(market::open_days.le(max))
+    }
+
+    if let Some(min) = params.volume_usd.first() {
+        query = query.filter(market::volume_usd.ge(min))
+    }
+    if params.volume_usd.len() > 1 {
+        let max = params.volume_usd.last().unwrap();
+        query = query.filter(market::volume_usd.le(max))
+    }
+
+    if let Some(min) = params.num_traders.first() {
+        query = query.filter(market::num_traders.ge(min))
+    }
+    if params.num_traders.len() > 1 {
+        let max = params.num_traders.last().unwrap();
+        query = query.filter(market::num_traders.le(max))
+    }
+
+    if let Some(min) = params.prob_at_midpoint.first() {
+        query = query.filter(market::prob_at_midpoint.ge(min))
+    }
+    if params.prob_at_midpoint.len() > 1 {
+        let max = params.prob_at_midpoint.last().unwrap();
+        query = query.filter(market::prob_at_midpoint.le(max))
+    }
+
+    if let Some(min) = params.prob_at_close.first() {
+        query = query.filter(market::prob_at_close.ge(min))
+    }
+    if params.prob_at_close.len() > 1 {
+        let max = params.prob_at_close.last().unwrap();
+        query = query.filter(market::prob_at_close.le(max))
+    }
+
+    if let Some(min) = params.prob_time_weighted.first() {
+        query = query.filter(market::prob_time_weighted.ge(min))
+    }
+    if params.prob_time_weighted.len() > 1 {
+        let max = params.prob_time_weighted.last().unwrap();
+        query = query.filter(market::prob_time_weighted.le(max))
+    }
+
+    if let Some(min) = params.resolution.first() {
+        query = query.filter(market::resolution.ge(min))
+    }
+    if params.resolution.len() > 1 {
+        let max = params.resolution.last().unwrap();
+        query = query.filter(market::resolution.le(max))
+    }
+
+    query
+        .select(Market::as_select())
         .load::<Market>(conn)
         .map_err(|e| ApiError::new(500, format!("failed to query markets: {e}")))
 }
@@ -229,7 +316,7 @@ async fn calibration_plot(
         .map_err(|e| ApiError::new(500, format!("failed to get connection from pool: {e}")))?;
 
     // get all markets from database
-    let markets = get_markets_filtered(conn, &query.filters)?;
+    let markets = get_markets_filtered(conn, query.filters.clone())?;
 
     // sort all markets based on the platform
     // this is a hot loop since we iterate over all markets
