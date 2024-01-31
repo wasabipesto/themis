@@ -11,6 +11,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "axios": "^1.6.7",
     "vue": "^3.3.11",
     "vue-router": "^4.2.5",
     "vuetify": "^3.5.1"
