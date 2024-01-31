@@ -6,7 +6,8 @@ use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::{pg::PgConnection, prelude::*};
 use helper::{categorize_markets_by_platform, scale_list, ApiError};
 use market_calibration::{build_calibration_plot, CalibrationQueryParams};
-use market_filter::{get_markets_filtered, CommonFilterParams};
+use market_filter::{get_markets_filtered, CommonFilterParams, PageSortParams};
+use market_list::{build_market_list, MarketListQueryParams};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env::var;
@@ -15,6 +16,7 @@ mod db_util;
 mod helper;
 mod market_calibration;
 mod market_filter;
+mod market_list;
 
 /// Metadata to help label a plot.
 #[derive(Debug, Serialize)]
@@ -60,7 +62,7 @@ async fn list_platforms(
 
 #[get("/list_markets")]
 async fn list_markets(
-    query: Query<CommonFilterParams>,
+    query: Query<MarketListQueryParams>,
     pool: Data<Pool<ConnectionManager<PgConnection>>>,
 ) -> Result<HttpResponse, ApiError> {
     // get database connection from pool
@@ -68,11 +70,8 @@ async fn list_markets(
         .get()
         .map_err(|e| ApiError::new(500, format!("failed to get connection from pool: {e}")))?;
 
-    // get markets from database
-    let markets = get_markets_filtered(conn, query.into_inner())?;
-
     // send to client
-    Ok(HttpResponse::Ok().json(markets))
+    build_market_list(query, conn)
 }
 
 #[get("/calibration_plot")]
@@ -85,12 +84,8 @@ async fn calibration_plot(
         .get()
         .map_err(|e| ApiError::new(500, format!("failed to get connection from pool: {e}")))?;
 
-    // get markets from database
-    let markets = get_markets_filtered(conn, query.filters.clone())?;
-    let markets_by_platform = categorize_markets_by_platform(markets);
-
     // build the plot
-    build_calibration_plot(query, conn, markets_by_platform)
+    build_calibration_plot(query, conn)
 }
 
 /// Server startup tasks.
