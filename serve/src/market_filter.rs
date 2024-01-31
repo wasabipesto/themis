@@ -1,37 +1,61 @@
 use super::*;
 
 /// Filter parameters common to all queries.
+#[serde_as]
 #[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct CommonFilterParams {
     title_contains: Option<String>,
     platform_select: Option<String>,
     category_select: Option<String>,
-    open_dt_min: Option<DateTime<Utc>>,
-    open_dt_max: Option<DateTime<Utc>>,
-    close_dt_min: Option<DateTime<Utc>>,
-    close_dt_max: Option<DateTime<Utc>>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    open_ts_min: Option<i64>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    open_ts_max: Option<i64>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    close_ts_min: Option<i64>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    close_ts_max: Option<i64>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
     open_days_min: Option<f32>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
     open_days_max: Option<f32>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
     volume_usd_min: Option<f32>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
     volume_usd_max: Option<f32>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
     num_traders_min: Option<i32>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
     num_traders_max: Option<i32>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
     prob_at_midpoint_min: Option<f32>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
     prob_at_midpoint_max: Option<f32>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
     prob_at_close_min: Option<f32>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
     prob_at_close_max: Option<f32>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
     prob_time_weighted_min: Option<f32>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
     prob_time_weighted_max: Option<f32>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
     resolution_min: Option<f32>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
     resolution_max: Option<f32>,
 }
 
 /// Pagination and sorting parameters, for listing markets
+#[serde_as]
 #[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct PageSortParams {
+    #[serde_as(as = "Option<DisplayFromStr>")]
     limit: Option<i64>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
     offset: Option<i64>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
     sort_attribute: Option<String>,
+    #[serde_as(as = "DisplayFromStr")]
     #[serde(default)]
     sort_desc: bool,
 }
@@ -55,17 +79,45 @@ pub fn get_markets_filtered(
         if let Some(category_select) = &params.category_select {
             query = query.filter(market::category.eq(category_select))
         }
-        if let Some(min) = params.open_dt_min {
-            query = query.filter(market::open_dt.ge(min))
+        if let Some(ts) = params.open_ts_min {
+            if let Some(dt) = DateTime::from_timestamp(ts, 0) {
+                query = query.filter(market::open_dt.ge(dt))
+            } else {
+                return Err(ApiError::new(
+                    400,
+                    format!("value for open_dt_min could not be converted into DateTime: {ts}",),
+                ));
+            }
         }
-        if let Some(max) = params.open_dt_max {
-            query = query.filter(market::open_dt.le(max))
+        if let Some(ts) = params.open_ts_max {
+            if let Some(dt) = DateTime::from_timestamp(ts, 0) {
+                query = query.filter(market::open_dt.le(dt))
+            } else {
+                return Err(ApiError::new(
+                    400,
+                    format!("value for open_ts_max could not be converted into DateTime: {ts}",),
+                ));
+            }
         }
-        if let Some(min) = params.close_dt_min {
-            query = query.filter(market::close_dt.ge(min))
+        if let Some(ts) = params.close_ts_min {
+            if let Some(dt) = DateTime::from_timestamp(ts, 0) {
+                query = query.filter(market::open_dt.ge(dt))
+            } else {
+                return Err(ApiError::new(
+                    400,
+                    format!("value for close_ts_min could not be converted into DateTime: {ts}",),
+                ));
+            }
         }
-        if let Some(max) = params.close_dt_max {
-            query = query.filter(market::close_dt.le(max))
+        if let Some(ts) = params.close_ts_max {
+            if let Some(dt) = DateTime::from_timestamp(ts, 0) {
+                query = query.filter(market::open_dt.le(dt))
+            } else {
+                return Err(ApiError::new(
+                    400,
+                    format!("value for close_ts_max could not be converted into DateTime: {ts}",),
+                ));
+            }
         }
         if let Some(min) = params.open_days_min {
             query = query.filter(market::open_days.ge(min))
@@ -116,7 +168,7 @@ pub fn get_markets_filtered(
             query = query.limit(limit)
         }
         if let Some(offset) = params.offset {
-            query = query.limit(offset)
+            query = query.offset(offset)
         }
         if let Some(sort_attribute) = &params.sort_attribute {
             match sort_attribute.as_str() {
