@@ -74,6 +74,32 @@ fn get_market_x_value(market: &Market, bin_method: &String) -> Result<f32, ApiEr
     }
 }
 
+/// Get the x-axis title of the plot, based on the user-defined bin method.
+fn get_x_axis_title(bin_method: &String) -> Result<String, ApiError> {
+    match bin_method.as_str() {
+        "prob_at_midpoint" => Ok(format!("Probability at Market Midpoint")),
+        "prob_at_close" => Ok(format!("Probability at Market Close")),
+        "prob_time_weighted" => Ok(format!("Market Time-Averaged Probability")),
+        _ => Err(ApiError {
+            status_code: 500,
+            message: format!("given bin_method not in x_title map"),
+        }),
+    }
+}
+
+/// Get the x-axis title of the plot, based on the user-defined bin method.
+fn get_y_axis_title(weight_attribute: &String) -> Result<String, ApiError> {
+    match weight_attribute.as_str() {
+        "open_days" => Ok(format!("Resolution, Weighted by Duration")),
+        "num_traders" => Ok(format!("Resolution, Weighted by Traders")),
+        "volume_usd" => Ok(format!("Resolution, Weighted by Volume")),
+        "none" => Ok(format!("Resolution, Unweighted")),
+        _ => Err(ApiError {
+            status_code: 500,
+            message: format!("given weight_attribute not in y_title map"),
+        }),
+    }
+}
 /// Get the y-value of the market, which is always the resolution value.
 /// Also checks to make sure the value is not NaN.
 fn get_market_y_value(market: &Market) -> Result<f32, ApiError> {
@@ -203,19 +229,8 @@ pub fn build_calibration_plot(
     // get plot and axis titles
     let metadata = PlotMetadata {
         title: format!("Calibration Plot"),
-        x_title: match query.calibration_bin_method.as_str() {
-            "prob_at_midpoint" => format!("Probability at Market Midpoint"),
-            "prob_at_close" => format!("Probability at Market Close"),
-            "prob_time_weighted" => format!("Market Time-Averaged Probability"),
-            _ => panic!("given bin_method not in x_title map"),
-        },
-        y_title: match query.calibration_weight_attribute.as_str() {
-            "open_days" => format!("Resolution, Weighted by Duration"),
-            "num_traders" => format!("Resolution, Weighted by Traders"),
-            "volume_usd" => format!("Resolution, Weighted by Volume"),
-            "none" => format!("Resolution, Unweighted"),
-            _ => panic!("given weight_attribute not in y_title map"),
-        },
+        x_title: get_x_axis_title(&query.calibration_bin_method)?,
+        y_title: get_y_axis_title(&query.calibration_weight_attribute)?,
     };
 
     let response = PlotData { metadata, traces };
