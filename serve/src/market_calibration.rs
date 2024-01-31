@@ -51,26 +51,36 @@ fn generate_xaxis_bins(bin_size: &f32) -> Vec<XAxisBin> {
 }
 
 /// Get the x-value of the market, based on the user-defined bin method.
-/// Also checks to make sure the value is not NaN.
 fn get_market_x_value(market: &Market, bin_method: &String) -> Result<f32, ApiError> {
-    let value = match bin_method.as_str() {
-        "prob_at_midpoint" => market.prob_at_midpoint,
-        "prob_at_close" => market.prob_at_close,
-        "prob_time_weighted" => market.prob_time_weighted,
+    match bin_method.as_str() {
+        "prob_at_midpoint" => Ok(market.prob_at_midpoint),
+        "prob_at_close" => Ok(market.prob_at_close),
+        "prob_time_weighted" => Ok(market.prob_time_weighted),
         _ => {
             return Err(ApiError::new(
                 400,
                 "the value provided for `bin_method` is not a valid option".to_string(),
             ))
         }
-    };
-    if value.is_nan() {
-        Err(ApiError {
-            status_code: 500,
-            message: format!("Market X-Value ({bin_method}) is NaN: {:?}", market),
-        })
-    } else {
-        Ok(value)
+    }
+}
+
+/// Get the y-value of the market, which is always the resolution value.
+fn get_market_y_value(market: &Market) -> Result<f32, ApiError> {
+    Ok(market.resolution)
+}
+
+/// Get the weighting value of the market, based on the user-defined weighting method.
+fn get_market_weight_value(market: &Market, weight_attribute: &String) -> Result<f32, ApiError> {
+    match weight_attribute.as_str() {
+        "open_days" => Ok(market.open_days),
+        "num_traders" => Ok(market.num_traders as f32),
+        "volume_usd" => Ok(market.volume_usd),
+        "none" => Ok(1.0),
+        _ => Err(ApiError::new(
+            400,
+            "the value provided for `weight_attribute` is not a valid option".to_string(),
+        )),
     }
 }
 
@@ -98,44 +108,6 @@ fn get_y_axis_title(weight_attribute: &String) -> Result<String, ApiError> {
             status_code: 500,
             message: format!("given weight_attribute not in y_title map"),
         }),
-    }
-}
-/// Get the y-value of the market, which is always the resolution value.
-/// Also checks to make sure the value is not NaN.
-fn get_market_y_value(market: &Market) -> Result<f32, ApiError> {
-    let value = market.resolution;
-    if value.is_nan() {
-        Err(ApiError {
-            status_code: 500,
-            message: format!("Market Y-Value is NaN: {:?}", market),
-        })
-    } else {
-        Ok(value)
-    }
-}
-
-/// Get the weighting value of the market, based on the user-defined weighting method.
-/// Also checks to make sure the value is not NaN.
-fn get_market_weight_value(market: &Market, weight_attribute: &String) -> Result<f32, ApiError> {
-    let value = match weight_attribute.as_str() {
-        "open_days" => market.open_days,
-        "num_traders" => market.num_traders as f32,
-        "volume_usd" => market.volume_usd,
-        "none" => 1.0,
-        _ => {
-            return Err(ApiError::new(
-                400,
-                "the value provided for `weight_attribute` is not a valid option".to_string(),
-            ))
-        }
-    };
-    if value.is_nan() {
-        Err(ApiError {
-            status_code: 500,
-            message: format!("Market Weight ({weight_attribute}) is NaN: {:?}", market),
-        })
-    } else {
-        Ok(value)
     }
 }
 
