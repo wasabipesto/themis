@@ -3,12 +3,12 @@
 # mounts working directory and enables hot-reload
 
 # build and deploy the docker image
-docker build -t themis-client-dev -f Dockerfile-dev . || exit
+docker build -t themis-client-dev -f client/Dockerfile-dev client || exit
 docker stop themis-client-dev
 docker rm themis-client-dev
 docker run -d \
-    -p 8147:8147 \
-    -v ./:/usr/src/themis-client \
+    -p 7040:7040 \
+    -v ./client/:/usr/src/themis-client \
     --name themis-client-dev \
     themis-client-dev
 

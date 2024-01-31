@@ -10,4 +10,4 @@ RUN npm install
 EXPOSE 8147
 
 # Start the application with hot-reload
-CMD npm run dev -- --host 0.0.0.0 --port 8147 --logLevel info
+CMD npm run dev -- --host 0.0.0.0 --port 7040 --logLevel info
