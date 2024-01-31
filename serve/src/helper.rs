@@ -1,11 +1,42 @@
 use actix_web::{http::StatusCode, ResponseError};
 use diesel::result::Error as DieselError;
-use serde::Deserialize;
 use serde_json::json;
 use std::fmt;
 
 use super::*;
 
+/// Scale a list of weights down to valid point sizes.
+pub fn scale_list(
+    list: Vec<f32>,
+    output_min: f32,
+    output_max: f32,
+    output_default: f32,
+) -> Vec<f32> {
+    if list.is_empty() {
+        return Vec::new();
+    }
+
+    let input_min = *list
+        .iter()
+        .min_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap();
+    let input_max = *list
+        .iter()
+        .max_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap();
+
+    if input_min == input_max {
+        return vec![output_default; list.len()];
+    }
+
+    list.iter()
+        .map(|&value| {
+            ((value - input_min) / (input_max - input_min)) * (output_max - output_min) + output_min
+        })
+        .collect()
+}
+
+/// A multi-purpose error struct.
 #[derive(Debug, Deserialize)]
 pub struct ApiError {
     pub status_code: u16,
