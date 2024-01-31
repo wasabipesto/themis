@@ -24,64 +24,34 @@ fn default_calibration_weight_attribute() -> String {
     "none".to_string()
 }
 
-/// A quick and dirty f32 mask into u32 for key lookup.
-/// Only needs to work for values between 0 and 1 at increaments of 0.01.
-fn prob_to_k(f: &f32) -> i32 {
-    (f * 1000.0) as i32
-}
-
-/// Inverse of `prob_to_k`.
-fn k_to_prob(k: &i32) -> f32 {
-    *k as f32 / 1000.0
-}
-
-/*/
 /// Data for each bin and the markets included.
 struct XAxisBin {
     start: f32,
+    middle: f32,
     end: f32,
-    weighted_y_values: f32,
-    weighted_counts: f32,
+    y_axis_numerator: f32,
+    y_axis_denominator: f32,
 }
-*/
 
-/// Generates a set of equally-spaced bins between 0 and 1.
-/// The key corresponds to the middle of each bin (where it will be plotted on the chart).
-/// All values here are given in "k", the value given by `prob_to_k`, so they can be used as keys.
-fn generate_xaxis_bins(bin_size: &i32) -> Vec<i32> {
-    // bin_size is the distance from the start to the end of the bin
-    let mut bins: Vec<i32> = Vec::new();
-    // we place the middle of the first bin such that it will start at 0
-    // e.g. if the bin size is 0.05, the first bin should be 0.00 -> 0.05, which means the center is at 0.025
-    let mut x = bin_size / 2;
-    while x <= prob_to_k(&1.0) {
-        bins.push(x);
+/// Generates a set of equally-spaced bins between 0 and 1, where `bin_size` is the width of each bin.
+fn generate_xaxis_bins(bin_size: &f32) -> Vec<XAxisBin> {
+    let mut bins: Vec<XAxisBin> = Vec::new();
+    let mut x: f32 = 0.0;
+    while x <= 1.0 {
+        bins.push(XAxisBin {
+            start: x,
+            middle: x + bin_size / 2.0,
+            end: x + bin_size,
+            y_axis_numerator: 0.0,
+            y_axis_denominator: 0.0,
+        });
         x += bin_size;
     }
     bins
 }
 
-/// Determine which bin the market belongs in based on the given x-value.
-/// If a markets is on the line between two bins it will be sorted into the lower one.
-fn find_xaxis_bin(x_value: f32, bins: &Vec<i32>, bin_size: i32) -> Result<i32, ApiError> {
-    // convert the x-axis value into "k" to match the keys in the list
-    let k_value = prob_to_k(&x_value);
-    bins.iter()
-        .find(|&bin_middle| {
-            bin_middle - bin_size / 2 <= k_value && k_value <= bin_middle + bin_size / 2
-        })
-        .ok_or(ApiError::new(
-            500,
-            format!(
-                "failed to find correct bin for {} in {:?} with lookaround {}",
-                k_value,
-                bins,
-                bin_size / 2
-            ),
-        ))
-        .copied()
-}
-
+/// Get the x-value of the market, based on the user-defined bin method.
+/// Also checks to make sure the value is not NaN.
 fn get_market_x_value(market: &Market, bin_method: &String) -> Result<f32, ApiError> {
     let value = match bin_method.as_str() {
         "prob_at_midpoint" => market.prob_at_midpoint,
@@ -104,6 +74,8 @@ fn get_market_x_value(market: &Market, bin_method: &String) -> Result<f32, ApiEr
     }
 }
 
+/// Get the y-value of the market, which is always the resolution value.
+/// Also checks to make sure the value is not NaN.
 fn get_market_y_value(market: &Market) -> Result<f32, ApiError> {
     let value = market.resolution;
     if value.is_nan() {
@@ -116,6 +88,8 @@ fn get_market_y_value(market: &Market) -> Result<f32, ApiError> {
     }
 }
 
+/// Get the weighting value of the market, based on the user-defined weighting method.
+/// Also checks to make sure the value is not NaN.
 fn get_market_weight_value(market: &Market, weight_attribute: &String) -> Result<f32, ApiError> {
     let value = match weight_attribute.as_str() {
         "open_days" => market.open_days,
@@ -167,22 +141,10 @@ pub fn build_calibration_plot(
     conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
     markets_by_platform: HashMap<String, Vec<Market>>,
 ) -> Result<HttpResponse, ApiError> {
-    // generate x-axis bins
-    let bin_size: i32 = prob_to_k(&query.calibration_bin_size);
-    let bins = generate_xaxis_bins(&bin_size);
-    let bin_count = bins.len();
-
     let mut traces = Vec::new();
     for (platform, market_list) in markets_by_platform {
-        // build sums and counts to use as rolling averages
-        let mut weighted_resolution_sums = HashMap::with_capacity(bin_count);
-        let mut weighted_counts = HashMap::with_capacity(bin_count);
-        // populate each map with x-values from bins
-        for bin in bins.clone() {
-            let hash_value = bin;
-            weighted_resolution_sums.insert(hash_value, 0.0);
-            weighted_counts.insert(hash_value, 0.0);
-        }
+        // generate x-axis bins
+        let mut bins = generate_xaxis_bins(&query.calibration_bin_size);
 
         // get weighted average values for all markets
         // this is a hot loop since we iterate over all markets
@@ -194,31 +156,32 @@ pub fn build_calibration_plot(
                 get_market_weight_value(&market, &query.calibration_weight_attribute)?;
 
             // find the closest bin based on the market's selected x value
-            let bin = find_xaxis_bin(market_x_value, &bins, bin_size)?;
+            let bin = bins
+                .iter_mut()
+                .find(|bin| bin.start <= market_x_value && market_x_value <= bin.end)
+                .ok_or(ApiError::new(
+                    500,
+                    format!(
+                        "failed to find correct bin for {market_x_value} with bin size {}",
+                        &query.calibration_bin_size
+                    ),
+                ))?;
 
             // add the market data to each counter
-            *weighted_resolution_sums.get_mut(&bin).unwrap() +=
-                market_weight_value * market_y_value;
-            *weighted_counts.get_mut(&bin).unwrap() += market_weight_value;
+            bin.y_axis_numerator += market_weight_value * market_y_value;
+            bin.y_axis_denominator += market_weight_value;
         }
 
         // convert "k"s back into standard probabilities for the x-axis
-        let x_series = bins.iter().map(k_to_prob).collect();
+        let x_series = bins.iter().map(|bin| bin.middle).collect();
         // divide out the weighted values in each bin to get average y-values
+        // note that NaN is serialized as None, so if `denominator` is 0 the point won't be shown
         let y_series = bins
             .iter()
-            .map(|bin| {
-                // note that NaN is serialized as None, so if `count` is 0 the point won't be shown
-                let sum = weighted_resolution_sums.get(bin).unwrap();
-                let count = weighted_counts.get(bin).unwrap();
-                sum / count
-            })
+            .map(|bin| bin.y_axis_numerator / bin.y_axis_denominator)
             .collect();
         // get weighted value for the point size and scale it to fit the plot
-        let point_weights = bins
-            .iter()
-            .map(|bin| *weighted_counts.get(bin).unwrap())
-            .collect();
+        let point_weights = bins.iter().map(|bin| bin.y_axis_denominator).collect();
         let point_sizes = scale_list(point_weights, 8.0, 32.0, 10.0);
 
         // get cached platform info from database
