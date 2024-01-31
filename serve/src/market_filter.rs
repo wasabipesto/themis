@@ -1,35 +1,29 @@
 use super::*;
 
 /// Filter parameters common to all queries.
-/// Numeric filters are formatted as Vecs:
-/// - If the list is empty or not supplied, no filtering is done.
-/// - If the list has one parameter, it is taken as the minimum.
-/// - If the list has more than one parameter, the last is taken as the maximum.
-/// - All numeric values in the schema are positive, so if you want to only limit
-///   by the maximum, set the first value to -1.
 #[derive(Debug, Deserialize, Clone)]
 pub struct CommonFilterParams {
     title_contains: Option<String>,
     platform_select: Option<String>,
     category_select: Option<String>,
-    #[serde(default)]
-    open_dt: Vec<DateTime<Utc>>,
-    #[serde(default)]
-    close_dt: Vec<DateTime<Utc>>,
-    #[serde(default)]
-    open_days: Vec<f32>,
-    #[serde(default)]
-    volume_usd: Vec<f32>,
-    #[serde(default)]
-    num_traders: Vec<i32>,
-    #[serde(default)]
-    prob_at_midpoint: Vec<f32>,
-    #[serde(default)]
-    prob_at_close: Vec<f32>,
-    #[serde(default)]
-    prob_time_weighted: Vec<f32>,
-    #[serde(default)]
-    resolution: Vec<f32>,
+    open_dt_min: Option<DateTime<Utc>>,
+    open_dt_max: Option<DateTime<Utc>>,
+    close_dt_min: Option<DateTime<Utc>>,
+    close_dt_max: Option<DateTime<Utc>>,
+    open_days_min: Option<f32>,
+    open_days_max: Option<f32>,
+    volume_usd_min: Option<f32>,
+    volume_usd_max: Option<f32>,
+    num_traders_min: Option<i32>,
+    num_traders_max: Option<i32>,
+    prob_at_midpoint_min: Option<f32>,
+    prob_at_midpoint_max: Option<f32>,
+    prob_at_close_min: Option<f32>,
+    prob_at_close_max: Option<f32>,
+    prob_time_weighted_min: Option<f32>,
+    prob_time_weighted_max: Option<f32>,
+    resolution_min: Option<f32>,
+    resolution_max: Option<f32>,
 }
 
 /// Query markets from the database, applying filters conditionally.
@@ -52,75 +46,66 @@ pub fn get_markets_filtered(
         query = query.filter(market::category.eq(category_select))
     }
 
-    if let Some(min) = params.open_dt.first() {
+    if let Some(min) = params.open_dt_min {
         query = query.filter(market::open_dt.ge(min))
     }
-    if params.open_dt.len() > 1 {
-        let max = params.open_dt.last().unwrap();
+    if let Some(max) = params.open_dt_max {
         query = query.filter(market::open_dt.le(max))
     }
 
-    if let Some(min) = params.close_dt.first() {
+    if let Some(min) = params.close_dt_min {
         query = query.filter(market::close_dt.ge(min))
     }
-    if params.close_dt.len() > 1 {
-        let max = params.close_dt.last().unwrap();
+    if let Some(max) = params.close_dt_max {
         query = query.filter(market::close_dt.le(max))
     }
 
-    if let Some(min) = params.open_days.first() {
+    if let Some(min) = params.open_days_min {
         query = query.filter(market::open_days.ge(min))
     }
-    if params.open_days.len() > 1 {
-        let max = params.open_days.last().unwrap();
+    if let Some(max) = params.open_days_max {
         query = query.filter(market::open_days.le(max))
     }
 
-    if let Some(min) = params.volume_usd.first() {
+    if let Some(min) = params.volume_usd_min {
         query = query.filter(market::volume_usd.ge(min))
     }
-    if params.volume_usd.len() > 1 {
-        let max = params.volume_usd.last().unwrap();
+    if let Some(max) = params.volume_usd_max {
         query = query.filter(market::volume_usd.le(max))
     }
 
-    if let Some(min) = params.num_traders.first() {
+    if let Some(min) = params.num_traders_min {
         query = query.filter(market::num_traders.ge(min))
     }
-    if params.num_traders.len() > 1 {
-        let max = params.num_traders.last().unwrap();
+    if let Some(max) = params.num_traders_max {
         query = query.filter(market::num_traders.le(max))
     }
 
-    if let Some(min) = params.prob_at_midpoint.first() {
+    if let Some(min) = params.prob_at_midpoint_min {
         query = query.filter(market::prob_at_midpoint.ge(min))
     }
-    if params.prob_at_midpoint.len() > 1 {
-        let max = params.prob_at_midpoint.last().unwrap();
+    if let Some(max) = params.prob_at_midpoint_max {
         query = query.filter(market::prob_at_midpoint.le(max))
     }
 
-    if let Some(min) = params.prob_at_close.first() {
+    if let Some(min) = params.prob_at_close_min {
         query = query.filter(market::prob_at_close.ge(min))
     }
-    if params.prob_at_close.len() > 1 {
-        let max = params.prob_at_close.last().unwrap();
+    if let Some(max) = params.prob_at_close_max {
         query = query.filter(market::prob_at_close.le(max))
     }
 
-    if let Some(min) = params.prob_time_weighted.first() {
+    if let Some(min) = params.prob_time_weighted_min {
         query = query.filter(market::prob_time_weighted.ge(min))
     }
-    if params.prob_time_weighted.len() > 1 {
-        let max = params.prob_time_weighted.last().unwrap();
+    if let Some(max) = params.prob_time_weighted_max {
         query = query.filter(market::prob_time_weighted.le(max))
     }
 
-    if let Some(min) = params.resolution.first() {
+    if let Some(min) = params.resolution_min {
         query = query.filter(market::resolution.ge(min))
     }
-    if params.resolution.len() > 1 {
-        let max = params.resolution.last().unwrap();
+    if let Some(max) = params.resolution_max {
         query = query.filter(market::resolution.le(max))
     }
 
