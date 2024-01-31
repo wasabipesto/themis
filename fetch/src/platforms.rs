@@ -60,7 +60,7 @@ table! {
         category -> Varchar,
         prob_at_midpoint -> Float,
         prob_at_close -> Float,
-        prob_time_weighted -> Float,
+        prob_time_avg -> Float,
         resolution -> Float,
     }
 }
@@ -82,7 +82,7 @@ pub struct MarketStandard {
     category: String,
     prob_at_midpoint: f32,
     prob_at_close: f32,
-    prob_time_weighted: f32,
+    prob_time_avg: f32,
     resolution: f32,
 }
 
@@ -214,7 +214,7 @@ pub trait MarketStandardizer {
     /// Get the market's average probability over the course of the market.
     /// This is calculated by taking the average of all market probabilities
     /// weighted by how long the market was at that probability.
-    fn prob_time_weighted(&self) -> Result<f32, MarketConvertError> {
+    fn prob_time_avg(&self) -> Result<f32, MarketConvertError> {
         let mut prev_event: Option<ProbUpdate> = None;
         let mut cumulative_prob: f32 = 0.0;
         let mut cumulative_time: f32 = 0.0;
@@ -298,15 +298,15 @@ pub trait MarketStandardizer {
                 }
             }
         }
-        let prob_time_weighted = cumulative_prob / cumulative_time;
-        if 0.0 <= prob_time_weighted && prob_time_weighted <= 1.0 {
-            Ok(prob_time_weighted)
+        let prob_time_avg = cumulative_prob / cumulative_time;
+        if 0.0 <= prob_time_avg && prob_time_avg <= 1.0 {
+            Ok(prob_time_avg)
         } else {
-            if prob_time_weighted.is_nan() {
+            if prob_time_avg.is_nan() {
                 Err(MarketConvertError {
                     data: self.debug(),
                     message: format!(
-                        "General: prob_time_weighted is NaN: {cumulative_prob} / {cumulative_time}."
+                        "General: prob_time_avg is NaN: {cumulative_prob} / {cumulative_time}."
                     ),
                     level: 1,
                 })
@@ -314,7 +314,7 @@ pub trait MarketStandardizer {
                 Err(MarketConvertError {
                     data: self.debug(),
                     message: format!(
-                        "General: prob_time_weighted calculation result was out of bounds: {cumulative_prob} / {cumulative_time} = {prob_time_weighted}."
+                        "General: prob_time_avg calculation result was out of bounds: {cumulative_prob} / {cumulative_time} = {prob_time_avg}."
                     ),
                     level: 2,
                 })
@@ -345,7 +345,7 @@ fn save_markets(markets: Vec<MarketStandard>, method: OutputMethod) {
                         category.eq(excluded(category)),
                         prob_at_midpoint.eq(excluded(prob_at_midpoint)),
                         prob_at_close.eq(excluded(prob_at_close)),
-                        prob_time_weighted.eq(excluded(prob_time_weighted)),
+                        prob_time_avg.eq(excluded(prob_time_avg)),
                         resolution.eq(excluded(resolution)),
                     ))
                     .execute(&mut conn)

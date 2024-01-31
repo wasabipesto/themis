@@ -1,7 +1,7 @@
 docker rm themis-fetch
 docker build -t themis-fetch .
 docker run -d \
-    --env-file ../.env \
+    --env-file ../dev.env \
     --net valinor_default \
     --name themis-fetch \
     themis-fetch

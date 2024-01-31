@@ -13,26 +13,26 @@ CREATE TABLE market (
     category VARCHAR DEFAULT 'None' NOT NULL,
     prob_at_midpoint REAL NOT NULL,
     prob_at_close REAL NOT NULL,
-    prob_time_weighted REAL NOT NULL,
+    prob_time_avg REAL NOT NULL,
     resolution REAL NOT NULL,
     CONSTRAINT platform_unique_by_id UNIQUE (platform, platform_id)
 );
 DROP TABLE IF EXISTS platform;
 CREATE TABLE platform (
-    platform_name VARCHAR PRIMARY KEY,
-    platform_name_fmt VARCHAR NOT NULL,
-    platform_description VARCHAR NOT NULL,
-    platform_site_url VARCHAR NOT NULL,
-    platform_avatar_url VARCHAR NOT NULL,
-    platform_color VARCHAR NOT NULL
+    name VARCHAR PRIMARY KEY,
+    name_fmt VARCHAR NOT NULL,
+    description VARCHAR NOT NULL,
+    site_url VARCHAR NOT NULL,
+    avatar_url VARCHAR NOT NULL,
+    color VARCHAR NOT NULL
 );
 INSERT INTO platform (
-        platform_name,
-        platform_name_fmt,
-        platform_description,
-        platform_site_url,
-        platform_avatar_url,
-        platform_color
+        name,
+        name_fmt,
+        description,
+        site_url,
+        avatar_url,
+        color
     )
 VALUES (
         'manifold',

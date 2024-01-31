@@ -366,7 +366,7 @@
               bin_method: {
                 prob_at_midpoint: { label: 'Probability at Market Midpoint' },
                 prob_at_close: { label: 'Probability at Market Close' },
-                prob_time_weighted: { 
+                prob_time_avg: { 
                   label: 'Market Time-Averaged Probability',
                   tooltip: 
                     'For each market, this is the probability averaged over time. <br>\
@@ -433,10 +433,10 @@
 
           updateSidebar(data) {
             this.sidebar_data = data.traces.map(p => ({
-              name: p.platform_name_fmt,
-              description: p.platform_description,
-              icon_url: p.platform_avatar_url,
-              num_markets: p.num_markets,
+              name: p.name_fmt,
+              description: p.description,
+              icon_url: p.avatar_url,
+              num_markets: p.markets,
               brier_score: Math.ceil(p.brier_score * 10000) / 10000,
             }));
           },
@@ -458,14 +458,14 @@
             for (var i = 0; i < data.traces.length; i++) {
               trace = data.traces[i]
               traces.push({
-                name: trace.platform_name_fmt,
+                name: trace.name_fmt,
                 x: trace.x_series,
                 y: trace.y_series,
                 //text: trace.point_descriptions,
                 type: 'scatter',
                 mode: 'markers',
                 marker: {
-                  color: trace.platform_color,
+                  color: trace.platform.color,
                   size: trace.point_sizes,
                 },
               })

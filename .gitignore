@@ -2,6 +2,7 @@
 .gitsecret/keys/random_seed
 !*.secret
 **/.env
+**/*.env
 */dist
 */.vite
 */node_modules

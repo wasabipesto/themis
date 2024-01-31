@@ -40,9 +40,9 @@ pub struct CommonFilterParams {
     #[serde_as(as = "Option<DisplayFromStr>")]
     prob_at_close_max: Option<f32>,
     #[serde_as(as = "Option<DisplayFromStr>")]
-    prob_time_weighted_min: Option<f32>,
+    prob_time_avg_min: Option<f32>,
     #[serde_as(as = "Option<DisplayFromStr>")]
-    prob_time_weighted_max: Option<f32>,
+    prob_time_avg_max: Option<f32>,
     #[serde_as(as = "Option<DisplayFromStr>")]
     resolution_min: Option<f32>,
     #[serde_as(as = "Option<DisplayFromStr>")]
@@ -153,11 +153,11 @@ pub fn get_markets_filtered(
         if let Some(max) = params.prob_at_close_max {
             query = query.filter(market::prob_at_close.le(max))
         }
-        if let Some(min) = params.prob_time_weighted_min {
-            query = query.filter(market::prob_time_weighted.ge(min))
+        if let Some(min) = params.prob_time_avg_min {
+            query = query.filter(market::prob_time_avg.ge(min))
         }
-        if let Some(max) = params.prob_time_weighted_max {
-            query = query.filter(market::prob_time_weighted.le(max))
+        if let Some(max) = params.prob_time_avg_max {
+            query = query.filter(market::prob_time_avg.le(max))
         }
         if let Some(min) = params.resolution_min {
             query = query.filter(market::resolution.ge(min))
@@ -224,9 +224,9 @@ pub fn get_markets_filtered(
                     false => query = query.order(market::prob_at_close.asc()),
                     true => query = query.order(market::prob_at_close.desc()),
                 },
-                "prob_time_weighted" => match params.sort_desc {
-                    false => query = query.order(market::prob_time_weighted.asc()),
-                    true => query = query.order(market::prob_time_weighted.desc()),
+                "prob_time_avg" => match params.sort_desc {
+                    false => query = query.order(market::prob_time_avg.asc()),
+                    true => query = query.order(market::prob_time_avg.desc()),
                 },
                 "resolution" => match params.sort_desc {
                     false => query = query.order(market::resolution.asc()),

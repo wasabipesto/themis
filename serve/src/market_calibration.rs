@@ -15,7 +15,7 @@ pub struct CalibrationQueryParams {
     pub filters: CommonFilterParams,
 }
 fn default_bin_attribute() -> String {
-    "prob_time_weighted".to_string()
+    "prob_time_avg".to_string()
 }
 fn default_bin_size() -> f32 {
     0.05
@@ -55,7 +55,7 @@ fn get_market_x_value(market: &Market, bin_attribute: &String) -> Result<f32, Ap
     match bin_attribute.as_str() {
         "prob_at_midpoint" => Ok(market.prob_at_midpoint),
         "prob_at_close" => Ok(market.prob_at_close),
-        "prob_time_weighted" => Ok(market.prob_time_weighted),
+        "prob_time_avg" => Ok(market.prob_time_avg),
         _ => {
             return Err(ApiError::new(
                 400,
@@ -89,7 +89,7 @@ fn get_x_axis_title(bin_attribute: &String) -> Result<String, ApiError> {
     match bin_attribute.as_str() {
         "prob_at_midpoint" => Ok(format!("Probability at Market Midpoint")),
         "prob_at_close" => Ok(format!("Probability at Market Close")),
-        "prob_time_weighted" => Ok(format!("Market Time-Averaged Probability")),
+        "prob_time_avg" => Ok(format!("Market Time-Averaged Probability")),
         _ => Err(ApiError {
             status_code: 500,
             message: format!("given bin_attribute not in x_title map"),
@@ -198,7 +198,7 @@ pub fn build_calibration_plot(
     }
 
     // sort the market lists by platform name so it's consistent
-    traces.sort_unstable_by_key(|t| t.platform.platform_name_fmt.clone());
+    traces.sort_unstable_by_key(|t| t.platform.name.clone());
 
     // get plot and axis titles
     let metadata = PlotMetadata {
