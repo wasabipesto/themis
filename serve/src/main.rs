@@ -1,10 +1,10 @@
 use actix_web::web::{Data, Query};
 use actix_web::{get, middleware, App, HttpResponse, HttpServer};
 use chrono::{DateTime, Utc};
-use db_util::{get_all_platforms, get_platform_by_name, market, platform, Market};
+use db_util::{get_all_platforms, get_platform_by_name, market, platform, Market, Platform};
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::{pg::PgConnection, prelude::*};
-use helper::{scale_list, ApiError};
+use helper::{categorize_markets_by_platform, scale_list, ApiError};
 use market_calibration::{build_calibration_plot, CalibrationQueryParams};
 use market_filter::{get_markets_filtered, CommonFilterParams};
 use serde::{Deserialize, Serialize};
@@ -27,12 +27,8 @@ struct PlotMetadata {
 /// Data sent to the client to render a plot, one plot per platform.
 #[derive(Debug, Serialize)]
 struct Trace {
-    platform_name_fmt: String,
-    platform_description: String,
-    platform_avatar_url: String,
-    platform_color: String,
+    platform: Platform,
     num_markets: usize,
-    brier_score: f32,
     x_series: Vec<f32>,
     y_series: Vec<f32>,
     point_sizes: Vec<f32>,
@@ -91,9 +87,10 @@ async fn calibration_plot(
 
     // get markets from database
     let markets = get_markets_filtered(conn, query.filters.clone())?;
+    let markets_by_platform = categorize_markets_by_platform(markets);
 
     // build the plot
-    build_calibration_plot(query, conn, markets)
+    build_calibration_plot(query, conn, markets_by_platform)
 }
 
 /// Server startup tasks.

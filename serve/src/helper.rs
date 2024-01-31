@@ -36,6 +36,20 @@ pub fn scale_list(
         .collect()
 }
 
+/// Sort all markets into Vecs based on the platform name.
+pub fn categorize_markets_by_platform(markets: Vec<Market>) -> HashMap<String, Vec<Market>> {
+    let mut markets_by_platform: HashMap<String, Vec<Market>> = HashMap::new();
+    for market in markets {
+        // this is a hot loop since we iterate over all markets
+        if let Some(market_list) = markets_by_platform.get_mut(&market.platform) {
+            market_list.push(market);
+        } else {
+            markets_by_platform.insert(market.platform.clone(), Vec::from([market]));
+        }
+    }
+    markets_by_platform
+}
+
 /// A multi-purpose error struct.
 #[derive(Debug, Deserialize)]
 pub struct ApiError {
