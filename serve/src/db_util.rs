@@ -16,7 +16,7 @@ table! {
         category -> Varchar,
         prob_at_midpoint -> Float,
         prob_at_close -> Float,
-        prob_time_weighted -> Float,
+        prob_time_avg -> Float,
         resolution -> Float,
     }
 }
@@ -37,18 +37,18 @@ pub struct Market {
     pub category: String,
     pub prob_at_midpoint: f32,
     pub prob_at_close: f32,
-    pub prob_time_weighted: f32,
+    pub prob_time_avg: f32,
     pub resolution: f32,
 }
 
 // Diesel macro to get database schema.
 table! {
-    platform (platform_name) {
-        platform_name -> Varchar,
-        platform_name_fmt -> Varchar,
-        platform_description -> Varchar,
-        platform_avatar_url -> Varchar,
-        platform_color -> Varchar,
+    platform (name) {
+        name -> Varchar,
+        name_fmt -> Varchar,
+        description -> Varchar,
+        avatar_url -> Varchar,
+        color -> Varchar,
     }
 }
 
@@ -56,11 +56,11 @@ table! {
 #[derive(Debug, Queryable, Serialize, Selectable)]
 #[diesel(table_name = platform)]
 pub struct Platform {
-    pub platform_name: String,
-    pub platform_name_fmt: String,
-    pub platform_description: String,
-    pub platform_avatar_url: String,
-    pub platform_color: String,
+    pub name: String,
+    pub name_fmt: String,
+    pub description: String,
+    pub avatar_url: String,
+    pub color: String,
 }
 
 /// Get information about a platform from the database.

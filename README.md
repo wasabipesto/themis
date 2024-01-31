@@ -29,7 +29,7 @@ The `client` subproject is actually just a single HTML file that pulls a few scr
 When standardizing things across platforms we ran into some edge cases, I've tried to detail them all here. When in doubt, you can always check the source to see how we compute a specific attribute.
 
 ### All
-- To calculate `prob_time_weighted`, we assume the market opens at 50%. Once the first trade occurs, we track the probability at each trade and the cumulative durations to generate an average.
+- To calculate `prob_time_avg`, we assume the market opens at 50%. Once the first trade occurs, we track the probability at each trade and the cumulative durations to generate an average.
 
 ### Kalshi
 - We use the YES price from the most recently executed trade as the probability at any point in time.
