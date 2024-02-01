@@ -17,8 +17,8 @@ const ListAPI = {
           sortDesc = false
         }
       } else {
-        sortAttr = null
-        sortDesc = null
+        sortAttr = "volume_usd"
+        sortDesc = true
       }
 
       let items
@@ -45,14 +45,14 @@ const ListAPI = {
       const attributes_to_usd = ['volume_usd']
       items.forEach((obj) => {
         attributes_to_usd.forEach((attribute) => {
-          obj[attribute] = "$" + obj[attribute]
+          obj[attribute] = '$' + obj[attribute]
         })
       })
 
-      const attributes_to_pct = ["prob_at_midpoint", "prob_at_close", "prob_time_avg", "resolution"]
+      const attributes_to_pct = ['prob_at_midpoint', 'prob_at_close', 'prob_time_avg', 'resolution']
       items.forEach((obj) => {
         attributes_to_pct.forEach((attribute) => {
-          obj[attribute] = (obj[attribute] * 100).toFixed(2) + "%";
+          obj[attribute] = (obj[attribute] * 100).toFixed(2) + '%'
         })
       })
 
@@ -119,10 +119,14 @@ function loadItems({ page, itemsPerPage, sortBy }) {
       :loading="loading"
       :search="search"
       item-value="name"
-      density="compact"
       hover
       @update:options="loadItems"
     >
+    <template #item.title="{ value, item }">
+    <a :href="item.url" target="_blank">
+      {{ value }}
+    </a>
+  </template>
     </v-data-table-server>
   </v-card>
 </template>
