@@ -1,7 +1,14 @@
+<script setup>
+import { state } from '@/modules/CommonState.js'
+</script>
+
 <template>
   <v-app-bar>
     <template v-slot:prepend>
-      <v-app-bar-nav-icon></v-app-bar-nav-icon>
+      <v-app-bar-nav-icon
+        variant="text"
+        @click.stop="state.left_sidebar_visible = !state.left_sidebar_visible"
+      ></v-app-bar-nav-icon>
     </template>
 
     <v-app-bar-title>

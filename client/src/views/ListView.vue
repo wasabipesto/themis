@@ -1,6 +1,8 @@
 <script setup>
 import { ref } from 'vue'
 import axios from 'axios'
+import CommonFilters from '@/components/CommonFilters.vue'
+import { state } from '@/modules/CommonState.js'
 
 const ListAPI = {
   fetch: async ({ page, itemsPerPage, sortBy }) => {
@@ -98,6 +100,9 @@ function loadItems({ page, itemsPerPage, sortBy }) {
 </script>
 
 <template>
+  <v-navigation-drawer :width="400" v-model="state.left_sidebar_visible">
+    <v-expansion-panels variant="accordion"> <CommonFilters /> </v-expansion-panels
+  ></v-navigation-drawer>
   <v-card flat title="Market List" class="my-5">
     <template v-slot:text>
       <v-text-field
