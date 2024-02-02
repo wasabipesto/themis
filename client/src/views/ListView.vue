@@ -1,70 +1,53 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, watch, watchEffect } from 'vue'
 import axios from 'axios'
 import CommonFilters from '@/components/CommonFilters.vue'
 import { state } from '@/modules/CommonState.js'
+import { debounce } from 'lodash'
 
-const ListAPI = {
-  fetch: async ({ page, itemsPerPage, sortBy }) => {
-    return new Promise(async (resolve) => {
-      const limit = itemsPerPage
-      const offset = (page - 1) * limit
-
-      let sortAttr, sortDesc
-      if (sortBy.length) {
-        sortAttr = sortBy[0].key
-        if (sortBy[0].order == 'desc') {
-          sortDesc = true
-        } else {
-          sortDesc = false
-        }
-      } else {
-        sortAttr = 'volume_usd'
-        sortDesc = true
-      }
-
-      let items
-      try {
-        const response = await axios.get('https://beta-api.calibration.city/list_markets', {
-          params: { limit, offset, sort_attribute: sortAttr, sort_desc: sortDesc }
-        })
-        items = response.data.markets
-      } catch (error) {
-        console.error('Error fetching market list:', error)
-      }
-
-      items.forEach((obj) => {
-        obj.platform = obj.platform.charAt(0).toUpperCase() + obj.platform.slice(1)
-      })
-
-      const attributes_to_round = ['open_days', 'volume_usd']
-      items.forEach((obj) => {
-        attributes_to_round.forEach((attribute) => {
-          obj[attribute] = Math.round(obj[attribute] * 100) / 100
-        })
-      })
-
-      const attributes_to_usd = ['volume_usd']
-      items.forEach((obj) => {
-        attributes_to_usd.forEach((attribute) => {
-          obj[attribute] = '$' + obj[attribute]
-        })
-      })
-
-      const attributes_to_pct = ['prob_at_midpoint', 'prob_at_close', 'prob_time_avg', 'resolution']
-      items.forEach((obj) => {
-        attributes_to_pct.forEach((attribute) => {
-          obj[attribute] = (obj[attribute] * 100).toFixed(2) + '%'
-        })
-      })
-
-      resolve({ items })
+const loading = ref(true)
+const responseItems = ref([])
+async function updateList() {
+  loading.value = true
+  let items
+  try {
+    const response = await axios.get('https://beta-api.calibration.city/list_markets', {
+      params: state.query_selected
     })
+    items = response.data.markets
+  } catch (error) {
+    console.error('Error fetching market list:', error)
   }
+
+  items.forEach((obj) => {
+    obj.platform = obj.platform.charAt(0).toUpperCase() + obj.platform.slice(1)
+  })
+
+  const attributes_to_round = ['open_days', 'volume_usd']
+  items.forEach((obj) => {
+    attributes_to_round.forEach((attribute) => {
+      obj[attribute] = Math.round(obj[attribute] * 100) / 100
+    })
+  })
+
+  const attributes_to_usd = ['volume_usd']
+  items.forEach((obj) => {
+    attributes_to_usd.forEach((attribute) => {
+      obj[attribute] = '$' + obj[attribute]
+    })
+  })
+
+  const attributes_to_pct = ['prob_at_midpoint', 'prob_at_close', 'prob_time_avg', 'resolution']
+  items.forEach((obj) => {
+    attributes_to_pct.forEach((attribute) => {
+      obj[attribute] = (obj[attribute] * 100).toFixed(2) + '%'
+    })
+  })
+
+  responseItems.value = items
+  loading.value = false
 }
 
-const search = ref('')
-const loading = ref(true)
 const itemsPerPage = ref(100)
 const itemsPerPageOptions = ref([
   { value: 100, title: '100' },
@@ -74,6 +57,7 @@ const itemsPerPageOptions = ref([
   { value: 10000, title: '10,000' },
   { value: 99999999, title: 'All' }
 ])
+
 const headers = ref([
   { title: 'Title', key: 'title', align: 'start' },
   { title: 'Platform', key: 'platform', align: 'start' },
@@ -89,44 +73,75 @@ const headers = ref([
   { title: 'Resolution', key: 'resolution', align: 'end' }
 ])
 
-const responseItems = ref([])
-function loadItems({ page, itemsPerPage, sortBy }) {
-  loading.value = true
-  ListAPI.fetch({ page, itemsPerPage, sortBy }).then(({ items }) => {
-    responseItems.value = items
-    loading.value = false
+function sendTableDataToQuery({ page, sortBy }) {
+  const limit = itemsPerPage.value
+  const offset = (page - 1) * limit
+
+  let sort_attribute, sort_desc
+  if (sortBy.length) {
+    sort_attribute = sortBy[0].key
+    if (sortBy[0].order == 'desc') {
+      sort_desc = true
+    } else {
+      sort_desc = false
+    }
+  } else {
+    sort_attribute = 'volume_usd'
+    sort_desc = true
+  }
+
+  state.query_selected = Object.assign(state.query_selected, {
+    limit,
+    offset,
+    sort_attribute,
+    sort_desc
   })
+}
+onMounted(() => {
+  updateList()
+})
+watch(
+  () => state.query_selected,
+  debounce((query_selected) => {
+    //console.log(query_selected)
+    updateList()
+  }, 100),
+  { deep: true }
+)
+
+const showDialog = ref(false)
+const showQueryState = () => {
+  showDialog.value = true
 }
 </script>
 
 <template>
   <v-navigation-drawer :width="400" v-model="state.left_sidebar_visible" app>
-    <v-expansion-panels variant="accordion"> <CommonFilters /> </v-expansion-panels
-  ></v-navigation-drawer>
+    <v-expansion-panels variant="accordion"> <CommonFilters /> </v-expansion-panels>
+  </v-navigation-drawer>
   <v-main>
     <v-card flat title="Market List" class="my-5">
       <template v-slot:text>
         <v-text-field
-          v-model="search"
-          label="Search"
-          prepend-inner-icon="mdi-magnify"
-          single-line
-          variant="outlined"
-          density="compact"
-          hide-details
-        ></v-text-field>
+            v-model="state.query_selected.title_contains"
+            label="Search"
+            prepend-inner-icon="mdi-magnify"
+            single-line
+            variant="outlined"
+            density="compact"
+            hide-details
+          ></v-text-field>
       </template>
       <v-data-table-server
         v-model:items-per-page="itemsPerPage"
         :items-per-page-options="itemsPerPageOptions"
         :headers="headers"
         :items="responseItems"
-        :items-length="itemsPerPage"
+        :items-length="100000"
         :loading="loading"
-        :search="search"
         item-value="name"
         hover
-        @update:options="loadItems"
+        @update:options="sendTableDataToQuery"
       >
         <template #item.title="{ value, item }">
           <a :href="item.url" target="_blank">
