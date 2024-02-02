@@ -17,7 +17,7 @@ const ListAPI = {
           sortDesc = false
         }
       } else {
-        sortAttr = "volume_usd"
+        sortAttr = 'volume_usd'
         sortDesc = true
       }
 
@@ -122,11 +122,11 @@ function loadItems({ page, itemsPerPage, sortBy }) {
       hover
       @update:options="loadItems"
     >
-    <template #item.title="{ value, item }">
-    <a :href="item.url" target="_blank">
-      {{ value }}
-    </a>
-  </template>
+      <template #item.title="{ value, item }">
+        <a :href="item.url" target="_blank">
+          {{ value }}
+        </a>
+      </template>
     </v-data-table-server>
   </v-card>
 </template>

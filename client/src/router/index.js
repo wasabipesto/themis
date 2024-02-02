@@ -1,12 +1,19 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import IntroductionView from '../views/IntroductionView.vue'
 import CalibrationView from '../views/CalibrationView.vue'
 import AccuracyView from '../views/AccuracyView.vue'
 import ListView from '../views/ListView.vue'
-import AboutView from '../views/AboutView.vue'
+import FAQView from '../views/FAQView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    {
+      path: '/introduction',
+      alias: '/',
+      name: 'introduction',
+      component: IntroductionView
+    },
     {
       path: '/calibration',
       alias: '/',
@@ -19,14 +26,14 @@ const router = createRouter({
       component: AccuracyView
     },
     {
-      path: '/about',
-      name: 'about',
-      component: AboutView
-    },
-    {
       path: '/list',
       name: 'list',
       component: ListView
+    },
+    {
+      path: '/faq',
+      name: 'faq',
+      component: FAQView
     }
   ]
 })
