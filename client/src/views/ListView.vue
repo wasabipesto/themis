@@ -115,7 +115,7 @@ function loadItems({ page, itemsPerPage, sortBy }) {
       :items-per-page-options="itemsPerPageOptions"
       :headers="headers"
       :items="responseItems"
-      items-length="10"
+      :items-length="itemsPerPage"
       :loading="loading"
       :search="search"
       item-value="name"

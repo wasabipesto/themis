@@ -1,7 +1,6 @@
 <script setup>
 import { RouterView } from 'vue-router'
 import TitleBar from './components/TitleBar.vue'
-import SiteFooter from './components/SiteFooter.vue'
 </script>
 
 <template>
@@ -9,7 +8,6 @@ import SiteFooter from './components/SiteFooter.vue'
     <TitleBar />
     <v-container>
       <RouterView />
-      <SiteFooter />
     </v-container>
   </v-layout>
 </template>

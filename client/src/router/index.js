@@ -10,7 +10,6 @@ const router = createRouter({
   routes: [
     {
       path: '/introduction',
-      alias: '/',
       name: 'introduction',
       component: IntroductionView
     },
