@@ -4,10 +4,8 @@ import TitleBar from './components/TitleBar.vue'
 </script>
 
 <template>
-  <v-layout class="rounded rounded-md">
+  <v-app>
     <TitleBar />
-    <v-container>
-      <RouterView />
-    </v-container>
-  </v-layout>
+    <RouterView />
+  </v-app>
 </template>

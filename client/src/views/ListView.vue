@@ -100,38 +100,40 @@ function loadItems({ page, itemsPerPage, sortBy }) {
 </script>
 
 <template>
-  <v-navigation-drawer :width="400" v-model="state.left_sidebar_visible">
+  <v-navigation-drawer :width="400" v-model="state.left_sidebar_visible" app>
     <v-expansion-panels variant="accordion"> <CommonFilters /> </v-expansion-panels
   ></v-navigation-drawer>
-  <v-card flat title="Market List" class="my-5">
-    <template v-slot:text>
-      <v-text-field
-        v-model="search"
-        label="Search"
-        prepend-inner-icon="mdi-magnify"
-        single-line
-        variant="outlined"
-        density="compact"
-        hide-details
-      ></v-text-field>
-    </template>
-    <v-data-table-server
-      v-model:items-per-page="itemsPerPage"
-      :items-per-page-options="itemsPerPageOptions"
-      :headers="headers"
-      :items="responseItems"
-      :items-length="itemsPerPage"
-      :loading="loading"
-      :search="search"
-      item-value="name"
-      hover
-      @update:options="loadItems"
-    >
-      <template #item.title="{ value, item }">
-        <a :href="item.url" target="_blank">
-          {{ value }}
-        </a>
+  <v-main>
+    <v-card flat title="Market List" class="my-5">
+      <template v-slot:text>
+        <v-text-field
+          v-model="search"
+          label="Search"
+          prepend-inner-icon="mdi-magnify"
+          single-line
+          variant="outlined"
+          density="compact"
+          hide-details
+        ></v-text-field>
       </template>
-    </v-data-table-server>
-  </v-card>
+      <v-data-table-server
+        v-model:items-per-page="itemsPerPage"
+        :items-per-page-options="itemsPerPageOptions"
+        :headers="headers"
+        :items="responseItems"
+        :items-length="itemsPerPage"
+        :loading="loading"
+        :search="search"
+        item-value="name"
+        hover
+        @update:options="loadItems"
+      >
+        <template #item.title="{ value, item }">
+          <a :href="item.url" target="_blank">
+            {{ value }}
+          </a>
+        </template>
+      </v-data-table-server>
+    </v-card>
+  </v-main>
 </template>
