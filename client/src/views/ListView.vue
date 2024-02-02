@@ -123,14 +123,14 @@ const showQueryState = () => {
     <v-card flat title="Market List" class="my-5">
       <template v-slot:text>
         <v-text-field
-            v-model="state.query_selected.title_contains"
-            label="Search"
-            prepend-inner-icon="mdi-magnify"
-            single-line
-            variant="outlined"
-            density="compact"
-            hide-details
-          ></v-text-field>
+          v-model="state.query_selected.title_contains"
+          label="Search"
+          prepend-inner-icon="mdi-magnify"
+          single-line
+          variant="outlined"
+          density="compact"
+          hide-details
+        ></v-text-field>
       </template>
       <v-data-table-server
         v-model:items-per-page="itemsPerPage"
