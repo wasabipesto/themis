@@ -9,6 +9,11 @@ const loading = ref(true)
 const responseItems = ref([])
 async function updateList() {
   loading.value = true
+
+  if (state.query_selected.limit == null) {
+    state.query_selected.limit = 100
+  }
+
   let items
   try {
     const response = await axios.get('https://beta-api.calibration.city/list_markets', {
@@ -53,9 +58,7 @@ const itemsPerPageOptions = ref([
   { value: 100, title: '100' },
   { value: 250, title: '250' },
   { value: 500, title: '500' },
-  { value: 1000, title: '1000' },
-  { value: 10000, title: '10,000' },
-  { value: 99999999, title: 'All' }
+  { value: 1000, title: '1000' }
 ])
 
 const headers = ref([
@@ -108,16 +111,11 @@ watch(
   }, 100),
   { deep: true }
 )
-
-const showDialog = ref(false)
-const showQueryState = () => {
-  showDialog.value = true
-}
 </script>
 
 <template>
   <v-navigation-drawer :width="400" v-model="state.left_sidebar_visible" app>
-    <v-expansion-panels variant="accordion"> <CommonFilters /> </v-expansion-panels>
+    <v-expansion-panels multiple variant="accordion"> <CommonFilters /> </v-expansion-panels>
   </v-navigation-drawer>
   <v-main>
     <v-card flat title="Market List" class="my-5">
@@ -130,6 +128,7 @@ const showQueryState = () => {
           variant="outlined"
           density="compact"
           hide-details
+          clearable
         ></v-text-field>
       </template>
       <v-data-table-server
@@ -137,7 +136,7 @@ const showQueryState = () => {
         :items-per-page-options="itemsPerPageOptions"
         :headers="headers"
         :items="responseItems"
-        :items-length="100000"
+        :items-length="10000"
         :loading="loading"
         item-value="name"
         hover

@@ -37,13 +37,48 @@ const query_options = {
     'Technology'
   ]
 }
+
+function get_title_contains_label() {
+  const title_contains = state.query_selected.title_contains
+  if (title_contains == '' || title_contains == null) {
+    return 'Any'
+  } else {
+    return title_contains
+  }
+}
+
+function get_platform_label() {
+  const platform = state.query_selected.platform_select
+  console.log(query_options)
+  if (platform in query_options.platforms) {
+    return query_options['platforms'][platform]['label']
+  } else {
+    return 'Any'
+  }
+}
+
+function get_numeric_label(min, max) {
+  if (min == null) {
+    if (max == null) {
+      return 'Any'
+    } else {
+      return max + ' or less'
+    }
+  } else {
+    if (max == null) {
+      return min + ' or more'
+    } else {
+      return min + ' to ' + max
+    }
+  }
+}
 </script>
 
 <template>
   <v-expansion-panel>
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-message-outline</v-icon>
-      Title Contains
+      Title Contains: {{ get_title_contains_label() }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
       <p class="my-2">
@@ -53,6 +88,7 @@ const query_options = {
       <v-text-field
         clearable
         v-model="state.query_selected.title_contains"
+        prepend-inner-icon="mdi-magnify"
         label="Title Contains"
       ></v-text-field>
     </v-expansion-panel-text>
@@ -60,7 +96,7 @@ const query_options = {
   <v-expansion-panel>
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-map-marker</v-icon>
-      Platform
+      Platform: {{ get_platform_label() }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
       <p class="my-2">Filter the markets in the sample to only those from a certain site.</p>
@@ -78,7 +114,7 @@ const query_options = {
   <v-expansion-panel>
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-group</v-icon>
-      Category: {{ state.query_selected.category_select || 'None' }}
+      Category: {{ state.query_selected.category_select || 'Any' }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
       <p class="my-2">Filter the markets in the sample to only those in a certain category.</p>
@@ -97,13 +133,22 @@ const query_options = {
   <v-expansion-panel>
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-account-group-outline</v-icon>
-      Unique Traders
+      Unique Traders:
+      {{
+        get_numeric_label(
+          state.query_selected.num_traders_min,
+          state.query_selected.num_traders_max
+        )
+      }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
       <p class="my-2">
-        Filter the markets in the sample to only those with at least a certain number of unique
-        traders. Useful to filter out personal markets with no wider interest.
+        Filter the markets in the sample to only those with a certain number of unique traders.
+        Useful to filter out personal markets with no wider interest.
       </p>
+      <v-alert border="start" border-color="red" elevation="2" density="compact">
+        This filter is not implemented for all platforms.
+      </v-alert>
       <v-container>
         <v-row>
           <v-col>
@@ -137,12 +182,15 @@ const query_options = {
   <v-expansion-panel>
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-calendar</v-icon>
-      Open Length
+      Open Length:
+      {{
+        get_numeric_label(state.query_selected.open_days_min, state.query_selected.open_days_max)
+      }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
       <p class="my-2">
-        Filter the markets in the sample to only those open longer than a certain number of days.
-        Useful to filter out markets that were quickly or fradulently resolved.
+        Filter the markets in the sample to only those open for a certain length of time. Useful to
+        filter out very short or very long markets. This metric is measured in days.
       </p>
       <v-container>
         <v-row>
@@ -177,13 +225,19 @@ const query_options = {
   <v-expansion-panel>
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-cash</v-icon>
-      Market Volume
+      Market Volume:
+      {{
+        get_numeric_label(state.query_selected.volume_usd_min, state.query_selected.volume_usd_max)
+      }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
       <p class="my-2">
-        Filter the markets in the sample to only those with at least a certain amount of money in
-        volume. Useful to isolate only the high-profile markets. This metric is measured in USD.
+        Filter the markets in the sample to only those with a certain amount of money in volume.
+        Useful to isolate only the high-profile markets. This metric is measured in USD.
       </p>
+      <v-alert border="start" border-color="red" elevation="2" density="compact">
+        This filter is not implemented for all platforms.
+      </v-alert>
       <v-container>
         <v-row>
           <v-col>
