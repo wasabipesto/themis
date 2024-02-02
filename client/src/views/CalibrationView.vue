@@ -4,6 +4,7 @@ import axios from 'axios'
 import CommonFilters from '@/components/CommonFilters.vue'
 import { state } from '@/modules/CommonState.js'
 import { debounce } from 'lodash'
+import * as d3 from 'd3';
 
 const loading = ref(true)
 async function updateGraph() {
@@ -18,8 +19,43 @@ async function updateGraph() {
   } catch (error) {
     console.error('Error fetching data:', error)
   }
-
   console.log(data)
+
+  // Declare the chart dimensions and margins.
+  const width = 1200;
+  const height = 600;
+  const marginTop = 20;
+  const marginRight = 20;
+  const marginBottom = 30;
+  const marginLeft = 40;
+
+  const percent_scale = d3.scaleLinear().domain([0, 1])
+
+  // Declare the x (horizontal position) scale.
+  const x_axis = d3.scaleLinear()
+      .domain([0, 1])
+      .range([marginLeft, width - marginRight]);
+
+  // Declare the y (vertical position) scale.
+  const y_axis = d3.scaleLinear()
+      .domain([0, 1])
+      .range([height - marginBottom, marginTop]);
+
+  // Create the SVG container.
+  const svg = d3.select("svg")
+      .attr("width", width)
+      .attr("height", height);
+
+  // Add the x-axis.
+  svg.append("g")
+      .attr("transform", `translate(0,${height - marginBottom})`)
+      .call(d3.axisBottom(x_axis).tickFormat(d3.format('~%')));
+
+  // Add the y-axis.
+  svg.append("g")
+      .attr("transform", `translate(${marginLeft},0)`)
+      .call(d3.axisLeft(y_axis).tickFormat(d3.format('~%')));
+
   loading.value = false
 }
 onMounted(() => {
@@ -42,7 +78,11 @@ watch(
   <v-main>
     <v-card elevation="16">
       <v-card-text>
-        <div id="graph"></div>
+        <div id="graph">
+          <svg>
+
+          </svg>
+        </div>
       </v-card-text>
     </v-card>
   </v-main>
