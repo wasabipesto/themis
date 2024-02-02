@@ -75,7 +75,7 @@ pub fn get_markets_filtered(
 
     if let Some(params) = common_params {
         if let Some(title_contains) = &params.title_contains {
-            query = query.filter(market::title.ilike(title_contains))
+            query = query.filter(market::title.ilike("%".to_string() + title_contains + "%"))
         }
         if let Some(platform_select) = &params.platform_select {
             query = query.filter(market::platform.eq(platform_select))
