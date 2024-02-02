@@ -1,5 +1,4 @@
 <script setup>
-import { ref } from 'vue'
 import { state } from '@/modules/CommonState.js'
 
 state.query_selected = {
@@ -49,7 +48,6 @@ function get_title_contains_label() {
 
 function get_platform_label() {
   const platform = state.query_selected.platform_select
-  console.log(query_options)
   if (platform in query_options.platforms) {
     return query_options['platforms'][platform]['label']
   } else {

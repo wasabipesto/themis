@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch, watchEffect } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import axios from 'axios'
 import CommonFilters from '@/components/CommonFilters.vue'
 import { state } from '@/modules/CommonState.js'
