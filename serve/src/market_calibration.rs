@@ -3,7 +3,7 @@ use super::*;
 /// Parameters passed to the calibration function.
 /// If the parameter is not supplied, the default values are used.
 /// TODO: Change bin_attribute and weight_attribute to enums
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct CalibrationQueryParams {
     #[serde(default = "default_bin_attribute")]
     bin_attribute: String,
@@ -31,6 +31,38 @@ struct XAxisBin {
     end: f32,
     y_axis_numerator: f32,
     y_axis_denominator: f32,
+}
+
+/// An individual datapoint to be plotted.
+#[derive(Debug, Serialize)]
+struct Point {
+    x: f32,
+    y: f32,
+    r: f32,
+    //desc: String,
+}
+
+/// Data sent to the client to render a plot, one plot per platform.
+#[derive(Debug, Serialize)]
+struct Trace {
+    platform: Platform,
+    points: Vec<Point>,
+}
+
+/// Metadata to help label a plot.
+#[derive(Debug, Serialize)]
+struct PlotMetadata {
+    title: String,
+    x_title: String,
+    y_title: String,
+}
+
+/// Full response for a calibration plot.
+#[derive(Debug, Serialize)]
+struct CalibrationPlotResponse {
+    query: CalibrationQueryParams,
+    metadata: PlotMetadata,
+    traces: Vec<Trace>,
 }
 
 /// Generates a set of equally-spaced bins between 0 and 1, where `bin_size` is the width of each bin.
@@ -201,7 +233,11 @@ pub fn build_calibration_plot(
         y_title: get_y_axis_title(&query.weight_attribute)?,
     };
 
-    let response = PlotData { metadata, traces };
+    let response = CalibrationPlotResponse {
+        query: query.into_inner(),
+        metadata,
+        traces,
+    };
 
     Ok(HttpResponse::Ok().json(response))
 }

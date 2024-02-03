@@ -18,37 +18,6 @@ mod market_calibration;
 mod market_filter;
 mod market_list;
 
-/// Metadata to help label a plot.
-#[derive(Debug, Serialize)]
-struct PlotMetadata {
-    title: String,
-    x_title: String,
-    y_title: String,
-}
-
-/// An individual datapoint to be plotted.
-#[derive(Debug, Serialize)]
-struct Point {
-    x: f32,
-    y: f32,
-    r: f32,
-    //desc: String,
-}
-
-/// Data sent to the client to render a plot, one plot per platform.
-#[derive(Debug, Serialize)]
-struct Trace {
-    platform: Platform,
-    points: Vec<Point>,
-}
-
-/// Full response for a calibration plot.
-#[derive(Debug, Serialize)]
-struct PlotData {
-    metadata: PlotMetadata,
-    traces: Vec<Trace>,
-}
-
 #[get("/list_platforms")]
 async fn list_platforms(
     pool: Data<Pool<ConnectionManager<PgConnection>>>,
