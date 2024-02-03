@@ -15,7 +15,7 @@ pub struct CalibrationQueryParams {
     pub filters: CommonFilterParams,
 }
 fn default_bin_attribute() -> String {
-    "prob_time_avg".to_string()
+    "prob_at_midpoint".to_string()
 }
 fn default_bin_size() -> f32 {
     0.05
