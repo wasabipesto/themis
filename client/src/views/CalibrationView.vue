@@ -4,57 +4,113 @@ import axios from 'axios'
 import CommonFilters from '@/components/CommonFilters.vue'
 import { state } from '@/modules/CommonState.js'
 import { debounce } from 'lodash'
-import * as d3 from 'd3';
+import { Chart as ChartJS, Tooltip, Legend, PointElement, LinearScale, Title } from 'chart.js'
+import { Bubble } from 'vue-chartjs'
+
+ChartJS.register(LinearScale, PointElement, Tooltip, Legend, Title)
+
+const chart_data = ref({
+  datasets: []
+})
+const chart_options = ref({
+  responsive: true,
+  maintainAspectRatio: false,
+  layout: {
+    padding: 8
+  },
+  plugins: {
+    title: {
+      display: true,
+      text: 'Calibration Plot',
+      padding: 16,
+      font: {
+        size: 16,
+        weight: 'bold'
+      }
+    },
+    legend: {
+      title: {
+        display: true,
+        text: '',
+        padding: {
+          top: 42
+        },
+        font: {
+          weight: 'bold'
+        }
+      },
+      position: 'chartArea',
+      align: 'start'
+    }
+  },
+  scales: {
+    x: {
+      title: {
+        display: true,
+        text: 'Prediction',
+        padding: 12,
+        font: {
+          size: 14
+        }
+      },
+      ticks: {
+        callback: function (value, index, ticks) {
+          return value * 100 + '%'
+        }
+      },
+      min: 0,
+      max: 1
+    },
+    y: {
+      title: {
+        display: true,
+        text: 'Resolution',
+        padding: 12,
+        font: {
+          size: 14
+        }
+      },
+      ticks: {
+        callback: function (value, index, ticks) {
+          return value * 100 + '%'
+        }
+      },
+      min: 0,
+      max: 1
+    }
+  }
+})
 
 const loading = ref(true)
 async function updateGraph() {
   loading.value = true
 
-  let data
+  let response_data
   try {
     const response = await axios.get('https://beta-api.calibration.city/calibration_plot', {
       params: state.query_selected
     })
-    data = response.data
+    response_data = response.data
   } catch (error) {
     console.error('Error fetching data:', error)
   }
-  console.log(data)
 
-  // Declare the chart dimensions and margins.
-  const width = 1200;
-  const height = 600;
-  const marginTop = 20;
-  const marginRight = 20;
-  const marginBottom = 30;
-  const marginLeft = 40;
-
-  const percent_scale = d3.scaleLinear().domain([0, 1])
-
-  // Declare the x (horizontal position) scale.
-  const x_axis = d3.scaleLinear()
-      .domain([0, 1])
-      .range([marginLeft, width - marginRight]);
-
-  // Declare the y (vertical position) scale.
-  const y_axis = d3.scaleLinear()
-      .domain([0, 1])
-      .range([height - marginBottom, marginTop]);
-
-  // Create the SVG container.
-  const svg = d3.select("svg")
-      .attr("width", width)
-      .attr("height", height);
-
-  // Add the x-axis.
-  svg.append("g")
-      .attr("transform", `translate(0,${height - marginBottom})`)
-      .call(d3.axisBottom(x_axis).tickFormat(d3.format('~%')));
-
-  // Add the y-axis.
-  svg.append("g")
-      .attr("transform", `translate(${marginLeft},0)`)
-      .call(d3.axisLeft(y_axis).tickFormat(d3.format('~%')));
+  var datasets = []
+  response_data.traces.forEach((t) =>
+    datasets.push({
+      label: t.platform.name_fmt,
+      backgroundColor: t.platform.color + '80',
+      borderColor: t.platform.color,
+      data: t.points
+    })
+  )
+  chart_data.value = {
+    datasets: datasets
+  }
+  chart_options.value.plugins.title.text = response_data.metadata.title
+  chart_options.value.scales.x.title.text = response_data.metadata.x_title
+  chart_options.value.scales.y.title.text = response_data.metadata.y_title
+  chart_options.value = { ...chart_options.value }
 
   loading.value = false
 }
@@ -75,20 +131,17 @@ watch(
   <v-navigation-drawer :width="400" v-model="state.left_sidebar_visible" app>
     <v-expansion-panels multiple variant="accordion"> <CommonFilters /> </v-expansion-panels>
   </v-navigation-drawer>
-  <v-main>
-    <v-card elevation="16">
-      <v-card-text>
-        <div id="graph">
-          <svg>
-
-          </svg>
-        </div>
-      </v-card-text>
-    </v-card>
-  </v-main>
 
   <v-snackbar v-model="loading">
     <v-progress-circular indeterminate color="red"></v-progress-circular>
     <span class="mx-5">Loading data...</span>
   </v-snackbar>
+
+  <v-main>
+    <v-card elevation="16">
+      <v-card-text>
+        <Bubble :data="chart_data" :options="chart_options" :width="1200" :height="600" />
+      </v-card-text>
+    </v-card>
+  </v-main>
 </template>

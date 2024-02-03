@@ -12,9 +12,10 @@
   },
   "dependencies": {
     "axios": "^1.6.7",
-    "d3": "^7.8.5",
+    "chart.js": "^4.4.1",
     "lodash": "^4.17.21",
     "vue": "^3.3.11",
+    "vue-chartjs": "^5.3.0",
     "vue-router": "^4.2.5",
     "vuetify": "^3.5.1"
   },
