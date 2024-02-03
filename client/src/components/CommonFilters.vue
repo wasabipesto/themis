@@ -1,7 +1,10 @@
 <script setup>
+import { toRefs } from 'vue'
 import { state } from '@/modules/CommonState.js'
 
-state.query_selected = {
+let { query_selected } = toRefs(state)
+
+query_selected.value = {
   title_contains: null,
   platform_select: null,
   category_select: null,
@@ -14,7 +17,8 @@ state.query_selected = {
   open_days_min: null,
   open_days_max: null,
   volume_usd_min: null,
-  volume_usd_max: null
+  volume_usd_max: null,
+  ...query_selected.value
 }
 
 const query_options = {
@@ -38,7 +42,7 @@ const query_options = {
 }
 
 function get_title_contains_label() {
-  const title_contains = state.query_selected.title_contains
+  const title_contains = query_selected.title_contains
   if (title_contains == '' || title_contains == null) {
     return 'Any'
   } else {
@@ -47,7 +51,7 @@ function get_title_contains_label() {
 }
 
 function get_platform_label() {
-  const platform = state.query_selected.platform_select
+  const platform = query_selected.platform_select
   if (platform in query_options.platforms) {
     return query_options['platforms'][platform]['label']
   } else {
@@ -85,7 +89,7 @@ function get_numeric_label(min, max) {
       </p>
       <v-text-field
         clearable
-        v-model="state.query_selected.title_contains"
+        v-model="query_selected.title_contains"
         prepend-inner-icon="mdi-magnify"
         label="Title Contains"
       ></v-text-field>
@@ -99,7 +103,7 @@ function get_numeric_label(min, max) {
     <v-expansion-panel-text>
       <p class="my-2">Filter the markets in the sample to only those from a certain site.</p>
       <v-chip-group
-        v-model="state.query_selected.platform_select"
+        v-model="query_selected.platform_select"
         selected-class="text-deep-purple-accent-4"
         column
         filter
@@ -112,12 +116,12 @@ function get_numeric_label(min, max) {
   <v-expansion-panel>
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-group</v-icon>
-      Category: {{ state.query_selected.category_select || 'Any' }}
+      Category: {{ query_selected.category_select || 'Any' }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
       <p class="my-2">Filter the markets in the sample to only those in a certain category.</p>
       <v-chip-group
-        v-model="state.query_selected.category_select"
+        v-model="query_selected.category_select"
         selected-class="text-deep-purple-accent-4"
         column
         filter
@@ -134,8 +138,8 @@ function get_numeric_label(min, max) {
       Unique Traders:
       {{
         get_numeric_label(
-          state.query_selected.num_traders_min,
-          state.query_selected.num_traders_max
+          query_selected.num_traders_min,
+          query_selected.num_traders_max
         )
       }}
     </v-expansion-panel-title>
@@ -152,7 +156,7 @@ function get_numeric_label(min, max) {
           <v-col>
             <v-text-field
               label="Minimum"
-              v-model="state.query_selected.num_traders_min"
+              v-model="query_selected.num_traders_min"
               type="number"
               density="compact"
               hide-details
@@ -164,7 +168,7 @@ function get_numeric_label(min, max) {
           <v-col>
             <v-text-field
               label="Maximum"
-              v-model="state.query_selected.num_traders_max"
+              v-model="query_selected.num_traders_max"
               type="number"
               density="compact"
               hide-details
@@ -182,7 +186,7 @@ function get_numeric_label(min, max) {
       <v-icon class="mr-3">mdi-calendar</v-icon>
       Open Length:
       {{
-        get_numeric_label(state.query_selected.open_days_min, state.query_selected.open_days_max)
+        get_numeric_label(query_selected.open_days_min, query_selected.open_days_max)
       }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
@@ -195,7 +199,7 @@ function get_numeric_label(min, max) {
           <v-col>
             <v-text-field
               label="Minimum"
-              v-model="state.query_selected.open_days_min"
+              v-model="query_selected.open_days_min"
               type="number"
               density="compact"
               hide-details
@@ -207,7 +211,7 @@ function get_numeric_label(min, max) {
           <v-col>
             <v-text-field
               label="Maximum"
-              v-model="state.query_selected.open_days_max"
+              v-model="query_selected.open_days_max"
               type="number"
               density="compact"
               hide-details
@@ -225,7 +229,7 @@ function get_numeric_label(min, max) {
       <v-icon class="mr-3">mdi-cash</v-icon>
       Market Volume:
       {{
-        get_numeric_label(state.query_selected.volume_usd_min, state.query_selected.volume_usd_max)
+        get_numeric_label(query_selected.volume_usd_min, query_selected.volume_usd_max)
       }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
@@ -241,7 +245,7 @@ function get_numeric_label(min, max) {
           <v-col>
             <v-text-field
               label="Minimum"
-              v-model="state.query_selected.volume_usd_min"
+              v-model="query_selected.volume_usd_min"
               type="number"
               density="compact"
               hide-details
@@ -254,7 +258,7 @@ function get_numeric_label(min, max) {
           <v-col>
             <v-text-field
               label="Maximum"
-              v-model="state.query_selected.volume_usd_max"
+              v-model="query_selected.volume_usd_max"
               type="number"
               density="compact"
               hide-details

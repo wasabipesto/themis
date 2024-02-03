@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, toRefs, watch } from 'vue'
 import axios from 'axios'
 import CommonFilters from '@/components/CommonFilters.vue'
 import { state } from '@/modules/CommonState.js'
@@ -9,12 +9,53 @@ import { Bubble } from 'vue-chartjs'
 
 ChartJS.register(LinearScale, PointElement, Tooltip, Legend, Title)
 
+let { query_selected } = toRefs(state)
+
+query_selected.value = {
+  bin_attribute: "prob_at_midpoint",
+  bin_size: 0.05,
+  weight_attribute: "none",
+  ...query_selected.value
+}
+
+
+const query_options = {
+  bin_attribute: {
+    prob_at_midpoint: { label: 'Probability at Market Midpoint' },
+    prob_at_close: { label: 'Probability at Market Close' },
+    prob_time_avg: { 
+      label: 'Market Time-Averaged Probability',
+      tooltip: 
+        'For each market, this is the probability averaged over time. <br>\
+        Each market is only counted once.',
+    },
+  },
+  weight_attribute: {
+    none: { label: 'None' },
+    volume_usd: { label: 'Market Volume' },
+    open_days: { label: 'Market Length' },
+    num_traders: { label: 'Number of Traders' },
+  },
+}
+
+function getOptionLabel(option, value) {
+  try {
+    return query_options[option][value]['label']
+  } catch {
+    return '¯\\_(ツ)_/¯'
+  }
+}
+
 const chart_data = ref({
   datasets: []
 })
 const chart_options = ref({
   responsive: true,
   maintainAspectRatio: false,
+  interaction: {
+    intersect: false,
+    mode: 'nearest',
+  },
   layout: {
     padding: 8
   },
@@ -41,7 +82,7 @@ const chart_options = ref({
       },
       position: 'chartArea',
       align: 'start'
-    }
+    },
   },
   scales: {
     x: {
@@ -127,9 +168,6 @@ async function updateGraph() {
 
   loading.value = false
 }
-onMounted(() => {
-  updateGraph()
-})
 watch(
   () => state.query_selected,
   debounce((query_selected) => {
@@ -142,7 +180,62 @@ watch(
 
 <template>
   <v-navigation-drawer :width="400" v-model="state.left_sidebar_visible" app>
-    <v-expansion-panels multiple variant="accordion"> <CommonFilters /> </v-expansion-panels>
+    <v-expansion-panels multiple variant="accordion">
+      <v-expansion-panel>
+        <v-expansion-panel-title>
+          <v-icon class="mr-3">mdi-ruler-square-compass</v-icon>
+          X-Axis Bin Method: <br>
+          {{ getOptionLabel("bin_attribute", query_selected.bin_attribute) }}
+        </v-expansion-panel-title>
+        <v-expansion-panel-text>
+          <p class="my-2">
+            The binning method determines where on the x-axis each market is placed. This
+            metric should represent the market's true belief or predicted value.
+          </p>
+          <v-radio-group v-model="query_selected.bin_attribute">
+            <v-radio
+              v-for="(v, k) in query_options.bin_attribute"
+              :key="k"
+              :value="k"
+            >
+            <template v-slot:label>
+              {{ v.label }}
+              <v-tooltip
+                v-if="v.tooltip"
+                activator="parent"
+                location="end"
+              >
+                <span v-html="v.tooltip"></span>
+              </v-tooltip>
+            </template>
+            </v-radio>
+          </v-radio-group>
+        </v-expansion-panel-text>
+      </v-expansion-panel>
+      <v-expansion-panel>
+        <v-expansion-panel-title>
+          <v-icon class="mr-3">mdi-globe-model</v-icon>
+          Y-Axis (Resolution) Weighting: <br>
+          {{ getOptionLabel("weight_attribute", query_selected.weight_attribute) }}
+        </v-expansion-panel-title>
+        <v-expansion-panel-text>
+          <p class="my-2">
+            With no weighting, the true resolution value of all markets in each bin are
+            averaged evenly. Weighting gives more importance to markets meeting certain
+            criteria.
+          </p>
+          <v-radio-group v-model="query_selected.weight_attribute">
+            <v-radio
+              v-for="(v,k) in query_options.weight_attribute"
+              :key="k"
+              :value="k"
+              :label="v.label"
+            ></v-radio>
+          </v-radio-group>
+        </v-expansion-panel-text>
+      </v-expansion-panel>
+      <CommonFilters />
+    </v-expansion-panels>
   </v-navigation-drawer>
 
   <v-snackbar v-model="loading">

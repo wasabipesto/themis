@@ -100,9 +100,6 @@ function sendTableDataToQuery({ page, sortBy }) {
     sort_desc
   })
 }
-onMounted(() => {
-  updateList()
-})
 watch(
   () => state.query_selected,
   debounce((query_selected) => {
