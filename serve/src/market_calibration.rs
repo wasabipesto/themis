@@ -172,28 +172,22 @@ pub fn build_calibration_plot(
             bin.y_axis_denominator += market_weight_value;
         }
 
-        // convert "k"s back into standard probabilities for the x-axis
-        let x_series = bins.iter().map(|bin| bin.middle).collect();
-        // divide out the weighted values in each bin to get average y-values
-        // note that NaN is serialized as None, so if `denominator` is 0 the point won't be shown
-        let y_series = bins
+        let denominator_list = bins.iter().map(|bin| bin.y_axis_denominator).collect();
+        let scale_params = get_scale_params(denominator_list, 8.0, 32.0, 10.0);
+        let points = bins
             .iter()
-            .map(|bin| bin.y_axis_numerator / bin.y_axis_denominator)
+            .map(|bin| Point {
+                x: bin.middle,
+                y: bin.y_axis_numerator / bin.y_axis_denominator,
+                r: scale_data_point(bin.y_axis_denominator, scale_params.clone()),
+                //desc: format!(),
+            })
             .collect();
-        // get weighted value for the point size and scale it to fit the plot
-        let point_weights = bins.iter().map(|bin| bin.y_axis_denominator).collect();
-        let point_sizes = scale_list(point_weights, 8.0, 32.0, 10.0);
-
-        // get cached platform info from database
-        let platform_info = get_platform_by_name(conn, &platform)?;
 
         // save it all to the trace and push it to result
         traces.push(Trace {
-            platform: platform_info,
-            num_markets: market_list.len(),
-            x_series,
-            y_series,
-            point_sizes,
+            platform: get_platform_by_name(conn, &platform)?,
+            points,
         })
     }
 

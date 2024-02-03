@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use db_util::{get_all_platforms, get_platform_by_name, market, platform, Market, Platform};
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::{pg::PgConnection, prelude::*};
-use helper::{categorize_markets_by_platform, scale_list, ApiError};
+use helper::{categorize_markets_by_platform, get_scale_params, scale_data_point, ApiError};
 use market_calibration::{build_calibration_plot, CalibrationQueryParams};
 use market_filter::{get_markets_filtered, CommonFilterParams, PageSortParams};
 use market_list::{build_market_list, MarketListQueryParams};
@@ -26,15 +26,20 @@ struct PlotMetadata {
     y_title: String,
 }
 
+/// An individual datapoint to be plotted.
+#[derive(Debug, Serialize)]
+struct Point {
+    x: f32,
+    y: f32,
+    r: f32,
+    //desc: String,
+}
+
 /// Data sent to the client to render a plot, one plot per platform.
 #[derive(Debug, Serialize)]
 struct Trace {
     platform: Platform,
-    num_markets: usize,
-    x_series: Vec<f32>,
-    y_series: Vec<f32>,
-    point_sizes: Vec<f32>,
-    //point_descriptions: Vec<String>,
+    points: Vec<Point>,
 }
 
 /// Full response for a calibration plot.

@@ -5,17 +5,22 @@ use std::fmt;
 
 use super::*;
 
-/// Scale a list of weights down to valid point sizes.
-pub fn scale_list(
-    list: Vec<f32>,
+/// Scaling data for fast transformations.
+#[derive(Debug, Clone)]
+pub struct ScaleParams {
+    input_min: f32,
+    input_max: f32,
     output_min: f32,
     output_max: f32,
-    output_default: f32,
-) -> Vec<f32> {
-    if list.is_empty() {
-        return Vec::new();
-    }
+}
 
+/// Get scaling parameters for a list (input min/max to output min/max).
+pub fn get_scale_params(
+    list: Vec<f32>,
+    mut output_min: f32,
+    mut output_max: f32,
+    output_default: f32,
+) -> ScaleParams {
     let input_min = *list
         .iter()
         .min_by(|a, b| a.partial_cmp(b).unwrap())
@@ -24,16 +29,23 @@ pub fn scale_list(
         .iter()
         .max_by(|a, b| a.partial_cmp(b).unwrap())
         .unwrap();
-
     if input_min == input_max {
-        return vec![output_default; list.len()];
+        output_min = output_default;
+        output_max = output_default;
     }
 
-    list.iter()
-        .map(|&value| {
-            ((value - input_min) / (input_max - input_min)) * (output_max - output_min) + output_min
-        })
-        .collect()
+    ScaleParams {
+        input_min,
+        input_max,
+        output_min,
+        output_max,
+    }
+}
+
+/// Scale a point linearly from input min/max to output min/max.
+pub fn scale_data_point(value: f32, p: ScaleParams) -> f32 {
+    ((value - p.input_min) / (p.input_max - p.input_min)) * (p.output_max - p.output_min)
+        + p.output_min
 }
 
 /// Sort all markets into Vecs based on the platform name.
