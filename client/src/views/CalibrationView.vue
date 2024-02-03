@@ -80,6 +80,7 @@ const chart_options = ref({
     }
   }
 })
+const platform_data = ref([])
 
 const loading = ref(true)
 async function updateGraph() {
@@ -112,6 +113,18 @@ async function updateGraph() {
   chart_options.value.scales.y.title.text = response_data.metadata.y_title
   chart_options.value = { ...chart_options.value }
 
+  var platforms = []
+  response_data.traces.forEach((t) =>
+    platforms.push({
+      name: t.platform.name_fmt,
+      description: t.platform.description,
+      avatar_url: t.platform.avatar_url,
+      site_url: t.platform.site_url,
+      color: t.platform.color + '40'
+    })
+  )
+  platform_data.value = platforms
+
   loading.value = false
 }
 onMounted(() => {
@@ -138,10 +151,37 @@ watch(
   </v-snackbar>
 
   <v-main>
-    <v-card elevation="16">
-      <v-card-text>
-        <Bubble :data="chart_data" :options="chart_options" :width="1200" :height="600" />
-      </v-card-text>
-    </v-card>
+    <v-container>
+      <v-row>
+        <v-col>
+          <v-card elevation="10">
+            <v-card-text>
+              <Bubble :data="chart_data" :options="chart_options" :width="1200" :height="600" />
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+      <v-row>
+        <v-col class="v-col-3" v-for="p in platform_data">
+          <v-card
+            :color="p.color"
+            :href="p.site_url"
+            target="_blank"
+            append-icon="mdi-open-in-new"
+            hover
+          >
+            <template v-slot:title>
+              <span class="d-flex align-center">
+                <img :src="'../' + p.avatar_url" width="20" class="mr-2" />
+                {{ p.name }}
+              </span>
+            </template>
+            <template v-slot:text>
+              {{ p.description }}
+            </template>
+          </v-card>
+        </v-col>
+      </v-row>
+    </v-container>
   </v-main>
 </template>

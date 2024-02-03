@@ -48,6 +48,7 @@ table! {
         name_fmt -> Varchar,
         description -> Varchar,
         avatar_url -> Varchar,
+        site_url -> Varchar,
         color -> Varchar,
     }
 }
@@ -60,6 +61,7 @@ pub struct Platform {
     pub name_fmt: String,
     pub description: String,
     pub avatar_url: String,
+    pub site_url: String,
     pub color: String,
 }
 

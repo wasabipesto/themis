@@ -24,12 +24,16 @@ import { state } from '@/modules/CommonState.js'
         <RouterLink to="/list">List</RouterLink>
         <RouterLink to="/faq">FAQ</RouterLink>
         <a href="https://github.com/wasabipesto/themis" target="_blank">
-          Source
-          <v-icon size="x-small">mdi-open-in-new</v-icon>
+          <span class="d-flex align-center">
+            Source
+            <v-icon size="x-small" class="pl-2">mdi-open-in-new</v-icon>
+          </span>
         </a>
         <a href="https://wasabipesto.com/" target="_blank">
-          Made By
-          <v-icon size="x-small">mdi-open-in-new</v-icon>
+          <span class="d-flex align-center">
+            Made By
+            <v-icon size="x-small" class="pl-2">mdi-open-in-new</v-icon>
+          </span>
         </a>
       </nav>
     </template>
