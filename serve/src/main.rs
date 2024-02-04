@@ -19,8 +19,8 @@ mod market_filter;
 mod market_list;
 
 const POINT_SIZE_MIN: f32 = 6.0;
-const POINT_SIZE_MAX: f32 = 8.0;
-const POINT_SIZE_DEFAULT: f32 = 28.0;
+const POINT_SIZE_MAX: f32 = 28.0;
+const POINT_SIZE_DEFAULT: f32 = 8.0;
 
 #[get("/list_platforms")]
 async fn list_platforms(
