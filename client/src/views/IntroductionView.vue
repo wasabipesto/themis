@@ -502,7 +502,7 @@ const sample_calibration_chart_options = ref({
       tend to fall around 0.15 while aggregated <b>prediction markets</b> generally fall between
       0.10 and 0.20.
     </p>
-    <h2>Prediction markets</h2>
+    <h2>Prediction Markets</h2>
     <p>
       <v-card variant="tonal" class="left-box">
         <v-card-text> What are these prediction markets? How can they be so accurate? </v-card-text>
