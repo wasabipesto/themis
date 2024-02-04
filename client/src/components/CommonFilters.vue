@@ -136,12 +136,7 @@ function get_numeric_label(min, max) {
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-account-group-outline</v-icon>
       Unique Traders:
-      {{
-        get_numeric_label(
-          query_selected.num_traders_min,
-          query_selected.num_traders_max
-        )
-      }}
+      {{ get_numeric_label(query_selected.num_traders_min, query_selected.num_traders_max) }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
       <p class="my-2">
@@ -185,9 +180,7 @@ function get_numeric_label(min, max) {
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-calendar</v-icon>
       Open Length:
-      {{
-        get_numeric_label(query_selected.open_days_min, query_selected.open_days_max)
-      }}
+      {{ get_numeric_label(query_selected.open_days_min, query_selected.open_days_max) }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
       <p class="my-2">
@@ -228,9 +221,7 @@ function get_numeric_label(min, max) {
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-cash</v-icon>
       Market Volume:
-      {{
-        get_numeric_label(query_selected.volume_usd_min, query_selected.volume_usd_max)
-      }}
+      {{ get_numeric_label(query_selected.volume_usd_min, query_selected.volume_usd_max) }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
       <p class="my-2">
