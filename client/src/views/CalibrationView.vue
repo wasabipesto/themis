@@ -144,22 +144,24 @@ async function updateGraph() {
     console.error('Error fetching data:', error)
   }
 
-  var datasets = [{
-    type: 'line',
-    label: 'Reference',
-    backgroundColor: '#80808080',
-    borderColor: '#80808080',
-    data: [
-      {
-        x: 0,
-        y: 0,
-      },
-      {
-        x: 1,
-        y: 1,
-      },
-    ]
-  }]
+  var datasets = [
+    {
+      type: 'line',
+      label: 'Reference',
+      backgroundColor: '#80808080',
+      borderColor: '#80808080',
+      data: [
+        {
+          x: 0,
+          y: 0
+        },
+        {
+          x: 1,
+          y: 1
+        }
+      ]
+    }
+  ]
   response_data.traces.forEach((t) =>
     datasets.push({
       type: 'bubble',
@@ -235,7 +237,7 @@ watch(
         </v-expansion-panel-title>
         <v-expansion-panel-text>
           <p class="my-2">
-            With no weighting, the true resolution value of all markets in each bin are averaged
+            With no weighting, the true resolution values of all markets in each bin are averaged
             evenly. Weighting gives more importance to markets meeting certain criteria.
           </p>
           <v-radio-group v-model="query_selected.weight_attribute">
@@ -248,6 +250,7 @@ watch(
           </v-radio-group>
         </v-expansion-panel-text>
       </v-expansion-panel>
+      <v-divider :thickness="16"></v-divider>
       <CommonFilters />
     </v-expansion-panels>
   </v-navigation-drawer>

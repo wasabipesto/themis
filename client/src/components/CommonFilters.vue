@@ -41,20 +41,18 @@ const query_options = {
   ]
 }
 
-function get_title_contains_label() {
-  const title_contains = query_selected.title_contains
-  if (title_contains == '' || title_contains == null) {
+function get_text_label(text) {
+  if (text == '' || text == null) {
     return 'Any'
   } else {
-    return title_contains
+    return text
   }
 }
 
-function get_platform_label() {
-  const platform = query_selected.platform_select
-  if (platform in query_options.platforms) {
-    return query_options['platforms'][platform]['label']
-  } else {
+function get_option_label(option, value) {
+  try {
+    return query_options[option][value]['label']
+  } catch {
     return 'Any'
   }
 }
@@ -80,7 +78,7 @@ function get_numeric_label(min, max) {
   <v-expansion-panel>
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-message-outline</v-icon>
-      Title Contains: {{ get_title_contains_label() }}
+      Title Contains: {{ get_text_label(query_selected.title_contains) }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
       <p class="my-2">
@@ -98,7 +96,7 @@ function get_numeric_label(min, max) {
   <v-expansion-panel>
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-map-marker</v-icon>
-      Platform: {{ get_platform_label() }}
+      Platform: {{ get_option_label('platforms', query_selected.platform_select) }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
       <p class="my-2">Filter the markets in the sample to only those from a certain site.</p>
