@@ -205,7 +205,12 @@ pub fn build_calibration_plot(
         }
 
         let denominator_list = bins.iter().map(|bin| bin.y_axis_denominator).collect();
-        let scale_params = get_scale_params(denominator_list, 8.0, 32.0, 10.0);
+        let scale_params = get_scale_params(
+            denominator_list,
+            POINT_SIZE_MIN,
+            POINT_SIZE_MAX,
+            POINT_SIZE_DEFAULT,
+        );
         let points = bins
             .iter()
             .map(|bin| Point {
