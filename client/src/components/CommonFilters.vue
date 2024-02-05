@@ -90,7 +90,7 @@ function get_numeric_label(min, max, prefix, suffix) {
 </script>
 
 <template>
-  <v-expansion-panel>
+  <v-expansion-panel value="title_contains">
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-message-outline</v-icon>
       Title Contains: {{ get_text_label(query_selected.title_contains) }}
@@ -108,7 +108,7 @@ function get_numeric_label(min, max, prefix, suffix) {
       ></v-text-field>
     </v-expansion-panel-text>
   </v-expansion-panel>
-  <v-expansion-panel>
+  <v-expansion-panel value="platform_select">
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-map-marker</v-icon>
       Platform: {{ get_option_label('platforms', query_selected.platform_select) }}
@@ -126,7 +126,7 @@ function get_numeric_label(min, max, prefix, suffix) {
       </v-chip-group>
     </v-expansion-panel-text>
   </v-expansion-panel>
-  <v-expansion-panel>
+  <v-expansion-panel value="category_select">
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-group</v-icon>
       Category: {{ query_selected.category_select || 'Any' }}
@@ -145,7 +145,7 @@ function get_numeric_label(min, max, prefix, suffix) {
       </v-chip-group>
     </v-expansion-panel-text>
   </v-expansion-panel>
-  <v-expansion-panel>
+  <v-expansion-panel value="num_traders">
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-account-group-outline</v-icon>
       Unique Traders:
@@ -196,7 +196,7 @@ function get_numeric_label(min, max, prefix, suffix) {
       </v-container>
     </v-expansion-panel-text>
   </v-expansion-panel>
-  <v-expansion-panel>
+  <v-expansion-panel value="open_days">
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-calendar</v-icon>
       Open Length:
@@ -239,7 +239,7 @@ function get_numeric_label(min, max, prefix, suffix) {
       </v-container>
     </v-expansion-panel-text>
   </v-expansion-panel>
-  <v-expansion-panel>
+  <v-expansion-panel value="volume_usd">
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-cash</v-icon>
       Market Volume:
@@ -285,7 +285,7 @@ function get_numeric_label(min, max, prefix, suffix) {
       </v-container>
     </v-expansion-panel-text>
   </v-expansion-panel>
-  <v-expansion-panel>
+  <v-expansion-panel value="prob_at_midpoint">
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-calendar-import</v-icon>
       Midpoint Probability:
@@ -333,7 +333,7 @@ function get_numeric_label(min, max, prefix, suffix) {
       </v-container>
     </v-expansion-panel-text>
   </v-expansion-panel>
-  <v-expansion-panel>
+  <v-expansion-panel value="prob_at_close">
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-calendar-end</v-icon>
       Probability at Close:
@@ -381,7 +381,7 @@ function get_numeric_label(min, max, prefix, suffix) {
       </v-container>
     </v-expansion-panel-text>
   </v-expansion-panel>
-  <v-expansion-panel>
+  <v-expansion-panel value="prob_time_avg">
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-calendar-start</v-icon>
       Time-Averaged Probability:
@@ -429,7 +429,7 @@ function get_numeric_label(min, max, prefix, suffix) {
       </v-container>
     </v-expansion-panel-text>
   </v-expansion-panel>
-  <v-expansion-panel>
+  <v-expansion-panel value="resolution">
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-seal</v-icon>
       Resolution Probability:

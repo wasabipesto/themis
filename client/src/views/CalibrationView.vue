@@ -17,7 +17,7 @@ import { Bubble } from 'vue-chartjs'
 
 ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend, Title)
 
-let { query_selected } = toRefs(state)
+let { query_selected, left_sidebar_options_expanded } = toRefs(state)
 
 query_selected.value = {
   bin_attribute: 'prob_at_midpoint',
@@ -224,8 +224,8 @@ watch(
 
 <template>
   <v-navigation-drawer :width="400" v-model="state.left_sidebar_visible" app>
-    <v-expansion-panels multiple variant="accordion">
-      <v-expansion-panel>
+    <v-expansion-panels v-model="left_sidebar_options_expanded" multiple variant="accordion">
+      <v-expansion-panel value="calibration_bin_method">
         <v-expansion-panel-title>
           <v-icon class="mr-3">mdi-ruler-square-compass</v-icon>
           X-Axis Bin Method: <br />
@@ -248,7 +248,7 @@ watch(
           </v-radio-group>
         </v-expansion-panel-text>
       </v-expansion-panel>
-      <v-expansion-panel>
+      <v-expansion-panel value="calibration_weight_method">
         <v-expansion-panel-title>
           <v-icon class="mr-3">mdi-globe-model</v-icon>
           Y-Axis (Resolution) Weighting: <br />

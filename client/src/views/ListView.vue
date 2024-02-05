@@ -1,23 +1,25 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, toRefs, watch } from 'vue'
 import axios from 'axios'
 import CommonFilters from '@/components/CommonFilters.vue'
 import { state } from '@/modules/CommonState.js'
 import { debounce } from 'lodash'
+
+let { query_selected, left_sidebar_options_expanded } = toRefs(state)
 
 const loading = ref(true)
 const responseItems = ref([])
 async function updateList() {
   loading.value = true
 
-  if (state.query_selected.limit == null) {
-    state.query_selected.limit = 100
+  if (query_selected.limit == null) {
+    query_selected.limit = 100
   }
 
   let items
   try {
     const response = await axios.get('https://beta-api.calibration.city/list_markets', {
-      params: state.query_selected
+      params: query_selected.value
     })
     items = response.data.markets
   } catch (error) {
@@ -93,7 +95,7 @@ function sendTableDataToQuery({ page, sortBy }) {
     sort_desc = true
   }
 
-  state.query_selected = Object.assign(state.query_selected, {
+  query_selected.value = Object.assign(query_selected.value, {
     limit,
     offset,
     sort_attribute,
@@ -101,7 +103,7 @@ function sendTableDataToQuery({ page, sortBy }) {
   })
 }
 watch(
-  () => state.query_selected,
+  () => query_selected.value,
   debounce((query_selected) => {
     //console.log(query_selected)
     updateList()
@@ -112,13 +114,15 @@ watch(
 
 <template>
   <v-navigation-drawer :width="400" v-model="state.left_sidebar_visible" app>
-    <v-expansion-panels multiple variant="accordion"> <CommonFilters /> </v-expansion-panels>
+    <v-expansion-panels v-model="left_sidebar_options_expanded" multiple variant="accordion">
+      <CommonFilters />
+    </v-expansion-panels>
   </v-navigation-drawer>
   <v-main>
     <v-card flat title="Market List" class="my-5">
       <template v-slot:text>
         <v-text-field
-          v-model="state.query_selected.title_contains"
+          v-model="query_selected.title_contains"
           label="Search"
           prepend-inner-icon="mdi-magnify"
           single-line
