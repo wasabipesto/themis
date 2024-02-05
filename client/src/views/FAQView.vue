@@ -62,23 +62,23 @@ const details = [
     notes: [],
     types: [
       {
-        label: 'CPMM-1 Binary',
+        label: 'Binary',
         icon: 'mdi-checkbox-marked-outline'
       },
       {
-        label: 'CPMM-1 Pseudo-Numeric',
+        label: 'Pseudo-Numeric',
         icon: 'mdi-checkbox-blank-outline'
       },
       {
-        label: 'CPMM-1 Pseudo-Numeric',
+        label: 'Multiple-Choice Unlinked',
         icon: 'mdi-checkbox-blank-outline'
       },
       {
-        label: 'CPMM-1 Pseudo-Numeric',
+        label: 'Multiple-Choice Linked',
         icon: 'mdi-checkbox-blank-outline'
       },
       {
-        label: 'DPM-2 Binary',
+        label: 'Non-CPMM Markets',
         icon: 'mdi-checkbox-blank-off-outline'
       }
     ]
