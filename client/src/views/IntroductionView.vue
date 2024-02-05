@@ -168,7 +168,7 @@ const sample_calibration_chart_options = ref({
     </p>
     <h2>Quantified Predictions</h2>
     <p>
-      <v-card variant="tonal" class="left-box">
+      <v-card variant="tonal" color="deep-orange-darken-4" class="left-box">
         <v-card-text>
           Wait, what does "70%" even mean in this situation? How can you have 70% of an apocalypse?
         </v-card-text>
@@ -195,7 +195,7 @@ const sample_calibration_chart_options = ref({
       umbrella? Should I wear a jacket? Probably!
     </p>
     <p>
-      <v-card variant="tonal" class="left-box">
+      <v-card variant="tonal" color="deep-orange-darken-4" class="left-box">
         <v-card-text>
           Why should I care about a specific confidence number? Just say "probably" like everyone
           else!
@@ -227,7 +227,7 @@ const sample_calibration_chart_options = ref({
     </p>
     <h2>Grading Calibration</h2>
     <p>
-      <v-card variant="tonal" class="left-box">
+      <v-card variant="tonal" color="deep-orange-darken-4" class="left-box">
         <v-card-text>
           If these predictions are so important, how do we know who to trust? Just because someone
           is confident in themselves doesn't mean I should be confident in them.
@@ -246,7 +246,7 @@ const sample_calibration_chart_options = ref({
       ideally everything in the NO bucket will resolve NO, and everything in the YES bucket will
       resolve YES.
     </p>
-    <v-card variant="outlined" class="middle-box-narrow">
+    <v-card variant="outlined" color="purple-darken-4" class="middle-box-narrow">
       <v-card-text>
         <v-table density="compact">
           <thead>
@@ -293,7 +293,7 @@ const sample_calibration_chart_options = ref({
       fall and a 70% chance there will be a snowy Christmas this year, then we can sort those into
       the right buckets and then evaluate each one.
     </p>
-    <v-card variant="outlined" class="middle-box">
+    <v-card variant="outlined" color="purple-darken-4" class="middle-box">
       <v-card-text>
         <v-table density="compact">
           <thead>
@@ -367,7 +367,7 @@ const sample_calibration_chart_options = ref({
       predictor has a much better <b>calibration</b>.
     </p>
     <p>
-      <v-card variant="tonal" class="right-box">
+      <v-card variant="tonal" color="green-darken-4" class="right-box">
         <v-card-text>
           If a predictor is <b>calibrated</b> it means that, on average, predictions they make with
           X% confidence occur X% of the time.
@@ -384,7 +384,7 @@ const sample_calibration_chart_options = ref({
       >, but it's also known as a reliability diagram.
     </p>
     <p>
-      <v-card variant="outlined" class="middle-box">
+      <v-card variant="outlined" color="purple-darken-4" class="middle-box">
         <v-card-text>
           <Bubble
             :data="sample_calibration_chart_data"
@@ -403,7 +403,7 @@ const sample_calibration_chart_options = ref({
     </p>
     <h2>Grading Accuracy</h2>
     <p>
-      <v-card variant="tonal" class="left-box">
+      <v-card variant="tonal" color="deep-orange-darken-4" class="left-box">
         <v-card-text>
           Those charts are nice and all, but it still doesn't tell me how seriously I should take
           this person.
@@ -416,7 +416,7 @@ const sample_calibration_chart_options = ref({
       is an intuitive measure but it has some important caveats.
     </p>
     <p>
-      <v-card variant="tonal" class="right-box">
+      <v-card variant="tonal" color="green-darken-4" class="right-box">
         <v-card-text>
           A predictor is more <b>accurate</b> the closer their predictions are to the resolved
           outcome.
@@ -438,7 +438,7 @@ const sample_calibration_chart_options = ref({
       After we have done this for all predictions, we take the average of these scores. This gives
       us the Brier score for the prediction set.
     </p>
-    <v-card variant="outlined" class="middle-box">
+    <v-card variant="outlined" color="purple-darken-4" class="middle-box">
       <v-card-text>
         <v-table density="compact">
           <thead>
@@ -503,7 +503,7 @@ const sample_calibration_chart_options = ref({
       0.10 and 0.20.
     </p>
     <p>
-      <v-card variant="tonal" class="left-box">
+      <v-card variant="tonal" color="deep-orange-darken-4" class="left-box">
         <v-card-text> So how is accuracy different than calibration here? </v-card-text>
       </v-card>
     </p>
@@ -515,7 +515,7 @@ const sample_calibration_chart_options = ref({
     </p>
     <h2>Prediction Markets</h2>
     <p>
-      <v-card variant="tonal" class="left-box">
+      <v-card variant="tonal" color="deep-orange-darken-4" class="left-box">
         <v-card-text> What are these prediction markets? How can they be so accurate? </v-card-text>
       </v-card>
     </p>
@@ -544,7 +544,7 @@ const sample_calibration_chart_options = ref({
     </ul>
     <h2>Caveats</h2>
     <p>
-      <v-card variant="tonal" class="left-box">
+      <v-card variant="tonal" color="deep-orange-darken-4" class="left-box">
         <v-card-text>
           It seems like these statistics are pretty easy to game. What's stopping you from
           predicting 100% on a bunch of certain things?

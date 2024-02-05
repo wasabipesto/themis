@@ -43,6 +43,7 @@ import { state } from '@/modules/CommonState.js'
 <style scoped>
 nav a.router-link-exact-active {
   color: var(--color-text);
+  font-weight: bold;
 }
 
 nav a.router-link-exact-active:hover {

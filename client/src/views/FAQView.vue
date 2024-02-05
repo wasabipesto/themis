@@ -136,6 +136,7 @@ const details = [
             :title="res.title"
             :href="res.url"
             :text="res.text"
+            color="purple-darken-4"
             target="_blank"
             append-icon="mdi-open-in-new"
             hover
@@ -154,7 +155,7 @@ const details = [
     <v-container>
       <v-row align="start" justify="center">
         <v-col cols="6" v-for="plt in details">
-          <v-card variant="outlined" :title="plt.title">
+          <v-card variant="outlined" :title="plt.title" color="purple-darken-4">
             <v-card-text>
               <v-table density="compact">
                 <tbody>
