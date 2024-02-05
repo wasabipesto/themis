@@ -502,6 +502,17 @@ const sample_calibration_chart_options = ref({
       tend to fall around 0.15 while aggregated <b>prediction markets</b> generally fall between
       0.10 and 0.20.
     </p>
+    <p>
+      <v-card variant="tonal" class="left-box">
+        <v-card-text> So how is accuracy different than calibration here? </v-card-text>
+      </v-card>
+    </p>
+    <p>
+      Calibration is about how good you are at quantifying your own confidence, not always about how
+      close you are to the truth. If you make a lot of predictions that are incorrect, but are
+      honest about your confidence in those predictions, you can be more well-calibrated than
+      someone who makes accurate but over- or under-confident predictions.
+    </p>
     <h2>Prediction Markets</h2>
     <p>
       <v-card variant="tonal" class="left-box">
@@ -517,7 +528,7 @@ const sample_calibration_chart_options = ref({
       polling in many cases.
     </p>
     <p>
-      Markets give particiants a financial incentive to be correct, encouraging researchers and
+      Markets give participants a financial incentive to be correct, encouraging researchers and
       skilled forecasters to spend time investigating events. Individuals with insider information
       or niche skills can profit by trading, which also updates the market's probability.
     </p>

@@ -271,7 +271,7 @@ watch(
           </v-card>
         </v-col>
       </v-row>
-      <v-row>
+      <v-row align="center" justify="center">
         <v-col class="v-col-3" v-for="p in platform_data">
           <v-card
             :color="p.color"
