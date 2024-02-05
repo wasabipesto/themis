@@ -61,7 +61,8 @@ const chart_options = ref({
   maintainAspectRatio: false,
   interaction: {
     intersect: false,
-    mode: 'nearest'
+    mode: 'nearest',
+    axis: 'x'
   },
   layout: {
     padding: 8
@@ -89,6 +90,24 @@ const chart_options = ref({
       },
       position: 'chartArea',
       align: 'start'
+    },
+    tooltip: {
+      callbacks: {
+        title: function (context) {
+          const x_val = context[0].parsed.x
+          if ((0 < x_val) & (x_val < 1)) {
+            const bin_size = 0.05
+            const x_min = (x_val - bin_size / 2) * 100
+            const x_max = (x_val + bin_size / 2) * 100
+            return 'Predicted: ' + Math.round(x_min) + ' to ' + Math.round(x_max) + '%'
+          } else {
+            return 'Reference: ' + Math.round(x_val * 100) + '%'
+          }
+        },
+        label: function (context) {
+          return context.dataset.label + ': ' + (context.parsed.y * 100).toFixed(1) + '%'
+        }
+      }
     }
   },
   scales: {
