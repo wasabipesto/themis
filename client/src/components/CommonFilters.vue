@@ -57,18 +57,24 @@ function get_option_label(option, value) {
   }
 }
 
-function get_numeric_label(min, max) {
+function get_numeric_label(min, max, prefix, suffix) {
+  let less_word
+  if (suffix == '') {
+    less_word = 'less'
+  } else {
+    less_word = 'fewer'
+  }
   if (min == null) {
     if (max == null) {
       return 'Any'
     } else {
-      return max + ' or less'
+      return prefix + max + ' or ' + less_word + ' ' + suffix
     }
   } else {
     if (max == null) {
-      return min + ' or more'
+      return prefix + min + ' or more ' + suffix
     } else {
-      return min + ' to ' + max
+      return prefix + min + ' to ' + max + ' ' + suffix
     }
   }
 }
@@ -134,7 +140,14 @@ function get_numeric_label(min, max) {
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-account-group-outline</v-icon>
       Unique Traders:
-      {{ get_numeric_label(query_selected.num_traders_min, query_selected.num_traders_max) }}
+      {{
+        get_numeric_label(
+          query_selected.num_traders_min,
+          query_selected.num_traders_max,
+          '',
+          'traders'
+        )
+      }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
       <p class="my-2">
@@ -178,7 +191,9 @@ function get_numeric_label(min, max) {
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-calendar</v-icon>
       Open Length:
-      {{ get_numeric_label(query_selected.open_days_min, query_selected.open_days_max) }}
+      {{
+        get_numeric_label(query_selected.open_days_min, query_selected.open_days_max, '', 'days')
+      }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
       <p class="my-2">
@@ -219,7 +234,7 @@ function get_numeric_label(min, max) {
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-cash</v-icon>
       Market Volume:
-      {{ get_numeric_label(query_selected.volume_usd_min, query_selected.volume_usd_max) }}
+      {{ get_numeric_label(query_selected.volume_usd_min, query_selected.volume_usd_max, '$', '') }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
       <p class="my-2">
