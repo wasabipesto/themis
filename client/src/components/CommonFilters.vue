@@ -1,8 +1,18 @@
 <script setup>
 import { toRefs, watch } from 'vue'
 import { state } from '@/modules/CommonState.js'
+import { useDisplay } from 'vuetify'
 
-let { query_selected, show_sidebar_toggle } = toRefs(state)
+let { query_selected, left_sidebar_visible, show_sidebar_toggle } = toRefs(state)
+
+// automatically show sidebar if on desktop
+let { mdAndUp } = useDisplay()
+if (mdAndUp.value) {
+  left_sidebar_visible.value = true
+} else {
+  left_sidebar_visible.value = false
+}
+
 show_sidebar_toggle.value = true
 
 query_selected.value = {

@@ -291,7 +291,7 @@ watch(
         </v-col>
       </v-row>
       <v-row align="center" justify="center">
-        <v-col class="v-col-3" v-for="p in platform_data">
+        <v-col cols="12" sm="6" md="3" v-for="p in platform_data">
           <v-card
             :color="p.color"
             :href="p.site_url"

@@ -136,7 +136,7 @@ const details = [
     <h2>Resources</h2>
     <v-container>
       <v-row align="center" justify="center">
-        <v-col cols="6" v-for="res in resources">
+        <v-col cols="12" md="6" v-for="res in resources">
           <v-card
             variant="tonal"
             :title="res.title"
@@ -160,7 +160,7 @@ const details = [
     </p>
     <v-container>
       <v-row align="start" justify="center">
-        <v-col cols="6" v-for="plt in details">
+        <v-col cols="12" md="6" v-for="plt in details">
           <v-card variant="outlined" :title="plt.title" color="purple-darken-4">
             <v-card-text>
               <v-table density="compact">

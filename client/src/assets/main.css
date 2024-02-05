@@ -7,6 +7,15 @@
   font-weight: normal;
 }
 
+@media (max-width: 1024px) {
+  #app {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 1rem;
+    font-weight: normal;
+  }
+}
+
 a {
   text-decoration: none;
   color: rgb(106, 27, 154);
