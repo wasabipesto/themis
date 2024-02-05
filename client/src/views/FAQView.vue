@@ -1,4 +1,10 @@
 <script setup>
+import { toRefs } from 'vue'
+import { state } from '@/modules/CommonState.js'
+
+let { show_sidebar_toggle } = toRefs(state)
+show_sidebar_toggle.value = false
+
 const resources = [
   {
     title: 'Prediction Market FAQ',

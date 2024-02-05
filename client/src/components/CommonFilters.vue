@@ -2,7 +2,8 @@
 import { toRefs } from 'vue'
 import { state } from '@/modules/CommonState.js'
 
-let { query_selected } = toRefs(state)
+let { query_selected, show_sidebar_toggle } = toRefs(state)
+show_sidebar_toggle.value = true
 
 query_selected.value = {
   title_contains: null,

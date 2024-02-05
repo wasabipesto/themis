@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, toRefs } from 'vue'
 import {
   Chart as ChartJS,
   Tooltip,
@@ -10,6 +10,10 @@ import {
   Title
 } from 'chart.js'
 import { Bubble } from 'vue-chartjs'
+import { state } from '@/modules/CommonState.js'
+
+let { show_sidebar_toggle } = toRefs(state)
+show_sidebar_toggle.value = false
 
 ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend, Title)
 

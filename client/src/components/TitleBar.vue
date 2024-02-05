@@ -6,9 +6,11 @@ import { state } from '@/modules/CommonState.js'
   <v-app-bar>
     <template v-slot:prepend>
       <v-app-bar-nav-icon
+        v-if="state.show_sidebar_toggle"
         variant="text"
         @click.stop="state.left_sidebar_visible = !state.left_sidebar_visible"
-      ></v-app-bar-nav-icon>
+      >
+      </v-app-bar-nav-icon>
     </template>
 
     <v-app-bar-title>
