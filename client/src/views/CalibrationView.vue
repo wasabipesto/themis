@@ -153,15 +153,15 @@ const loading = ref(true)
 async function updateGraph() {
   loading.value = true
 
-  let response_data
+  let response
   try {
-    const response = await axios.get('https://beta-api.calibration.city/calibration_plot', {
-      params: state.query_selected
+    response = await axios.get('https://beta-api.calibration.city/calibration_plot', {
+      params: query_selected.value
     })
-    response_data = response.data
   } catch (error) {
     console.error('Error fetching data:', error)
   }
+  const response_data = response.data
 
   var datasets = [
     {

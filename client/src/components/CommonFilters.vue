@@ -1,5 +1,5 @@
 <script setup>
-import { toRefs } from 'vue'
+import { toRefs, watch } from 'vue'
 import { state } from '@/modules/CommonState.js'
 
 let { query_selected, show_sidebar_toggle } = toRefs(state)
@@ -87,6 +87,18 @@ function get_numeric_label(min, max, prefix, suffix) {
     }
   }
 }
+
+watch(
+  query_selected,
+  () => {
+    for (let key in query_selected.value) {
+      if (query_selected.value[key] === '' || query_selected.value[key] === undefined) {
+        query_selected.value[key] = null
+      }
+    }
+  },
+  { deep: true }
+)
 </script>
 
 <template>

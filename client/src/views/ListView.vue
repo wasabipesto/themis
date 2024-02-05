@@ -16,15 +16,15 @@ async function updateList() {
     query_selected.limit = 100
   }
 
-  let items
+  let response
   try {
-    const response = await axios.get('https://beta-api.calibration.city/list_markets', {
+    response = await axios.get('https://beta-api.calibration.city/list_markets', {
       params: query_selected.value
     })
-    items = response.data.markets
   } catch (error) {
     console.error('Error fetching market list:', error)
   }
+  const items = response.data.markets
 
   items.forEach((obj) => {
     obj.platform = obj.platform.charAt(0).toUpperCase() + obj.platform.slice(1)
