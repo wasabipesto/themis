@@ -19,6 +19,14 @@ query_selected.value = {
   open_days_max: null,
   volume_usd_min: null,
   volume_usd_max: null,
+  prob_at_midpoint_min: null,
+  prob_at_midpoint_max: null,
+  prob_at_close_min: null,
+  prob_at_close_max: null,
+  prob_time_avg_min: null,
+  prob_time_avg_max: null,
+  resolution_min: null,
+  resolution_max: null,
   ...query_selected.value
 }
 
@@ -270,6 +278,191 @@ function get_numeric_label(min, max, prefix, suffix) {
               variant="outlined"
               clearable
               prefix="$"
+            >
+            </v-text-field>
+          </v-col>
+        </v-row>
+      </v-container>
+    </v-expansion-panel-text>
+  </v-expansion-panel>
+  <v-expansion-panel>
+    <v-expansion-panel-title>
+      <v-icon class="mr-3">mdi-calendar-import</v-icon>
+      Midpoint Probability:
+      {{
+        get_numeric_label(
+          query_selected.prob_at_midpoint_min,
+          query_selected.prob_at_midpoint_max,
+          '',
+          ''
+        )
+      }}
+    </v-expansion-panel-title>
+    <v-expansion-panel-text>
+      <p class="my-2">
+        Filter the markets in the sample to only those with a midpoint probability in a certain
+        range. Must be a decimal between 0 and 1.
+      </p>
+      <v-container>
+        <v-row>
+          <v-col>
+            <v-text-field
+              label="Minimum"
+              v-model="query_selected.prob_at_midpoint_min"
+              type="number"
+              density="compact"
+              hide-details
+              variant="outlined"
+              clearable
+            >
+            </v-text-field>
+          </v-col>
+          <v-col>
+            <v-text-field
+              label="Maximum"
+              v-model="query_selected.prob_at_midpoint_max"
+              type="number"
+              density="compact"
+              hide-details
+              variant="outlined"
+              clearable
+            >
+            </v-text-field>
+          </v-col>
+        </v-row>
+      </v-container>
+    </v-expansion-panel-text>
+  </v-expansion-panel>
+  <v-expansion-panel>
+    <v-expansion-panel-title>
+      <v-icon class="mr-3">mdi-calendar-end</v-icon>
+      Probability at Close:
+      {{
+        get_numeric_label(
+          query_selected.prob_at_close_min,
+          query_selected.prob_at_close_max,
+          '',
+          ''
+        )
+      }}
+    </v-expansion-panel-title>
+    <v-expansion-panel-text>
+      <p class="my-2">
+        Filter the markets in the sample to only those with a closing probability in a certain
+        range. Must be a decimal between 0 and 1.
+      </p>
+      <v-container>
+        <v-row>
+          <v-col>
+            <v-text-field
+              label="Minimum"
+              v-model="query_selected.prob_at_close_min"
+              type="number"
+              density="compact"
+              hide-details
+              variant="outlined"
+              clearable
+            >
+            </v-text-field>
+          </v-col>
+          <v-col>
+            <v-text-field
+              label="Maximum"
+              v-model="query_selected.prob_at_close_max"
+              type="number"
+              density="compact"
+              hide-details
+              variant="outlined"
+              clearable
+            >
+            </v-text-field>
+          </v-col>
+        </v-row>
+      </v-container>
+    </v-expansion-panel-text>
+  </v-expansion-panel>
+  <v-expansion-panel>
+    <v-expansion-panel-title>
+      <v-icon class="mr-3">mdi-calendar-start</v-icon>
+      Time-Averaged Probability:
+      {{
+        get_numeric_label(
+          query_selected.prob_time_avg_min,
+          query_selected.prob_time_avg_max,
+          '',
+          ''
+        )
+      }}
+    </v-expansion-panel-title>
+    <v-expansion-panel-text>
+      <p class="my-2">
+        Filter the markets in the sample to only those with a time-averaged probability in a certain
+        range. Must be a decimal between 0 and 1.
+      </p>
+      <v-container>
+        <v-row>
+          <v-col>
+            <v-text-field
+              label="Minimum"
+              v-model="query_selected.prob_time_avg_min"
+              type="number"
+              density="compact"
+              hide-details
+              variant="outlined"
+              clearable
+            >
+            </v-text-field>
+          </v-col>
+          <v-col>
+            <v-text-field
+              label="Maximum"
+              v-model="query_selected.prob_time_avg_max"
+              type="number"
+              density="compact"
+              hide-details
+              variant="outlined"
+              clearable
+            >
+            </v-text-field>
+          </v-col>
+        </v-row>
+      </v-container>
+    </v-expansion-panel-text>
+  </v-expansion-panel>
+  <v-expansion-panel>
+    <v-expansion-panel-title>
+      <v-icon class="mr-3">mdi-seal</v-icon>
+      Resolution Probability:
+      {{ get_numeric_label(query_selected.resolution_min, query_selected.resolution_max, '', '') }}
+    </v-expansion-panel-title>
+    <v-expansion-panel-text>
+      <p class="my-2">
+        Filter the markets in the sample to only those that resolved with a certain value. Useful
+        for isolating markets that resolves YES (1) or NO (0). Must be a decimal between 0 and 1.
+      </p>
+      <v-container>
+        <v-row>
+          <v-col>
+            <v-text-field
+              label="Minimum"
+              v-model="query_selected.resolution_min"
+              type="number"
+              density="compact"
+              hide-details
+              variant="outlined"
+              clearable
+            >
+            </v-text-field>
+          </v-col>
+          <v-col>
+            <v-text-field
+              label="Maximum"
+              v-model="query_selected.resolution_max"
+              type="number"
+              density="compact"
+              hide-details
+              variant="outlined"
+              clearable
             >
             </v-text-field>
           </v-col>
