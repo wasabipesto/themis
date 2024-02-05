@@ -389,7 +389,6 @@ const sample_calibration_chart_options = ref({
     </p>
     <p>
       <v-card variant="outlined" color="purple-darken-4" class="middle-box">
-        <!--
         <v-card-text>
           <Bubble
             :data="sample_calibration_chart_data"
@@ -398,7 +397,6 @@ const sample_calibration_chart_options = ref({
             :height="400"
           />
         </v-card-text>
-      -->
       </v-card>
     </p>
     <p>
