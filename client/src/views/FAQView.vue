@@ -36,96 +36,164 @@ const resources = [
 const details = [
   {
     title: 'All',
-    notes: [
-      'To calculate the time-averaged probability, we assume the market opens at 50%. Once the first trade occurs, we track the probability at each trade and the cumulative durations to generate an average.'
+    items: [
+      {
+        items: [
+          {
+            label:
+              'To calculate the time-averaged probability, we assume the market opens at 50%. Once the first trade occurs, we track the probability at each trade and the cumulative durations to generate an average.',
+            icon: 'mdi-information-outline'
+          }
+        ]
+      }
     ]
   },
   {
     title: 'Kalshi',
-    notes: [
-      'We use the YES price from the most recently executed trade as the probability at any point in time.',
-      'The counter for the number of unique traders is currently unimplemented.'
-    ],
-    types: [
+    items: [
       {
-        label: 'Binary',
-        icon: 'mdi-checkbox-marked-outline'
+        label: 'Notes:',
+        items: [
+          {
+            label:
+              'We use the YES price from the most recently executed trade as the probability at any point in time.',
+            icon: 'mdi-information-outline'
+          },
+          {
+            label: 'The counter for the number of unique traders is currently unimplemented.',
+            icon: 'mdi-progress-wrench'
+          }
+        ]
       },
       {
-        label: 'Multiple-Choice',
-        icon: 'mdi-checkbox-blank-outline'
+        label: 'Supported market types:',
+        items: [
+          {
+            label: 'Binary',
+            icon: 'mdi-checkbox-marked-circle-outline'
+          },
+          {
+            label: 'Multiple-Choice',
+            icon: 'mdi-circle-outline'
+          }
+        ]
       }
     ]
   },
   {
     title: 'Manifold',
-    notes: [],
-    types: [
+    items: [
       {
-        label: 'Binary',
-        icon: 'mdi-checkbox-marked-outline'
-      },
-      {
-        label: 'Pseudo-Numeric',
-        icon: 'mdi-checkbox-blank-outline'
-      },
-      {
-        label: 'Multiple-Choice Unlinked',
-        icon: 'mdi-checkbox-blank-outline'
-      },
-      {
-        label: 'Multiple-Choice Linked',
-        icon: 'mdi-checkbox-blank-outline'
-      },
-      {
-        label: 'Non-CPMM Markets',
-        icon: 'mdi-checkbox-blank-off-outline'
+        label: 'Supported market types:',
+        items: [
+          {
+            label: 'Binary',
+            icon: 'mdi-checkbox-marked-circle-outline'
+          },
+          {
+            label: 'Pseudo-Numeric',
+            icon: 'mdi-progress-wrench'
+          },
+          {
+            label: 'Multiple-Choice Unlinked',
+            icon: 'mdi-progress-wrench'
+          },
+          {
+            label: 'Multiple-Choice Linked',
+            icon: 'mdi-circle-outline'
+          },
+          {
+            label: 'Non-CPMM Markets',
+            icon: 'mdi-cancel'
+          }
+        ]
       }
     ]
   },
   {
     title: 'Metaculus',
-    notes: [
-      'We use the community_prediction.history.x2.avg series for the probability.',
-      'Since Metaculus does not have bets, we use the number of forecasts at 10 cents each for the market volume.'
-    ],
-    types: [
+    items: [
       {
-        label: 'Binary',
-        icon: 'mdi-checkbox-marked-outline'
+        label: 'Notes:',
+        items: [
+          {
+            label: 'We use the community prediction (history.x2.avg series) for the probability.',
+            icon: 'mdi-information-outline'
+          },
+          {
+            label:
+              'Since Metaculus does not have bets, we use the number of forecasts at 10 cents each for the market volume.',
+            icon: 'mdi-information-outline'
+          }
+        ]
       },
       {
-        label: 'Multiple-Choice',
-        icon: 'mdi-checkbox-blank-outline'
+        label: 'Supported market types:',
+        items: [
+          {
+            label: 'Binary',
+            icon: 'mdi-checkbox-marked-circle-outline'
+          },
+          {
+            label: 'Multiple-Choice',
+            icon: 'mdi-circle-outline'
+          }
+        ]
       }
     ]
   },
   {
     title: 'Polymarket',
-    notes: [
-      'We used to use the Gamma API which had defined start and end dates, but that functionality has been removed. We declare a market has started when the first trade occurs and end at the date noted by end_date_iso. This field is optional and markets without it are not counted.',
-      'The counter for the number of unique traders is currently unimplemented.',
-      'The counter for market volume is currently unimplemented.'
-    ],
-    types: [
+    items: [
       {
-        label: 'Binary',
-        icon: 'mdi-checkbox-marked-outline'
+        label: 'Notes:',
+        items: [
+          {
+            label:
+              'We declare a market has started when the first trade occurs and end at the date noted by end_date_iso. This field is optional and markets without it are not counted.',
+            icon: 'mdi-information-outline'
+          },
+          {
+            label: 'The counter for the number of unique traders is currently unimplemented.',
+            icon: 'mdi-progress-wrench'
+          },
+          {
+            label: 'The counter for market volume is currently unimplemented.',
+            icon: 'mdi-progress-wrench'
+          }
+        ]
       },
       {
-        label: 'Multiple-Choice',
-        icon: 'mdi-checkbox-blank-outline'
-      },
-      {
-        label: 'Non-CLOB Markets',
-        icon: 'mdi-checkbox-blank-off-outline'
+        label: 'Supported market types:',
+        items: [
+          {
+            label: 'Binary',
+            icon: 'mdi-checkbox-marked-circle-outline'
+          },
+          {
+            label: 'Multiple-Choice',
+            icon: 'mdi-circle-outline'
+          },
+          {
+            label: 'Non-CLOB Markets',
+            icon: 'mdi-cancel'
+          }
+        ]
       }
     ]
   },
   {
     title: 'Disclaimer',
-    notes: [
-      'I use Manifold much more than any of the other platforms included in this analysis, and have received bounties from the Manifold team in both mana (play money) and real money. Their contributions did not affect the contents of this site in any way.'
+    items: [
+      {
+        items: [
+          {
+            label:
+              'I use Manifold much more than any of the other platforms included in this analysis, and have received bounties from the Manifold team in both mana (play money) and real money. Their contributions did not affect the contents of this site in any way.',
+            icon: 'mdi-shield-alert-outline'
+          }
+        ]
+      }
     ]
   }
 ]
@@ -160,37 +228,28 @@ const details = [
     </p>
     <v-container>
       <v-row align="start" justify="center">
-        <v-col cols="12" md="6" v-for="plt in details">
-          <v-card variant="outlined" :title="plt.title" color="purple-darken-4">
+        <v-col cols="12" md="6" v-for="i in details">
+          <v-card variant="outlined" :title="i.title" color="purple-darken-4">
             <v-card-text>
-              <v-table density="compact">
-                <tbody>
-                  <tr v-for="note in plt.notes">
-                    <td>
-                      <div class="detail-card-cell">
-                        {{ note }}
-                      </div>
-                    </td>
-                  </tr>
-                  <tr v-if="'types' in plt">
-                    <td>
-                      <div class="detail-card-cell">
-                        Supported market types:
-                        <v-table density="compact">
-                          <tbody>
-                            <tr v-for="typ in plt.types">
-                              <td width="50">
-                                <v-icon :icon="typ.icon" size="small"></v-icon>
-                              </td>
-                              <td>{{ typ.label }}</td>
-                            </tr>
-                          </tbody>
-                        </v-table>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </v-table>
+              <div v-for="j in i.items" class="ma-3">
+                <v-table density="compact">
+                  <thead v-if="j.label">
+                    <tr>
+                      <th colspan="2">
+                        {{ j.label }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="k in j.items">
+                      <td width="50">
+                        <v-icon :icon="k.icon"></v-icon>
+                      </td>
+                      <td class="py-1">{{ k.label }}</td>
+                    </tr>
+                  </tbody>
+                </v-table>
+              </div>
             </v-card-text>
           </v-card>
         </v-col>
@@ -208,7 +267,7 @@ const details = [
 p {
   margin: 1rem;
 }
-.detail-card-cell {
+.detail-cell {
   margin: 0.5rem 0;
 }
 code {
