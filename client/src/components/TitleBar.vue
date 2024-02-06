@@ -58,39 +58,55 @@ const right_sidebar_visible = ref(false)
     v-model="right_sidebar_visible"
   >
     <nav>
-      <v-list class="text-center">
-        <v-list-item>
-          <RouterLink to="/introduction">Introduction</RouterLink>
-        </v-list-item>
-        <v-list-item>
-          <RouterLink to="/calibration">Calibration</RouterLink>
-        </v-list-item>
-        <v-list-item>
-          <RouterLink to="/accuracy">Accuracy</RouterLink>
-        </v-list-item>
-        <v-list-item>
-          <RouterLink to="/list">List</RouterLink>
-        </v-list-item>
-        <v-list-item>
-          <RouterLink to="/faq">FAQ</RouterLink>
-        </v-list-item>
-        <v-list-item>
-          <a href="https://github.com/wasabipesto/themis" target="_blank">
-            <span class="d-flex align-center">
-              Source
-              <v-icon size="x-small" class="pl-2">mdi-open-in-new</v-icon>
-            </span>
-          </a>
-        </v-list-item>
-        <v-list-item>
-          <a href="https://wasabipesto.com/" target="_blank">
-            <span class="d-flex align-center">
-              Made By
-              <v-icon size="x-small" class="pl-2">mdi-open-in-new</v-icon>
-            </span>
-          </a>
-        </v-list-item>
-      </v-list>
+      <v-table>
+        <tbody>
+          <tr>
+            <td>
+              <RouterLink to="/introduction">Introduction</RouterLink>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <RouterLink to="/calibration">Calibration</RouterLink>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <RouterLink to="/accuracy">Accuracy</RouterLink>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <RouterLink to="/list">List</RouterLink>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <RouterLink to="/faq">FAQ</RouterLink>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <a href="https://github.com/wasabipesto/themis" target="_blank">
+                <span class="d-flex align-center">
+                  Source
+                  <v-icon size="x-small" class="pl-2">mdi-open-in-new</v-icon>
+                </span>
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <a href="https://wasabipesto.com/" target="_blank">
+                <span class="d-flex align-center">
+                  Made By
+                  <v-icon size="x-small" class="pl-2">mdi-open-in-new</v-icon>
+                </span>
+              </a>
+            </td>
+          </tr>
+        </tbody>
+      </v-table>
     </nav>
   </v-navigation-drawer>
 </template>
