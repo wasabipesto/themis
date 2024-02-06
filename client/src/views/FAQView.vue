@@ -208,7 +208,7 @@ const details = [
           <v-card
             variant="tonal"
             :title="res.title"
-            :href="res.url"
+            :href="res.link"
             :text="res.text"
             color="purple-darken-4"
             target="_blank"
