@@ -611,4 +611,10 @@ td {
 ul {
   margin: 1rem 3rem;
 }
+
+@media (max-width: 960px) {
+  .v-main {
+    max-width: 100%;
+  }
+}
 </style>

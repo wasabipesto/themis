@@ -267,10 +267,4 @@ const details = [
 p {
   margin: 1rem;
 }
-.detail-cell {
-  margin: 0.5rem 0;
-}
-code {
-  font-size: 0.75rem;
-}
 </style>
