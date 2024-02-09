@@ -1,35 +1,7 @@
-# client
+# themis-client
 
-This template should help get you started developing with Vue 3 in Vite.
+This is the frontend of the Calibration City project. It's changed many times, most recently into an actual Vue project.
 
-## Recommended IDE Setup
+## A Plea
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vitejs.dev/config/).
-
-## Project Setup
-
-```sh
-npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
-npm run dev
-```
-
-### Compile and Minify for Production
-
-```sh
-npm run build
-```
-
-### Lint with [ESLint](https://eslint.org/)
-
-```sh
-npm run lint
-```
+I am not a web developer. Please keep this in mind when browsing/editing this code.

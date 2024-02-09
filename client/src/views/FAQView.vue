@@ -73,7 +73,11 @@ const details = [
             icon: 'mdi-checkbox-marked-circle-outline'
           },
           {
-            label: 'Multiple-Choice',
+            label: 'Multiple-Choice Unlinked',
+            icon: 'mdi-checkbox-marked-circle-outline'
+          },
+          {
+            label: 'Multiple-Choice Linked',
             icon: 'mdi-circle-outline'
           }
         ]
@@ -167,11 +171,15 @@ const details = [
         label: 'Supported market types:',
         items: [
           {
-            label: 'Binary',
+            label: 'Single-Market Binary',
             icon: 'mdi-checkbox-marked-circle-outline'
           },
           {
-            label: 'Multiple-Choice',
+            label: 'Multiple-Choice Unlinked',
+            icon: 'mdi-checkbox-marked-circle-outline'
+          },
+          {
+            label: 'Multiple-Choice Linked',
             icon: 'mdi-circle-outline'
           },
           {
