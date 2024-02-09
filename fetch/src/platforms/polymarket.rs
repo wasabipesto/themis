@@ -69,7 +69,7 @@ impl MarketStandardizer for MarketFull {
         self.market.condition_id.to_owned()
     }
     fn url(&self) -> String {
-        POLYMARKET_SITE_BASE.to_owned() + "/event/" + &self.market.market_slug
+        POLYMARKET_SITE_BASE.to_owned() + "/market/" + &self.market.market_slug
     }
     fn open_dt(&self) -> Result<DateTime<Utc>, MarketConvertError> {
         if let Some(first_event) = self.events().first() {
