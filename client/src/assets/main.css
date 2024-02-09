@@ -1,0 +1,37 @@
+@import './base.css';
+
+#app {
+  max-width: 95%;
+  margin: 0 auto;
+  padding: 2rem;
+  font-weight: normal;
+}
+
+@media (max-width: 1024px) {
+  #app {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 1rem;
+    font-weight: normal;
+  }
+}
+
+a {
+  text-decoration: none;
+  color: rgb(106, 27, 154);
+  transition: 0.4s;
+  padding: 3px;
+}
+
+@media (hover: hover) {
+  a:hover {
+    background-color: rgb(74, 20, 140, 0.2);
+  }
+}
+
+@media (min-width: 1024px) {
+  body {
+    display: flex;
+    place-items: center;
+  }
+}

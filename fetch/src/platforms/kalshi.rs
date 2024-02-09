@@ -91,8 +91,11 @@ impl MarketStandardizer for MarketFull {
     fn url(&self) -> String {
         let ticker_regex = Regex::new(r"^(\w+)-").unwrap();
         let ticker_prefix =
-            if let Some(ticker_regex_result) = ticker_regex.find(&self.market.event_ticker) {
-                ticker_regex_result.as_str()
+            if let Some(ticker_regex_result) = ticker_regex.captures(&self.market.event_ticker) {
+                ticker_regex_result
+                    .get(1)
+                    .expect("failed to get first regex match even though regex reported a match")
+                    .as_str()
             } else {
                 // Some tickers do not have a prefix, just use the market ticker for both
                 &self.market.event_ticker
@@ -163,7 +166,7 @@ impl TryInto<MarketStandard> for MarketFull {
             category: self.category(),
             prob_at_midpoint: self.prob_at_percent(0.5)?,
             prob_at_close: self.prob_at_percent(1.0)?,
-            prob_time_weighted: self.prob_time_weighted()?,
+            prob_time_avg: self.prob_time_avg()?,
             resolution: self.resolution()?,
         })
     }

@@ -24,43 +24,6 @@ Subproject `serve` queries an external Postgres database with saved markets, cal
 
 The `client` subproject is actually just a single HTML file that pulls a few scripts via CDN to build the layout and then queries the `serve` API to get data.
 
-## Implementation details
-
-When standardizing things across platforms we ran into some edge cases, I've tried to detail them all here. When in doubt, you can always check the source to see how we compute a specific attribute.
-
-### All
-- To calculate `prob_time_weighted`, we assume the market opens at 50%. Once the first trade occurs, we track the probability at each trade and the cumulative durations to generate an average.
-
-### Kalshi
-- We use the YES price from the most recently executed trade as the probability at any point in time.
-- The counter for `num_traders` is currently unimplemented.
-- Supported market types:
-    - [x] Binary
-
-### Manifold
-- Supported market types: 
-    - [x] CPMM-1 Binary
-    - [ ] CPMM-1 Pseudo-Numeric
-    - [ ] CPMM-1 Multiple-Choice Unlinked
-    - [ ] CPMM-1 Multiple-Choice Linked
-    - [ ] DPM-2 Binary
-
-### Metaculus
-- We use the `community_prediction.history.x2.avg` series for the probability
-- Since Metaculus does not have bets, we use the number of forecasts at 10 cents each for `volume_usd`
-- Supported market types: 
-    - [x] Binary
-    - [ ] Multiple-Choice
-
-### Polymarket
-- We used to use the Gamma API which had defined start and end dates, but that functionality has been removed. We declare a market has started when the first trade occurs and end at the date noted by `end_date_iso`. This field is optional and markets without it are not counted.
-- The counter for `volume` is currently unimplemented.
-- The counter for `num_traders` is currently unimplemented.
-- Supported market types:
-    - [x] Binary
-    - [ ] Multiple-Choice
-- We also do not support old markets that used a previous order system, only those that use the newer CLOB system.
-
 ## Roadmap
 
 These are the things I plan to add in the near future.
@@ -87,20 +50,14 @@ These are the things I plan to add in the near future.
 - Add optional KDE smoothing to calibration
 
 ### Client
-- Add a filter for open & close times
-- Revise to clarify Brier score is for accuracy, not calibration
-- Add a dedicated explainer page with a walkthough on calibration
+- Add filters for open & close times
 - Add a way to share a link to the current view with weights & filters
-- Investigate mobile support: dragging slider moves sidebar, can't re-enter sidebar
-- Investigate swapping out plotly for a custom D3 component
 
 ### Other
 - Investigate PredictIt
 - Add an x-method for a random point along the market duration
 - Add an x-method with time-based probability spread
 - Set up docker container for client and a sample compose file
-- Return a list of markets in each sample
-- Plot Brier score against any x-axis (closed date, number of traders, market volume)
 - Investigate a standardized corpus of questions across platforms
 
 ## Disclaimer

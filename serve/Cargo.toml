@@ -9,7 +9,8 @@ edition = "2021"
 actix-cors = { version = "0.7.0" }
 actix-web = { version = "4.4" }
 chrono = { version = "0.4.31", features = ["serde"] }
-diesel = { version = "2.1.4", features = ["postgres", "r2d2"] }
+diesel = { version = "2.1.4", features = ["chrono", "postgres", "r2d2"] }
 env_logger = { version = "0.10.1" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }
+serde_with = { version = "3.6.0", features = ["chrono_0_4"] }
