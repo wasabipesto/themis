@@ -337,6 +337,7 @@ fn save_markets(markets: Vec<MarketStandard>, method: OutputMethod) {
                     .on_conflict((platform, platform_id))
                     .do_update()
                     .set((
+                        url.eq(excluded(url)),
                         open_dt.eq(excluded(open_dt)),
                         close_dt.eq(excluded(close_dt)),
                         open_days.eq(excluded(open_days)),
