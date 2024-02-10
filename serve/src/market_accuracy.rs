@@ -26,7 +26,7 @@ fn default_xaxis_attribute() -> String {
     "open_days".to_string()
 }
 fn default_num_market_points() -> usize {
-    100
+    1000
 }
 
 /// Data for each bin and the markets included.
