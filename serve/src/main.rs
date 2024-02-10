@@ -1,26 +1,35 @@
 use actix_web::web::{Data, Query};
 use actix_web::{get, middleware, App, HttpResponse, HttpServer};
 use chrono::{DateTime, Utc};
-use db_util::{get_all_platforms, get_platform_by_name, market, platform, Market, Platform};
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::{pg::PgConnection, prelude::*};
-use helper::{categorize_markets_by_platform, get_scale_params, scale_data_point, ApiError};
-use market_calibration::{build_calibration_plot, CalibrationQueryParams};
-use market_filter::{get_markets_filtered, CommonFilterParams, PageSortParams};
-use market_list::{build_market_list, MarketListQueryParams};
+use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env::var;
 
 mod db_util;
 mod helper;
+mod market_accuracy;
 mod market_calibration;
 mod market_filter;
 mod market_list;
 
+use db_util::{get_all_platforms, get_platform_by_name, market, platform, Market, Platform};
+use helper::{categorize_markets_by_platform, get_scale_params, scale_data_point, ApiError};
+use market_accuracy::{build_accuracy_plot, AccuracyQueryParams};
+use market_calibration::{build_calibration_plot, CalibrationQueryParams};
+use market_filter::{get_markets_filtered, CommonFilterParams, PageSortParams};
+use market_list::{build_market_list, MarketListQueryParams};
+
 const POINT_SIZE_MIN: f32 = 6.0;
 const POINT_SIZE_MAX: f32 = 28.0;
 const POINT_SIZE_DEFAULT: f32 = 8.0;
+
+#[get("/")]
+async fn index() -> String {
+    "OK".to_string()
+}
 
 #[get("/list_platforms")]
 async fn list_platforms(
@@ -66,6 +75,20 @@ async fn calibration_plot(
     build_calibration_plot(query, conn)
 }
 
+#[get("/accuracy_plot")]
+async fn accuracy_plot(
+    query: Query<AccuracyQueryParams>,
+    pool: Data<Pool<ConnectionManager<PgConnection>>>,
+) -> Result<HttpResponse, ApiError> {
+    // get database connection from pool
+    let conn = &mut pool
+        .get()
+        .map_err(|e| ApiError::new(500, format!("failed to get connection from pool: {e}")))?;
+
+    // build the plot
+    build_accuracy_plot(query, conn)
+}
+
 /// Server startup tasks.
 #[actix_web::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -89,6 +112,7 @@ async fn main() -> Result<(), std::io::Error> {
             .service(list_platforms)
             .service(list_markets)
             .service(calibration_plot)
+            .service(accuracy_plot)
     })
     .bind(var("HTTP_BIND").unwrap_or(String::from("0.0.0.0:7041")))?
     .run()

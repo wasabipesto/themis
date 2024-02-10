@@ -129,7 +129,7 @@ fn get_x_axis_title(bin_attribute: &String) -> Result<String, ApiError> {
     }
 }
 
-/// Get the x-axis title of the plot, based on the user-defined weight attribute.
+/// Get the y-axis title of the plot, based on the user-defined weight attribute.
 fn get_y_axis_title(weight_attribute: &String) -> Result<String, ApiError> {
     match weight_attribute.as_str() {
         "open_days" => Ok(format!("Resolution, Weighted by Duration")),
@@ -141,27 +141,6 @@ fn get_y_axis_title(weight_attribute: &String) -> Result<String, ApiError> {
             message: format!("given weight_attribute not in y_title map"),
         }),
     }
-}
-
-/// Takes a set of markets and generates a brier score.
-#[allow(dead_code)]
-pub fn calculate_brier_score(
-    query: Query<CalibrationQueryParams>,
-    markets: Vec<Market>,
-) -> Result<f32, ApiError> {
-    // set up brier counters
-    let mut weighted_brier_sum: f32 = 0.0;
-    let mut weighted_brier_count: f32 = 0.0;
-
-    // this is a hot loop since we iterate over all markets
-    for market in markets {
-        let market_x_value = get_market_x_value(&market, &query.bin_attribute)?;
-        let market_y_value = get_market_y_value(&market)?;
-        let market_weight_value = get_market_weight_value(&market, &query.weight_attribute)?;
-        weighted_brier_sum += market_weight_value * (market_y_value - market_x_value).powf(2.0);
-        weighted_brier_count += market_weight_value;
-    }
-    Ok(weighted_brier_sum / weighted_brier_count)
 }
 
 /// Takes a set of markets and generates calibration plots for each.
