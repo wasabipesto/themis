@@ -22,13 +22,25 @@ use market_calibration::{build_calibration_plot, CalibrationQueryParams};
 use market_filter::{get_markets_filtered, CommonFilterParams, PageSortParams};
 use market_list::{build_market_list, MarketListQueryParams};
 
-const POINT_SIZE_MIN: f32 = 6.0;
-const POINT_SIZE_MAX: f32 = 28.0;
-const POINT_SIZE_DEFAULT: f32 = 8.0;
+#[derive(Debug, Serialize)]
+struct IndexResponse {
+    status: String,
+    routes: Vec<String>,
+}
 
 #[get("/")]
-async fn index() -> String {
-    "OK".to_string()
+async fn list_routes() -> Result<HttpResponse, ApiError> {
+    let response = IndexResponse {
+        status: "OK".to_string(),
+        routes: Vec::from([
+            "/".to_string(),
+            "/list_platforms".to_string(),
+            "/list_markets".to_string(),
+            "/calibration_plot".to_string(),
+            "/accuracy_plot".to_string(),
+        ]),
+    };
+    Ok(HttpResponse::Ok().json(response))
 }
 
 #[get("/list_platforms")]
@@ -109,6 +121,7 @@ async fn main() -> Result<(), std::io::Error> {
             .app_data(Data::new(pool.clone()))
             .wrap(actix_cors::Cors::permissive())
             .wrap(middleware::Logger::default())
+            .service(list_routes)
             .service(list_platforms)
             .service(list_markets)
             .service(calibration_plot)

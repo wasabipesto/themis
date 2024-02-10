@@ -1,5 +1,9 @@
 use super::*;
 
+const POINT_SIZE_MIN: f32 = 6.0;
+const POINT_SIZE_MAX: f32 = 28.0;
+const POINT_SIZE_DEFAULT: f32 = 8.0;
+
 /// Parameters passed to the calibration function.
 /// If the parameter is not supplied, the default values are used.
 /// TODO: Change bin_attribute and weight_attribute to enums
