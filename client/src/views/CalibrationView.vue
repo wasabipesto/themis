@@ -4,18 +4,10 @@ import axios from 'axios'
 import CommonFilters from '@/components/CommonFilters.vue'
 import { state } from '@/modules/CommonState.js'
 import { debounce } from 'lodash'
-import {
-  Chart as ChartJS,
-  Tooltip,
-  Legend,
-  PointElement,
-  LinearScale,
-  LineElement,
-  Title
-} from 'chart.js'
+import { Chart as ChartJS, registerables } from 'chart.js'
 import { Bubble } from 'vue-chartjs'
 
-ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend, Title)
+ChartJS.register(...registerables)
 
 let { query_selected, left_sidebar_options_expanded } = toRefs(state)
 
