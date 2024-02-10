@@ -18,7 +18,7 @@ async function updateList() {
 
   let response
   try {
-    response = await axios.get('https://beta-api.calibration.city/list_markets', {
+    response = await axios.get('https://api.calibration.city/list_markets', {
       params: query_selected.value
     })
   } catch (error) {

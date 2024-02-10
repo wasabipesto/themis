@@ -147,7 +147,7 @@ async function updateGraph() {
 
   let response
   try {
-    response = await axios.get('https://beta-api.calibration.city/calibration_plot', {
+    response = await axios.get('https://api.calibration.city/calibration_plot', {
       params: query_selected.value
     })
   } catch (error) {

@@ -1,23 +1,7 @@
 <template>
   <v-main>
-    <v-container>
-      <v-row align="center" justify="center">
-        <v-col>
-          <v-alert
-            text="This page is currently under construction."
-            type="error"
-            variant="tonal"
-          ></v-alert>
-        </v-col>
-      </v-row>
-    </v-container>
+    <v-alert icon="mdi-progress-wrench" title="Under Construction" type="error" variant="tonal">
+      Check back later, we're currently working on this part of the site.
+    </v-alert>
   </v-main>
 </template>
-
-<style scoped>
-.v-main {
-  max-width: 60rem;
-  margin-left: auto;
-  margin-right: auto;
-}
-</style>

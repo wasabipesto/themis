@@ -2,13 +2,13 @@
 # dev build and deploy script
 
 # build and deploy the docker image
-docker build -t themis-serve serve || exit
+docker build -t themis-serve-dev serve || exit
 docker stop themis-serve-dev
 docker rm themis-serve-dev
 docker run -d \
     --env-file ./dev.env \
-    --env HTTP_BIND=0.0.0.0:7042 \
-    -p 7042:7042 \
+    --env HTTP_BIND=0.0.0.0:7043 \
+    -p 7043:7043 \
     --net valinor_default \
     --name themis-serve-dev \
     themis-serve
