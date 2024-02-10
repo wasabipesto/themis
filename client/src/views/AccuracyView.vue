@@ -85,8 +85,23 @@ const chart_options = ref({
     },
     tooltip: {
       callbacks: {
+        title: function (context) {
+          if (context[0].raw.desc) {
+            // scatter
+            return
+          } else {
+            // line
+            return context[0].parsed.x.toFixed(2)
+          }
+        },
         label: function (context) {
-          return context.dataset.label + ': ' + context.raw.desc
+          if (context.raw.desc) {
+            // scatter
+            return context.dataset.label + ': ' + context.raw.desc
+          } else {
+            // line
+            return context.dataset.label + ' Brier Score: ' + context.parsed.y.toFixed(4)
+          }
         }
       }
     }
@@ -134,13 +149,25 @@ async function updateGraph() {
 
   var datasets = []
   response_data.traces.forEach((t) =>
-    datasets.push({
-      type: 'scatter',
-      label: t.platform.name_fmt,
-      backgroundColor: t.platform.color + '80',
-      borderColor: t.platform.color,
-      data: t.market_points
-    })
+    datasets.push(
+      {
+        type: 'scatter',
+        label: t.platform.name_fmt + ' Markets',
+        backgroundColor: t.platform.color + '40',
+        //borderColor: t.platform.color,
+        data: t.market_points
+      },
+      {
+        type: 'line',
+        label: t.platform.name_fmt + ' Accuracy',
+        //backgroundColor: t.platform.color,
+        borderColor: t.platform.color,
+        cubicInterpolationMode: 'monotone',
+        spanGaps: true,
+        //stepped: true,
+        data: t.accuracy_line
+      }
+    )
   )
   chart_data.value = {
     datasets: datasets
@@ -199,8 +226,8 @@ watch(
       </v-expansion-panel>
       <v-expansion-panel value="accuracy_xaxis_attribute">
         <v-expansion-panel-title>
-          <v-icon class="mr-3">mdi-globe-model</v-icon>
-          X-Axis Attribute: <br />
+          <v-icon class="mr-3">mdi-ruler</v-icon>
+          Compare Against X-Axis: <br />
           {{ getOptionLabel('xaxis_attribute', query_selected.xaxis_attribute) }}
         </v-expansion-panel-title>
         <v-expansion-panel-text>

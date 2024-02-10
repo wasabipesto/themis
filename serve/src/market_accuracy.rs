@@ -9,8 +9,6 @@ const SCATTER_OUTLIER_COUNT: usize = 5;
 pub struct AccuracyQueryParams {
     #[serde(default = "default_scoring_attribute")]
     scoring_attribute: String,
-    #[serde(default = "default_weight_attribute")]
-    weight_attribute: String,
     #[serde(default = "default_xaxis_attribute")]
     xaxis_attribute: String,
     #[serde(default = "default_num_market_points")]
@@ -20,9 +18,6 @@ pub struct AccuracyQueryParams {
 }
 fn default_scoring_attribute() -> String {
     "prob_at_midpoint".to_string()
-}
-fn default_weight_attribute() -> String {
-    "none".to_string()
 }
 fn default_xaxis_attribute() -> String {
     "open_days".to_string()
@@ -36,8 +31,8 @@ struct XAxisBin {
     start: f32,
     middle: f32,
     end: f32,
-    y_axis_numerator: f32,
-    y_axis_denominator: f32,
+    brier_sum: f32,
+    count: u32,
 }
 
 /// An individual datapoint to be plotted.
@@ -45,7 +40,7 @@ struct XAxisBin {
 struct Point {
     x: f32,
     y: f32,
-    desc: String,
+    desc: Option<String>,
 }
 
 /// Data sent to the client to render a plot, one plot per platform.
@@ -53,7 +48,7 @@ struct Point {
 struct Trace {
     platform: Platform,
     market_points: Vec<Point>,
-    //accuracy_line: Vec<Point>,
+    accuracy_line: Vec<Point>,
 }
 
 /// Metadata to help label a plot.
@@ -72,9 +67,23 @@ struct AccuracyPlotResponse {
     traces: Vec<Trace>,
 }
 
-/// TODO
-fn generate_xaxis_bins(bin_size: &f32) -> Result<Vec<XAxisBin>, ApiError> {
-    let mut bins: Vec<XAxisBin> = Vec::new();
+/// Generate `count` equally-spaced bins from 0 to `max`
+/// The first bin is from 0 to `step` and the last one is from `max`-`step` to `max`.
+fn generate_xaxis_bins(max: f32, count: usize) -> Result<Vec<XAxisBin>, ApiError> {
+    let step = max / count as f32;
+    let mut bins = Vec::with_capacity(count);
+    for i in 0..count {
+        let start = i as f32 * step;
+        let end = (i as f32 + 1.0) * step;
+        let middle = (start + end) / 2.0;
+        bins.push(XAxisBin {
+            start,
+            middle,
+            end,
+            brier_sum: 0.0,
+            count: 0,
+        });
+    }
     Ok(bins)
 }
 
@@ -102,20 +111,6 @@ fn get_market_xaxis_value(market: &Market, query: &AccuracyQueryParams) -> Resul
         _ => Err(ApiError::new(
             400,
             "the value provided for `xaxis_attribute` is not a valid option".to_string(),
-        )),
-    }
-}
-
-/// Get the weighting value of the market, based on the user-defined weighting attribute.
-fn get_market_weight_value(market: &Market, query: &AccuracyQueryParams) -> Result<f32, ApiError> {
-    match query.weight_attribute.as_str() {
-        "open_days" => Ok(market.open_days),
-        "num_traders" => Ok(market.num_traders as f32),
-        "volume_usd" => Ok(market.volume_usd),
-        "none" => Ok(1.0),
-        _ => Err(ApiError::new(
-            400,
-            "the value provided for `weight_attribute` is not a valid option".to_string(),
         )),
     }
 }
@@ -159,27 +154,6 @@ fn get_market_brier_score(
     Ok(brier_score)
 }
 
-/// Takes a set of markets and generates a brier score.
-fn get_list_brier_score(
-    markets: &Vec<Market>,
-    query: &Query<AccuracyQueryParams>,
-) -> Result<f32, ApiError> {
-    // set up brier counters
-    let mut weighted_brier_sum: f32 = 0.0;
-    let mut weighted_brier_count: f32 = 0.0;
-
-    // this is a hot loop since we iterate over all markets
-    for market in markets {
-        let market_predicted_value = get_market_scoring_value(&market, &query)?;
-        let market_resolved_value = market.resolution;
-        let market_weight_value = get_market_weight_value(&market, &query)?;
-        weighted_brier_sum +=
-            market_weight_value * (market_resolved_value - market_predicted_value).powf(2.0);
-        weighted_brier_count += market_weight_value;
-    }
-    Ok(weighted_brier_sum / weighted_brier_count)
-}
-
 /// Takes a set of markets and generates calibration plots for each.
 pub fn build_accuracy_plot(
     query: Query<AccuracyQueryParams>,
@@ -203,7 +177,7 @@ pub fn build_accuracy_plot(
             market_points.push(Point {
                 x: get_market_xaxis_value(&market, &query)?,
                 y: get_market_brier_score(&market, &query)?,
-                desc: market.title.clone(),
+                desc: Some(market.title.clone()),
             })
         }
         // sort by x ascending and then discard anything over the requested amount
@@ -213,10 +187,47 @@ pub fn build_accuracy_plot(
         });
         market_points.truncate(query.num_market_points);
 
+        // generate bins for full accuracy measurement
+        // limit to the highest x-value rendered on the plot so we stay in bounds
+        let mut bins = generate_xaxis_bins(
+            market_points
+                .last()
+                .expect("Failed to get last market value.")
+                .x,
+            20,
+        )?;
+
+        // calculate brier scores for each market
+        // this is a hot loop since we iterate over all markets
+        for market in market_list.iter() {
+            // find the closest bin based on the market's selected x value
+            let market_xaxis_value = get_market_xaxis_value(&market, &query)?;
+            let bin_opt = bins
+                .iter_mut()
+                .find(|bin| bin.start <= market_xaxis_value && market_xaxis_value <= bin.end);
+
+            // if it's in our range, calculate and save
+            if let Some(bin) = bin_opt {
+                bin.brier_sum += get_market_brier_score(&market, &query)?;
+                bin.count += 1;
+            }
+        }
+
+        // get the final result per bin
+        let accuracy_line = bins
+            .iter()
+            .map(|bin| Point {
+                x: bin.middle,
+                y: bin.brier_sum / bin.count as f32,
+                desc: None,
+            })
+            .collect();
+
         // save it all to the trace and push it to result
         traces.push(Trace {
             platform: get_platform_by_name(conn, &platform)?,
             market_points,
+            accuracy_line,
         })
     }
 
