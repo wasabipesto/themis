@@ -1,5 +1,7 @@
 use super::*;
 
+const SCATTER_OUTLIER_COUNT: usize = 5;
+
 /// Parameters passed to the accuracy function.
 /// If the parameter is not supplied, the default values are used.
 /// TODO: Change to enums
@@ -193,14 +195,23 @@ pub fn build_accuracy_plot(
     let mut traces = Vec::new();
     for (platform, market_list) in markets_by_platform {
         // get a set of random markets for the scatterplot
-        let mut market_points = Vec::with_capacity(query.num_market_points);
-        for market in market_list.choose_multiple(&mut rng, query.num_market_points) {
+        // we get the requested amount plus a few so we can filter out some outliers
+        let random_markets =
+            market_list.choose_multiple(&mut rng, query.num_market_points + SCATTER_OUTLIER_COUNT);
+        let mut market_points = Vec::with_capacity(query.num_market_points + SCATTER_OUTLIER_COUNT);
+        for market in random_markets {
             market_points.push(Point {
                 x: get_market_xaxis_value(&market, &query)?,
                 y: get_market_brier_score(&market, &query)?,
                 desc: market.title.clone(),
             })
         }
+        // sort by x ascending and then discard anything over the requested amount
+        market_points.sort_by(|a, b| {
+            a.x.partial_cmp(&b.x)
+                .expect("Failed to compare values (NaN?)")
+        });
+        market_points.truncate(query.num_market_points);
 
         // save it all to the trace and push it to result
         traces.push(Trace {
