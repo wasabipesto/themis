@@ -7,8 +7,8 @@ docker build -t themis-client-dev -f client/Dockerfile-dev client || exit
 docker stop themis-client-dev
 docker rm themis-client-dev
 docker run -d \
-    -p 7044:7044 \
-    -v ./client/:/usr/src/themis-client \
+    -p 7044:80 \
+    -v ./client/:/app \
     --name themis-client-dev \
     themis-client-dev
 
