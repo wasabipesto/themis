@@ -4,6 +4,7 @@ import CalibrationView from '../views/CalibrationView.vue'
 import AccuracyView from '../views/AccuracyView.vue'
 import ListView from '../views/ListView.vue'
 import FAQView from '../views/FAQView.vue'
+import NotFoundView from '../views/NotFoundView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -33,6 +34,11 @@ const router = createRouter({
       path: '/faq',
       name: 'faq',
       component: FAQView
+    },
+    {
+      path: '/:pathMatch(.*)*', // this is a wildcard route
+      name: 'not-found',
+      component: NotFoundView
     }
   ]
 })

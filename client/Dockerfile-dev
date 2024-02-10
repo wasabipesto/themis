@@ -1,6 +1,6 @@
 # Load base image and set working directory
 FROM node:21
-WORKDIR /usr/src/themis-client
+WORKDIR /app
 
 # Install project dependencies
 COPY package*.json ./
