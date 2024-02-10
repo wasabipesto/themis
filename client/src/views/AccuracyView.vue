@@ -82,6 +82,13 @@ const chart_options = ref({
       },
       position: 'right',
       align: 'start'
+    },
+    tooltip: {
+      callbacks: {
+        label: function (context) {
+          return context.dataset.label + ': ' + context.raw.desc
+        }
+      }
     }
   },
   scales: {
@@ -105,7 +112,7 @@ const chart_options = ref({
         }
       },
       min: 0,
-      max: 0.5
+      max: 1
     }
   }
 })
