@@ -22,7 +22,7 @@ table! {
 }
 
 /// Data returned from the database, same as what we inserted.
-#[derive(Debug, Queryable, Serialize, Selectable)]
+#[derive(Debug, Queryable, Serialize, Selectable, Clone)]
 #[diesel(table_name = market)]
 pub struct Market {
     pub title: String,

@@ -11,7 +11,7 @@ docker run -d \
     -p 7043:7043 \
     --net valinor_default \
     --name themis-serve-dev \
-    themis-serve
+    themis-serve-dev
 
 # tail logs if requested
 if [ "$1" = "-f" ]; then
