@@ -1,27 +1,26 @@
 use super::*;
 
-const SCATTER_OUTLIER_COUNT: usize = 10;
+const SCATTER_OUTLIER_COUNT: usize = 20;
 const NUM_ACCURACY_BINS: usize = 20;
 
 /// Parameters passed to the accuracy function.
 /// If the parameter is not supplied, the default values are used.
-/// TODO: Change to enums
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AccuracyQueryParams {
     #[serde(default = "default_scoring_attribute")]
-    scoring_attribute: String,
+    scoring_attribute: ScoringAttribute,
     #[serde(default = "default_xaxis_attribute")]
-    xaxis_attribute: String,
+    xaxis_attribute: XAxisAttribute,
     #[serde(default = "default_num_market_points")]
     num_market_points: usize,
     #[serde(flatten)]
     pub filters: CommonFilterParams,
 }
-fn default_scoring_attribute() -> String {
-    "prob_at_midpoint".to_string()
+fn default_scoring_attribute() -> ScoringAttribute {
+    ScoringAttribute::ProbAtMidpoint
 }
-fn default_xaxis_attribute() -> String {
-    "open_days".to_string()
+fn default_xaxis_attribute() -> XAxisAttribute {
+    XAxisAttribute::OpenDays
 }
 fn default_num_market_points() -> usize {
     1000
@@ -69,6 +68,81 @@ struct AccuracyPlotResponse {
     traces: Vec<Trace>,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ScoringAttribute {
+    ProbAtMidpoint,
+    ProbAtClose,
+    ProbTimeAvg,
+}
+
+pub trait ScoringValue {
+    /// Get the value to use for the y-axis.
+    fn get_y_value(&self, market: &Market) -> f32;
+    /// Get the title to use for the y-axis.
+    fn get_title(&self) -> String;
+}
+impl ScoringValue for ScoringAttribute {
+    fn get_y_value(&self, market: &Market) -> f32 {
+        match self {
+            ScoringAttribute::ProbAtMidpoint => {
+                (market.resolution - market.prob_at_midpoint).powf(2.0)
+            }
+            ScoringAttribute::ProbAtClose => (market.resolution - market.prob_at_close).powf(2.0),
+            ScoringAttribute::ProbTimeAvg => (market.resolution - market.prob_time_avg).powf(2.0),
+        }
+    }
+    fn get_title(&self) -> String {
+        match self {
+            ScoringAttribute::ProbAtMidpoint => "Brier Score from Midpoint Probability".to_string(),
+            ScoringAttribute::ProbAtClose => "Brier Score from Closing Probability".to_string(),
+            ScoringAttribute::ProbTimeAvg => {
+                "Brier Score from Time-Averaged Probability".to_string()
+            }
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum XAxisAttribute {
+    OpenDays,
+    VolumeUSD,
+    NumTraders,
+}
+
+pub trait XAxisValue {
+    /// Get the value to use for the x-axis.
+    fn get_x_value(&self, market: &Market) -> f32;
+    /// Get the default maximum to use for the x-axis.
+    fn get_default_max(&self) -> f32;
+    /// Get the title to use for the x-axis.
+    fn get_title(&self) -> String;
+}
+impl XAxisValue for XAxisAttribute {
+    fn get_x_value(&self, market: &Market) -> f32 {
+        match self {
+            XAxisAttribute::OpenDays => market.open_days,
+            XAxisAttribute::VolumeUSD => market.volume_usd,
+            XAxisAttribute::NumTraders => market.num_traders as f32,
+        }
+    }
+    fn get_default_max(&self) -> f32 {
+        match self {
+            XAxisAttribute::OpenDays => 500.0,
+            XAxisAttribute::VolumeUSD => 500.0,
+            XAxisAttribute::NumTraders => 60.0,
+        }
+    }
+    fn get_title(&self) -> String {
+        match self {
+            XAxisAttribute::OpenDays => "Market Open Length (days)".to_string(),
+            XAxisAttribute::VolumeUSD => "Market Volume (USD)".to_string(),
+            XAxisAttribute::NumTraders => "Number of Unique Traders".to_string(),
+        }
+    }
+}
+
 /// Generate `count` equally-spaced bins from 0 to `max`
 /// The first bin is from 0 to `step` and the last one is from `max`-`step` to `max`.
 fn generate_xaxis_bins(max: f32, count: usize) -> Result<Vec<XAxisBin>, ApiError> {
@@ -89,88 +163,6 @@ fn generate_xaxis_bins(max: f32, count: usize) -> Result<Vec<XAxisBin>, ApiError
     Ok(bins)
 }
 
-/// Get the predicted value of the market, based on the user-defined scoring attribute.
-fn get_market_scoring_value(market: &Market, query: &AccuracyQueryParams) -> Result<f32, ApiError> {
-    match query.scoring_attribute.as_str() {
-        "prob_at_midpoint" => Ok(market.prob_at_midpoint),
-        "prob_at_close" => Ok(market.prob_at_close),
-        "prob_time_avg" => Ok(market.prob_time_avg),
-        _ => Err(ApiError::new(
-            400,
-            "the value provided for `scoring_attribute` is not a valid option".to_string(),
-        )),
-    }
-}
-
-/// Get the x-value of the market, based on the user-defined attribute.
-fn get_market_xaxis_value(market: &Market, query: &AccuracyQueryParams) -> Result<f32, ApiError> {
-    match query.xaxis_attribute.as_str() {
-        //"open_dt" => Ok(market.open_dt),
-        //"close_dt" => Ok(market.close_dt),
-        "open_days" => Ok(market.open_days),
-        "volume_usd" => Ok(market.volume_usd),
-        "num_traders" => Ok(market.num_traders as f32),
-        _ => Err(ApiError::new(
-            400,
-            "the value provided for `xaxis_attribute` is not a valid option".to_string(),
-        )),
-    }
-}
-
-/// Get the default maximum x-value for the market bins.
-fn get_xaxis_default_max(query: &AccuracyQueryParams) -> Result<f32, ApiError> {
-    match query.xaxis_attribute.as_str() {
-        //"open_dt" => Ok(),
-        //"close_dt" => Ok(),
-        "open_days" => Ok(500.0),
-        "volume_usd" => Ok(500.0),
-        "num_traders" => Ok(60.0),
-        _ => Err(ApiError::new(
-            500,
-            "given xaxis_attribute not in xaxis_default_max map".to_string(),
-        )),
-    }
-}
-
-/// Get the x-axis title of the plot, based on the user-defined bin attribute.
-fn get_x_axis_title(query: &AccuracyQueryParams) -> Result<String, ApiError> {
-    match query.xaxis_attribute.as_str() {
-        //"open_dt" => Ok(format!("Market Open Date")),
-        //"close_dt" => Ok(format!("Market Close Date")),
-        "open_days" => Ok(format!("Market Open Length (days)")),
-        "volume_usd" => Ok(format!("Market Volume (USD)")),
-        "num_traders" => Ok(format!("Number of Unique Traders")),
-        _ => Err(ApiError {
-            status_code: 500,
-            message: format!("given xaxis_attribute not in x_title map"),
-        }),
-    }
-}
-
-/// Get the y-axis title of the plot, based on the user-defined weight attribute.
-fn get_y_axis_title(query: &AccuracyQueryParams) -> Result<String, ApiError> {
-    match query.scoring_attribute.as_str() {
-        "prob_at_midpoint" => Ok(format!("Brier Score from Midpoint Probability")),
-        "prob_at_close" => Ok(format!("Brier Score from Closing Probability")),
-        "prob_time_avg" => Ok(format!("Brier Score from Time-Averaged Probability")),
-        _ => Err(ApiError {
-            status_code: 500,
-            message: format!("given scoring_attribute not in y_title map"),
-        }),
-    }
-}
-
-/// Takes a markets and generates its brier score.
-fn get_market_brier_score(
-    market: &Market,
-    query: &Query<AccuracyQueryParams>,
-) -> Result<f32, ApiError> {
-    let market_resolved_value = market.resolution;
-    let market_predicted_value = get_market_scoring_value(&market, &query)?;
-    let brier_score = (market_resolved_value - market_predicted_value).powf(2.0);
-    Ok(brier_score)
-}
-
 /// Takes a set of markets and generates calibration plots for each.
 pub fn build_accuracy_plot(
     query: Query<AccuracyQueryParams>,
@@ -185,10 +177,10 @@ pub fn build_accuracy_plot(
     let markets_by_platform = categorize_markets_by_platform(markets.clone());
 
     // get maximum value for x-axis bins
-    let default_maximum = get_xaxis_default_max(&query)?;
+    let default_maximum = query.xaxis_attribute.get_default_max();
     let column_maximum = markets
         .iter()
-        .map(|market| get_market_xaxis_value(market, &query).unwrap())
+        .map(|market| query.xaxis_attribute.get_x_value(market))
         .max_by(|a, b| a.partial_cmp(b).unwrap())
         .unwrap();
     // generate bins for accuracy measurement
@@ -206,8 +198,8 @@ pub fn build_accuracy_plot(
         let mut market_points = Vec::with_capacity(query.num_market_points + SCATTER_OUTLIER_COUNT);
         for market in random_markets {
             market_points.push(Point {
-                x: get_market_xaxis_value(&market, &query)?,
-                y: get_market_brier_score(&market, &query)?,
+                x: query.xaxis_attribute.get_x_value(market),
+                y: query.scoring_attribute.get_y_value(market),
                 desc: Some(market.title.clone()),
             })
         }
@@ -222,14 +214,14 @@ pub fn build_accuracy_plot(
         // this is a hot loop since we iterate over all markets
         for market in market_list.iter() {
             // find the closest bin based on the market's selected x value
-            let market_xaxis_value = get_market_xaxis_value(&market, &query)?;
+            let market_xaxis_value = query.xaxis_attribute.get_x_value(market);
             let bin_opt = bins
                 .iter_mut()
                 .find(|bin| bin.start <= market_xaxis_value && market_xaxis_value <= bin.end);
 
             // if it's in our range, calculate and save
             if let Some(bin) = bin_opt {
-                bin.brier_sum += get_market_brier_score(&market, &query)?;
+                bin.brier_sum += query.scoring_attribute.get_y_value(market);
                 bin.count += 1;
             }
         }
@@ -258,8 +250,8 @@ pub fn build_accuracy_plot(
     // get plot and axis titles
     let metadata = PlotMetadata {
         title: format!("Accuracy Plot"),
-        x_title: get_x_axis_title(&query)?,
-        y_title: get_y_axis_title(&query)?,
+        x_title: query.xaxis_attribute.get_title(),
+        y_title: query.scoring_attribute.get_title(),
     };
 
     let response = AccuracyPlotResponse {
