@@ -154,9 +154,10 @@ async function updateGraph() {
       {
         type: 'line',
         label: t.platform.name_fmt + ' Accuracy',
-        backgroundColor: t.platform.color + '40',
+        backgroundColor: t.platform.color,
         borderColor: t.platform.color,
         cubicInterpolationMode: 'monotone',
+        pointRadius: 3,
         //spanGaps: true,
         //stepped: true,
         data: t.accuracy_line
@@ -242,13 +243,13 @@ watch(
       <v-expansion-panel value="accuracy_num_market_points">
         <v-expansion-panel-title>
           <v-icon class="mr-3">mdi-plus-circle-outline</v-icon>
-          Points to Display: {{ query_selected.num_market_points }} markets
+          Market Points to Display: {{ query_selected.num_market_points }}
         </v-expansion-panel-title>
         <v-expansion-panel-text>
           <p class="my-2">
             A random selection of markets are displayed on the chart as a scatterplot. Increase this
-            to show more markets per platform. Note that this does not affect the number of markets
-            used in the accuracy line calculations.
+            to show more markets per platform. Note that this does not affect the accuracy line
+            calculations in any way.
           </p>
           <v-alert border="start" border-color="red" elevation="2" density="compact">
             Changing this setting may impact your browser's performance.

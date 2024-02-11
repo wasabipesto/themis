@@ -249,7 +249,7 @@ pub fn build_accuracy_plot(
                     x: bin.middle,
                     y: brier_score,
                     point_title: Some(format!(
-                        "{:.04} to {:.04} {}",
+                        "{} to {} {}",
                         bin.start,
                         bin.end,
                         query.xaxis_attribute.get_units()
