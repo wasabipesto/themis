@@ -34,6 +34,10 @@ const query_options = {
     volume_usd: { label: 'Market Volume' },
     open_days: { label: 'Market Length' },
     num_traders: { label: 'Number of Traders' }
+  },
+  num_market_points: {
+    range: [500, 5000],
+    step: 500
   }
 }
 
@@ -239,6 +243,25 @@ watch(
               :label="v.label"
             ></v-radio>
           </v-radio-group>
+        </v-expansion-panel-text>
+      </v-expansion-panel>
+      <v-expansion-panel value="accuracy_num_market_points">
+        <v-expansion-panel-title>
+          <v-icon class="mr-3">mdi-star-four-points-circle-outline</v-icon>
+          Market Points to Display: {{ query_selected.num_market_points }}
+        </v-expansion-panel-title>
+        <v-expansion-panel-text>
+          <p class="my-2">TODO</p>
+          <v-slider
+            v-model="query_selected.num_market_points"
+            :min="query_options.num_market_points.range[0]"
+            :max="query_options.num_market_points.range[1]"
+            :step="query_options.num_market_points.step"
+            class="pt-8"
+            show-ticks="always"
+            thumb-label="always"
+          >
+          </v-slider>
         </v-expansion-panel-text>
       </v-expansion-panel>
       <v-divider :thickness="16"></v-divider>
