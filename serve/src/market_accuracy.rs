@@ -108,7 +108,7 @@ impl YAxisMethods for ScoringAttribute {
 #[serde(rename_all = "snake_case")]
 pub enum XAxisAttribute {
     OpenDays,
-    VolumeUSD,
+    VolumeUsd,
     NumTraders,
 }
 
@@ -126,28 +126,28 @@ impl XAxisMethods for XAxisAttribute {
     fn get_x_value(&self, market: &Market) -> f32 {
         match self {
             XAxisAttribute::OpenDays => market.open_days,
-            XAxisAttribute::VolumeUSD => market.volume_usd,
+            XAxisAttribute::VolumeUsd => market.volume_usd,
             XAxisAttribute::NumTraders => market.num_traders as f32,
         }
     }
     fn get_default_max(&self) -> f32 {
         match self {
             XAxisAttribute::OpenDays => 500.0,
-            XAxisAttribute::VolumeUSD => 500.0,
+            XAxisAttribute::VolumeUsd => 500.0,
             XAxisAttribute::NumTraders => 60.0,
         }
     }
     fn get_title(&self) -> String {
         match self {
             XAxisAttribute::OpenDays => "Market Open Length (days)".to_string(),
-            XAxisAttribute::VolumeUSD => "Market Volume (USD)".to_string(),
+            XAxisAttribute::VolumeUsd => "Market Volume (USD)".to_string(),
             XAxisAttribute::NumTraders => "Number of Unique Traders".to_string(),
         }
     }
     fn get_units(&self) -> String {
         match self {
             XAxisAttribute::OpenDays => "days".to_string(),
-            XAxisAttribute::VolumeUSD => "USD".to_string(),
+            XAxisAttribute::VolumeUsd => "USD".to_string(),
             XAxisAttribute::NumTraders => "traders".to_string(),
         }
     }
