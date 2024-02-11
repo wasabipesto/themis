@@ -13,7 +13,6 @@ let { query_selected, left_sidebar_options_expanded } = toRefs(state)
 
 query_selected.value = {
   scoring_attribute: 'prob_at_midpoint',
-  //weight_attribute: 'none',
   xaxis_attribute: 'open_days',
   num_market_points: 1000,
   ...query_selected.value
@@ -90,21 +89,13 @@ const chart_options = ref({
     tooltip: {
       callbacks: {
         title: function (context) {
-          if (context[0].raw.desc) {
-            // scatter
-            return
-          } else {
-            // line
-            return context[0].parsed.x.toFixed(2)
+          if (context[0].raw.point_title) {
+            return context[0].raw.point_title
           }
         },
         label: function (context) {
-          if (context.raw.desc) {
-            // scatter
-            return context.dataset.label + ': ' + context.raw.desc
-          } else {
-            // line
-            return context.dataset.label + ' Brier Score: ' + context.parsed.y.toFixed(4)
+          if (context.raw.point_label) {
+            return context.raw.point_label
           }
         }
       }

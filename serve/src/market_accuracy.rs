@@ -41,7 +41,8 @@ struct XAxisBin {
 struct Point {
     x: f32,
     y: f32,
-    desc: Option<String>,
+    point_title: Option<String>,
+    point_label: String,
 }
 
 /// Data sent to the client to render a plot, one plot per platform.
@@ -76,13 +77,13 @@ pub enum ScoringAttribute {
     ProbTimeAvg,
 }
 
-pub trait ScoringValue {
-    /// Get the value to use for the y-axis.
+pub trait YAxisMethods {
+    /// Get the value to use for the y-axis (brier score).
     fn get_y_value(&self, market: &Market) -> f32;
     /// Get the title to use for the y-axis.
     fn get_title(&self) -> String;
 }
-impl ScoringValue for ScoringAttribute {
+impl YAxisMethods for ScoringAttribute {
     fn get_y_value(&self, market: &Market) -> f32 {
         match self {
             ScoringAttribute::ProbAtMidpoint => {
@@ -111,15 +112,17 @@ pub enum XAxisAttribute {
     NumTraders,
 }
 
-pub trait XAxisValue {
+pub trait XAxisMethods {
     /// Get the value to use for the x-axis.
     fn get_x_value(&self, market: &Market) -> f32;
     /// Get the default maximum to use for the x-axis.
     fn get_default_max(&self) -> f32;
     /// Get the title to use for the x-axis.
     fn get_title(&self) -> String;
+    /// Get the units to use for the x-axis.
+    fn get_units(&self) -> String;
 }
-impl XAxisValue for XAxisAttribute {
+impl XAxisMethods for XAxisAttribute {
     fn get_x_value(&self, market: &Market) -> f32 {
         match self {
             XAxisAttribute::OpenDays => market.open_days,
@@ -139,6 +142,13 @@ impl XAxisValue for XAxisAttribute {
             XAxisAttribute::OpenDays => "Market Open Length (days)".to_string(),
             XAxisAttribute::VolumeUSD => "Market Volume (USD)".to_string(),
             XAxisAttribute::NumTraders => "Number of Unique Traders".to_string(),
+        }
+    }
+    fn get_units(&self) -> String {
+        match self {
+            XAxisAttribute::OpenDays => "days".to_string(),
+            XAxisAttribute::VolumeUSD => "USD".to_string(),
+            XAxisAttribute::NumTraders => "traders".to_string(),
         }
     }
 }
@@ -187,7 +197,10 @@ pub fn build_accuracy_plot(
     let bins_orig = generate_xaxis_bins(default_maximum.min(column_maximum), NUM_ACCURACY_BINS)?;
 
     let mut traces = Vec::new();
-    for (platform, market_list) in markets_by_platform {
+    for (platform_name, market_list) in markets_by_platform {
+        // get platform info
+        let platform = get_platform_by_name(conn, &platform_name)?;
+
         // clone bins
         let mut bins = bins_orig.clone();
 
@@ -200,7 +213,8 @@ pub fn build_accuracy_plot(
             market_points.push(Point {
                 x: query.xaxis_attribute.get_x_value(market),
                 y: query.scoring_attribute.get_y_value(market),
-                desc: Some(market.title.clone()),
+                point_title: None,
+                point_label: format!("{}: {}", platform.name_fmt.clone(), market.title.clone()),
             })
         }
         // sort by x ascending and then discard anything over the requested amount
@@ -229,16 +243,30 @@ pub fn build_accuracy_plot(
         // get the final result per bin
         let accuracy_line = bins
             .iter()
-            .map(|bin| Point {
-                x: bin.middle,
-                y: bin.brier_sum / bin.count as f32,
-                desc: None,
+            .map(|bin| {
+                let brier_score = bin.brier_sum / bin.count as f32;
+                Point {
+                    x: bin.middle,
+                    y: brier_score,
+                    point_title: Some(format!(
+                        "{:.04} to {:.04} {}",
+                        bin.start,
+                        bin.end,
+                        query.xaxis_attribute.get_units()
+                    )),
+                    point_label: format!(
+                        "{} Score: {:.04} from {} markets",
+                        platform.name_fmt.clone(),
+                        brier_score,
+                        bin.count
+                    ),
+                }
             })
             .collect();
 
         // save it all to the trace and push it to result
         traces.push(Trace {
-            platform: get_platform_by_name(conn, &platform)?,
+            platform,
             market_points,
             accuracy_line,
         })
