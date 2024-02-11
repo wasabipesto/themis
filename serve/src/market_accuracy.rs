@@ -1,6 +1,5 @@
 use super::*;
 
-const SCATTER_OUTLIER_COUNT: usize = 20;
 const NUM_ACCURACY_BINS: usize = 20;
 
 /// Parameters passed to the accuracy function.
@@ -206,9 +205,8 @@ pub fn build_accuracy_plot(
 
         // get a set of random markets for the scatterplot
         // we get the requested amount plus a few so we can filter out some outliers
-        let random_markets =
-            market_list.choose_multiple(&mut rng, query.num_market_points + SCATTER_OUTLIER_COUNT);
-        let mut market_points = Vec::with_capacity(query.num_market_points + SCATTER_OUTLIER_COUNT);
+        let random_markets = market_list.choose_multiple(&mut rng, query.num_market_points);
+        let mut market_points = Vec::with_capacity(query.num_market_points);
         for market in random_markets {
             market_points.push(Point {
                 x: query.xaxis_attribute.get_x_value(market),
@@ -217,12 +215,11 @@ pub fn build_accuracy_plot(
                 point_label: format!("{}: {}", platform.name_fmt.clone(), market.title.clone()),
             })
         }
-        // sort by x ascending and then discard anything over the requested amount
+        // sort by x ascending for easier rendering (remove?)
         market_points.sort_by(|a, b| {
             a.x.partial_cmp(&b.x)
                 .expect("Failed to compare values (NaN?)")
         });
-        market_points.truncate(query.num_market_points);
 
         // calculate brier scores for each market
         // this is a hot loop since we iterate over all markets

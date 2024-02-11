@@ -167,8 +167,16 @@ async function updateGraph() {
   chart_data.value = {
     datasets: datasets
   }
+
+  // caluclate max x-axis value
+  const refline = response_data.traces[0].accuracy_line
+  const bin_width = refline[1].x - refline[0].x
+  const x_max = refline[refline.length - 1].x + bin_width * 1.5
+
+  // set chart-level options
   chart_options.value.plugins.title.text = response_data.metadata.title
   chart_options.value.scales.x.title.text = response_data.metadata.x_title
+  chart_options.value.scales.x.max = x_max
   chart_options.value.scales.y.title.text = response_data.metadata.y_title
   chart_options.value = { ...chart_options.value }
 
