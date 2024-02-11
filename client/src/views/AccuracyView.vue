@@ -214,7 +214,7 @@ watch(
           {{ getOptionLabel('scoring_attribute', query_selected.scoring_attribute) }}
         </v-expansion-panel-title>
         <v-expansion-panel-text>
-          <p class="my-2">TODO</p>
+          <p class="my-2">The Brier score for each market is caluclated based on this attribute.</p>
           <v-radio-group v-model="query_selected.scoring_attribute">
             <v-radio v-for="(v, k) in query_options.scoring_attribute" :key="k" :value="k">
               <template v-slot:label>
@@ -234,7 +234,10 @@ watch(
           {{ getOptionLabel('xaxis_attribute', query_selected.xaxis_attribute) }}
         </v-expansion-panel-title>
         <v-expansion-panel-text>
-          <p class="my-2">TODO</p>
+          <p class="my-2">
+            Compare each platform's Brier score against this value. For example, you can investigate
+            how each platform's accuracy is affected by market length or number of traders.
+          </p>
           <v-radio-group v-model="query_selected.xaxis_attribute">
             <v-radio
               v-for="(v, k) in query_options.xaxis_attribute"
@@ -247,17 +250,24 @@ watch(
       </v-expansion-panel>
       <v-expansion-panel value="accuracy_num_market_points">
         <v-expansion-panel-title>
-          <v-icon class="mr-3">mdi-star-four-points-circle-outline</v-icon>
-          Market Points to Display: {{ query_selected.num_market_points }}
+          <v-icon class="mr-3">mdi-plus-circle-outline</v-icon>
+          Points to Display: {{ query_selected.num_market_points }} markets
         </v-expansion-panel-title>
         <v-expansion-panel-text>
-          <p class="my-2">TODO</p>
+          <p class="my-2">
+            A random selection of markets are displayed on the chart as a scatterplot. Increase this
+            to show more markets per platform. Note that this does not affect the number of markets
+            used in the accuracy line calculations.
+          </p>
+          <v-alert border="start" border-color="red" elevation="2" density="compact">
+            Changing this setting may impact your browser's performance.
+          </v-alert>
           <v-slider
             v-model="query_selected.num_market_points"
             :min="query_options.num_market_points.range[0]"
             :max="query_options.num_market_points.range[1]"
             :step="query_options.num_market_points.step"
-            class="pt-8"
+            class="pt-10"
             show-ticks="always"
             thumb-label="always"
           >
