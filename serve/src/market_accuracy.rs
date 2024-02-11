@@ -1,6 +1,7 @@
 use super::*;
 
-const SCATTER_OUTLIER_COUNT: usize = 5;
+const SCATTER_OUTLIER_COUNT: usize = 10;
+const NUM_ACCURACY_BINS: usize = 20;
 
 /// Parameters passed to the accuracy function.
 /// If the parameter is not supplied, the default values are used.
@@ -26,6 +27,7 @@ fn default_num_market_points() -> usize {
     1000
 }
 
+#[derive(Debug, Clone)]
 /// Data for each bin and the markets included.
 struct XAxisBin {
     start: f32,
@@ -115,6 +117,21 @@ fn get_market_xaxis_value(market: &Market, query: &AccuracyQueryParams) -> Resul
     }
 }
 
+/// Get the default maximum x-value for the market bins.
+fn get_xaxis_default_max(query: &AccuracyQueryParams) -> Result<f32, ApiError> {
+    match query.xaxis_attribute.as_str() {
+        //"open_dt" => Ok(),
+        //"close_dt" => Ok(),
+        "open_days" => Ok(500.0),
+        "volume_usd" => Ok(500.0),
+        "num_traders" => Ok(60.0),
+        _ => Err(ApiError::new(
+            500,
+            "given xaxis_attribute not in xaxis_default_max map".to_string(),
+        )),
+    }
+}
+
 /// Get the x-axis title of the plot, based on the user-defined bin attribute.
 fn get_x_axis_title(query: &AccuracyQueryParams) -> Result<String, ApiError> {
     match query.xaxis_attribute.as_str() {
@@ -161,13 +178,27 @@ pub fn build_accuracy_plot(
 ) -> Result<HttpResponse, ApiError> {
     // get rng thread
     let mut rng = rand::thread_rng();
+
     // get markets from database
     let markets = get_markets_filtered(conn, Some(&query.filters), None)?;
     // sort by platform
-    let markets_by_platform = categorize_markets_by_platform(markets);
+    let markets_by_platform = categorize_markets_by_platform(markets.clone());
+
+    // get maximum value for x-axis bins
+    let default_maximum = get_xaxis_default_max(&query)?;
+    let column_maximum = markets
+        .iter()
+        .map(|market| get_market_xaxis_value(market, &query).unwrap())
+        .max_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap();
+    // generate bins for accuracy measurement
+    let bins_orig = generate_xaxis_bins(default_maximum.min(column_maximum), NUM_ACCURACY_BINS)?;
 
     let mut traces = Vec::new();
     for (platform, market_list) in markets_by_platform {
+        // clone bins
+        let mut bins = bins_orig.clone();
+
         // get a set of random markets for the scatterplot
         // we get the requested amount plus a few so we can filter out some outliers
         let random_markets =
@@ -186,16 +217,6 @@ pub fn build_accuracy_plot(
                 .expect("Failed to compare values (NaN?)")
         });
         market_points.truncate(query.num_market_points);
-
-        // generate bins for full accuracy measurement
-        // limit to the highest x-value rendered on the plot so we stay in bounds
-        let mut bins = generate_xaxis_bins(
-            market_points
-                .last()
-                .expect("Failed to get last market value.")
-                .x,
-            20,
-        )?;
 
         // calculate brier scores for each market
         // this is a hot loop since we iterate over all markets
