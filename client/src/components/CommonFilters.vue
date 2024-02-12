@@ -1,5 +1,5 @@
 <script setup>
-import { toRefs, watch } from 'vue'
+import { ref, toRefs, watchEffect } from 'vue'
 import { state } from '@/modules/CommonState.js'
 import { useDisplay } from 'vuetify'
 
@@ -14,6 +14,11 @@ if (mdAndUp.value) {
 }
 
 show_sidebar_toggle.value = true
+
+const prob_at_midpoint_pct = ref([0, 100])
+const prob_at_close_pct = ref([0, 100])
+const prob_time_avg_pct = ref([0, 100])
+const resolution_pct = ref([0, 100])
 
 query_selected.value = {
   title_contains: null,
@@ -83,32 +88,80 @@ function get_numeric_label(min, max, prefix, suffix) {
   } else {
     less_word = 'fewer'
   }
+  if (min == 0 && max == 100 && suffix == '%') {
+    return 'Any'
+  }
   if (min == null) {
     if (max == null) {
       return 'Any'
     } else {
-      return prefix + max + ' or ' + less_word + ' ' + suffix
+      return prefix + max + ' or ' + less_word + suffix
     }
   } else {
     if (max == null) {
-      return prefix + min + ' or more ' + suffix
+      return prefix + min + ' or more' + suffix
     } else {
-      return prefix + min + ' to ' + max + ' ' + suffix
+      return prefix + min + ' to ' + max + suffix
     }
   }
 }
 
-watch(
-  query_selected,
-  () => {
-    for (let key in query_selected.value) {
-      if (query_selected.value[key] === '' || query_selected.value[key] === undefined) {
-        query_selected.value[key] = null
-      }
+watchEffect(() => {
+  for (let key in query_selected.value) {
+    if (query_selected.value[key] === '' || query_selected.value[key] === undefined) {
+      query_selected.value[key] = null
     }
-  },
-  { deep: true }
-)
+    if (query_selected.value.num_traders_min == 0) {
+      query_selected.value.num_traders_min = null
+    }
+    if (query_selected.value.open_days_min == 0) {
+      query_selected.value.open_days_min = null
+    }
+    if (query_selected.value.volume_usd_min == 0) {
+      query_selected.value.volume_usd_min = null
+    }
+  }
+})
+watchEffect(() => {
+  if (prob_at_midpoint_pct.value[0] < 0) {
+    prob_at_midpoint_pct.value[0] = 0
+  }
+  if (prob_at_midpoint_pct.value[1] > 100) {
+    prob_at_midpoint_pct.value[1] = 100
+  }
+  query_selected.value.prob_at_midpoint_min = prob_at_midpoint_pct.value[0] / 100
+  query_selected.value.prob_at_midpoint_max = prob_at_midpoint_pct.value[1] / 100
+})
+watchEffect(() => {
+  if (prob_at_close_pct.value[0] < 0) {
+    prob_at_close_pct.value[0] = 0
+  }
+  if (prob_at_close_pct.value[1] > 100) {
+    prob_at_close_pct.value[1] = 100
+  }
+  query_selected.value.prob_at_close_min = prob_at_close_pct.value[0] / 100
+  query_selected.value.prob_at_close_max = prob_at_close_pct.value[1] / 100
+})
+watchEffect(() => {
+  if (prob_time_avg_pct.value[0] < 0) {
+    prob_time_avg_pct.value[0] = 0
+  }
+  if (prob_time_avg_pct.value[1] > 100) {
+    prob_time_avg_pct.value[1] = 100
+  }
+  query_selected.value.prob_time_avg_min = prob_time_avg_pct.value[0] / 100
+  query_selected.value.prob_time_avg_max = prob_time_avg_pct.value[1] / 100
+})
+watchEffect(() => {
+  if (resolution_pct.value[0] < 0) {
+    resolution_pct.value[0] = 0
+  }
+  if (resolution_pct.value[1] > 100) {
+    resolution_pct.value[1] = 100
+  }
+  query_selected.value.resolution_min = resolution_pct.value[0] / 100
+  query_selected.value.resolution_max = resolution_pct.value[1] / 100
+})
 </script>
 
 <template>
@@ -176,7 +229,7 @@ watch(
           query_selected.num_traders_min,
           query_selected.num_traders_max,
           '',
-          'traders'
+          ' traders'
         )
       }}
     </v-expansion-panel-title>
@@ -215,6 +268,18 @@ watch(
             </v-text-field>
           </v-col>
         </v-row>
+        <v-row class="my-0">
+          <v-col>
+            <v-slider
+              min="0"
+              max="500"
+              step="10"
+              v-model="query_selected.num_traders_min"
+              density="compact"
+            >
+            </v-slider>
+          </v-col>
+        </v-row>
       </v-container>
     </v-expansion-panel-text>
   </v-expansion-panel>
@@ -223,7 +288,7 @@ watch(
       <v-icon class="mr-3">mdi-calendar</v-icon>
       Open Length:
       {{
-        get_numeric_label(query_selected.open_days_min, query_selected.open_days_max, '', 'days')
+        get_numeric_label(query_selected.open_days_min, query_selected.open_days_max, '', ' days')
       }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
@@ -256,6 +321,18 @@ watch(
               clearable
             >
             </v-text-field>
+          </v-col>
+        </v-row>
+        <v-row class="my-0">
+          <v-col>
+            <v-slider
+              min="0"
+              max="500"
+              step="10"
+              v-model="query_selected.open_days_min"
+              density="compact"
+            >
+            </v-slider>
           </v-col>
         </v-row>
       </v-container>
@@ -304,6 +381,18 @@ watch(
             </v-text-field>
           </v-col>
         </v-row>
+        <v-row class="my-0">
+          <v-col>
+            <v-slider
+              min="0"
+              max="500"
+              step="10"
+              v-model="query_selected.volume_usd_min"
+              density="compact"
+            >
+            </v-slider>
+          </v-col>
+        </v-row>
       </v-container>
     </v-expansion-panel-text>
   </v-expansion-panel>
@@ -311,45 +400,48 @@ watch(
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-calendar-import</v-icon>
       Midpoint Probability:
-      {{
-        get_numeric_label(
-          query_selected.prob_at_midpoint_min,
-          query_selected.prob_at_midpoint_max,
-          '',
-          ''
-        )
-      }}
+      {{ get_numeric_label(prob_at_midpoint_pct[0], prob_at_midpoint_pct[1], '', '%') }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
       <p class="my-2">
         Filter the markets in the sample to only those with a midpoint probability in a certain
-        range. Must be a decimal between 0 and 1.
+        range.
       </p>
       <v-container>
         <v-row>
           <v-col>
             <v-text-field
               label="Minimum"
-              v-model="query_selected.prob_at_midpoint_min"
+              v-model="prob_at_midpoint_pct[0]"
               type="number"
               density="compact"
               hide-details
               variant="outlined"
-              clearable
             >
             </v-text-field>
           </v-col>
           <v-col>
             <v-text-field
               label="Maximum"
-              v-model="query_selected.prob_at_midpoint_max"
+              v-model="prob_at_midpoint_pct[1]"
               type="number"
               density="compact"
               hide-details
               variant="outlined"
-              clearable
             >
             </v-text-field>
+          </v-col>
+        </v-row>
+        <v-row class="my-0">
+          <v-col>
+            <v-range-slider
+              min="0"
+              max="100"
+              step="1"
+              v-model="prob_at_midpoint_pct"
+              density="compact"
+            >
+            </v-range-slider>
           </v-col>
         </v-row>
       </v-container>
@@ -359,14 +451,7 @@ watch(
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-calendar-end</v-icon>
       Probability at Close:
-      {{
-        get_numeric_label(
-          query_selected.prob_at_close_min,
-          query_selected.prob_at_close_max,
-          '',
-          ''
-        )
-      }}
+      {{ get_numeric_label(prob_at_close_pct[0], prob_at_close_pct[1], '', '%') }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
       <p class="my-2">
@@ -378,26 +463,36 @@ watch(
           <v-col>
             <v-text-field
               label="Minimum"
-              v-model="query_selected.prob_at_close_min"
+              v-model="prob_at_close_pct[0]"
               type="number"
               density="compact"
               hide-details
               variant="outlined"
-              clearable
             >
             </v-text-field>
           </v-col>
           <v-col>
             <v-text-field
               label="Maximum"
-              v-model="query_selected.prob_at_close_max"
+              v-model="prob_at_close_pct[1]"
               type="number"
               density="compact"
               hide-details
               variant="outlined"
-              clearable
             >
             </v-text-field>
+          </v-col>
+        </v-row>
+        <v-row class="my-0">
+          <v-col>
+            <v-range-slider
+              min="0"
+              max="100"
+              step="1"
+              v-model="prob_at_close_pct"
+              density="compact"
+            >
+            </v-range-slider>
           </v-col>
         </v-row>
       </v-container>
@@ -407,14 +502,7 @@ watch(
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-calendar-start</v-icon>
       Time-Averaged Probability:
-      {{
-        get_numeric_label(
-          query_selected.prob_time_avg_min,
-          query_selected.prob_time_avg_max,
-          '',
-          ''
-        )
-      }}
+      {{ get_numeric_label(prob_time_avg_pct[0], prob_time_avg_pct[1], '', '%') }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
       <p class="my-2">
@@ -426,26 +514,36 @@ watch(
           <v-col>
             <v-text-field
               label="Minimum"
-              v-model="query_selected.prob_time_avg_min"
+              v-model="prob_time_avg_pct[0]"
               type="number"
               density="compact"
               hide-details
               variant="outlined"
-              clearable
             >
             </v-text-field>
           </v-col>
           <v-col>
             <v-text-field
               label="Maximum"
-              v-model="query_selected.prob_time_avg_max"
+              v-model="prob_time_avg_pct[1]"
               type="number"
               density="compact"
               hide-details
               variant="outlined"
-              clearable
             >
             </v-text-field>
+          </v-col>
+        </v-row>
+        <v-row class="my-0">
+          <v-col>
+            <v-range-slider
+              min="0"
+              max="100"
+              step="1"
+              v-model="prob_time_avg_pct[0]"
+              density="compact"
+            >
+            </v-range-slider>
           </v-col>
         </v-row>
       </v-container>
@@ -455,38 +553,42 @@ watch(
     <v-expansion-panel-title>
       <v-icon class="mr-3">mdi-seal</v-icon>
       Resolution Probability:
-      {{ get_numeric_label(query_selected.resolution_min, query_selected.resolution_max, '', '') }}
+      {{ get_numeric_label(resolution_pct[0], resolution_pct[1], '', '%') }}
     </v-expansion-panel-title>
     <v-expansion-panel-text>
       <p class="my-2">
         Filter the markets in the sample to only those that resolved with a certain value. Useful
-        for isolating markets that resolves YES (1) or NO (0). Must be a decimal between 0 and 1.
+        for isolating markets that resolved YES (100%) or NO (0%).
       </p>
       <v-container>
-        <v-row>
+        <v-row class="my-0">
           <v-col>
             <v-text-field
               label="Minimum"
-              v-model="query_selected.resolution_min"
+              v-model="resolution_pct[0]"
               type="number"
               density="compact"
               hide-details
               variant="outlined"
-              clearable
             >
             </v-text-field>
           </v-col>
           <v-col>
             <v-text-field
               label="Maximum"
-              v-model="query_selected.resolution_max"
+              v-model="resolution_pct[1]"
               type="number"
               density="compact"
               hide-details
               variant="outlined"
-              clearable
             >
             </v-text-field>
+          </v-col>
+        </v-row>
+        <v-row class="my-0">
+          <v-col>
+            <v-range-slider min="0" max="100" step="1" v-model="resolution_pct" density="compact">
+            </v-range-slider>
           </v-col>
         </v-row>
       </v-container>
