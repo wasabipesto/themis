@@ -540,7 +540,7 @@ watchEffect(() => {
               min="0"
               max="100"
               step="1"
-              v-model="prob_time_avg_pct[0]"
+              v-model="prob_time_avg_pct"
               density="compact"
             >
             </v-range-slider>
