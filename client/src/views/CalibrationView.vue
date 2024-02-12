@@ -12,8 +12,9 @@ ChartJS.register(...registerables)
 let { query_selected, left_sidebar_options_expanded } = toRefs(state)
 
 query_selected.value = {
-  bin_attribute: 'prob_at_midpoint',
   bin_size: 0.05,
+  bin_attribute: 'prob_at_midpoint',
+  bin_attribute_x_pct: 50,
   weight_attribute: 'none',
   ...query_selected.value
 }
@@ -27,7 +28,8 @@ const query_options = {
       tooltip:
         'For each market, this is the probability averaged over time. <br>\
         Each market is only counted once.'
-    }
+    },
+    prob_at_pct: { label: 'Probability at Specified Percent' }
   },
   weight_attribute: {
     none: { label: 'None' },
@@ -238,6 +240,17 @@ watch(
               </template>
             </v-radio>
           </v-radio-group>
+          <v-slider
+            min="0"
+            max="100"
+            step="5"
+            v-if="query_selected.bin_attribute == 'prob_at_pct'"
+            v-model="query_selected.bin_attribute_x_pct"
+            density="compact"
+            thumb-label="always"
+            prepend-icon="mdi-percent"
+          >
+          </v-slider>
         </v-expansion-panel-text>
       </v-expansion-panel>
       <v-expansion-panel value="calibration_weight_method">

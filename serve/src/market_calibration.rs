@@ -10,6 +10,7 @@ const POINT_SIZE_DEFAULT: f32 = 8.0;
 pub struct CalibrationQueryParams {
     #[serde(default = "default_bin_attribute")]
     bin_attribute: BinAttribute,
+    bin_attribute_x_pct: Option<usize>,
     #[serde(default = "default_bin_size")]
     bin_size: f32,
     #[serde(default = "default_weight_attribute")]
@@ -34,6 +35,7 @@ struct XAxisBin {
     end: f32,
     y_axis_numerator: f32,
     y_axis_denominator: f32,
+    count: usize,
 }
 
 /// An individual datapoint to be plotted.
@@ -76,26 +78,57 @@ pub enum BinAttribute {
     ProbAtMidpoint,
     ProbAtClose,
     ProbTimeAvg,
+    ProbAtPct,
 }
 pub trait XAxisMethods {
     /// Get the value to use for the x-axis (bin).
-    fn get_x_value(&self, market: &Market) -> f32;
+    fn get_x_value(
+        &self,
+        market: &Market,
+        bin_attribute_x_pct: Option<usize>,
+    ) -> Result<f32, ApiError>;
     /// Get the title to use for the y-axis.
-    fn get_title(&self) -> String;
+    fn get_title(&self, bin_attribute_x_pct: Option<usize>) -> String;
 }
 impl XAxisMethods for BinAttribute {
-    fn get_x_value(&self, market: &Market) -> f32 {
+    fn get_x_value(
+        &self,
+        market: &Market,
+        bin_attribute_x_pct: Option<usize>,
+    ) -> Result<f32, ApiError> {
         match self {
-            BinAttribute::ProbAtMidpoint => market.prob_at_midpoint,
-            BinAttribute::ProbAtClose => market.prob_at_close,
-            BinAttribute::ProbTimeAvg => market.prob_time_avg,
+            BinAttribute::ProbAtMidpoint => Ok(market.prob_at_midpoint),
+            BinAttribute::ProbAtClose => Ok(market.prob_at_close),
+            BinAttribute::ProbTimeAvg => Ok(market.prob_time_avg),
+            BinAttribute::ProbAtPct => match bin_attribute_x_pct {
+                Some(pct) => match market.prob_at_pct.get(pct) {
+                    Some(x_value) => Ok(x_value.to_owned()),
+                    None => Err(ApiError {
+                        status_code: 500,
+                        message: format!(
+                            "Failed to get probability at {}% for market {:?}",
+                            pct, market
+                        ),
+                    }),
+                },
+                None => Err(ApiError {
+                    status_code: 400,
+                    message:
+                        "Value for `bin_attribute_x_pct` is required when `prob_at_pct` is set."
+                            .to_string(),
+                }),
+            },
         }
     }
-    fn get_title(&self) -> String {
+    fn get_title(&self, bin_attribute_x_pct: Option<usize>) -> String {
         match self {
             BinAttribute::ProbAtMidpoint => "Probability at Market Midpoint".to_string(),
             BinAttribute::ProbAtClose => "Probability at Market Close".to_string(),
             BinAttribute::ProbTimeAvg => "Market Time-Averaged Probability".to_string(),
+            BinAttribute::ProbAtPct => match bin_attribute_x_pct {
+                Some(pct) => format!("Probability at {pct}% of Market Duration"),
+                _ => "Probability at User-Defined Percent".to_string(),
+            },
         }
     }
 }
@@ -150,6 +183,7 @@ fn generate_xaxis_bins(bin_size: &f32) -> Result<Vec<XAxisBin>, ApiError> {
             end: x + bin_size,
             y_axis_numerator: 0.0,
             y_axis_denominator: 0.0,
+            count: 0,
         });
         x += bin_size;
     }
@@ -175,7 +209,9 @@ pub fn build_calibration_plot(
         // this is a hot loop since we iterate over all markets
         for market in market_list.iter() {
             // get specified market values
-            let market_x_value = query.bin_attribute.get_x_value(market);
+            let market_x_value = query
+                .bin_attribute
+                .get_x_value(market, query.bin_attribute_x_pct)?;
             let market_y_value = query.weight_attribute.get_y_value(market);
             let market_weight_value = query.weight_attribute.get_weight(market);
 
@@ -194,6 +230,7 @@ pub fn build_calibration_plot(
             // add the market data to each counter
             bin.y_axis_numerator += market_weight_value * market_y_value;
             bin.y_axis_denominator += market_weight_value;
+            bin.count += 1;
         }
 
         // get platform data
@@ -220,7 +257,12 @@ pub fn build_calibration_plot(
                         bin.start * 100.0,
                         bin.end * 100.0
                     ),
-                    point_label: format!("{}: {:.1}%", platform.name_fmt, y_value * 100.0,),
+                    point_label: format!(
+                        "{}: {:.1}% from {} markets",
+                        platform.name_fmt,
+                        y_value * 100.0,
+                        bin.count
+                    ),
                 }
             })
             .collect();
@@ -235,8 +277,8 @@ pub fn build_calibration_plot(
     // get plot and axis titles
     let metadata = PlotMetadata {
         title: "Calibration Plot".to_string(),
-        x_title: query.bin_attribute.get_title(),
-        y_title: query.bin_attribute.get_title(),
+        x_title: query.bin_attribute.get_title(query.bin_attribute_x_pct),
+        y_title: query.weight_attribute.get_title(),
     };
 
     let response = CalibrationPlotResponse {
