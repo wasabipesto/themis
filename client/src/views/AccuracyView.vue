@@ -1,5 +1,5 @@
 <script setup>
-import { ref, toRefs, watch } from 'vue'
+import { ref, toRefs, watch, watchEffect } from 'vue'
 import axios from 'axios'
 import CommonFilters from '@/components/CommonFilters.vue'
 import { state } from '@/modules/CommonState.js'
@@ -40,14 +40,6 @@ const query_options = {
   num_market_points: {
     range: [500, 5000],
     step: 500
-  }
-}
-
-function getOptionLabel(option, value) {
-  try {
-    return query_options[option][value]['label']
-  } catch {
-    return '¯\\_(ツ)_/¯'
   }
 }
 
@@ -137,7 +129,7 @@ async function updateGraph() {
 
   let response
   try {
-    response = await axios.get('https://beta-api.calibration.city/accuracy_plot', {
+    response = await axios.get('https://api.calibration.city/accuracy_plot', {
       params: query_selected.value
     })
   } catch (error) {
@@ -203,6 +195,30 @@ watch(
   }, 100),
   { deep: true }
 )
+
+function getOptionLabel(option, value) {
+  try {
+    return query_options[option][value]['label']
+  } catch {
+    return '¯\\_(ツ)_/¯'
+  }
+}
+
+const scoring_override = ref(null)
+function get_xaxis_attribute_label() {
+  if (scoring_override.value == null) {
+    return getOptionLabel('scoring_attribute', query_selected.value.scoring_attribute)
+  } else {
+    return scoring_override.value
+  }
+}
+watchEffect(() => {
+  if (query_selected.value.xaxis_attribute == 'market_duration') {
+    scoring_override.value = 'Probability at X Percent'
+  } else {
+    scoring_override.value = null
+  }
+})
 </script>
 
 <template>
@@ -212,11 +228,14 @@ watch(
         <v-expansion-panel-title>
           <v-icon class="mr-3">mdi-ruler-square-compass</v-icon>
           Brier Scoring Method: <br />
-          {{ getOptionLabel('scoring_attribute', query_selected.scoring_attribute) }}
+          {{ get_xaxis_attribute_label() }}
         </v-expansion-panel-title>
         <v-expansion-panel-text>
           <p class="my-2">The Brier score for each market is caluclated based on this attribute.</p>
-          <v-radio-group v-model="query_selected.scoring_attribute">
+          <v-radio-group
+            v-model="query_selected.scoring_attribute"
+            :readonly="scoring_override != null"
+          >
             <v-radio v-for="(v, k) in query_options.scoring_attribute" :key="k" :value="k">
               <template v-slot:label>
                 {{ v.label }}
