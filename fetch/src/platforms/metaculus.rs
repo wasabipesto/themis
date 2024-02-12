@@ -242,7 +242,7 @@ async fn get_extended_data(
 
 /// Download, process and store all valid markets from the platform.
 pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
-    println!("Metaculus: Processing started...");
+    log_to_stdout("Metaculus: Processing started...");
     let client = get_reqwest_client_ratelimited(METACULUS_RATELIMIT, Some(METACULUS_RATELIMIT_MS));
     let api_url = METACULUS_API_BASE.to_owned() + "/questions";
     if verbose {
@@ -311,7 +311,7 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
             break;
         }
     }
-    println!("Metaculus: Processing complete.");
+    log_to_stdout("Metaculus: Processing complete.");
 }
 
 /// Download, process and store one market from the platform.

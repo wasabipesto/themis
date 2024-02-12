@@ -335,7 +335,7 @@ async fn get_extended_data(
 
 /// Download, process and store all valid markets from the platform.
 pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
-    println!("Manifold: Processing started...");
+    log_to_stdout("Manifold: Processing started...");
     let client = get_reqwest_client_ratelimited(MANIFOLD_RATELIMIT, None);
     let api_url = MANIFOLD_API_BASE.to_owned() + "/markets";
     if verbose {
@@ -400,7 +400,7 @@ pub async fn get_markets_all(output_method: OutputMethod, verbose: bool) {
             break;
         }
     }
-    println!("Manifold: Processing complete.");
+    log_to_stdout("Manifold: Processing complete.");
 }
 
 /// Download, process and store one market from the platform.

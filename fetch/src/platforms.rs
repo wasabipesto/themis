@@ -457,3 +457,8 @@ fn eval_error(error: MarketConvertError, verbose: bool) {
         _ => panic!("{}", error),
     }
 }
+
+/// Print a standard log line with the current datetime.
+fn log_to_stdout(message: &str) {
+    println!("{:?} - {}", chrono::offset::Local::now(), message);
+}
