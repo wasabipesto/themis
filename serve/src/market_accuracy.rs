@@ -115,18 +115,45 @@ pub enum XAxisAttribute {
     NumTraders,
 }
 pub trait XAxisMethods {
+    /// Get the option name.
+    fn debug(&self) -> String;
     /// Get the value to use for the x-axis.
     fn get_x_value(&self, market: &Market) -> f32;
+    /// Get the minimum x-value from the markets.
+    fn get_minimum_x_value(&self, markets: &Vec<Market>) -> Result<f32, ApiError> {
+        markets
+            .iter()
+            .map(|market| self.get_x_value(market))
+            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .ok_or_else(|| ApiError {
+                status_code: 500,
+                message: format!("Failed to get maximum value in column {:?}", self.debug()),
+            })
+    }
+    /// Get the maximum x-value from the markets.
+    fn get_maximum_x_value(&self, markets: &Vec<Market>) -> Result<f32, ApiError> {
+        markets
+            .iter()
+            .map(|market| self.get_x_value(market))
+            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .ok_or_else(|| ApiError {
+                status_code: 500,
+                message: format!("Failed to get minimum value in column {:?}", self.debug()),
+            })
+    }
     /// Get the default minimum to use for the x-axis.
-    fn get_default_min(&self) -> f32;
+    fn get_bin_minimum(&self, markets: &Vec<Market>) -> f32;
     /// Get the default maximum to use for the x-axis.
-    fn get_default_max(&self) -> f32;
+    fn get_bin_maximum(&self, markets: &Vec<Market>) -> f32;
     /// Get the title to use for the x-axis.
     fn get_title(&self) -> String;
     /// Get the units to use for the x-axis.
     fn get_units(&self) -> String;
 }
 impl XAxisMethods for XAxisAttribute {
+    fn debug(&self) -> String {
+        format!("{:?}", self)
+    }
     fn get_x_value(&self, market: &Market) -> f32 {
         match self {
             XAxisAttribute::OpenDate => {
@@ -137,20 +164,31 @@ impl XAxisMethods for XAxisAttribute {
             XAxisAttribute::NumTraders => market.num_traders as f32,
         }
     }
-    fn get_default_min(&self) -> f32 {
+    fn get_bin_minimum(&self, markets: &Vec<Market>) -> f32 {
         match self {
-            XAxisAttribute::OpenDate => -500.0,
+            XAxisAttribute::OpenDate => self
+                .get_minimum_x_value(markets)
+                .unwrap_or(-500.0)
+                .max(-500.0),
             XAxisAttribute::OpenDays => 0.0,
             XAxisAttribute::VolumeUsd => 0.0,
             XAxisAttribute::NumTraders => 0.0,
         }
     }
-    fn get_default_max(&self) -> f32 {
+    fn get_bin_maximum(&self, markets: &Vec<Market>) -> f32 {
         match self {
             XAxisAttribute::OpenDate => 0.0,
-            XAxisAttribute::OpenDays => 500.0,
-            XAxisAttribute::VolumeUsd => 500.0,
-            XAxisAttribute::NumTraders => 60.0,
+            XAxisAttribute::OpenDays => self
+                .get_maximum_x_value(markets)
+                .unwrap_or(500.0)
+                .min(500.0),
+            XAxisAttribute::VolumeUsd => self
+                .get_maximum_x_value(markets)
+                .unwrap_or(500.0)
+                .min(500.0),
+            XAxisAttribute::NumTraders => {
+                self.get_maximum_x_value(markets).unwrap_or(60.0).min(60.0)
+            }
         }
     }
     fn get_title(&self) -> String {
@@ -198,29 +236,15 @@ pub fn build_accuracy_plot(
 ) -> Result<HttpResponse, ApiError> {
     // get rng thread
     let mut rng = rand::thread_rng();
-
     // get markets from database
     let (markets, _) = get_markets_filtered(conn, Some(&query.filters), None)?;
-    // sort by platform
-    let markets_by_platform = categorize_markets_by_platform(markets.clone());
-
     // get maximum value for x-axis bins
-    let bin_minimum = query.xaxis_attribute.get_default_min();
-    let default_maximum = query.xaxis_attribute.get_default_max();
-    let bin_maximum = markets
-        .iter()
-        .map(|market| query.xaxis_attribute.get_x_value(market))
-        .max_by(|a, b| a.partial_cmp(b).unwrap())
-        .ok_or_else(|| ApiError {
-            status_code: 500,
-            message: format!(
-                "Failed to get maximum value in column {:?}",
-                query.xaxis_attribute
-            ),
-        })?
-        .min(default_maximum);
+    let bin_minimum = query.xaxis_attribute.get_bin_minimum(&markets);
+    let bin_maximum = query.xaxis_attribute.get_bin_maximum(&markets);
     // generate bins for accuracy measurement
     let bins_orig = generate_xaxis_bins(bin_minimum, bin_maximum, NUM_ACCURACY_BINS)?;
+    // sort markets by platform
+    let markets_by_platform = categorize_markets_by_platform(markets);
 
     let mut traces = Vec::new();
     for (platform_name, market_list) in markets_by_platform {
