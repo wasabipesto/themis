@@ -34,6 +34,7 @@ const query_options = {
     close_date: { label: 'Close Date' },
     volume_usd: { label: 'Market Volume' },
     open_days: { label: 'Market Length' },
+    market_duration: { label: 'Market Duration' },
     num_traders: { label: 'Number of Traders' }
   },
   num_market_points: {
@@ -136,7 +137,7 @@ async function updateGraph() {
 
   let response
   try {
-    response = await axios.get('https://api.calibration.city/accuracy_plot', {
+    response = await axios.get('https://beta-api.calibration.city/accuracy_plot', {
       params: query_selected.value
     })
   } catch (error) {

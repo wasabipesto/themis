@@ -1,6 +1,6 @@
 use super::*;
 
-const NUM_ACCURACY_BINS: usize = 20;
+const NUM_ACCURACY_BINS: usize = 25;
 const SECS_PER_DAY: f32 = 86400.0;
 
 /// Parameters passed to the accuracy function.
@@ -28,7 +28,7 @@ fn default_num_market_points() -> usize {
 
 #[derive(Debug, Clone)]
 /// Data for each bin and the markets included.
-struct XAxisBin {
+pub struct XAxisBin {
     start: f32,
     middle: f32,
     end: f32,
@@ -38,7 +38,7 @@ struct XAxisBin {
 
 /// An individual datapoint to be plotted.
 #[derive(Debug, Serialize)]
-struct Point {
+pub struct Point {
     x: f32,
     y: f32,
     point_title: Option<String>,
@@ -80,6 +80,10 @@ pub enum ScoringAttribute {
     ProbTimeAvg,
 }
 pub trait YAxisMethods {
+    /// Get the Brier score from the given reference point.
+    fn get_brier_score(&self, market: &Market, prob: &f32) -> f32 {
+        (market.resolution - prob).powf(2.0)
+    }
     /// Get the value to use for the y-axis (brier score).
     fn get_y_value(&self, market: &Market) -> f32;
     /// Get the title to use for the y-axis.
@@ -89,10 +93,10 @@ impl YAxisMethods for ScoringAttribute {
     fn get_y_value(&self, market: &Market) -> f32 {
         match self {
             ScoringAttribute::ProbAtMidpoint => {
-                (market.resolution - market.prob_at_midpoint).powf(2.0)
+                self.get_brier_score(market, &market.prob_at_midpoint)
             }
-            ScoringAttribute::ProbAtClose => (market.resolution - market.prob_at_close).powf(2.0),
-            ScoringAttribute::ProbTimeAvg => (market.resolution - market.prob_time_avg).powf(2.0),
+            ScoringAttribute::ProbAtClose => self.get_brier_score(market, &market.prob_at_close),
+            ScoringAttribute::ProbTimeAvg => self.get_brier_score(market, &market.prob_time_avg),
         }
     }
     fn get_title(&self) -> String {
@@ -110,6 +114,7 @@ impl YAxisMethods for ScoringAttribute {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum XAxisAttribute {
+    MarketDuration,
     OpenDate,
     CloseDate,
     OpenDays,
@@ -119,8 +124,10 @@ pub enum XAxisAttribute {
 pub trait XAxisMethods {
     /// Get the option name.
     fn debug(&self) -> String;
+
     /// Get the value to use for the x-axis.
     fn get_x_value(&self, market: &Market) -> f32;
+
     /// Get the minimum x-value from the markets.
     fn get_minimum_x_value(&self, markets: &Vec<Market>) -> Result<f32, ApiError> {
         markets
@@ -132,6 +139,7 @@ pub trait XAxisMethods {
                 message: format!("Failed to get maximum value in column {:?}", self.debug()),
             })
     }
+
     /// Get the maximum x-value from the markets.
     fn get_maximum_x_value(&self, markets: &Vec<Market>) -> Result<f32, ApiError> {
         markets
@@ -143,12 +151,32 @@ pub trait XAxisMethods {
                 message: format!("Failed to get minimum value in column {:?}", self.debug()),
             })
     }
+
     /// Get the default minimum to use for the x-axis.
     fn get_bin_minimum(&self, markets: &Vec<Market>) -> f32;
+
     /// Get the default maximum to use for the x-axis.
     fn get_bin_maximum(&self, markets: &Vec<Market>) -> f32;
+
+    /// Generate a point for a market on the scatter plot.
+    fn get_scatter_point(
+        &self,
+        market: &Market,
+        platform: &Platform,
+        scoring_attribute: &ScoringAttribute,
+    ) -> Result<Point, ApiError>;
+
+    /// Update the biins with the market information.
+    fn update_bins(
+        &self,
+        bins: &mut Vec<XAxisBin>,
+        markets: Vec<Market>,
+        scoring_attribute: &ScoringAttribute,
+    );
+
     /// Get the title to use for the x-axis.
     fn get_title(&self) -> String;
+
     /// Get the units to use for the x-axis.
     fn get_units(&self) -> String;
 }
@@ -156,8 +184,10 @@ impl XAxisMethods for XAxisAttribute {
     fn debug(&self) -> String {
         format!("{:?}", self)
     }
+
     fn get_x_value(&self, market: &Market) -> f32 {
         match self {
+            XAxisAttribute::MarketDuration => rand::thread_rng().gen_range(0..100) as f32,
             XAxisAttribute::OpenDate => {
                 (Utc::now() - market.open_dt).num_seconds() as f32 / SECS_PER_DAY * -1.0
             }
@@ -169,8 +199,10 @@ impl XAxisMethods for XAxisAttribute {
             XAxisAttribute::NumTraders => market.num_traders as f32,
         }
     }
+
     fn get_bin_minimum(&self, markets: &Vec<Market>) -> f32 {
         match self {
+            XAxisAttribute::MarketDuration => 0.0,
             XAxisAttribute::OpenDate => self
                 .get_minimum_x_value(markets)
                 .unwrap_or(-500.0)
@@ -184,8 +216,10 @@ impl XAxisMethods for XAxisAttribute {
             XAxisAttribute::NumTraders => 0.0,
         }
     }
+
     fn get_bin_maximum(&self, markets: &Vec<Market>) -> f32 {
         match self {
+            XAxisAttribute::MarketDuration => 100.0,
             XAxisAttribute::OpenDate => 0.0,
             XAxisAttribute::CloseDate => 0.0,
             XAxisAttribute::OpenDays => self
@@ -201,8 +235,79 @@ impl XAxisMethods for XAxisAttribute {
             }
         }
     }
+
+    fn get_scatter_point(
+        &self,
+        market: &Market,
+        platform: &Platform,
+        scoring_attribute: &ScoringAttribute,
+    ) -> Result<Point, ApiError> {
+        let x_value = self.get_x_value(market);
+        let y_value = match self {
+            XAxisAttribute::MarketDuration => {
+                // market duration overrides the normal y-value
+                if let Some(y_value) = market.prob_at_pct.get(x_value as usize) {
+                    Ok(scoring_attribute.get_brier_score(market, y_value))
+                } else {
+                    Err(ApiError {
+                        status_code: 500,
+                        message: format!(
+                            "Failed to get probability at {}% for market {:?}",
+                            x_value, market
+                        ),
+                    })
+                }
+            }
+            _ => Ok(scoring_attribute.get_y_value(market)),
+        }?;
+        Ok(Point {
+            x: x_value,
+            y: y_value,
+            point_title: None,
+            point_label: format!("{}: {}", platform.name_fmt.clone(), market.title.clone()),
+        })
+    }
+
+    fn update_bins(
+        &self,
+        bins: &mut Vec<XAxisBin>,
+        markets: Vec<Market>,
+        scoring_attribute: &ScoringAttribute,
+    ) {
+        match self {
+            XAxisAttribute::MarketDuration => {
+                // this is a hot loop since we iterate over all markets AND all bins
+                for bin in bins {
+                    let x_value = bin.middle.clone() as usize;
+                    for market in markets.iter() {
+                        let y_value = market.prob_at_pct.get(x_value).unwrap();
+                        bin.brier_sum += scoring_attribute.get_brier_score(market, y_value);
+                        bin.count += 1;
+                    }
+                }
+            }
+            _ => {
+                // this is a hot loop since we iterate over all markets
+                for market in markets.iter() {
+                    // find the closest bin based on the market's selected x value
+                    let market_xaxis_value = self.get_x_value(market);
+                    let bin_opt = bins.iter_mut().find(|bin| {
+                        bin.start <= market_xaxis_value && market_xaxis_value <= bin.end
+                    });
+
+                    // if it's in our range, calculate and save
+                    if let Some(bin) = bin_opt {
+                        bin.brier_sum += scoring_attribute.get_y_value(market);
+                        bin.count += 1;
+                    }
+                }
+            }
+        }
+    }
+
     fn get_title(&self) -> String {
         match self {
+            XAxisAttribute::MarketDuration => "Market Duration (percent)".to_string(),
             XAxisAttribute::OpenDate => "Market Open Date (days before today)".to_string(),
             XAxisAttribute::CloseDate => "Market Close Date (days before today)".to_string(),
             XAxisAttribute::OpenDays => "Market Open Length (days)".to_string(),
@@ -210,8 +315,10 @@ impl XAxisMethods for XAxisAttribute {
             XAxisAttribute::NumTraders => "Number of Unique Traders".to_string(),
         }
     }
+
     fn get_units(&self) -> String {
         match self {
+            XAxisAttribute::MarketDuration => "percent".to_string(),
             XAxisAttribute::OpenDate => "days before today".to_string(),
             XAxisAttribute::CloseDate => "days before today".to_string(),
             XAxisAttribute::OpenDays => "days".to_string(),
@@ -271,12 +378,11 @@ pub fn build_accuracy_plot(
         let random_markets = market_list.choose_multiple(&mut rng, query.num_market_points);
         let mut market_points = Vec::with_capacity(query.num_market_points);
         for market in random_markets {
-            market_points.push(Point {
-                x: query.xaxis_attribute.get_x_value(market),
-                y: query.scoring_attribute.get_y_value(market),
-                point_title: None,
-                point_label: format!("{}: {}", platform.name_fmt.clone(), market.title.clone()),
-            })
+            market_points.push(query.xaxis_attribute.get_scatter_point(
+                market,
+                &platform,
+                &query.scoring_attribute,
+            )?)
         }
         // sort by x ascending for easier rendering (remove?)
         market_points.sort_by(|a, b| {
@@ -284,23 +390,12 @@ pub fn build_accuracy_plot(
                 .expect("Failed to compare values (NaN?)")
         });
 
-        // calculate brier scores for each market
-        // this is a hot loop since we iterate over all markets
-        for market in market_list.iter() {
-            // find the closest bin based on the market's selected x value
-            let market_xaxis_value = query.xaxis_attribute.get_x_value(market);
-            let bin_opt = bins
-                .iter_mut()
-                .find(|bin| bin.start <= market_xaxis_value && market_xaxis_value <= bin.end);
+        // update the bins with market information
+        query
+            .xaxis_attribute
+            .update_bins(&mut bins, market_list, &query.scoring_attribute);
 
-            // if it's in our range, calculate and save
-            if let Some(bin) = bin_opt {
-                bin.brier_sum += query.scoring_attribute.get_y_value(market);
-                bin.count += 1;
-            }
-        }
-
-        // get the final result per bin
+        // get the final result per bins
         let accuracy_line = bins
             .iter()
             .map(|bin| {

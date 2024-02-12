@@ -16,6 +16,7 @@ table! {
         category -> Varchar,
         prob_at_midpoint -> Float,
         prob_at_close -> Float,
+        prob_at_pct -> Array<Float>,
         prob_time_avg -> Float,
         resolution -> Float,
     }
@@ -37,6 +38,7 @@ pub struct Market {
     pub category: String,
     pub prob_at_midpoint: f32,
     pub prob_at_close: f32,
+    pub prob_at_pct: Vec<f32>,
     pub prob_time_avg: f32,
     pub resolution: f32,
 }
