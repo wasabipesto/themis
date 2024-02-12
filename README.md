@@ -18,11 +18,11 @@ In the default flow we spin up a group of async tasks to recursively download al
 
 ### Serve
 
-Subproject `serve` queries an external Postgres database with saved markets, calculates calibration points and Brier score, and ships it off to the client. Right now it only has a single route but it is extremely fast, usually completing a request in under 250ms. You can find the API schema in the serve README.
+Subproject `serve` queries an external Postgres database with saved markets, calculates calibration points and Brier score, and ships it off to the client. Different user-selectable options are deserialized immediately and applied to the SQL filter. A paginated endpoint allows third parties to query markets for their own analysis. You can find the API schema in the serve README.
 
 ### Client
 
-The `client` subproject is actually just a single HTML file that pulls a few scripts via CDN to build the layout and then queries the `serve` API to get data.
+The `client` subproject is a Vue project that is built upon deployment to be served behind nginx. There are only a few reused components, with most items being integrated directly into the view to allow for more flexibility. We use Veutify for basic components and the ChartJS library for plotting the visualizations. 
 
 ## Roadmap
 
