@@ -57,6 +57,7 @@ struct Trace {
 struct PlotMetadata {
     title: String,
     x_title: String,
+    x_max: f32,
     y_title: String,
 }
 
@@ -187,13 +188,20 @@ pub fn build_accuracy_plot(
 
     // get maximum value for x-axis bins
     let default_maximum = query.xaxis_attribute.get_default_max();
-    let column_maximum = markets
+    let bin_maximum = markets
         .iter()
         .map(|market| query.xaxis_attribute.get_x_value(market))
         .max_by(|a, b| a.partial_cmp(b).unwrap())
-        .unwrap();
+        .ok_or_else(|| ApiError {
+            status_code: 500,
+            message: format!(
+                "Failed to get maximum value in column {:?}",
+                query.xaxis_attribute
+            ),
+        })?
+        .min(default_maximum);
     // generate bins for accuracy measurement
-    let bins_orig = generate_xaxis_bins(default_maximum.min(column_maximum), NUM_ACCURACY_BINS)?;
+    let bins_orig = generate_xaxis_bins(bin_maximum, NUM_ACCURACY_BINS)?;
 
     let mut traces = Vec::new();
     for (platform_name, market_list) in markets_by_platform {
@@ -274,8 +282,9 @@ pub fn build_accuracy_plot(
 
     // get plot and axis titles
     let metadata = PlotMetadata {
-        title: format!("Accuracy Plot"),
+        title: "Accuracy Plot".to_string(),
         x_title: query.xaxis_attribute.get_title(),
+        x_max: bin_maximum,
         y_title: query.scoring_attribute.get_title(),
     };
 
