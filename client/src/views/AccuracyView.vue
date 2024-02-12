@@ -31,6 +31,7 @@ const query_options = {
   },
   xaxis_attribute: {
     open_date: { label: 'Open Date' },
+    close_date: { label: 'Close Date' },
     volume_usd: { label: 'Market Volume' },
     open_days: { label: 'Market Length' },
     num_traders: { label: 'Number of Traders' }

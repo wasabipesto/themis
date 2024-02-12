@@ -1,6 +1,7 @@
 use super::*;
 
 const NUM_ACCURACY_BINS: usize = 20;
+const SECS_PER_DAY: f32 = 86400.0;
 
 /// Parameters passed to the accuracy function.
 /// If the parameter is not supplied, the default values are used.
@@ -110,6 +111,7 @@ impl YAxisMethods for ScoringAttribute {
 #[serde(rename_all = "snake_case")]
 pub enum XAxisAttribute {
     OpenDate,
+    CloseDate,
     OpenDays,
     VolumeUsd,
     NumTraders,
@@ -157,7 +159,10 @@ impl XAxisMethods for XAxisAttribute {
     fn get_x_value(&self, market: &Market) -> f32 {
         match self {
             XAxisAttribute::OpenDate => {
-                (Utc::now() - market.open_dt).num_seconds() as f32 / (24.0 * 60.0 * 60.0) * -1.0
+                (Utc::now() - market.open_dt).num_seconds() as f32 / SECS_PER_DAY * -1.0
+            }
+            XAxisAttribute::CloseDate => {
+                (Utc::now() - market.close_dt).num_seconds() as f32 / SECS_PER_DAY * -1.0
             }
             XAxisAttribute::OpenDays => market.open_days,
             XAxisAttribute::VolumeUsd => market.volume_usd,
@@ -170,6 +175,10 @@ impl XAxisMethods for XAxisAttribute {
                 .get_minimum_x_value(markets)
                 .unwrap_or(-500.0)
                 .max(-500.0),
+            XAxisAttribute::CloseDate => self
+                .get_minimum_x_value(markets)
+                .unwrap_or(-500.0)
+                .max(-500.0),
             XAxisAttribute::OpenDays => 0.0,
             XAxisAttribute::VolumeUsd => 0.0,
             XAxisAttribute::NumTraders => 0.0,
@@ -178,6 +187,7 @@ impl XAxisMethods for XAxisAttribute {
     fn get_bin_maximum(&self, markets: &Vec<Market>) -> f32 {
         match self {
             XAxisAttribute::OpenDate => 0.0,
+            XAxisAttribute::CloseDate => 0.0,
             XAxisAttribute::OpenDays => self
                 .get_maximum_x_value(markets)
                 .unwrap_or(500.0)
@@ -194,6 +204,7 @@ impl XAxisMethods for XAxisAttribute {
     fn get_title(&self) -> String {
         match self {
             XAxisAttribute::OpenDate => "Market Open Date (days before today)".to_string(),
+            XAxisAttribute::CloseDate => "Market Close Date (days before today)".to_string(),
             XAxisAttribute::OpenDays => "Market Open Length (days)".to_string(),
             XAxisAttribute::VolumeUsd => "Market Volume (USD)".to_string(),
             XAxisAttribute::NumTraders => "Number of Unique Traders".to_string(),
@@ -202,6 +213,7 @@ impl XAxisMethods for XAxisAttribute {
     fn get_units(&self) -> String {
         match self {
             XAxisAttribute::OpenDate => "days before today".to_string(),
+            XAxisAttribute::CloseDate => "days before today".to_string(),
             XAxisAttribute::OpenDays => "days".to_string(),
             XAxisAttribute::VolumeUsd => "USD".to_string(),
             XAxisAttribute::NumTraders => "traders".to_string(),
