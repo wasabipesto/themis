@@ -57,6 +57,7 @@ struct Trace {
 struct PlotMetadata {
     title: String,
     x_title: String,
+    x_min: f32,
     x_max: f32,
     y_title: String,
 }
@@ -108,6 +109,7 @@ impl YAxisMethods for ScoringAttribute {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum XAxisAttribute {
+    OpenDate,
     OpenDays,
     VolumeUsd,
     NumTraders,
@@ -115,6 +117,8 @@ pub enum XAxisAttribute {
 pub trait XAxisMethods {
     /// Get the value to use for the x-axis.
     fn get_x_value(&self, market: &Market) -> f32;
+    /// Get the default minimum to use for the x-axis.
+    fn get_default_min(&self) -> f32;
     /// Get the default maximum to use for the x-axis.
     fn get_default_max(&self) -> f32;
     /// Get the title to use for the x-axis.
@@ -125,13 +129,25 @@ pub trait XAxisMethods {
 impl XAxisMethods for XAxisAttribute {
     fn get_x_value(&self, market: &Market) -> f32 {
         match self {
+            XAxisAttribute::OpenDate => {
+                (Utc::now() - market.open_dt).num_seconds() as f32 / (24.0 * 60.0 * 60.0) * -1.0
+            }
             XAxisAttribute::OpenDays => market.open_days,
             XAxisAttribute::VolumeUsd => market.volume_usd,
             XAxisAttribute::NumTraders => market.num_traders as f32,
         }
     }
+    fn get_default_min(&self) -> f32 {
+        match self {
+            XAxisAttribute::OpenDate => -500.0,
+            XAxisAttribute::OpenDays => 0.0,
+            XAxisAttribute::VolumeUsd => 0.0,
+            XAxisAttribute::NumTraders => 0.0,
+        }
+    }
     fn get_default_max(&self) -> f32 {
         match self {
+            XAxisAttribute::OpenDate => 0.0,
             XAxisAttribute::OpenDays => 500.0,
             XAxisAttribute::VolumeUsd => 500.0,
             XAxisAttribute::NumTraders => 60.0,
@@ -139,6 +155,7 @@ impl XAxisMethods for XAxisAttribute {
     }
     fn get_title(&self) -> String {
         match self {
+            XAxisAttribute::OpenDate => "Market Open Date (days before today)".to_string(),
             XAxisAttribute::OpenDays => "Market Open Length (days)".to_string(),
             XAxisAttribute::VolumeUsd => "Market Volume (USD)".to_string(),
             XAxisAttribute::NumTraders => "Number of Unique Traders".to_string(),
@@ -146,6 +163,7 @@ impl XAxisMethods for XAxisAttribute {
     }
     fn get_units(&self) -> String {
         match self {
+            XAxisAttribute::OpenDate => "days before today".to_string(),
             XAxisAttribute::OpenDays => "days".to_string(),
             XAxisAttribute::VolumeUsd => "USD".to_string(),
             XAxisAttribute::NumTraders => "traders".to_string(),
@@ -155,12 +173,12 @@ impl XAxisMethods for XAxisAttribute {
 
 /// Generate `count` equally-spaced bins from 0 to `max`
 /// The first bin is from 0 to `step` and the last one is from `max`-`step` to `max`.
-fn generate_xaxis_bins(max: f32, count: usize) -> Result<Vec<XAxisBin>, ApiError> {
-    let step = max / count as f32;
+fn generate_xaxis_bins(min: f32, max: f32, count: usize) -> Result<Vec<XAxisBin>, ApiError> {
+    let step = (max - min) / count as f32;
     let mut bins = Vec::with_capacity(count);
     for i in 0..count {
-        let start = i as f32 * step;
-        let end = (i as f32 + 1.0) * step;
+        let start = min + i as f32 * step;
+        let end = min + (i as f32 + 1.0) * step;
         let middle = (start + end) / 2.0;
         bins.push(XAxisBin {
             start,
@@ -187,6 +205,7 @@ pub fn build_accuracy_plot(
     let markets_by_platform = categorize_markets_by_platform(markets.clone());
 
     // get maximum value for x-axis bins
+    let bin_minimum = query.xaxis_attribute.get_default_min();
     let default_maximum = query.xaxis_attribute.get_default_max();
     let bin_maximum = markets
         .iter()
@@ -201,7 +220,7 @@ pub fn build_accuracy_plot(
         })?
         .min(default_maximum);
     // generate bins for accuracy measurement
-    let bins_orig = generate_xaxis_bins(bin_maximum, NUM_ACCURACY_BINS)?;
+    let bins_orig = generate_xaxis_bins(bin_minimum, bin_maximum, NUM_ACCURACY_BINS)?;
 
     let mut traces = Vec::new();
     for (platform_name, market_list) in markets_by_platform {
@@ -284,6 +303,7 @@ pub fn build_accuracy_plot(
     let metadata = PlotMetadata {
         title: "Accuracy Plot".to_string(),
         x_title: query.xaxis_attribute.get_title(),
+        x_min: bin_minimum,
         x_max: bin_maximum,
         y_title: query.scoring_attribute.get_title(),
     };

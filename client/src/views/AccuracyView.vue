@@ -30,6 +30,7 @@ const query_options = {
     }
   },
   xaxis_attribute: {
+    open_date: { label: 'Open Date' },
     volume_usd: { label: 'Market Volume' },
     open_days: { label: 'Market Length' },
     num_traders: { label: 'Number of Traders' }
@@ -173,6 +174,7 @@ async function updateGraph() {
   // set chart-level options
   chart_options.value.plugins.title.text = response_data.metadata.title
   chart_options.value.scales.x.title.text = response_data.metadata.x_title
+  chart_options.value.scales.x.min = response_data.metadata.x_min
   chart_options.value.scales.x.max = response_data.metadata.x_max
   chart_options.value.scales.y.title.text = response_data.metadata.y_title
   chart_options.value = { ...chart_options.value }
