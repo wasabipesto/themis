@@ -6,26 +6,25 @@ const POINT_SIZE_DEFAULT: f32 = 8.0;
 
 /// Parameters passed to the calibration function.
 /// If the parameter is not supplied, the default values are used.
-/// TODO: Change bin_attribute and weight_attribute to enums
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CalibrationQueryParams {
     #[serde(default = "default_bin_attribute")]
-    bin_attribute: String,
+    bin_attribute: BinAttribute,
     #[serde(default = "default_bin_size")]
     bin_size: f32,
     #[serde(default = "default_weight_attribute")]
-    weight_attribute: String,
+    weight_attribute: WeightAttribute,
     #[serde(flatten)]
     pub filters: CommonFilterParams,
 }
-fn default_bin_attribute() -> String {
-    "prob_at_midpoint".to_string()
+fn default_bin_attribute() -> BinAttribute {
+    BinAttribute::ProbAtMidpoint
 }
 fn default_bin_size() -> f32 {
     0.05
 }
-fn default_weight_attribute() -> String {
-    "none".to_string()
+fn default_weight_attribute() -> WeightAttribute {
+    WeightAttribute::None
 }
 
 /// Data for each bin and the markets included.
@@ -43,7 +42,8 @@ struct Point {
     x: f32,
     y: f32,
     r: f32,
-    //desc: String,
+    //point_title: String,
+    //point_label: String,
 }
 
 /// Data sent to the client to render a plot, one plot per platform.
@@ -69,6 +69,76 @@ struct CalibrationPlotResponse {
     traces: Vec<Trace>,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BinAttribute {
+    ProbAtMidpoint,
+    ProbAtClose,
+    ProbTimeAvg,
+}
+
+pub trait XAxisMethods {
+    /// Get the value to use for the x-axis (bin).
+    fn get_x_value(&self, market: &Market) -> f32;
+    /// Get the title to use for the y-axis.
+    fn get_title(&self) -> String;
+}
+impl XAxisMethods for BinAttribute {
+    fn get_x_value(&self, market: &Market) -> f32 {
+        match self {
+            BinAttribute::ProbAtMidpoint => market.prob_at_midpoint,
+            BinAttribute::ProbAtClose => market.prob_at_close,
+            BinAttribute::ProbTimeAvg => market.prob_time_avg,
+        }
+    }
+    fn get_title(&self) -> String {
+        match self {
+            BinAttribute::ProbAtMidpoint => "Probability at Market Midpoint".to_string(),
+            BinAttribute::ProbAtClose => "Probability at Market Close".to_string(),
+            BinAttribute::ProbTimeAvg => "Market Time-Averaged Probability".to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WeightAttribute {
+    None,
+    OpenDays,
+    VolumeUsd,
+    NumTraders,
+}
+
+pub trait YAxisMethods {
+    /// Get the value to use for the y-axis (resolution).
+    fn get_y_value(&self, market: &Market) -> f32;
+    /// Get the weight to use for the y-axis.
+    fn get_weight(&self, market: &Market) -> f32;
+    /// Get the title to use for the y-axis.
+    fn get_title(&self) -> String;
+}
+impl YAxisMethods for WeightAttribute {
+    fn get_y_value(&self, market: &Market) -> f32 {
+        market.resolution
+    }
+    fn get_weight(&self, market: &Market) -> f32 {
+        match self {
+            WeightAttribute::None => 1.0,
+            WeightAttribute::OpenDays => market.open_days,
+            WeightAttribute::VolumeUsd => market.volume_usd,
+            WeightAttribute::NumTraders => market.num_traders as f32,
+        }
+    }
+    fn get_title(&self) -> String {
+        match self {
+            WeightAttribute::None => "Resolution, Unweighted".to_string(),
+            WeightAttribute::OpenDays => "Resolution, Weighted by Duration".to_string(),
+            WeightAttribute::VolumeUsd => "Resolution, Weighted by Traders".to_string(),
+            WeightAttribute::NumTraders => "Resolution, Weighted by Volume".to_string(),
+        }
+    }
+}
+
 /// Generates a set of equally-spaced bins between 0 and 1, where `bin_size` is the width of each bin.
 fn generate_xaxis_bins(bin_size: &f32) -> Result<Vec<XAxisBin>, ApiError> {
     let mut bins: Vec<XAxisBin> = Vec::new();
@@ -84,67 +154,6 @@ fn generate_xaxis_bins(bin_size: &f32) -> Result<Vec<XAxisBin>, ApiError> {
         x += bin_size;
     }
     Ok(bins)
-}
-
-/// Get the x-value of the market, based on the user-defined bin attribute.
-fn get_market_x_value(market: &Market, bin_attribute: &String) -> Result<f32, ApiError> {
-    match bin_attribute.as_str() {
-        "prob_at_midpoint" => Ok(market.prob_at_midpoint),
-        "prob_at_close" => Ok(market.prob_at_close),
-        "prob_time_avg" => Ok(market.prob_time_avg),
-        _ => {
-            return Err(ApiError::new(
-                400,
-                "the value provided for `bin_attribute` is not a valid option".to_string(),
-            ))
-        }
-    }
-}
-
-/// Get the y-value of the market, which is always the resolution value.
-fn get_market_y_value(market: &Market) -> Result<f32, ApiError> {
-    Ok(market.resolution)
-}
-
-/// Get the weighting value of the market, based on the user-defined weighting attribute.
-fn get_market_weight_value(market: &Market, weight_attribute: &String) -> Result<f32, ApiError> {
-    match weight_attribute.as_str() {
-        "open_days" => Ok(market.open_days),
-        "num_traders" => Ok(market.num_traders as f32),
-        "volume_usd" => Ok(market.volume_usd),
-        "none" => Ok(1.0),
-        _ => Err(ApiError::new(
-            400,
-            "the value provided for `weight_attribute` is not a valid option".to_string(),
-        )),
-    }
-}
-
-/// Get the x-axis title of the plot, based on the user-defined bin attribute.
-fn get_x_axis_title(bin_attribute: &String) -> Result<String, ApiError> {
-    match bin_attribute.as_str() {
-        "prob_at_midpoint" => Ok(format!("Probability at Market Midpoint")),
-        "prob_at_close" => Ok(format!("Probability at Market Close")),
-        "prob_time_avg" => Ok(format!("Market Time-Averaged Probability")),
-        _ => Err(ApiError {
-            status_code: 500,
-            message: format!("given bin_attribute not in x_title map"),
-        }),
-    }
-}
-
-/// Get the y-axis title of the plot, based on the user-defined weight attribute.
-fn get_y_axis_title(weight_attribute: &String) -> Result<String, ApiError> {
-    match weight_attribute.as_str() {
-        "open_days" => Ok(format!("Resolution, Weighted by Duration")),
-        "num_traders" => Ok(format!("Resolution, Weighted by Traders")),
-        "volume_usd" => Ok(format!("Resolution, Weighted by Volume")),
-        "none" => Ok(format!("Resolution, Unweighted")),
-        _ => Err(ApiError {
-            status_code: 500,
-            message: format!("given weight_attribute not in y_title map"),
-        }),
-    }
 }
 
 /// Takes a set of markets and generates calibration plots for each.
@@ -166,9 +175,9 @@ pub fn build_calibration_plot(
         // this is a hot loop since we iterate over all markets
         for market in market_list.iter() {
             // get specified market values
-            let market_x_value = get_market_x_value(&market, &query.bin_attribute)?;
-            let market_y_value = get_market_y_value(&market)?;
-            let market_weight_value = get_market_weight_value(&market, &query.weight_attribute)?;
+            let market_x_value = query.bin_attribute.get_x_value(market);
+            let market_y_value = query.weight_attribute.get_y_value(market);
+            let market_weight_value = query.weight_attribute.get_weight(market);
 
             // find the closest bin based on the market's selected x value
             let bin = bins
@@ -217,8 +226,8 @@ pub fn build_calibration_plot(
     // get plot and axis titles
     let metadata = PlotMetadata {
         title: format!("Calibration Plot"),
-        x_title: get_x_axis_title(&query.bin_attribute)?,
-        y_title: get_y_axis_title(&query.weight_attribute)?,
+        x_title: query.bin_attribute.get_title(),
+        y_title: query.bin_attribute.get_title(),
     };
 
     let response = CalibrationPlotResponse {
