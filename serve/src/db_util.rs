@@ -50,6 +50,7 @@ table! {
         avatar_url -> Varchar,
         site_url -> Varchar,
         color -> Varchar,
+        color_accent -> Varchar,
     }
 }
 
@@ -63,6 +64,7 @@ pub struct Platform {
     pub avatar_url: String,
     pub site_url: String,
     pub color: String,
+    pub color_accent: String,
 }
 
 /// Get information about a platform from the database.

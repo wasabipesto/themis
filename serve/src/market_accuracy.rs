@@ -69,6 +69,7 @@ struct AccuracyPlotResponse {
     traces: Vec<Trace>,
 }
 
+/// A selector for how to score each market.
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ScoringAttribute {
@@ -76,7 +77,6 @@ pub enum ScoringAttribute {
     ProbAtClose,
     ProbTimeAvg,
 }
-
 pub trait YAxisMethods {
     /// Get the value to use for the y-axis (brier score).
     fn get_y_value(&self, market: &Market) -> f32;
@@ -104,6 +104,7 @@ impl YAxisMethods for ScoringAttribute {
     }
 }
 
+/// A selector for the x-axis attribute to compare against.
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum XAxisAttribute {
@@ -111,7 +112,6 @@ pub enum XAxisAttribute {
     VolumeUsd,
     NumTraders,
 }
-
 pub trait XAxisMethods {
     /// Get the value to use for the x-axis.
     fn get_x_value(&self, market: &Market) -> f32;

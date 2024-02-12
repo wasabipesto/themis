@@ -24,7 +24,8 @@ CREATE TABLE platform (
     description VARCHAR NOT NULL,
     site_url VARCHAR NOT NULL,
     avatar_url VARCHAR NOT NULL,
-    color VARCHAR NOT NULL
+    color VARCHAR NOT NULL,
+    color_accent VARCHAR NOT NULL
 );
 INSERT INTO platform (
         name,
@@ -32,7 +33,8 @@ INSERT INTO platform (
         description,
         site_url,
         avatar_url,
-        color
+        color,
+        color_accent
     )
 VALUES (
         'manifold',
@@ -40,7 +42,8 @@ VALUES (
         'A play-money platform where anyone can make any market.',
         'https://manifold.markets/',
         'images/manifold.svg',
-        '#4337c9'
+        '#4337c9',
+        '#211b64'
     ),
     (
         'kalshi',
@@ -48,7 +51,8 @@ VALUES (
         'A US-regulated exchange with limited real-money contracts.',
         'https://kalshi.com/',
         'images/kalshi.png',
-        '#00d298'
+        '#00d298',
+        '#00694c'
     ),
     (
         'metaculus',
@@ -56,7 +60,8 @@ VALUES (
         'A forecasting platform focused on calibration instead of bets.',
         'https://www.metaculus.com/home/',
         'images/metaculus.png',
-        '#283441'
+        '#283441',
+        '#141a20'
     ),
     (
         'polymarket',
@@ -64,5 +69,6 @@ VALUES (
         'A high-volume cryptocurrency exchange backed by USDC.',
         'https://polymarket.com/',
         'images/polymarket.png',
-        '#0072f9'
+        '#0072f9',
+        '#00397c'
     );

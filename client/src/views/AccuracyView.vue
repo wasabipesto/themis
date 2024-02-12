@@ -149,16 +149,18 @@ async function updateGraph() {
         type: 'scatter',
         label: t.platform.name_fmt + ' Markets',
         backgroundColor: t.platform.color + '40',
+        borderColor: t.platform.color + '80',
+        pointRadius: 2,
         data: t.market_points
       },
       {
         type: 'line',
         label: t.platform.name_fmt + ' Accuracy',
-        backgroundColor: t.platform.color,
+        //backgroundColor: 'black',
         borderColor: t.platform.color,
+        pointRadius: 4,
         cubicInterpolationMode: 'monotone',
-        pointRadius: 3,
-        //spanGaps: true,
+        spanGaps: true,
         //stepped: true,
         data: t.accuracy_line
       }

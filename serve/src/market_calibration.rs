@@ -69,6 +69,7 @@ struct CalibrationPlotResponse {
     traces: Vec<Trace>,
 }
 
+/// A selector for how to bin the markets along the x-axis.
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum BinAttribute {
@@ -76,7 +77,6 @@ pub enum BinAttribute {
     ProbAtClose,
     ProbTimeAvg,
 }
-
 pub trait XAxisMethods {
     /// Get the value to use for the x-axis (bin).
     fn get_x_value(&self, market: &Market) -> f32;
@@ -100,6 +100,7 @@ impl XAxisMethods for BinAttribute {
     }
 }
 
+/// A selector for the weighting method to use on the y-axis.
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WeightAttribute {
@@ -108,7 +109,6 @@ pub enum WeightAttribute {
     VolumeUsd,
     NumTraders,
 }
-
 pub trait YAxisMethods {
     /// Get the value to use for the y-axis (resolution).
     fn get_y_value(&self, market: &Market) -> f32;
@@ -234,7 +234,7 @@ pub fn build_calibration_plot(
 
     // get plot and axis titles
     let metadata = PlotMetadata {
-        title: format!("Calibration Plot"),
+        title: "Calibration Plot".to_string(),
         x_title: query.bin_attribute.get_title(),
         y_title: query.bin_attribute.get_title(),
     };
