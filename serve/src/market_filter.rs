@@ -109,7 +109,7 @@ pub fn get_markets_filtered(
         }
         if let Some(ts) = params.close_ts_min {
             if let Some(dt) = DateTime::from_timestamp(ts, 0) {
-                query = query.filter(market::open_dt.ge(dt))
+                query = query.filter(market::close_dt.ge(dt))
             } else {
                 return Err(ApiError::new(
                     400,
@@ -119,7 +119,7 @@ pub fn get_markets_filtered(
         }
         if let Some(ts) = params.close_ts_max {
             if let Some(dt) = DateTime::from_timestamp(ts, 0) {
-                query = query.filter(market::open_dt.le(dt))
+                query = query.filter(market::close_dt.le(dt))
             } else {
                 return Err(ApiError::new(
                     400,
