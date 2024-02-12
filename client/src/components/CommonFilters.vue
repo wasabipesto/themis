@@ -15,11 +15,6 @@ if (mdAndUp.value) {
 
 show_sidebar_toggle.value = true
 
-const prob_at_midpoint_pct = ref([0, 100])
-const prob_at_close_pct = ref([0, 100])
-const prob_time_avg_pct = ref([0, 100])
-const resolution_pct = ref([0, 100])
-
 query_selected.value = {
   title_contains: null,
   platform_select: null,
@@ -62,8 +57,19 @@ const query_options = {
     'Science',
     'Sports',
     'Technology'
-  ]
+  ],
+  open_date: { range: [new Date(2000, 0, 1), new Date()] },
+  close_date: { range: [new Date(2000, 0, 1), new Date()] }
 }
+
+const open_date_range = ref([query_options.open_date.range[0], query_options.open_date.range[1]])
+const open_date_range_pickers = ref([false, false])
+const close_date_range = ref([query_options.close_date.range[0], query_options.close_date.range[1]])
+const close_date_range_pickers = ref([false, false])
+const prob_at_midpoint_pct = ref([0, 100])
+const prob_at_close_pct = ref([0, 100])
+const prob_time_avg_pct = ref([0, 100])
+const resolution_pct = ref([0, 100])
 
 function get_text_label(text) {
   if (text == '' || text == null) {
@@ -78,6 +84,24 @@ function get_option_label(option, value) {
     return query_options[option][value]['label']
   } catch {
     return 'Any'
+  }
+}
+
+function format_dates(dates) {
+  const formatted = []
+  dates.forEach((date) =>
+    formatted.push([date.getMonth() + 1, date.getDate(), date.getFullYear()].join('/'))
+  )
+  return formatted[0] + ' to ' + formatted[1]
+}
+
+function get_date_label(dates) {
+  const dates_formatted = format_dates(dates)
+  const default_formatted = format_dates(query_options.open_date.range)
+  if (dates_formatted == default_formatted) {
+    return 'Any'
+  } else {
+    return dates_formatted
   }
 }
 
@@ -161,6 +185,14 @@ watchEffect(() => {
   }
   query_selected.value.resolution_min = resolution_pct.value[0] / 100
   query_selected.value.resolution_max = resolution_pct.value[1] / 100
+})
+watchEffect(() => {
+  query_selected.value.open_ts_min = Math.floor(open_date_range.value[0].getTime() / 1000)
+  query_selected.value.open_ts_max = Math.floor(open_date_range.value[1].getTime() / 1000)
+})
+watchEffect(() => {
+  query_selected.value.close_ts_min = Math.floor(close_date_range.value[0].getTime() / 1000)
+  query_selected.value.close_ts_max = Math.floor(close_date_range.value[1].getTime() / 1000)
 })
 </script>
 
@@ -391,6 +423,82 @@ watchEffect(() => {
               density="compact"
             >
             </v-slider>
+          </v-col>
+        </v-row>
+      </v-container>
+    </v-expansion-panel-text>
+  </v-expansion-panel>
+  <v-expansion-panel value="open_date">
+    <v-expansion-panel-title>
+      <v-icon class="mr-3">mdi-clock-check-outline</v-icon>
+      Open Date:
+      {{ get_date_label(open_date_range) }}
+    </v-expansion-panel-title>
+    <v-expansion-panel-text>
+      <p class="my-2">
+        Filter the markets in the sample to only those that opened within a certain date range.
+      </p>
+      <v-container>
+        <v-row>
+          <v-col>
+            <v-btn
+              @click="open_date_range_pickers[0] = true"
+              prepend-icon="mdi-arrow-collapse-left"
+            >
+              Edit Min
+            </v-btn>
+            <v-dialog v-model="open_date_range_pickers[0]">
+              <v-date-picker label="Start Date" v-model="open_date_range[0]"> </v-date-picker>
+            </v-dialog>
+          </v-col>
+          <v-col>
+            <v-btn
+              @click="open_date_range_pickers[1] = true"
+              append-icon="mdi-arrow-collapse-right"
+            >
+              Edit Max
+            </v-btn>
+            <v-dialog v-model="open_date_range_pickers[1]">
+              <v-date-picker label="Start Date" v-model="open_date_range[1]"> </v-date-picker>
+            </v-dialog>
+          </v-col>
+        </v-row>
+      </v-container>
+    </v-expansion-panel-text>
+  </v-expansion-panel>
+  <v-expansion-panel value="close_date">
+    <v-expansion-panel-title>
+      <v-icon class="mr-3">mdi-clock-alert-outline</v-icon>
+      Close Date:
+      {{ get_date_label(close_date_range) }}
+    </v-expansion-panel-title>
+    <v-expansion-panel-text>
+      <p class="my-2">
+        Filter the markets in the sample to only those that closed within a certain date range.
+      </p>
+      <v-container>
+        <v-row>
+          <v-col>
+            <v-btn
+              @click="close_date_range_pickers[0] = true"
+              prepend-icon="mdi-arrow-collapse-left"
+            >
+              Edit Min
+            </v-btn>
+            <v-dialog v-model="close_date_range_pickers[0]">
+              <v-date-picker label="Start Date" v-model="close_date_range[0]"> </v-date-picker>
+            </v-dialog>
+          </v-col>
+          <v-col>
+            <v-btn
+              @click="close_date_range_pickers[1] = true"
+              append-icon="mdi-arrow-collapse-right"
+            >
+              Edit Max
+            </v-btn>
+            <v-dialog v-model="close_date_range_pickers[1]">
+              <v-date-picker label="Start Date" v-model="close_date_range[1]"> </v-date-picker>
+            </v-dialog>
           </v-col>
         </v-row>
       </v-container>
