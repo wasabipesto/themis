@@ -15,6 +15,8 @@ if (mdAndUp.value) {
 
 show_sidebar_toggle.value = true
 
+const defaultDateRange = [new Date(2000, 0, 1), new Date()]
+
 query_selected.value = {
   title_contains: null,
   platform_select: null,
@@ -58,8 +60,8 @@ const query_options = {
     'Sports',
     'Technology'
   ],
-  open_date: { range: [new Date(2000, 0, 1), new Date()] },
-  close_date: { range: [new Date(2000, 0, 1), new Date()] }
+  open_date: { range: defaultDateRange },
+  close_date: { range: defaultDateRange }
 }
 
 const open_date_range = ref([query_options.open_date.range[0], query_options.open_date.range[1]])
@@ -87,6 +89,13 @@ function get_option_label(option, value) {
   }
 }
 
+function reset_open_date_range() {
+  open_date_range.value = [...defaultDateRange]
+}
+function reset_close_date_range() {
+  close_date_range.value = [...defaultDateRange]
+}
+
 function format_dates(dates) {
   const formatted = []
   dates.forEach((date) =>
@@ -97,7 +106,7 @@ function format_dates(dates) {
 
 function get_date_label(dates) {
   const dates_formatted = format_dates(dates)
-  const default_formatted = format_dates(query_options.open_date.range)
+  const default_formatted = format_dates(defaultDateRange)
   if (dates_formatted == default_formatted) {
     return 'Any'
   } else {
@@ -440,23 +449,26 @@ watchEffect(() => {
       </p>
       <v-container>
         <v-row>
-          <v-col>
+          <v-col cols="4">
             <v-btn
               @click="open_date_range_pickers[0] = true"
               prepend-icon="mdi-arrow-collapse-left"
             >
-              Edit Min
+              Min
             </v-btn>
             <v-dialog v-model="open_date_range_pickers[0]">
               <v-date-picker label="Start Date" v-model="open_date_range[0]"> </v-date-picker>
             </v-dialog>
           </v-col>
-          <v-col>
+          <v-col cols="4">
+            <v-btn @click="reset_open_date_range"> Reset </v-btn>
+          </v-col>
+          <v-col cols="4">
             <v-btn
               @click="open_date_range_pickers[1] = true"
               append-icon="mdi-arrow-collapse-right"
             >
-              Edit Max
+              Max
             </v-btn>
             <v-dialog v-model="open_date_range_pickers[1]">
               <v-date-picker label="Start Date" v-model="open_date_range[1]"> </v-date-picker>
@@ -478,23 +490,26 @@ watchEffect(() => {
       </p>
       <v-container>
         <v-row>
-          <v-col>
+          <v-col cols="4">
             <v-btn
               @click="close_date_range_pickers[0] = true"
               prepend-icon="mdi-arrow-collapse-left"
             >
-              Edit Min
+              Min
             </v-btn>
             <v-dialog v-model="close_date_range_pickers[0]">
               <v-date-picker label="Start Date" v-model="close_date_range[0]"> </v-date-picker>
             </v-dialog>
           </v-col>
-          <v-col>
+          <v-col cols="4">
+            <v-btn @click="reset_close_date_range"> Reset </v-btn>
+          </v-col>
+          <v-col cols="4">
             <v-btn
               @click="close_date_range_pickers[1] = true"
               append-icon="mdi-arrow-collapse-right"
             >
-              Edit Max
+              Max
             </v-btn>
             <v-dialog v-model="close_date_range_pickers[1]">
               <v-date-picker label="Start Date" v-model="close_date_range[1]"> </v-date-picker>
