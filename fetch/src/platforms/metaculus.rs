@@ -90,7 +90,7 @@ impl MarketStandardizer for MarketFull {
         } else {
             Err(MarketConvertError {
                 data: self.debug(),
-                message: format!("Metaculus: effected_close_time is missing from closed market"),
+                message: "Metaculus: effected_close_time is missing from closed market".to_string(),
                 level: 3,
             })
         }
@@ -145,19 +145,19 @@ impl MarketStandardizer for MarketFull {
     }
     fn resolution(&self) -> Result<f32, MarketConvertError> {
         if let Some(resolution) = self.market.resolution {
-            if 0.0 <= resolution && resolution <= 1.0 {
+            if (0.0..=1.0).contains(&resolution) {
                 Ok(resolution)
             } else {
                 Err(MarketConvertError {
                     data: self.debug(),
-                    message: format!("Metaculus: Market resolution value out of bounds"),
+                    message: "Metaculus: Market resolution value out of bounds".to_string(),
                     level: 3,
                 })
             }
         } else {
             Err(MarketConvertError {
                 data: self.debug(),
-                message: format!("Metaculus: Market resolution value is null"),
+                message: "Metaculus: Market resolution value is null".to_string(),
                 level: 3,
             })
         }
@@ -209,16 +209,15 @@ fn get_prob_updates(
             } else {
                 return Err(MarketConvertError {
                     data: format!("{:?}", point),
-                    message: format!("Metaculus: History event point.x2.avg is missing"),
+                    message: "Metaculus: History event point.x2.avg is missing".to_string(),
                     level: 3,
                 });
             }
         } else {
             return Err(MarketConvertError {
                 data: format!("{:?}", point),
-                message: format!(
-                    "Metaculus: History event timestamp could not be converted into DateTime"
-                ),
+                message: "Metaculus: History event timestamp could not be converted into DateTime"
+                    .to_string(),
                 level: 4,
             });
         }

@@ -2,11 +2,9 @@
 
 use super::*;
 
-//const POLYMARKET_GAMMA_API_BASE: &str = "https://gamma-api.polymarket.com/query";
 const POLYMARKET_CLOB_API_BASE: &str = "https://clob.polymarket.com";
 const POLYMARKET_SITE_BASE: &str = "https://polymarket.com";
 const POLYMARKET_RATELIMIT: usize = 100;
-//const POLYMARKET_EPSILON: f32 = 0.0001;
 
 /// (Indirect) API response with standard market info.
 #[allow(non_snake_case)]
@@ -15,7 +13,6 @@ struct MarketInfo {
     condition_id: String,
     question: String,
     market_slug: String,
-    //active: bool,
     closed: bool,
     end_date_iso: Option<DateTime<Utc>>,
     parent_categories: Vec<String>,
@@ -77,7 +74,8 @@ impl MarketStandardizer for MarketFull {
         } else {
             Err(MarketConvertError {
                 data: self.debug(),
-                message: format!("Polymarket: No events in event list (cannot get market bounds)."),
+                message: "Polymarket: No events in event list (cannot get market bounds)."
+                    .to_string(),
                 level: 3,
             })
         }
@@ -88,7 +86,7 @@ impl MarketStandardizer for MarketFull {
         } else {
             Err(MarketConvertError {
                 data: self.debug(),
-                message: format!("Polymarket: Market field end_date_iso is empty."),
+                message: "Polymarket: Market field end_date_iso is empty.".to_string(),
                 level: 0,
             })
         }
@@ -127,18 +125,18 @@ impl MarketStandardizer for MarketFull {
                 (false, true) => Ok(0.0),
                 (true, true) => Err(MarketConvertError {
                     data: self.debug(),
-                    message: format!("Polymarket: Both tokens are winners."),
+                    message: "Polymarket: Both tokens are winners.".to_string(),
                     level: 1,
                 }),
                 (false, false) => Err(MarketConvertError {
                     data: self.debug(),
-                    message: format!("Polymarket: Neither token is a winner."),
+                    message: "Polymarket: Neither token is a winner.".to_string(),
                     level: 1,
                 }),
             },
             _ => Err(MarketConvertError {
                 data: self.debug(),
-                message: format!("Polymarket: Market field `tokens` has less than two values."),
+                message: "Polymarket: Market field `tokens` has less than two values.".to_string(),
                 level: 3,
             }),
         }
@@ -170,29 +168,7 @@ impl TryInto<MarketStandard> for MarketFull {
 
 /// Test if a market is suitable for analysis.
 fn is_valid(market: &MarketInfo) -> bool {
-    market.closed == true && market.tokens.len() == 2 && market.end_date_iso < Some(Utc::now())
-}
-
-/// Convert API events into standard events.
-fn get_prob_updates(
-    mut points: Vec<PricesHistoryPoint>,
-) -> Result<Vec<ProbUpdate>, MarketConvertError> {
-    let mut result: Vec<ProbUpdate> = Vec::new();
-    points.sort_unstable_by_key(|point| point.t);
-    for point in points {
-        if let Some(last_point) = result.last() {
-            if last_point.prob == point.p {
-                // skip adding to the list if the prob is the same
-                continue;
-            }
-        }
-        result.push(ProbUpdate {
-            time: point.t,
-            prob: point.p,
-        });
-    }
-
-    Ok(result)
+    market.closed && market.tokens.len() == 2 && market.end_date_iso < Some(Utc::now())
 }
 
 /// Download full market history and store events in the container.
@@ -205,11 +181,11 @@ async fn get_extended_data(
         Some(token) => Ok(token.token_id.to_owned()),
         None => Err(MarketConvertError {
             data: format!("{:?}", market),
-            message: format!("Polymarket: Market field `tokens` is empty."),
+            message: "Polymarket: Market field `tokens` is empty.".to_string(),
             level: 3,
         }),
     }?;
-    let mut events = Vec::new();
+    let mut history = Vec::new();
     for i in 0..=5 {
         // get fidelity window
         let fidelity = match i {
@@ -232,8 +208,8 @@ async fn get_extended_data(
         .await?;
 
         // break out if we get data
-        if response.history.len() > 0 {
-            events.extend(response.history);
+        if !response.history.is_empty() {
+            history.extend(response.history);
             break;
         } else if i >= 5 {
             return Err(MarketConvertError {
@@ -244,9 +220,25 @@ async fn get_extended_data(
         }
     }
 
+    // convert API history events into standard events
+    let mut events: Vec<ProbUpdate> = Vec::new();
+    history.sort_unstable_by_key(|point| point.t);
+    for point in history {
+        if let Some(last_point) = events.last() {
+            if last_point.prob == point.p {
+                // skip adding to the list if the prob is the same
+                continue;
+            }
+        }
+        events.push(ProbUpdate {
+            time: point.t,
+            prob: point.p,
+        });
+    }
+
     Ok(MarketFull {
         market: market.clone(),
-        events: get_prob_updates(events)?,
+        events,
     })
 }
 

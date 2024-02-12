@@ -119,17 +119,17 @@ impl MarketStandardizer for MarketFull {
     }
     fn category(&self) -> String {
         match self.market.category.as_str() {
-            "COVID-19" => return "Science".to_string(),
-            "Climate and Weather" => return "Climate".to_string(),
-            "Companies" => return "Economics".to_string(),
-            "Economics" => return "Economics".to_string(),
-            "Entertainment" => return "Culture".to_string(),
-            "Financials" => return "Economics".to_string(),
-            "Health" => return "Science".to_string(),
-            "Politics" => return "Politics".to_string(),
-            "Science & Technology" => return "Science".to_string(),
-            "Science and Technology" => return "Science".to_string(),
-            "Transportation" => return "Politics".to_string(),
+            "COVID-19" => "Science".to_string(),
+            "Climate and Weather" => "Climate".to_string(),
+            "Companies" => "Economics".to_string(),
+            "Economics" => "Economics".to_string(),
+            "Entertainment" => "Culture".to_string(),
+            "Financials" => "Economics".to_string(),
+            "Health" => "Science".to_string(),
+            "Politics" => "Politics".to_string(),
+            "Science & Technology" => "Science".to_string(),
+            "Science and Technology" => "Science".to_string(),
+            "Transportation" => "Politics".to_string(),
             _ => "None".to_string(),
         }
     }

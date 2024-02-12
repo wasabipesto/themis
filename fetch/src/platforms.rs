@@ -16,6 +16,7 @@ use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use serde_json::to_string_pretty;
+use std::cmp::Ordering;
 use std::env::var;
 
 pub mod kalshi;
@@ -226,43 +227,51 @@ pub trait MarketStandardizer {
             // check if this is the first event
             match &prev_event {
                 None => {
-                    if event.time > self.open_dt()? {
-                        // add time between start time and first event
-                        let duration = (event.time - self.open_dt()?).num_seconds() as f32;
-                        cumulative_prob += DEFAULT_OPENING_PROB * duration;
-                        cumulative_time += duration;
-                    } else if event.time == self.open_dt()? {
-                        // no time between start time and first event, skip
-                    } else {
-                        return Err(MarketConvertError {
-                            data: self.debug(),
-                            message: format!(
-                                "General: Market event {:?} occured before market start {:?}.",
-                                event,
-                                self.open_dt()?
-                            ),
-                            level: 1,
-                        });
+                    match event.time.cmp(&self.open_dt()?) {
+                        Ordering::Greater => {
+                            // add time between start time and first event
+                            let duration = (event.time - self.open_dt()?).num_seconds() as f32;
+                            cumulative_prob += DEFAULT_OPENING_PROB * duration;
+                            cumulative_time += duration;
+                        }
+                        Ordering::Equal => {
+                            // no time between start time and first event, skip
+                        }
+                        Ordering::Less => {
+                            return Err(MarketConvertError {
+                                data: self.debug(),
+                                message: format!(
+                                    "General: Market event {:?} occured before market start {:?}.",
+                                    event,
+                                    self.open_dt()?
+                                ),
+                                level: 1,
+                            });
+                        }
                     }
                 }
                 Some(prev) => {
-                    if event.time > prev.time {
-                        // add time between last event and this one
-                        let duration = (event.time - prev.time).num_seconds() as f32;
-                        cumulative_prob += prev.prob * duration;
-                        cumulative_time += duration;
-                    } else if event.time == prev.time {
-                        // this event happened at the exact same moment as the last, let's assume the probs are equal and move on
-                        continue;
-                    } else {
-                        return Err(MarketConvertError {
-                            data: self.debug(),
-                            message: format!(
-                                "General: Market events were not sorted properly, event {:?} occured before earlier event {:?}.",
-                                event, prev
-                            ),
-                            level: 4,
-                        });
+                    match event.time.cmp(&prev.time) {
+                        Ordering::Greater => {
+                            // add time between last event and this one
+                            let duration = (event.time - prev.time).num_seconds() as f32;
+                            cumulative_prob += prev.prob * duration;
+                            cumulative_time += duration;
+                        }
+                        Ordering::Equal => {
+                            // this event happened at the exact same moment as the last, let's assume the probs are equal and move on
+                            continue;
+                        }
+                        Ordering::Less => {
+                            return Err(MarketConvertError {
+                                data: self.debug(),
+                                message: format!(
+                                    "General: Market events were not sorted properly, event {:?} occured before earlier event {:?}.",
+                                    event, prev
+                                ),
+                                level: 4,
+                            });
+                        }
                     }
                 }
             }
@@ -280,7 +289,7 @@ pub trait MarketStandardizer {
                 }
             }
             None => {
-                if self.events().len() > 0 {
+                if !self.events().is_empty() {
                     // there are some events but they're all outside the market window
                     return Err(MarketConvertError {
                         data: self.debug(),
@@ -299,26 +308,24 @@ pub trait MarketStandardizer {
             }
         }
         let prob_time_avg = cumulative_prob / cumulative_time;
-        if 0.0 <= prob_time_avg && prob_time_avg <= 1.0 {
+        if (0.0..=1.0).contains(&prob_time_avg) {
             Ok(prob_time_avg)
+        } else if prob_time_avg.is_nan() {
+            Err(MarketConvertError {
+                data: self.debug(),
+                message: format!(
+                    "General: prob_time_avg is NaN: {cumulative_prob} / {cumulative_time}."
+                ),
+                level: 1,
+            })
         } else {
-            if prob_time_avg.is_nan() {
-                Err(MarketConvertError {
-                    data: self.debug(),
-                    message: format!(
-                        "General: prob_time_avg is NaN: {cumulative_prob} / {cumulative_time}."
-                    ),
-                    level: 1,
-                })
-            } else {
-                Err(MarketConvertError {
-                    data: self.debug(),
-                    message: format!(
-                        "General: prob_time_avg calculation result was out of bounds: {cumulative_prob} / {cumulative_time} = {prob_time_avg}."
-                    ),
-                    level: 2,
-                })
-            }
+            Err(MarketConvertError {
+                data: self.debug(),
+                message: format!(
+                    "General: prob_time_avg calculation result was out of bounds: {cumulative_prob} / {cumulative_time} = {prob_time_avg}."
+                ),
+                level: 2,
+            })
         }
     }
 }
@@ -404,7 +411,7 @@ async fn send_request<T: for<'de> serde::Deserialize<'de>>(
         Ok(r) => Ok(r),
         Err(e) => Err(MarketConvertError {
             data: e.to_string(),
-            message: format!("Failed to execute HTTP call."),
+            message: "Failed to execute HTTP call.".to_string(),
             level: 5,
         }),
     }?;
@@ -412,7 +419,7 @@ async fn send_request<T: for<'de> serde::Deserialize<'de>>(
     let status = response.status();
     let response_text = response.text().await.map_err(|e| MarketConvertError {
         data: e.to_string(),
-        message: format!("Failed to get response body text."),
+        message: "Failed to get response body text.".to_string(),
         level: 4,
     })?;
 
