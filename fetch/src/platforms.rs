@@ -61,6 +61,7 @@ table! {
         category -> Varchar,
         prob_at_midpoint -> Float,
         prob_at_close -> Float,
+        prob_at_pct -> Array<Float>,
         prob_time_avg -> Float,
         resolution -> Float,
     }
@@ -83,6 +84,7 @@ pub struct MarketStandard {
     category: String,
     prob_at_midpoint: f32,
     prob_at_close: f32,
+    prob_at_pct: Vec<f32>,
     prob_time_avg: f32,
     resolution: f32,
 }
@@ -210,6 +212,13 @@ pub trait MarketStandardizer {
         let duration_from_start = (self.close_dt()? - self.open_dt()?).num_seconds() as f32 * pct;
         let time = self.open_dt()? + Duration::seconds(duration_from_start as i64);
         self.prob_at_time(time)
+    }
+
+    /// Get a list of the market probabilities from 0% to 100% of the market duration.
+    fn prob_at_pct_list(&self) -> Result<Vec<f32>, MarketConvertError> {
+        (0..=100)
+            .map(|pct| self.prob_at_percent(pct as f32 / 100.0))
+            .collect()
     }
 
     /// Get the market's average probability over the course of the market.
