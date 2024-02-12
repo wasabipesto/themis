@@ -86,18 +86,14 @@ const chart_options = ref({
     tooltip: {
       callbacks: {
         title: function (context) {
-          const x_val = context[0].parsed.x
-          if ((0 < x_val) & (x_val < 1)) {
-            const bin_size = 0.05
-            const x_min = (x_val - bin_size / 2) * 100
-            const x_max = (x_val + bin_size / 2) * 100
-            return 'Predicted: ' + Math.round(x_min) + ' to ' + Math.round(x_max) + '%'
-          } else {
-            return 'Reference: ' + Math.round(x_val * 100) + '%'
+          if (context[0].raw.point_title) {
+            return context[0].raw.point_title
           }
         },
         label: function (context) {
-          return context.dataset.label + ': ' + (context.parsed.y * 100).toFixed(1) + '%'
+          if (context.raw.point_label) {
+            return context.raw.point_label
+          }
         }
       }
     }
@@ -164,11 +160,15 @@ async function updateGraph() {
       data: [
         {
           x: 0,
-          y: 0
+          y: 0,
+          point_title: 'Reference: 0%',
+          point_label: 'Reference: 0.0%'
         },
         {
           x: 1,
-          y: 1
+          y: 1,
+          point_title: 'Reference: 100%',
+          point_label: 'Reference: 100%'
         }
       ]
     }

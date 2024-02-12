@@ -42,8 +42,8 @@ struct Point {
     x: f32,
     y: f32,
     r: f32,
-    //point_title: String,
-    //point_label: String,
+    point_title: String,
+    point_label: String,
 }
 
 /// Data sent to the client to render a plot, one plot per platform.
@@ -196,6 +196,10 @@ pub fn build_calibration_plot(
             bin.y_axis_denominator += market_weight_value;
         }
 
+        // get platform data
+        let platform = get_platform_by_name(conn, &platform)?;
+
+        // scale and save the data
         let denominator_list = bins.iter().map(|bin| bin.y_axis_denominator).collect();
         let scale_params = get_scale_params(
             denominator_list,
@@ -205,19 +209,24 @@ pub fn build_calibration_plot(
         );
         let points = bins
             .iter()
-            .map(|bin| Point {
-                x: bin.middle,
-                y: bin.y_axis_numerator / bin.y_axis_denominator,
-                r: scale_data_point(bin.y_axis_denominator, scale_params.clone()),
-                //desc: format!(),
+            .map(|bin| {
+                let y_value = bin.y_axis_numerator / bin.y_axis_denominator;
+                Point {
+                    x: bin.middle,
+                    y: y_value,
+                    r: scale_data_point(bin.y_axis_denominator, scale_params.clone()),
+                    point_title: format!(
+                        "Predicted: {:.0} to {:.0}%",
+                        bin.start * 100.0,
+                        bin.end * 100.0
+                    ),
+                    point_label: format!("{}: {:.1}%", platform.name_fmt, y_value * 100.0,),
+                }
             })
             .collect();
 
         // save it all to the trace and push it to result
-        traces.push(Trace {
-            platform: get_platform_by_name(conn, &platform)?,
-            points,
-        })
+        traces.push(Trace { platform, points })
     }
 
     // sort the market lists by platform name so it's consistent
