@@ -162,7 +162,7 @@ pub fn build_calibration_plot(
     conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
 ) -> Result<HttpResponse, ApiError> {
     // get markets from database
-    let markets = get_markets_filtered(conn, Some(&query.filters), None)?;
+    let (markets, _) = get_markets_filtered(conn, Some(&query.filters), None)?;
     // sort by platform
     let markets_by_platform = categorize_markets_by_platform(markets);
 

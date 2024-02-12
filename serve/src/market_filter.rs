@@ -54,6 +54,7 @@ pub struct CommonFilterParams {
 #[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct PageSortParams {
     #[serde_as(as = "Option<DisplayFromStr>")]
+    #[serde(default = "default_limit")]
     limit: Option<i64>,
     #[serde_as(as = "Option<DisplayFromStr>")]
     offset: Option<i64>,
@@ -63,6 +64,9 @@ pub struct PageSortParams {
     #[serde(default)]
     sort_desc: bool,
 }
+fn default_limit() -> Option<i64> {
+    Some(1000)
+}
 
 /// Build a query from the database, applying filters conditionally.
 /// If no filters are given, this will get all markets.
@@ -70,7 +74,7 @@ pub fn get_markets_filtered(
     conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
     common_params: Option<&CommonFilterParams>,
     list_params: Option<&PageSortParams>,
-) -> Result<Vec<Market>, ApiError> {
+) -> Result<(Vec<Market>, usize), ApiError> {
     let mut query = market::table.into_boxed();
 
     if let Some(params) = common_params {
@@ -168,12 +172,6 @@ pub fn get_markets_filtered(
     }
 
     if let Some(params) = list_params {
-        if let Some(limit) = params.limit {
-            query = query.limit(limit)
-        }
-        if let Some(offset) = params.offset {
-            query = query.offset(offset)
-        }
         if let Some(sort_attribute) = &params.sort_attribute {
             match sort_attribute.as_str() {
                 "title" => match params.sort_desc {
@@ -244,8 +242,35 @@ pub fn get_markets_filtered(
         }
     }
 
-    query
+    // run the query
+    let mut markets = query
         .select(Market::as_select())
         .load::<Market>(conn)
-        .map_err(|e| ApiError::new(500, format!("failed to query markets: {e}")))
+        .map_err(|e| ApiError::new(500, format!("failed to query markets: {e}")))?;
+
+    // get the number of markets for pagination
+    let count = markets.len();
+
+    // paginate with offset and limit
+    if let Some(params) = list_params {
+        match (params.offset, params.limit) {
+            (None, None) => (),
+            (Some(offset), None) => {
+                if offset > 0 {
+                    let (_, remainder) = markets.split_at(offset as usize);
+                    markets = remainder.to_vec();
+                }
+            }
+            (None, Some(limit)) => markets.truncate(limit as usize),
+            (Some(offset), Some(limit)) => {
+                if offset > 0 {
+                    let (_, remainder) = markets.split_at(offset as usize);
+                    markets = remainder.to_vec();
+                }
+                markets.truncate(limit as usize);
+            }
+        }
+    }
+
+    Ok((markets, count))
 }

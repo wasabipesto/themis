@@ -182,7 +182,7 @@ pub fn build_accuracy_plot(
     let mut rng = rand::thread_rng();
 
     // get markets from database
-    let markets = get_markets_filtered(conn, Some(&query.filters), None)?;
+    let (markets, _) = get_markets_filtered(conn, Some(&query.filters), None)?;
     // sort by platform
     let markets_by_platform = categorize_markets_by_platform(markets.clone());
 
