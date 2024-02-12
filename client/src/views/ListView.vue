@@ -8,6 +8,7 @@ import { debounce } from 'lodash'
 let { query_selected, left_sidebar_options_expanded } = toRefs(state)
 
 const loading = ref(true)
+const totalItems = ref(0)
 const responseItems = ref([])
 async function updateList() {
   loading.value = true
@@ -51,6 +52,7 @@ async function updateList() {
     })
   })
 
+  totalItems.value = response.data.total_markets
   responseItems.value = items
   loading.value = false
 }
@@ -137,7 +139,7 @@ watch(
         :items-per-page-options="itemsPerPageOptions"
         :headers="headers"
         :items="responseItems"
-        :items-length="10000"
+        :items-length="totalItems"
         :loading="loading"
         item-value="name"
         hover
