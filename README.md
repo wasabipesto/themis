@@ -18,47 +18,11 @@ In the default flow we spin up a group of async tasks to recursively download al
 
 ### Serve
 
-Subproject `serve` queries an external Postgres database with saved markets, calculates calibration points and Brier score, and ships it off to the client. Different user-selectable options are deserialized immediately and applied to the SQL filter. A paginated endpoint allows third parties to query markets for their own analysis. You can find the API schema in the serve README.
+Subproject `serve` queries an external Postgres database with saved markets, calculates calibration points and Brier scores, and ships it off to the client. Different user-selectable options are deserialized immediately and applied to the SQL filter. A paginated endpoint allows third parties to query markets for their own analysis. You can find the API schema in the serve README.
 
 ### Client
 
-The `client` subproject is a Vue project that is built upon deployment to be served behind nginx. There are only a few reused components, with most items being integrated directly into the view to allow for more flexibility. We use Veutify for basic components and the ChartJS library for plotting the visualizations. 
-
-## Roadmap
-
-These are the things I plan to add in the near future.
-
-### Fetch
-
-#### Kalshi
-- Investigate getting the number of unique traders
-- Investigate additional market types
-
-#### Manifold
-- Investigate including linked and unlinked multiple choice
-
-#### Metaculus
-- Investigate additional market types
-
-#### Polymarket
-- Investigate getting market volume
-- Investigate getting the number of unique traders
-- Investigate including multiple choice
-
-### Serve
-- Compute log score (maybe with transformation)
-- Add optional KDE smoothing to calibration
-
-### Client
-- Add filters for open & close times
-- Add a way to share a link to the current view with weights & filters
-
-### Other
-- Investigate PredictIt
-- Add an x-method for a random point along the market duration
-- Add an x-method with time-based probability spread
-- Set up docker container for client and a sample compose file
-- Investigate a standardized corpus of questions across platforms
+The `client` subproject is a Vue project that is built upon deployment to be served behind nginx. There are only a few reused components, with most items being integrated directly into the view to allow for more flexibility. We use Vuetify for basic components and the ChartJS library for plotting the visualizations. 
 
 ## Disclaimer
 I use Manifold much more than any of the other platforms included in this analysis, and have received bounties from the Manifold team in both mana (play money) and real money. Their contributions did not affect the contents of this site in any way.
