@@ -517,41 +517,12 @@ const sample_calibration_chart_options = ref({
       honest about your confidence in those predictions, you can be more well-calibrated than
       someone who makes accurate but over- or under-confident predictions.
     </p>
-    <h2>Prediction Markets</h2>
-    <p>
-      <v-card variant="tonal" color="deep-orange-darken-4" class="left-box">
-        <v-card-text> What are these prediction markets? How can they be so accurate? </v-card-text>
-      </v-card>
-    </p>
-    <p>
-      <a href="https://en.wikipedia.org/wiki/Prediction_market">Prediction markets</a> are based on
-      a simple concept: If you're confident about something, you can place a bet on it. If someone
-      else disagrees with you, declare terms with them and whoever wins takes the money. By
-      aggregating the odds of these trades, you can gain an insight into the "wisdom of the crowds".
-      Multiple studies have shown that these markets are often very accurate, even better than
-      polling in many cases.
-    </p>
-    <p>
-      Markets give participants a financial incentive to be correct, encouraging researchers and
-      skilled forecasters to spend time investigating events. Individuals with insider information
-      or niche skills can profit by trading, which also updates the market's probability.
-    </p>
-    <p>Some popular prediction market platforms include:</p>
-    <ul>
-      <li>
-        <a href="https://en.wikipedia.org/wiki/Iowa_Electronic_Markets">Iowa Electronic Markets</a>
-      </li>
-      <li><a href="https://en.wikipedia.org/wiki/PredictIt">PredictIt</a></li>
-      <li><a href="https://en.wikipedia.org/wiki/Metaculus">Metaculus</a></li>
-      <li><a href="https://en.wikipedia.org/wiki/Good_Judgment_Open">Good Judgment Open</a></li>
-      <li><a href="https://en.wikipedia.org/wiki/Augur_(software)">Augur</a></li>
-    </ul>
     <h2>Caveats</h2>
     <p>
       <v-card variant="tonal" color="deep-orange-darken-4" class="left-box">
         <v-card-text>
           It seems like these statistics are pretty easy to game. What's stopping you from
-          predicting 100% on a bunch of certain things?
+          predicting 100% on a bunch of certain things, like "will the sun come up tomorrow"?
         </v-card-text>
       </v-card>
     </p>
@@ -572,6 +543,48 @@ const sample_calibration_chart_options = ref({
       the
       <RouterLink to="/list">list page</RouterLink>.
     </p>
+    <h2>Prediction Markets</h2>
+    <p>
+      <v-card variant="tonal" color="deep-orange-darken-4" class="left-box">
+        <v-card-text> What are these prediction markets? How can they be so accurate? </v-card-text>
+      </v-card>
+    </p>
+    <p>
+      <a href="https://en.wikipedia.org/wiki/Prediction_market">Prediction markets</a> are based on
+      a simple concept: If you're confident about something, you can place a bet on it. If someone
+      else disagrees with you, declare terms with them and whoever wins takes the money. By
+      aggregating the odds of these trades, you can gain an insight into the "wisdom of the crowds".
+    </p>
+    <p>
+      Imagine a stock exchange, but instead of trading shares, you trade on the likelihood of future
+      events. Each prediction market offers contracts tied to specific events, like elections,
+      economic indicators, or scientific breakthroughs. You can buy or sell these contracts based on
+      your belief about the outcome - if you are very confident about something, or you have
+      specialized information, you can make a lot of money from a market.
+    </p>
+    <p>
+      Markets give participants a financial incentive to be correct, encouraging researchers and
+      skilled forecasters to spend time investigating events. Individuals with insider information
+      or niche skills can profit by trading, which also updates the market's probability. Prediction
+      markets have
+      <a href="https://daily.jstor.org/how-accurate-are-prediction-markets/">
+        out-performed polls
+      </a>
+      and
+      <a href="https://news.manifold.markets/p/manifold-predicted-the-ai-extinction">
+        revealed insider information </a
+      >, making them a useful tool for information gathering or profit.
+    </p>
+    <p>Some popular prediction market platforms include:</p>
+    <ul>
+      <li>
+        <a href="https://en.wikipedia.org/wiki/Iowa_Electronic_Markets">Iowa Electronic Markets</a>
+      </li>
+      <li><a href="https://en.wikipedia.org/wiki/PredictIt">PredictIt</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Metaculus">Metaculus</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Good_Judgment_Open">Good Judgment Open</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Augur_(software)">Augur</a></li>
+    </ul>
   </v-main>
 </template>
 
