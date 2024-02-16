@@ -1,21 +1,13 @@
 <script setup>
 import { ref, toRefs } from 'vue'
-import {
-  Chart as ChartJS,
-  Tooltip,
-  Legend,
-  PointElement,
-  LinearScale,
-  LineElement,
-  Title
-} from 'chart.js'
+import { Chart as ChartJS, registerables } from 'chart.js'
 import { Bubble } from 'vue-chartjs'
 import { state } from '@/modules/CommonState.js'
 
 let { show_sidebar_toggle } = toRefs(state)
 show_sidebar_toggle.value = false
 
-ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend, Title)
+ChartJS.register(...registerables)
 
 const sample_calibration_chart_data = ref({
   datasets: [
@@ -224,10 +216,7 @@ const sample_calibration_chart_options = ref({
       <li>Will COVID cases rise again? Should you stock up on masks or toilet paper?</li>
     </ul>
     <p>
-      These are the sorts of questions where it's helpful to have
-      <a href="https://en.wikipedia.org/wiki/Probabilistic_classification">
-        quantified predictions </a
-      >.
+      These are the sorts of questions where it's helpful to have <b>quantified predictions</b>.
     </p>
     <h2>Grading Calibration</h2>
     <p>
