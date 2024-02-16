@@ -232,8 +232,9 @@ watch(
         </v-expansion-panel-title>
         <v-expansion-panel-text>
           <p class="my-2">
-            The binning method determines where on the x-axis each market is placed. This metric
-            should represent the market's true belief or predicted value.
+            The binning method determines where on the x-axis each market is placed. This is set to
+            the market midpoint by default, but if you're more interested in the probability at a
+            specific point (or the average probability) you can change that here.
           </p>
           <v-radio-group v-model="query_selected.bin_attribute">
             <v-radio v-for="(v, k) in query_options.bin_attribute" :key="k" :value="k">
@@ -267,7 +268,9 @@ watch(
         <v-expansion-panel-text>
           <p class="my-2">
             With no weighting, the true resolution values of all markets in each bin are averaged
-            evenly. Weighting gives more importance to markets meeting certain criteria.
+            evenly. Selecting an option here weights the market's value when averaging within a bin.
+            It can be useful if you care more about markets with these attributes and want to
+            de-emphasize others without explicitly filtering them out.
           </p>
           <v-radio-group v-model="query_selected.weight_attribute">
             <v-radio
