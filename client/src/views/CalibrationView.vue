@@ -29,7 +29,12 @@ const query_options = {
         'For each market, this is the probability averaged over time. <br>\
         Each market is only counted once.'
     },
-    prob_at_pct: { label: 'Probability at Specified Percent' }
+    prob_at_pct: {
+      label: 'Probability at X% of Market Duration',
+      tooltip:
+        "Use the market's probability at a specific percent of the duration. <br>\
+        0% is the start of the market, 50% is the midpoint, and 100% is at market close."
+    }
   },
   weight_attribute: {
     none: { label: 'None' },
