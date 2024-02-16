@@ -423,9 +423,8 @@ const sample_calibration_chart_options = ref({
     <p>
       For each prediction, we take the "distance" it was from the outcome: if we predict 10% but it
       resolved NO, the distance is 0.1 — but if we predict 10% and the answer is YES, the distance
-      would be 0.9. We always want this number to be low! Then, for each of these distances, we
-      square the number. This has the effect of "forgiving" small errors while punishing larger
-      ones.
+      would be 0.9. <b>We always want this number to be low!</b> Once we have these distances, we
+      square each one. This has the effect of "forgiving" small errors while punishing larger ones.
     </p>
     <p>
       After we have done this for all predictions, we take the average of these scores. This gives
@@ -490,10 +489,16 @@ const sample_calibration_chart_options = ref({
     <p>
       The most important thing to note here is the fact that <b>smaller is better</b>! This score is
       actually measuring the amount of error in our predictions, so we want it to be as low as
-      possible. In fact, an ideal score in this system is 0 while the worst possible score is 1. If
-      you were to guess "50%" on every question, your Brier score would be 0.25. Superforecasters
-      tend to fall around 0.15 while aggregated <b>prediction markets</b> generally fall between
-      0.10 and 0.20.
+      possible. In fact, an ideal score in this system is 0 while the worst possible score is 1.
+    </p>
+    <p>
+      <v-card variant="tonal" color="green-darken-4" class="right-box">
+        <v-card-text>
+          If you were to guess "50%" on every question, your Brier score would be 0.25.
+          Superforecasters tend to fall around 0.15 while aggregated
+          <b>prediction markets</b> generally fall between 0.10 and 0.20.
+        </v-card-text>
+      </v-card>
     </p>
     <p>
       <v-card variant="tonal" color="deep-orange-darken-4" class="left-box">
@@ -506,7 +511,6 @@ const sample_calibration_chart_options = ref({
       honest about your confidence in those predictions, you can be more well-calibrated than
       someone who makes accurate but over- or under-confident predictions.
     </p>
-    <h2>Caveats</h2>
     <p>
       <v-card variant="tonal" color="deep-orange-darken-4" class="left-box">
         <v-card-text>
@@ -528,9 +532,12 @@ const sample_calibration_chart_options = ref({
       participants.
     </p>
     <p>
-      You can check the individual markets included in this site's data by browsing the markets on
-      the
-      <RouterLink to="/list">list page</RouterLink>.
+      <v-card variant="tonal" color="green-darken-4" class="right-box">
+        <v-card-text>
+          You can check the individual markets included in this site's data by browsing the markets
+          on the <RouterLink to="/list">list page</RouterLink>.
+        </v-card-text>
+      </v-card>
     </p>
     <h2>Prediction Markets</h2>
     <p>
@@ -552,28 +559,95 @@ const sample_calibration_chart_options = ref({
       specialized information, you can make a lot of money from a market.
     </p>
     <p>
-      Markets give participants a financial incentive to be correct, encouraging researchers and
-      skilled forecasters to spend time investigating events. Individuals with insider information
-      or niche skills can profit by trading, which also updates the market's probability. Prediction
-      markets have
-      <a href="https://daily.jstor.org/how-accurate-are-prediction-markets/">
-        out-performed polls
-      </a>
+      Markets give participants a <b>financial incentive</b> to be correct, encouraging researchers
+      and skilled forecasters to spend time investigating events. Individuals with insider
+      information or niche skills can profit by trading, which also updates the market's
+      probability. Prediction markets have
+      <a href="https://daily.jstor.org/how-accurate-are-prediction-markets/">out-performed polls</a>
       and
-      <a href="https://news.manifold.markets/p/manifold-predicted-the-ai-extinction">
-        revealed insider information </a
+      <a href="https://news.manifold.markets/p/manifold-predicted-the-ai-extinction"
+        >revealed insider information</a
       >, making them a useful tool for information gathering or profit.
     </p>
     <p>Some popular prediction market platforms include:</p>
     <ul>
-      <li>
-        <a href="https://en.wikipedia.org/wiki/Iowa_Electronic_Markets">Iowa Electronic Markets</a>
-      </li>
-      <li><a href="https://en.wikipedia.org/wiki/PredictIt">PredictIt</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Kalshi">Kalshi</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Manifold_(prediction_market)">Manifold</a></li>
       <li><a href="https://en.wikipedia.org/wiki/Metaculus">Metaculus</a></li>
-      <li><a href="https://en.wikipedia.org/wiki/Good_Judgment_Open">Good Judgment Open</a></li>
-      <li><a href="https://en.wikipedia.org/wiki/Augur_(software)">Augur</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Polymarket">Polymarket</a></li>
     </ul>
+    <p>
+      While prediction markets have existed in various capacities for decades, their use in the U.S.
+      is currently limited by the CFTC. Modern platforms either submit questions for approval to the
+      CFTC, use reputation or "play-money" currencies, restrict usage to non-U.S. residents, or
+      utilize cryptocurrencies. Additionally, sites will often focus on a particular niche or
+      community in order to increase trading volume and activity on individual questions.
+    </p>
+    <h2>Calibration City</h2>
+    <p>
+      All of this brings us to this very site - Calibration City. This site is a project to answer
+      the question:
+    </p>
+    <p>
+      <v-card variant="tonal" color="purple-darken-4" class="middle-box-narrow text-center">
+        <v-card-text> <h3>"How much can trust prediction markets?"</h3> </v-card-text>
+      </v-card>
+    </p>
+    <p>
+      The way we approach this question is to look at each platform as a whole. We can take each
+      market on the platform and treat it like an individual prediction, using the market's
+      estimated probability as the prediction value. Once the market resolves, we can look at how
+      accurate the market was and how calibrated the site was overall using the same methods
+      outlined above. Just like before, these are our two keys: predictions and resolutions.
+    </p>
+    <p>
+      <v-card variant="tonal" color="deep-orange-darken-4" class="left-box">
+        <v-card-text>
+          Can we really just use the market's "estimated probability" like an individual's
+          prediction? Doesn't it change over time?
+        </v-card-text>
+      </v-card>
+    </p>
+    <p>
+      A market's listed probability is the aggregated prediction of hundreds of people, which means
+      it does change over time as people make trades or news comes out. By default we use a market's
+      <b>probability at its midpoint</b> as the prediction value - this is far enough from the
+      market's start that traders have had time to settle on a consensus range, and far enough from
+      the end that the outcome is uncertain.
+    </p>
+    <p>
+      When we calculate the <RouterLink to="/calibration">calibration chart</RouterLink>, for
+      example, we can choose to use the probability at any point throughout the duration of the
+      market. If you're more interested to see how calibrated markets near their beginnings, you can
+      choose to look at the calibration at 10% of the way through the market's duration instead. You
+      could also choose to use the average probability throughout the course of the market, which
+      takes into account the entire market history.
+    </p>
+    <p>
+      We also have an <RouterLink to="/accuracy">accuracy plot</RouterLink>, where you can calculate
+      the total accuracy of a platform and compare it against another attribute, such as the
+      market's volume or length. A common refrain is that prediction markets get more accurate as
+      more people participate - is that true? You can check by changing the x-axis to "number of
+      traders" to see how the accuracy changes based on how many people are involved.
+    </p>
+    <p>
+      Each chart has more options, such as searching based on title, picking individual categories,
+      limiting based on date, or filtering based on any other attribute in the database. If you have
+      a specific query, you can also see the markets used in the calculations on the
+      <RouterLink to="/list">list page</RouterLink>.
+    </p>
+    <p>
+      Obviously every platform is different - there are design decisions made for each one that make
+      it unique and not all platforms are designed in a way that shines when graded like this. Some
+      platforms encourage shorter-term markets with more particiants, while others have systems that
+      incentivize making as many predictions as possible. Just because a platform seems less
+      calibrated under some conditions or their accuracy line is worse than another, does not mean
+      that they shouldn't be taken seriously.
+      <b>
+        This site is designed to make it easier to find objective information and present it in a
+        standardized way, not to say which platform is better.
+      </b>
+    </p>
   </v-main>
 </template>
 
