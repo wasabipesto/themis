@@ -33,8 +33,16 @@ const query_options = {
     open_date: { label: 'Open Date' },
     close_date: { label: 'Close Date' },
     volume_usd: { label: 'Market Volume' },
-    open_days: { label: 'Market Length' },
-    market_duration: { label: 'Market Duration' },
+    open_days: {
+      label: 'Market Length',
+      tooltip: 'Compare markets that have longer or shorter durations.'
+    },
+    market_duration: {
+      label: 'Duration of Market',
+      tooltip:
+        'Compare all markets over their entire durations. <br>\
+        The x-axis is the percentage of the way through the market from start to finish.'
+    },
     num_traders: { label: 'Number of Traders' }
   },
   num_market_points: {
@@ -259,12 +267,14 @@ watchEffect(() => {
             how each platform's accuracy is affected by market length or number of traders.
           </p>
           <v-radio-group v-model="query_selected.xaxis_attribute">
-            <v-radio
-              v-for="(v, k) in query_options.xaxis_attribute"
-              :key="k"
-              :value="k"
-              :label="v.label"
-            ></v-radio>
+            <v-radio v-for="(v, k) in query_options.xaxis_attribute" :key="k" :value="k">
+              <template v-slot:label>
+                {{ v.label }}
+                <v-tooltip v-if="v.tooltip" activator="parent" location="end">
+                  <span v-html="v.tooltip"></span>
+                </v-tooltip>
+              </template>
+            </v-radio>
           </v-radio-group>
         </v-expansion-panel-text>
       </v-expansion-panel>
