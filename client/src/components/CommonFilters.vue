@@ -15,7 +15,7 @@ if (mdAndUp.value) {
 
 show_sidebar_toggle.value = true
 
-const defaultDateRange = [new Date(2000, 0, 1), new Date()]
+const defaultDateRange = [new Date(2000, 0, 1), new Date(new Date().setHours(23, 59, 59, 999))]
 
 query_selected.value = {
   title_contains: null,
