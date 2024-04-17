@@ -77,12 +77,12 @@ const right_sidebar_visible = ref(false)
           </tr>
           <tr>
             <td>
-              <RouterLink to="/list">List</RouterLink>
+              <RouterLink to="/list">All Markets</RouterLink>
             </td>
           </tr>
           <tr>
             <td>
-              <RouterLink to="/faq">FAQ</RouterLink>
+              <RouterLink to="/faq">Resources</RouterLink>
             </td>
           </tr>
           <tr>
