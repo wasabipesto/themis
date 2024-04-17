@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 use serde_json::to_string_pretty;
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::env::var;
 
 pub mod kalshi;
@@ -61,7 +62,8 @@ table! {
         category -> Varchar,
         prob_at_midpoint -> Float,
         prob_at_close -> Float,
-        prob_at_pct -> Array<Float>,
+        prob_each_pct -> Array<Float>,
+        prob_each_date -> Jsonb,
         prob_time_avg -> Float,
         resolution -> Float,
     }
@@ -84,7 +86,8 @@ pub struct MarketStandard {
     category: String,
     prob_at_midpoint: f32,
     prob_at_close: f32,
-    prob_at_pct: Vec<f32>,
+    prob_each_pct: Vec<f32>,
+    prob_each_date: serde_json::Value,
     prob_time_avg: f32,
     resolution: f32,
 }
@@ -215,7 +218,7 @@ pub trait MarketStandardizer {
     }
 
     /// Get a list of the market probabilities from 0% to 100% of the market duration.
-    fn prob_at_pct_list(&self) -> Result<Vec<f32>, MarketConvertError> {
+    fn prob_each_pct_list(&self) -> Result<Vec<f32>, MarketConvertError> {
         (0..=100)
             .map(|pct| self.prob_at_percent(pct as f32 / 100.0))
             .collect()
@@ -327,6 +330,54 @@ pub trait MarketStandardizer {
     fn prob_time_avg_whole(&self) -> Result<f32, MarketConvertError> {
         self.prob_time_avg_between(self.open_dt()?, self.close_dt()?)
     }
+
+    /// Get a map of the market probability on each day the market was open.
+    /// The key is the timestamp at the start of the day (UTC) and the value is
+    /// the time-averaged probability throughout the day.
+    fn prob_each_date_map(&self) -> Result<serde_json::Value, MarketConvertError> {
+        // Ensure both dates are at the start of their day, including seconds
+        let market_start_morning: DateTime<Utc> =
+            match self.open_dt()?.date().and_hms_milli_opt(0, 0, 0, 0) {
+                Some(dt) => dt,
+                None => {
+                    return Err(MarketConvertError {
+                        data: self.debug(),
+                        message: format!(
+                            "General: Could not get the start of day {}.",
+                            self.open_dt()?
+                        ),
+                        level: 4,
+                    })
+                }
+            };
+        let market_end_morning: DateTime<Utc> =
+            match self.close_dt()?.date().and_hms_milli_opt(0, 0, 0, 0) {
+                Some(dt) => dt,
+                None => {
+                    return Err(MarketConvertError {
+                        data: self.debug(),
+                        message: format!(
+                            "General: Could not get the start of day {}.",
+                            self.open_dt()?
+                        ),
+                        level: 4,
+                    })
+                }
+            };
+
+        // Calculate the number of days between the two dates
+        let market_open_days = (market_end_morning - market_start_morning).num_days() as usize;
+
+        // Generate a vector of DateTime<Utc> for each day, including seconds
+        let mut result: HashMap<DateTime<Utc>, f32> = HashMap::with_capacity(market_open_days);
+        for i in 0..=market_open_days {
+            let date_start = market_start_morning + Duration::days(i as i64);
+            let date_end = date_start + Duration::days(1);
+            let prob_over_day = self.prob_time_avg_between(date_start, date_end)?;
+            result.insert(date_start, prob_over_day);
+        }
+        Ok(serde_json::json!(result))
+    }
 }
 
 fn save_markets(markets: Vec<MarketStandard>, method: OutputMethod) {
@@ -352,6 +403,8 @@ fn save_markets(markets: Vec<MarketStandard>, method: OutputMethod) {
                         category.eq(excluded(category)),
                         prob_at_midpoint.eq(excluded(prob_at_midpoint)),
                         prob_at_close.eq(excluded(prob_at_close)),
+                        prob_each_pct.eq(excluded(prob_each_pct)),
+                        prob_each_date.eq(excluded(prob_each_date)),
                         prob_time_avg.eq(excluded(prob_time_avg)),
                         resolution.eq(excluded(resolution)),
                     ))

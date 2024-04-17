@@ -13,7 +13,8 @@ CREATE TABLE market (
     category VARCHAR DEFAULT 'None' NOT NULL,
     prob_at_midpoint REAL NOT NULL,
     prob_at_close REAL NOT NULL,
-    prob_at_pct REAL [] NOT NULL,
+    prob_each_pct REAL [] NOT NULL,
+    prob_each_date JSONB NOT NULL,
     prob_time_avg REAL NOT NULL,
     resolution REAL NOT NULL,
     CONSTRAINT platform_unique_by_id UNIQUE (platform, platform_id)
