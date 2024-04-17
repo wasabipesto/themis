@@ -272,13 +272,14 @@ pub trait MarketStandardizer {
                     cumulative_time += duration;
                 }
                 Ordering::Equal => {
+                    // TODO: This should be recoverable. Just use the later event and don't update counters?
                     return Err(MarketConvertError {
                         data: self.debug(),
                         message: format!(
                             "General: Market events {:?} and {:?} occured simultaneously but with different probabilities.",
                             event, prev_event
                         ),
-                        level: 4,
+                        level: 2,
                     });
                 }
                 Ordering::Less => {
