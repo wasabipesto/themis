@@ -1,7 +1,7 @@
 //! This module has all of the common utilities and market standardization tools required to query the API and convert responses into DB rows.
 
 use chrono::serde::{ts_milliseconds, ts_milliseconds_option, ts_seconds};
-use chrono::{DateTime, Duration, NaiveDateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use clap::ValueEnum;
 use core::fmt;
 use diesel::upsert::excluded;
@@ -330,8 +330,8 @@ pub trait MarketStandardizer {
     fn prob_each_date_map(&self) -> Result<serde_json::Value, MarketConvertError> {
         // Ensure both dates are at the start of their day, including seconds
         let market_start_morning: DateTime<Utc> =
-            match self.open_dt()?.date().and_hms_milli_opt(0, 0, 0, 0) {
-                Some(dt) => dt,
+            match self.open_dt()?.date_naive().and_hms_milli_opt(0, 0, 0, 0) {
+                Some(dt) => dt.and_utc(),
                 None => {
                     return Err(MarketConvertError {
                         data: self.debug(),
@@ -344,14 +344,14 @@ pub trait MarketStandardizer {
                 }
             };
         let market_end_morning: DateTime<Utc> =
-            match self.close_dt()?.date().and_hms_milli_opt(0, 0, 0, 0) {
-                Some(dt) => dt,
+            match self.close_dt()?.date_naive().and_hms_milli_opt(0, 0, 0, 0) {
+                Some(dt) => dt.and_utc(),
                 None => {
                     return Err(MarketConvertError {
                         data: self.debug(),
                         message: format!(
                             "General: Could not get the start of day {}.",
-                            self.open_dt()?
+                            self.close_dt()?
                         ),
                         level: 4,
                     })
