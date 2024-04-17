@@ -5,7 +5,7 @@ pub mod platforms;
 use platforms::{OutputMethod, Platform};
 
 /// The main path for processing markets by platform.
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 pub async fn run(
     platform: Option<Platform>,
     id: Option<String>,

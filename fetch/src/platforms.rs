@@ -221,101 +221,86 @@ pub trait MarketStandardizer {
             .collect()
     }
 
-    /// Get the market's average probability over the course of the market.
+    /// Get the market's time-averaged probability between two timestamps.
     /// This is calculated by taking the average of all market probabilities
     /// weighted by how long the market was at that probability.
-    fn prob_time_avg(&self) -> Result<f32, MarketConvertError> {
-        let mut prev_event: Option<ProbUpdate> = None;
+    /// We trust that events are ordered properly before this stage and throw
+    /// errors if they were not.
+    fn prob_time_avg_between(
+        &self,
+        window_start: DateTime<Utc>,
+        window_end: DateTime<Utc>,
+    ) -> Result<f32, MarketConvertError> {
+        let all_events = self.events();
+
+        // get the probability at the start of the window
+        let last_event_before_window = all_events
+            .iter()
+            .filter(|event| event.time <= window_start)
+            .last();
+        let prob_at_window_start = match last_event_before_window {
+            Some(event) => event.prob,
+            None => DEFAULT_OPENING_PROB,
+        };
+        let mut prev_event = &ProbUpdate {
+            time: window_start,
+            prob: prob_at_window_start,
+        };
+
+        let events_in_window: Vec<&ProbUpdate> = all_events
+            .iter()
+            .filter(|event| event.time > window_start && event.time < window_end)
+            .collect();
+
+        // set up lookback and counters
         let mut cumulative_prob: f32 = 0.0;
         let mut cumulative_time: f32 = 0.0;
-        for event in self.events() {
-            // make sure we haven't passed outside the market open window
-            if self.close_dt()? < event.time {
-                break;
+        for event in events_in_window {
+            // skip any events that don't change the probability
+            if event.prob == prev_event.prob {
+                continue;
             }
-            // check if this is the first event
-            match &prev_event {
-                None => {
-                    match event.time.cmp(&self.open_dt()?) {
-                        Ordering::Greater => {
-                            // add time between start time and first event
-                            let duration = (event.time - self.open_dt()?).num_seconds() as f32;
-                            cumulative_prob += DEFAULT_OPENING_PROB * duration;
-                            cumulative_time += duration;
-                        }
-                        Ordering::Equal => {
-                            // no time between start time and first event, skip
-                        }
-                        Ordering::Less => {
-                            return Err(MarketConvertError {
-                                data: self.debug(),
-                                message: format!(
-                                    "General: Market event {:?} occured before market start {:?}.",
-                                    event,
-                                    self.open_dt()?
-                                ),
-                                level: 1,
-                            });
-                        }
-                    }
-                }
-                Some(prev) => {
-                    match event.time.cmp(&prev.time) {
-                        Ordering::Greater => {
-                            // add time between last event and this one
-                            let duration = (event.time - prev.time).num_seconds() as f32;
-                            cumulative_prob += prev.prob * duration;
-                            cumulative_time += duration;
-                        }
-                        Ordering::Equal => {
-                            // this event happened at the exact same moment as the last, let's assume the probs are equal and move on
-                            continue;
-                        }
-                        Ordering::Less => {
-                            return Err(MarketConvertError {
-                                data: self.debug(),
-                                message: format!(
-                                    "General: Market events were not sorted properly, event {:?} occured before earlier event {:?}.",
-                                    event, prev
-                                ),
-                                level: 4,
-                            });
-                        }
-                    }
-                }
-            }
-            // save the previous event
-            prev_event = Some(event);
-        }
-        match &prev_event {
-            Some(prev) => {
-                // add time between last event and close time
-                // if the close time was moved to before the last event then we can't determine how long the last bet was valid for
-                if self.close_dt()? > prev.time {
-                    let duration = (self.close_dt()? - prev.time).num_seconds() as f32;
-                    cumulative_prob += prev.prob * duration;
+            // compare timstamp against previous event to catch some potential ordering errors
+            match event.time.cmp(&prev_event.time) {
+                Ordering::Greater => {
+                    // add time between last event and this one
+                    let duration = (event.time - prev_event.time).num_seconds() as f32;
+                    cumulative_prob += prev_event.prob * duration;
                     cumulative_time += duration;
                 }
-            }
-            None => {
-                if !self.events().is_empty() {
-                    // there are some events but they're all outside the market window
+                Ordering::Equal => {
                     return Err(MarketConvertError {
                         data: self.debug(),
                         message: format!(
-                            "General: Market had {} events but none fell within open duration.",
-                            self.events().len()
+                            "General: Market events {:?} and {:?} occured simultaneously but with different probabilities.",
+                            event, prev_event
                         ),
-                        level: 1,
+                        level: 4,
                     });
-                } else {
-                    // there are no events whatsoever, just assume it was the default throughout
-                    let duration = (self.close_dt()? - self.open_dt()?).num_seconds() as f32;
-                    cumulative_prob = DEFAULT_OPENING_PROB * duration;
-                    cumulative_time = duration;
+                }
+                Ordering::Less => {
+                    return Err(MarketConvertError {
+                        data: self.debug(),
+                        message: format!(
+                            "General: Market events were not sorted properly, event {:?} timestamp should be greater than event {:?}.",
+                            event, prev_event
+                        ),
+                        level: 4,
+                    });
                 }
             }
+            // save the event for comparison
+            prev_event = event
         }
+
+        // add the duration between the last event and window end
+        // if there are no events in the window this starts at the window start
+        {
+            let duration = (window_end - prev_event.time).num_seconds() as f32;
+            cumulative_prob += prev_event.prob * duration;
+            cumulative_time += duration;
+        }
+
         let prob_time_avg = cumulative_prob / cumulative_time;
         if (0.0..=1.0).contains(&prob_time_avg) {
             Ok(prob_time_avg)
@@ -323,9 +308,9 @@ pub trait MarketStandardizer {
             Err(MarketConvertError {
                 data: self.debug(),
                 message: format!(
-                    "General: prob_time_avg is NaN: {cumulative_prob} / {cumulative_time}."
+                    "General: prob_time_avg is NaN (probably because duration was too short): {cumulative_prob} / {cumulative_time}."
                 ),
-                level: 1,
+                level: 3,
             })
         } else {
             Err(MarketConvertError {
@@ -333,9 +318,14 @@ pub trait MarketStandardizer {
                 message: format!(
                     "General: prob_time_avg calculation result was out of bounds: {cumulative_prob} / {cumulative_time} = {prob_time_avg}."
                 ),
-                level: 2,
+                level: 3,
             })
         }
+    }
+
+    /// Get the market's time-averaged probability over the course of the market.
+    fn prob_time_avg_whole(&self) -> Result<f32, MarketConvertError> {
+        self.prob_time_avg_between(self.open_dt()?, self.close_dt()?)
     }
 }
 

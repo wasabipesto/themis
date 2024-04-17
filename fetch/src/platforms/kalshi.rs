@@ -167,7 +167,7 @@ impl TryInto<MarketStandard> for MarketFull {
             prob_at_midpoint: self.prob_at_percent(0.5)?,
             prob_at_close: self.prob_at_percent(1.0)?,
             prob_at_pct: self.prob_at_pct_list()?,
-            prob_time_avg: self.prob_time_avg()?,
+            prob_time_avg: self.prob_time_avg_whole()?,
             resolution: self.resolution()?,
         })
     }
