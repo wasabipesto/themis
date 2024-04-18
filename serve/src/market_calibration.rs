@@ -101,7 +101,7 @@ impl XAxisMethods for BinAttribute {
             BinAttribute::ProbAtClose => Ok(market.prob_at_close),
             BinAttribute::ProbTimeAvg => Ok(market.prob_time_avg),
             BinAttribute::ProbAtPct => match bin_attribute_x_pct {
-                Some(pct) => match market.prob_at_pct.get(pct) {
+                Some(pct) => match market.prob_each_pct.get(pct) {
                     Some(x_value) => Ok(x_value.to_owned()),
                     None => Err(ApiError {
                         status_code: 500,
@@ -114,7 +114,7 @@ impl XAxisMethods for BinAttribute {
                 None => Err(ApiError {
                     status_code: 400,
                     message:
-                        "Value for `bin_attribute_x_pct` is required when `prob_at_pct` is set."
+                        "Value for `bin_attribute_x_pct` is required when `prob_each_pct` is set."
                             .to_string(),
                 }),
             },

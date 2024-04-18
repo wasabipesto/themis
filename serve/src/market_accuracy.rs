@@ -246,7 +246,7 @@ impl XAxisMethods for XAxisAttribute {
         let y_value = match self {
             XAxisAttribute::MarketDuration => {
                 // market duration overrides the normal y-value
-                if let Some(y_value) = market.prob_at_pct.get(x_value as usize) {
+                if let Some(y_value) = market.prob_each_pct.get(x_value as usize) {
                     Ok(scoring_attribute.get_brier_score(market, y_value))
                 } else {
                     Err(ApiError {
@@ -280,7 +280,7 @@ impl XAxisMethods for XAxisAttribute {
                 for bin in bins {
                     let x_value = bin.middle.clone() as usize;
                     for market in markets.iter() {
-                        let y_value = market.prob_at_pct.get(x_value).unwrap();
+                        let y_value = market.prob_each_pct.get(x_value).unwrap();
                         bin.brier_sum += scoring_attribute.get_brier_score(market, y_value);
                         bin.count += 1;
                     }
