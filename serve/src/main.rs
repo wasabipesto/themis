@@ -5,17 +5,24 @@ use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::{pg::PgConnection, prelude::*};
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use serde_yaml;
+use std::collections::{HashMap, HashSet};
 use std::env::var;
+use std::fs::File;
 
 mod db_util;
+mod group_comparison;
 mod helper;
 mod market_accuracy;
 mod market_calibration;
 mod market_filter;
 mod market_list;
 
-use db_util::{get_all_platforms, get_platform_by_name, market, platform, Market, Platform};
+use db_util::{
+    get_all_platforms, get_market_by_platform_id, get_platform_by_name, market, platform, Market,
+    Platform,
+};
+use group_comparison::build_group_comparison;
 use helper::{categorize_markets_by_platform, get_scale_params, scale_data_point, ApiError};
 use market_accuracy::{build_accuracy_plot, AccuracyQueryParams};
 use market_calibration::{build_calibration_plot, CalibrationQueryParams};
@@ -38,6 +45,7 @@ async fn list_routes() -> Result<HttpResponse, ApiError> {
             "/list_markets".to_string(),
             "/calibration_plot".to_string(),
             "/accuracy_plot".to_string(),
+            "/group_accuracy".to_string(),
         ]),
     };
     Ok(HttpResponse::Ok().json(response))
@@ -101,6 +109,20 @@ async fn accuracy_plot(
     build_accuracy_plot(query, conn)
 }
 
+#[get("/group_accuracy")]
+async fn group_accuracy(
+    //query: Query<AccuracyQueryParams>,
+    pool: Data<Pool<ConnectionManager<PgConnection>>>,
+) -> Result<HttpResponse, ApiError> {
+    // get database connection from pool
+    let conn = &mut pool
+        .get()
+        .map_err(|e| ApiError::new(500, format!("failed to get connection from pool: {e}")))?;
+
+    // build the plot
+    build_group_comparison(conn)
+}
+
 /// Server startup tasks.
 #[actix_web::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -126,6 +148,7 @@ async fn main() -> Result<(), std::io::Error> {
             .service(list_markets)
             .service(calibration_plot)
             .service(accuracy_plot)
+            .service(group_accuracy)
     })
     .bind(var("HTTP_BIND").unwrap_or(String::from("0.0.0.0:7041")))?
     .run()

@@ -11,5 +11,6 @@ WORKDIR /usr/src/themis-serve
 RUN apt-get update
 RUN apt-get install libpq5 -y
 COPY --from=builder /usr/src/themis-serve/target/release/themis-serve .
+COPY groups.yaml .
 
 CMD ["./themis-serve"]

@@ -43,6 +43,36 @@ pub struct Market {
     pub resolution: f32,
 }
 
+/// Get information about a market from the database.
+pub fn get_market_by_platform_id(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+    platform_sel: &String,
+    platform_id_sel: &String,
+) -> Result<Market, ApiError> {
+    use crate::market::dsl::*;
+    market
+        .filter(platform.eq(platform_sel))
+        .filter(platform_id.eq(platform_id_sel))
+        .select(Market::as_select())
+        .first(conn)
+        .map_err(|e| {
+            ApiError::new(
+                500,
+                format!("failed to query db for {platform_sel}/{platform_id_sel}: {e}"),
+            )
+        })
+}
+
+/// Get all data on all markets.
+pub fn _get_all_markets(
+    conn: &mut PooledConnection<ConnectionManager<PgConnection>>,
+) -> Result<Vec<Market>, ApiError> {
+    market::table
+        .select(Market::as_select())
+        .load::<Market>(conn)
+        .map_err(|e| ApiError::new(500, format!("failed to query db for markets: {e}")))
+}
+
 // Diesel macro to get database schema.
 table! {
     platform (name) {

@@ -1,169 +1,186 @@
 # This is a file to map markets across platforms into a single group.
 # With this we can directly compare accuracy scores without conflating different types of markets.
 
-AI:
-  - title: "Will Sam Altman return to OpenAI as CEO before 2026?"
-    markets:
-      - platform: manifold
-        platform_id: tI0SmMHzn0nMUbXo21rm
-      - platform: metaculus
-        platform_id: "19998"
+- title: "Will Sam Altman return to OpenAI as CEO before 2026?"
+  category: AI
+  markets:
+    - platform: manifold
+      platform_id: tI0SmMHzn0nMUbXo21rm
+    - platform: metaculus
+      platform_id: "19998"
 
-  - title: "Will OpenAI report having ≥99% uptime for ChatGPT and the OpenAI API in December 2023?"
-    markets:
-      - platform: manifold
-        platform_id: G02bqrhMW8p7246rbB0f
-      - platform: metaculus
-        platform_id: "20038"
+- title: "Will OpenAI report having ≥99% uptime for ChatGPT and the OpenAI API in December 2023?"
+  category: AI
+  markets:
+    - platform: manifold
+      platform_id: G02bqrhMW8p7246rbB0f
+    - platform: metaculus
+      platform_id: "20038"
 
-Culture:
-  - title: "Will Oppenheimer win the most Oscar awards?"
-    markets:
-      - platform: manifold
-        platform_id: fdxoepD0o8EeCIT6BBvP
-      - platform: metaculus
-        platform_id: "21493"
+- title: "Will Oppenheimer win the most Oscar awards?"
+  category: Culture
+  markets:
+    - platform: manifold
+      platform_id: fdxoepD0o8EeCIT6BBvP
+    - platform: metaculus
+      platform_id: "21493"
 
-  - title: "Will the \"Dune: Part Two\" domestic opening box office be greater than that of "Dune (2021)"?"
-    markets:
-      - platform: manifold
-        platform_id: P69OD7ZSi72sWtLNz9u1
-      - platform: metaculus
-        platform_id: "21081"
+- title: "Will the \"Dune: Part Two\" domestic opening box office be greater than that of \"Dune (2021)\"?"
+  category: Culture
+  markets:
+    - platform: manifold
+      platform_id: P69OD7ZSi72sWtLNz9u1
+    - platform: metaculus
+      platform_id: "21081"
 
-Crypto:
-  - title: "Will Bitcoin reach $40,000 before January 1, 2024?"
-    markets:
-      - platform: manifold
-        platform_id: Ea4hpEAwkkiirfTA4xxD
-      - platform: metaculus
-        platform_id: "19898"
-  
-  - title: "Will a US spot Ethereum ETF be approved in 2023?"
-    markets:
-      - platform: manifold
-        platform_id: PfJAqg9NZTDWVJxF2Z8M
-      - platform: metaculus
-        platform_id: "18684"
+- title: "Will Bitcoin reach $40,000 before January 1, 2024?"
+  category: Crypto
+  markets:
+    - platform: manifold
+      platform_id: Ea4hpEAwkkiirfTA4xxD
+    - platform: metaculus
+      platform_id: "19898"
 
-Economics:
-  - title: "Will the Federal Funds Rate be raised before December 14, 2023?"
-    markets:
-      - platform: manifold
-        platform_id: JpDTAPKT3pZvf4ZQjYwr
-      - platform: metaculus
-        platform_id: "19358"
+- title: "Will a US spot Ethereum ETF be approved in 2023?"
+  category: Crypto
+  markets:
+    - platform: manifold
+      platform_id: PfJAqg9NZTDWVJxF2Z8M
+    - platform: metaculus
+      platform_id: "18684"
 
-Politics:
-  - title: "Will Hamas lose control of Gaza before 2024?"
-    markets:
-      - platform: manifold
-        platform_id: gO7a5r4asXvWyLqNLInH
-      - platform: metaculus
-        platform_id: "19308"
-  
-  - title: "Will Yahya Sinwar cease to act as Hamas Chief in the Gaza Strip before 2024?"
-    markets:
-      - platform: manifold
-        platform_id: lm5MpYUS0KcWZievu17u
-      - platform: metaculus
-        platform_id: "19333"
-  
-  - title: "Before April 1 2024, will the Supreme Court agree to hear an appeal from Donald Trump on the question of presidential immunity?"
-    markets:
-      - platform: manifold
-        platform_id: uJieXjZItbk786Ajsyvs
-      - platform: metaculus
-        platform_id: "21418"
-  
-  - title: "Will Sweden join NATO before 2025?"
-    markets:
-      - platform: manifold
-        platform_id: KJSIl2ddCPPrwGyUuIgQ
-      - platform: metaculus
-        platform_id: "20024"
-  
-  - title: "Will the Doomsday Clock move closer to midnight in January 2024?"
-    markets:
-      - platform: manifold
-        platform_id: MOMPQNvPa7MrGfhXRuCT
-      - platform: metaculus
-        platform_id: "20750"
-  
-  - title: "Will the National Assembly of Hungary approve Sweden's NATO accession before March 1, 2024?"
-    markets:
-      - platform: manifold
-        platform_id: 9B5JgILYXSoMV8u6s3eQ
-      - platform: metaculus
-        platform_id: "21185"
-  
-  - title: "Will Israel launch a large-scale ground offensive into Gaza before November 1, 2023?"
-    markets:
-      - platform: manifold
-        platform_id: RAcrlIykluGPdGusJkqc
-      - platform: metaculus
-        platform_id: "19492"
-  
-  - title: "Will China have at least 420 nuclear warheads on December 31, 2023?"
-    markets:
-      - platform: manifold
-        platform_id: fp4PegAqnEETVf2GD6M5
-      - platform: metaculus
-        platform_id: "8139"
-  
-  - title: "Will Israel carry out and explicitly acknowledge a deadly attack on Iran before 2024?"
-    markets:
-      - platform: manifold
-        platform_id: DafaXBB29A3hnGbeOENZ
-      - platform: metaculus
-        platform_id: "19332"
-  
-  - title: "Will the Democratic Progressive Party win the 2024 Taiwanese presidential election?"
-    markets:
-      - platform: manifold
-        platform_id: rmIkVBu1OJ18Hi7F4PPU
-      - platform: metaculus
-        platform_id: "7575"
-  
-  - title: "Will Donald Trump spend at least one hour confined in a jail cell before January 1, 2024?"
-    markets:
-      - platform: manifold
-        platform_id: 6MRbxAt6SjrbeaRPzfeA
-      - platform: metaculus
-        platform_id: "19765"
-  
-  - title: "Will the Republican Party retain New York's 3rd congressional district in the 2024 special election?"
-    markets:
-      - platform: manifold
-        platform_id: ABVgvhQ2oKkRpdO5tSbe
-      - platform: metaculus
-        platform_id: "20360"
-  
-  - title: "Will a new or extended state of emergency be declared in Ecuador before April 1, 2024?"
-    markets:
-      - platform: manifold
-        platform_id: F8PcCXyXbdxSi0UePWy5
-      - platform: metaculus
-        platform_id: "21182"
-  
-  - title: "Will President Biden issue an executive order on immigration before the State of the Union on March 7, 2024?"
-    markets:
-      - platform: manifold
-        platform_id: j1prjCur5mYUhsosFysG
-      - platform: metaculus
-        platform_id: "21489"
-  
-  - title: "Will the submarine cables running through the Red Sea be damaged by a hostile actor before the 15th of March?"
-    markets:
-      - platform: manifold
-        platform_id: eeFg0CuuLoUJ3iu4XFYt
-      - platform: metaculus
-        platform_id: "21394"
+- title: "Will the Federal Funds Rate be raised before December 14, 2023?"
+  category: Economics
+  markets:
+    - platform: manifold
+      platform_id: JpDTAPKT3pZvf4ZQjYwr
+    - platform: metaculus
+      platform_id: "19358"
 
-Science:
-  - title: "Will NASA re-establish communications with Voyager 1 before 1 Jan 2024?"
-    markets:
-      - platform: manifold
-        platform_id: ucq6tGjrQUukUoo6r8fP
-      - platform: metaculus
-        platform_id: "20569"
+- title: "Will Hamas lose control of Gaza before 2024?"
+  category: Politics
+  markets:
+    - platform: manifold
+      platform_id: gO7a5r4asXvWyLqNLInH
+    - platform: metaculus
+      platform_id: "19308"
+
+- title: "Will Yahya Sinwar cease to act as Hamas Chief in the Gaza Strip before 2024?"
+  category: Politics
+  markets:
+    - platform: manifold
+      platform_id: lm5MpYUS0KcWZievu17u
+    - platform: metaculus
+      platform_id: "19333"
+
+- title: "Before April 1 2024, will the Supreme Court agree to hear an appeal from Donald Trump on the question of presidential immunity?"
+  category: Politics
+  markets:
+    - platform: manifold
+      platform_id: uJieXjZItbk786Ajsyvs
+    - platform: metaculus
+      platform_id: "21418"
+
+- title: "Will Sweden join NATO before 2025?"
+  category: Politics
+  markets:
+    - platform: manifold
+      platform_id: KJSIl2ddCPPrwGyUuIgQ
+    - platform: metaculus
+      platform_id: "20024"
+
+- title: "Will the Doomsday Clock move closer to midnight in January 2024?"
+  category: Politics
+  markets:
+    - platform: manifold
+      platform_id: MOMPQNvPa7MrGfhXRuCT
+    - platform: metaculus
+      platform_id: "20750"
+
+- title: "Will the National Assembly of Hungary approve Sweden's NATO accession before March 1, 2024?"
+  category: Politics
+  markets:
+    - platform: manifold
+      platform_id: 9B5JgILYXSoMV8u6s3eQ
+    - platform: metaculus
+      platform_id: "21185"
+
+- title: "Will Israel launch a large-scale ground offensive into Gaza before November 1, 2023?"
+  category: Politics
+  markets:
+    - platform: manifold
+      platform_id: RAcrlIykluGPdGusJkqc
+    - platform: metaculus
+      platform_id: "19492"
+
+- title: "Will China have at least 420 nuclear warheads on December 31, 2023?"
+  category: Politics
+  markets:
+    - platform: manifold
+      platform_id: fp4PegAqnEETVf2GD6M5
+    - platform: metaculus
+      platform_id: "8139"
+
+- title: "Will Israel carry out and explicitly acknowledge a deadly attack on Iran before 2024?"
+  category: Politics
+  markets:
+    - platform: manifold
+      platform_id: DafaXBB29A3hnGbeOENZ
+    - platform: metaculus
+      platform_id: "19332"
+
+- title: "Will the Democratic Progressive Party win the 2024 Taiwanese presidential election?"
+  category: Politics
+  markets:
+    - platform: manifold
+      platform_id: rmIkVBu1OJ18Hi7F4PPU
+    - platform: metaculus
+      platform_id: "7575"
+
+- title: "Will Donald Trump spend at least one hour confined in a jail cell before January 1, 2024?"
+  category: Politics
+  markets:
+    - platform: manifold
+      platform_id: 6MRbxAt6SjrbeaRPzfeA
+    - platform: metaculus
+      platform_id: "19765"
+
+- title: "Will the Republican Party retain New York's 3rd congressional district in the 2024 special election?"
+  category: Politics
+  markets:
+    - platform: manifold
+      platform_id: ABVgvhQ2oKkRpdO5tSbe
+    - platform: metaculus
+      platform_id: "20360"
+
+- title: "Will a new or extended state of emergency be declared in Ecuador before April 1, 2024?"
+  category: Politics
+  markets:
+    - platform: manifold
+      platform_id: F8PcCXyXbdxSi0UePWy5
+    - platform: metaculus
+      platform_id: "21182"
+
+- title: "Will President Biden issue an executive order on immigration before the State of the Union on March 7, 2024?"
+  category: Politics
+  markets:
+    - platform: manifold
+      platform_id: j1prjCur5mYUhsosFysG
+    - platform: metaculus
+      platform_id: "21489"
+
+- title: "Will the submarine cables running through the Red Sea be damaged by a hostile actor before the 15th of March?"
+  category: Politics
+  markets:
+    - platform: manifold
+      platform_id: eeFg0CuuLoUJ3iu4XFYt
+    - platform: metaculus
+      platform_id: "21394"
+
+- title: "Will NASA re-establish communications with Voyager 1 before 1 Jan 2024?"
+  category: Science
+  markets:
+    - platform: manifold
+      platform_id: ucq6tGjrQUukUoo6r8fP
+    - platform: metaculus
+      platform_id: "20569"
