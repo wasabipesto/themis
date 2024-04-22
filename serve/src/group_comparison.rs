@@ -122,6 +122,41 @@ fn get_unique_categories_from_groups(groups: &Vec<ResponseGroupData>) -> Vec<Cat
     set.into_iter().collect()
 }
 
+/// Save a score to a map in the form of {platform: {date: score}}.
+/// Errors if a duplicate date is given.
+fn save_score_to_nested_map(
+    score_data: &mut HashMap<PlatformKey, HashMap<DateKey, f32>>,
+    platform: &PlatformKey,
+    date: &DateKey,
+    score: f32,
+) -> Result<(), ApiError> {
+    match score_data.get_mut(platform) {
+        None => {
+            score_data.insert(platform.clone(), HashMap::from([(date.to_owned(), score)]));
+            Ok(())
+        }
+        Some(subdata) => match subdata.get(date) {
+            None => {
+                subdata.insert(date.clone(), score);
+                Ok(())
+            }
+            Some(_) => Err(ApiError {
+                status_code: 500,
+                message: "date already in map".to_owned(),
+            }),
+        },
+    }
+}
+
+/// Gets a score from a map in the form of {platform: {date: score}}.
+fn get_score_from_nested_map(
+    score_data: &HashMap<PlatformKey, HashMap<DateKey, f32>>,
+    platform: &PlatformKey,
+    date: &DateKey,
+) -> Result<f32, ApiError> {
+    Ok(*score_data.get(platform).unwrap().get(date).unwrap())
+}
+
 /// Aggregate data from a list of groups.
 /// The result is a list where each item represents all markets in a platform.
 fn get_platform_aggregate_stats(
@@ -212,8 +247,7 @@ pub fn build_group_comparison(
 
         // get absolute brier per day on each market
         let dates_for_absolute_scoring = get_dates_for_absolute_scoring(&markets_by_platform);
-        let mut absolute_score_per_platform_per_day: HashMap<PlatformKey, HashMap<DateKey, f32>> =
-            HashMap::new();
+        let mut absolute_score_data: HashMap<PlatformKey, HashMap<DateKey, f32>> = HashMap::new();
         for (platform, market) in &markets_by_platform {
             for date in &dates_for_absolute_scoring {
                 // calculate brier for the day
@@ -221,89 +255,37 @@ pub fn build_group_comparison(
                 let prediction = market.prob_each_date.get(date).unwrap().as_f64().unwrap() as f32;
                 let absolute_brier = (resolution - prediction).powi(2);
                 // save it to map
-                match absolute_score_per_platform_per_day.get_mut(platform) {
-                    None => {
-                        absolute_score_per_platform_per_day.insert(
-                            platform.clone(),
-                            HashMap::from([(date.to_owned(), absolute_brier)]),
-                        );
-                    }
-                    Some(absolute_score_per_day) => match absolute_score_per_day.get(date) {
-                        None => {
-                            absolute_score_per_day.insert(date.clone(), absolute_brier);
-                        }
-                        Some(_) => {
-                            panic!("Date already existed in map!");
-                        }
-                    },
-                }
+                save_score_to_nested_map(&mut absolute_score_data, platform, date, absolute_brier)?;
             }
         }
 
         // get median brier per day
         for date in &dates_for_absolute_scoring {
+            let platform = &"median".to_string();
             let mut median_brier_acc = 0.0;
             let mut median_brier_len = 0;
-            for (_, date_map) in &absolute_score_per_platform_per_day {
+            for (_, date_map) in &absolute_score_data {
                 if let Some(brier) = date_map.get(date) {
                     median_brier_acc += brier;
                     median_brier_len += 1;
                 }
             }
             let median_brier = median_brier_acc / median_brier_len as f32;
-            match absolute_score_per_platform_per_day.get_mut("median") {
-                None => {
-                    absolute_score_per_platform_per_day.insert(
-                        "median".to_owned(),
-                        HashMap::from([(date.to_owned(), median_brier)]),
-                    );
-                }
-                Some(absolute_score_per_day) => match absolute_score_per_day.get(date) {
-                    None => {
-                        absolute_score_per_day.insert(date.clone(), median_brier);
-                    }
-                    Some(_) => {
-                        panic!("Date already existed in map!");
-                    }
-                },
-            }
+            save_score_to_nested_map(&mut absolute_score_data, platform, date, median_brier)?;
         }
 
         // get relative brier per day on each market
         let dates_for_relative_scoring = get_dates_for_relative_scoring(&markets_by_platform);
-        let mut relative_score_per_platform_per_day: HashMap<PlatformKey, HashMap<DateKey, f32>> =
-            HashMap::new();
+        let mut relative_score_data: HashMap<PlatformKey, HashMap<DateKey, f32>> = HashMap::new();
         for (platform, _) in &markets_by_platform {
             for date in &dates_for_relative_scoring {
-                // calculate brier for the day
-                let absolute = absolute_score_per_platform_per_day
-                    .get(platform)
-                    .unwrap()
-                    .get(date)
-                    .unwrap();
-                let median = absolute_score_per_platform_per_day
-                    .get(&"median".to_owned())
-                    .unwrap()
-                    .get(date)
-                    .unwrap();
+                // calculate relative brier for the day
+                let absolute = get_score_from_nested_map(&absolute_score_data, platform, date)?;
+                let median =
+                    get_score_from_nested_map(&absolute_score_data, &"median".to_owned(), date)?;
                 let relative_brier = absolute - median;
                 // save it to map
-                match relative_score_per_platform_per_day.get_mut(platform) {
-                    None => {
-                        relative_score_per_platform_per_day.insert(
-                            platform.clone(),
-                            HashMap::from([(date.to_owned(), relative_brier)]),
-                        );
-                    }
-                    Some(relative_score_per_day) => match relative_score_per_day.get(date) {
-                        None => {
-                            relative_score_per_day.insert(date.clone(), relative_brier);
-                        }
-                        Some(_) => {
-                            panic!("Date already existed in map!");
-                        }
-                    },
-                }
+                save_score_to_nested_map(&mut relative_score_data, platform, date, relative_brier)?;
             }
         }
 
@@ -313,24 +295,18 @@ pub fn build_group_comparison(
             markets: markets_by_platform
                 .into_iter()
                 .map(|(platform, market)| {
-                    let absolute_brier = absolute_score_per_platform_per_day
+                    let absolute_brier = absolute_score_data
                         .get(&platform)
                         .unwrap()
                         .values()
                         .sum::<f32>()
-                        / absolute_score_per_platform_per_day
-                            .get(&platform)
-                            .unwrap()
-                            .len() as f32;
-                    let relative_brier = relative_score_per_platform_per_day
+                        / absolute_score_data.get(&platform).unwrap().len() as f32;
+                    let relative_brier = relative_score_data
                         .get(&platform)
                         .unwrap()
                         .values()
                         .sum::<f32>()
-                        / relative_score_per_platform_per_day
-                            .get(&platform)
-                            .unwrap()
-                            .len() as f32;
+                        / relative_score_data.get(&platform).unwrap().len() as f32;
                     ResponseMarketData {
                         market_data: market,
                         platform,
