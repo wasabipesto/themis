@@ -157,6 +157,26 @@ fn get_score_from_nested_map(
     Ok(*score_data.get(platform).unwrap().get(date).unwrap())
 }
 
+/// Get the median from a list of floats.
+fn float_median(numbers: &mut Vec<f32>) -> Result<f32, ApiError> {
+    numbers.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let len = numbers.len();
+    match len {
+        0 => Err(ApiError {
+            status_code: 500,
+            message: "brier scores list was empty".to_string(),
+        }),
+        _ => {
+            if len % 2 == 0 {
+                let mid = len / 2;
+                Ok((numbers[mid - 1] + numbers[mid]) / 2.0)
+            } else {
+                Ok(numbers[len / 2])
+            }
+        }
+    }
+}
+
 /// Aggregate data from a list of groups.
 /// The result is a list where each item represents all markets in a platform.
 fn get_platform_aggregate_stats(
@@ -261,17 +281,18 @@ pub fn build_group_comparison(
 
         // get median brier per day
         for date in &dates_for_absolute_scoring {
-            let platform = &"median".to_string();
-            let mut median_brier_acc = 0.0;
-            let mut median_brier_len = 0;
-            for (_, date_map) in &absolute_score_data {
-                if let Some(brier) = date_map.get(date) {
-                    median_brier_acc += brier;
-                    median_brier_len += 1;
-                }
-            }
-            let median_brier = median_brier_acc / median_brier_len as f32;
-            save_score_to_nested_map(&mut absolute_score_data, platform, date, median_brier)?;
+            let mut brier_scores: Vec<f32> = absolute_score_data
+                .values()
+                .flat_map(|date_map| date_map.get(date))
+                .copied()
+                .collect();
+            let median_brier = float_median(&mut brier_scores)?;
+            save_score_to_nested_map(
+                &mut absolute_score_data,
+                &"median".to_owned(),
+                date,
+                median_brier,
+            )?;
         }
 
         // get relative brier per day on each market
@@ -289,32 +310,34 @@ pub fn build_group_comparison(
             }
         }
 
+        let markets = markets_by_platform
+            .into_iter()
+            .map(|(platform, market)| {
+                let absolute_brier = absolute_score_data
+                    .get(&platform)
+                    .unwrap()
+                    .values()
+                    .sum::<f32>()
+                    / absolute_score_data.get(&platform).unwrap().len() as f32;
+                let relative_brier = relative_score_data
+                    .get(&platform)
+                    .unwrap()
+                    .values()
+                    .sum::<f32>()
+                    / relative_score_data.get(&platform).unwrap().len() as f32;
+                ResponseMarketData {
+                    market_data: market,
+                    platform,
+                    absolute_brier,
+                    relative_brier,
+                }
+            })
+            .collect();
+
         groups.push(ResponseGroupData {
             group_title: group.title,
             category: group.category,
-            markets: markets_by_platform
-                .into_iter()
-                .map(|(platform, market)| {
-                    let absolute_brier = absolute_score_data
-                        .get(&platform)
-                        .unwrap()
-                        .values()
-                        .sum::<f32>()
-                        / absolute_score_data.get(&platform).unwrap().len() as f32;
-                    let relative_brier = relative_score_data
-                        .get(&platform)
-                        .unwrap()
-                        .values()
-                        .sum::<f32>()
-                        / relative_score_data.get(&platform).unwrap().len() as f32;
-                    ResponseMarketData {
-                        market_data: market,
-                        platform,
-                        absolute_brier,
-                        relative_brier,
-                    }
-                })
-                .collect(),
+            markets,
         })
     }
 
