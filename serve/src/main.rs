@@ -5,6 +5,7 @@ use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::{pg::PgConnection, prelude::*};
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
+use serde_json;
 use serde_yaml;
 use std::collections::{HashMap, HashSet};
 use std::env::var;

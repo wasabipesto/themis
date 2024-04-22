@@ -17,6 +17,7 @@ table! {
         prob_at_midpoint -> Float,
         prob_at_close -> Float,
         prob_each_pct -> Array<Float>,
+        prob_each_date -> Jsonb,
         prob_time_avg -> Float,
         resolution -> Float,
     }
@@ -39,6 +40,7 @@ pub struct Market {
     pub prob_at_midpoint: f32,
     pub prob_at_close: f32,
     pub prob_each_pct: Vec<f32>,
+    pub prob_each_date: serde_json::Value,
     pub prob_time_avg: f32,
     pub resolution: f32,
 }
