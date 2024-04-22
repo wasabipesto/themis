@@ -148,6 +148,11 @@ fn save_score_to_nested_map(
     }
 }
 
+/// Gets a probability from a market object given a date.
+fn get_prob_on_date_from_market(market: &Market, date: &DateKey) -> Result<f32, ApiError> {
+    Ok(market.prob_each_date.get(date).unwrap().as_f64().unwrap() as f32)
+}
+
 /// Gets a score from a map in the form of {platform: {date: score}}.
 fn get_score_from_nested_map(
     score_data: &HashMap<PlatformKey, HashMap<DateKey, f32>>,
@@ -155,6 +160,15 @@ fn get_score_from_nested_map(
     date: &DateKey,
 ) -> Result<f32, ApiError> {
     Ok(*score_data.get(platform).unwrap().get(date).unwrap())
+}
+
+/// Get the average score from a map given the platform name.
+fn get_average_score_from_map(
+    score_data: &HashMap<PlatformKey, HashMap<DateKey, f32>>,
+    platform: &PlatformKey,
+) -> Result<f32, ApiError> {
+    Ok(score_data.get(platform).unwrap().values().sum::<f32>()
+        / score_data.get(platform).unwrap().len() as f32)
 }
 
 /// Get the median from a list of floats.
@@ -272,7 +286,7 @@ pub fn build_group_comparison(
             for date in &dates_for_absolute_scoring {
                 // calculate brier for the day
                 let resolution = market.resolution.clone();
-                let prediction = market.prob_each_date.get(date).unwrap().as_f64().unwrap() as f32;
+                let prediction = get_prob_on_date_from_market(&market, &date)?;
                 let absolute_brier = (resolution - prediction).powi(2);
                 // save it to map
                 save_score_to_nested_map(&mut absolute_score_data, platform, date, absolute_brier)?;
@@ -310,34 +324,20 @@ pub fn build_group_comparison(
             }
         }
 
-        let markets = markets_by_platform
-            .into_iter()
-            .map(|(platform, market)| {
-                let absolute_brier = absolute_score_data
-                    .get(&platform)
-                    .unwrap()
-                    .values()
-                    .sum::<f32>()
-                    / absolute_score_data.get(&platform).unwrap().len() as f32;
-                let relative_brier = relative_score_data
-                    .get(&platform)
-                    .unwrap()
-                    .values()
-                    .sum::<f32>()
-                    / relative_score_data.get(&platform).unwrap().len() as f32;
-                ResponseMarketData {
-                    market_data: market,
-                    platform,
-                    absolute_brier,
-                    relative_brier,
-                }
+        let mut markets_for_response = Vec::new();
+        for (platform, market) in markets_by_platform {
+            markets_for_response.push(ResponseMarketData {
+                market_data: market,
+                platform: platform.clone(),
+                absolute_brier: get_average_score_from_map(&absolute_score_data, &platform)?,
+                relative_brier: get_average_score_from_map(&relative_score_data, &platform)?,
             })
-            .collect();
+        }
 
         groups.push(ResponseGroupData {
             group_title: group.title,
             category: group.category,
-            markets,
+            markets: markets_for_response,
         })
     }
 
