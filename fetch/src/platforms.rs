@@ -448,10 +448,14 @@ fn get_reqwest_client_ratelimited(
         .build()
 }
 
-/// Send the request, check for common errors, and parse the response.
 async fn send_request<T: for<'de> serde::Deserialize<'de>>(
     req: reqwest_middleware::RequestBuilder,
 ) -> Result<T, MarketConvertError> {
+    // this only panics if the body is a stream (we don't use streams)
+    let cloned_req = req.try_clone().unwrap().build().unwrap();
+    let final_url = cloned_req.url();
+
+    // send the request
     let response = match req.send().await {
         Ok(r) => Ok(r),
         Err(e) => Err(MarketConvertError {
@@ -461,6 +465,7 @@ async fn send_request<T: for<'de> serde::Deserialize<'de>>(
         }),
     }?;
 
+    // parse the response as text
     let status = response.status();
     let response_text = response.text().await.map_err(|e| MarketConvertError {
         data: e.to_string(),
@@ -468,14 +473,16 @@ async fn send_request<T: for<'de> serde::Deserialize<'de>>(
         level: 4,
     })?;
 
+    // check if the server returned an error
     if !status.is_success() {
         return Err(MarketConvertError {
             data: response_text.to_owned(),
-            message: format!("Query returned status code {status}."),
+            message: format!("Query to {} returned status code {}.", final_url, status),
             level: 4,
         });
     }
 
+    // parse the text as json
     serde_json::from_str(&response_text).map_err(|e| MarketConvertError {
         data: response_text.to_owned(),
         message: format!("Failed to deserialize: {e}."),
