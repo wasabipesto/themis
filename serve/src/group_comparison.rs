@@ -60,6 +60,7 @@ struct FullResponse {
 
 /// Gets a list of all dates where 2 or more markets were open.
 /// Used to calculate the absolute Brier score.
+/// Panics of the database is not well-formed.
 fn get_dates_for_absolute_scoring(markets: &HashMap<String, Market>) -> Vec<DateKey> {
     let mut date_set: HashSet<DateKey> = HashSet::new();
     for market in markets.values() {
@@ -83,6 +84,7 @@ fn get_dates_for_absolute_scoring(markets: &HashMap<String, Market>) -> Vec<Date
 
 /// Gets a list of all dates where ALL markets were open.
 /// Used to calculate the relative Brier score.
+/// Panics of the database is not well-formed.
 fn get_dates_for_relative_scoring(markets: &HashMap<String, Market>) -> Vec<DateKey> {
     let mut date_set: HashSet<DateKey> = HashSet::new();
     for market in markets.values() {
@@ -142,7 +144,10 @@ fn save_score_to_nested_map(
             }
             Some(_) => Err(ApiError {
                 status_code: 500,
-                message: "date already in map".to_owned(),
+                message: format!(
+                    "Tried to insert date {} but it was already in map {:?}",
+                    date, subdata
+                ),
             }),
         },
     }
@@ -150,7 +155,19 @@ fn save_score_to_nested_map(
 
 /// Gets a probability from a market object given a date.
 fn get_prob_on_date_from_market(market: &Market, date: &DateKey) -> Result<f32, ApiError> {
-    Ok(market.prob_each_date.get(date).unwrap().as_f64().unwrap() as f32)
+    match market.prob_each_date.get(date) {
+        Some(prob) => match prob.as_f64() {
+            Some(prob_f64) => Ok(prob_f64 as f32),
+            None => Err(ApiError {
+                status_code: 500,
+                message: format!("Failed to convert probability to f64 for date {}", date),
+            }),
+        },
+        None => Err(ApiError {
+            status_code: 500,
+            message: format!("No probability found for date {}", date),
+        }),
+    }
 }
 
 /// Gets a score from a map in the form of {platform: {date: score}}.
@@ -159,7 +176,19 @@ fn get_score_from_nested_map(
     platform: &PlatformKey,
     date: &DateKey,
 ) -> Result<f32, ApiError> {
-    Ok(*score_data.get(platform).unwrap().get(date).unwrap())
+    match score_data.get(platform) {
+        Some(date_map) => match date_map.get(date) {
+            Some(score) => Ok(*score),
+            None => Err(ApiError {
+                status_code: 500,
+                message: format!("No score found for date {} and platform {}", date, platform),
+            }),
+        },
+        None => Err(ApiError {
+            status_code: 500,
+            message: format!("No data found for platform {}", platform),
+        }),
+    }
 }
 
 /// Get the average score from a map given the platform name.
@@ -167,18 +196,34 @@ fn get_average_score_from_map(
     score_data: &HashMap<PlatformKey, HashMap<DateKey, f32>>,
     platform: &PlatformKey,
 ) -> Result<f32, ApiError> {
-    Ok(score_data.get(platform).unwrap().values().sum::<f32>()
-        / score_data.get(platform).unwrap().len() as f32)
+    match score_data.get(platform) {
+        Some(date_map) => {
+            let sum: f32 = date_map.values().sum();
+            let len = date_map.len() as f32;
+            if len == 0.0 {
+                Err(ApiError {
+                    status_code: 500,
+                    message: format!("No data found for platform {}", platform),
+                })
+            } else {
+                Ok(sum / len)
+            }
+        }
+        None => Err(ApiError {
+            status_code: 500,
+            message: format!("No data found for platform {}", platform),
+        }),
+    }
 }
 
 /// Get the median from a list of floats.
 fn float_median(numbers: &mut Vec<f32>) -> Result<f32, ApiError> {
-    numbers.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    numbers.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     let len = numbers.len();
     match len {
         0 => Err(ApiError {
             status_code: 500,
-            message: "brier scores list was empty".to_string(),
+            message: "Generated Brier scores list was empty".to_string(),
         }),
         _ => {
             if len % 2 == 0 {
