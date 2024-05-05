@@ -3,6 +3,7 @@ import IntroductionView from '../views/IntroductionView.vue'
 import CalibrationView from '../views/CalibrationView.vue'
 import AccuracyView from '../views/AccuracyView.vue'
 import ListView from '../views/ListView.vue'
+import GroupView from '../views/GroupView.vue'
 import FAQView from '../views/FAQView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 
@@ -29,6 +30,11 @@ const router = createRouter({
       path: '/list',
       name: 'list',
       component: ListView
+    },
+    {
+      path: '/groups',
+      name: 'groups',
+      component: GroupView
     },
     {
       path: '/faq',
