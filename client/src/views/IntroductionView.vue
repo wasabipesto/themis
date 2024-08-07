@@ -272,7 +272,7 @@ const sample_calibration_chart_options = ref({
     <p>
       Well it looks like our Nostradamus was decently accurate whenever he predicted NO - those only
       happened 17% of the time. But his YES predictions weren't so good - they happened about as
-      often as chance! It seems like this predictor isn't very calibrated.
+      often as chance! It seems like this predictor isn't very well-calibrated.
     </p>
     <p>
       Anyways, we're more interested in forecasters that don't just say yes or no. We're looking at
@@ -335,7 +335,7 @@ const sample_calibration_chart_options = ref({
               <th>9</th>
             </tr>
             <tr>
-              <td>Avgerage Resolution</td>
+              <td>Average Resolution</td>
               <th>9.1%</th>
               <th>11.7%</th>
               <th>28.0%</th>
@@ -590,7 +590,7 @@ const sample_calibration_chart_options = ref({
     </p>
     <p>
       <v-card variant="tonal" color="purple-darken-4" class="middle-box-narrow text-center">
-        <v-card-text> <h3>"How much can trust prediction markets?"</h3> </v-card-text>
+        <v-card-text> <h3>"How much can we trust prediction markets?"</h3> </v-card-text>
       </v-card>
     </p>
     <p>
