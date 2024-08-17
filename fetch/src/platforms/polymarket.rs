@@ -4,7 +4,7 @@ use super::*;
 
 const POLYMARKET_CLOB_API_BASE: &str = "https://clob.polymarket.com";
 const POLYMARKET_SITE_BASE: &str = "https://polymarket.com";
-const POLYMARKET_RATELIMIT: usize = 100;
+const POLYMARKET_RATELIMIT: usize = 50;
 
 /// (Indirect) API response with standard market info.
 #[allow(non_snake_case)]
@@ -15,7 +15,7 @@ struct MarketInfo {
     market_slug: String,
     closed: bool,
     end_date_iso: Option<DateTime<Utc>>,
-    parent_categories: Vec<String>,
+    tags: Option<Vec<String>>,
     tokens: Vec<TokenData>,
 }
 
@@ -99,18 +99,20 @@ impl MarketStandardizer for MarketFull {
         0 // TODO
     }
     fn category(&self) -> String {
-        for category in &self.market.parent_categories {
-            match category.as_str() {
-                "AI" => return "AI".to_string(),
-                "Business" => return "Economics".to_string(),
-                "Coronavirus" => return "Science".to_string(),
-                "Crypto" => return "Crypto".to_string(),
-                "NFTs" => return "Crypto".to_string(),
-                "Politics" => return "Politics".to_string(),
-                "Pop Culture" => return "Culture".to_string(),
-                "Science" => return "Science".to_string(),
-                "Sports" => return "Sports".to_string(),
-                _ => continue,
+        if let Some(categories) = &self.market.tags {
+            for category in categories {
+                match category.as_str() {
+                    "AI" => return "AI".to_string(),
+                    "Business" => return "Economics".to_string(),
+                    "Coronavirus" => return "Science".to_string(),
+                    "Crypto" => return "Crypto".to_string(),
+                    "NFTs" => return "Crypto".to_string(),
+                    "Politics" => return "Politics".to_string(),
+                    "Pop Culture" => return "Culture".to_string(),
+                    "Science" => return "Science".to_string(),
+                    "Sports" => return "Sports".to_string(),
+                    _ => continue,
+                }
             }
         }
         "None".to_string()
