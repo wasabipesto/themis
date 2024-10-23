@@ -1,7 +1,7 @@
 //! This module has all of the common utilities and market standardization tools required to query the API and convert responses into DB rows.
 
 use chrono::serde::{ts_milliseconds, ts_milliseconds_option, ts_seconds};
-use chrono::{DateTime, Duration, NaiveDateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use clap::ValueEnum;
 use core::fmt;
 use diesel::upsert::excluded;
@@ -275,7 +275,7 @@ pub trait MarketStandardizer {
                             "General: Market events {:?} and {:?} occured simultaneously but with different probabilities.",
                             event, prev_event
                         ),
-                        level: 4,
+                        level: 3,
                     });
                 }
                 Ordering::Less => {
@@ -285,7 +285,7 @@ pub trait MarketStandardizer {
                             "General: Market events were not sorted properly, event {:?} timestamp should be greater than event {:?}.",
                             event, prev_event
                         ),
-                        level: 4,
+                        level: 3,
                     });
                 }
             }
@@ -444,16 +444,23 @@ async fn send_request<T: for<'de> serde::Deserialize<'de>>(
 /// Level 3 is for actual processing errors which can be ignored
 /// Level 4+ is for actual processing errors which should not be ignored
 fn eval_error(error: MarketConvertError, verbose: bool) {
-    let error_level = match verbose {
-        false => error.level,
-        true => error.level + 1,
-    };
-    match error_level {
-        0 => (),
-        1 => (),
-        2 => eprintln!("{}", error),
-        3 => eprintln!("{}", error),
-        _ => panic!("{}", error),
+    match verbose {
+        false => match error.level {
+            0 => (),
+            1 => (),
+            2 => eprintln!("{}", error),
+            3 => eprintln!("{}", error),
+            4 => eprintln!("{}", error),
+            _ => panic!("{}", error),
+        },
+        true => match error.level {
+            0 => (),
+            1 => eprintln!("{}", error),
+            2 => eprintln!("{}", error),
+            3 => eprintln!("{}", error),
+            4 => eprintln!("{}", error),
+            _ => panic!("{}", error),
+        },
     }
 }
 
