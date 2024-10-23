@@ -350,6 +350,7 @@ pub async fn get_market_by_id(id: &String, output_method: OutputMethod, verbose:
 }
 
 /// Get a new token if the old one expired.
+#[allow(dead_code)]
 struct FetchTokenMiddleware;
 
 #[async_trait::async_trait]
