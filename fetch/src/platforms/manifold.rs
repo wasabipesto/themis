@@ -6,7 +6,7 @@ use std::cmp;
 const MANIFOLD_API_BASE: &str = "https://api.manifold.markets/v0";
 const MANIFOLD_SITE_BASE: &str = "https://manifold.markets/";
 const MANIFOLD_EXCHANGE_RATE: f32 = 100.0;
-const MANIFOLD_RATELIMIT: usize = 15;
+const MANIFOLD_RATELIMIT: usize = 10;
 
 /// API response with standard market info from `/markets`.
 #[allow(non_snake_case)]
