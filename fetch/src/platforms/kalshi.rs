@@ -213,7 +213,6 @@ async fn get_login_token(client_opt: Option<ClientWithMiddleware>) -> String {
         .await
         .expect("Kalshi: Login failed.");
 
-    println!("Kalshi: Logged in with token {}", response.token);
     response.token
 }
 

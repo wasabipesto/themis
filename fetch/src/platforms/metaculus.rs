@@ -10,7 +10,7 @@ const METACULUS_RATELIMIT_MS: u64 = 60_000;
 
 #[derive(Deserialize, Debug, Clone)]
 struct BulkMarketResponse {
-    //next: String,
+    //next: String, // just use offset instead
     results: Vec<MarketInfo>,
 }
 
@@ -18,50 +18,62 @@ struct BulkMarketResponse {
 struct MarketInfo {
     id: u32,
     title: String,
-    active_state: String,
-    page_url: String,
-    number_of_forecasters: i32,
-    prediction_count: u32,
-    created_time: DateTime<Utc>,
-    effected_close_time: Option<DateTime<Utc>>,
-    possibilities: MarketTypePossibilities,
-    community_prediction: PredictionHistory,
-    resolution: Option<f32>,
+    //status: String,
+    resolved: bool,
+    nr_forecasters: i32,
+    forecasts_count: u32,
+    created_at: DateTime<Utc>,
+    published_at: Option<DateTime<Utc>>,
+    actual_close_time: Option<DateTime<Utc>>,
+    projects: MarketProjects,
+    question: MarketQuestionDetails,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-struct MarketInfoExtra {
-    categories: Vec<String>,
+struct MarketProjects {
+    category: Option<Vec<Category>>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-struct MarketTypePossibilities {
+struct Category {
+    //name: String,
+    slug: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+struct MarketQuestionDetails {
+    //description: String,
     r#type: Option<String>,
+    resolution: Option<String>,
+    aggregations: PredictionAggregations,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-struct PredictionHistory {
+struct PredictionAggregations {
+    /// Formerly referred to as "community prediction"
+    recency_weighted: AggregationData,
+    //unweighted: AggregationData,
+    //single_aggregation: AggregationData,
+    //metaculus_prediction: AggregationData,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+struct AggregationData {
     history: Vec<PredictionPoint>,
+    //latest: PredictionPoint,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 struct PredictionPoint {
-    t: f32,
-    x2: PredictionPointX2,
-}
-
-#[derive(Deserialize, Debug, Clone)]
-struct PredictionPointX2 {
-    avg: Option<f32>,
-    //var: f32,
-    //weighted_avg: f32,
+    start_time: f32,
+    end_time: Option<f32>,
+    means: Vec<f32>,
 }
 
 /// Container for market data and events, used to hold data for conversion.
 #[derive(Debug)]
 struct MarketFull {
     market: MarketInfo,
-    market_extra: MarketInfoExtra,
     events: Vec<ProbUpdate>,
 }
 
@@ -79,80 +91,89 @@ impl MarketStandardizer for MarketFull {
         self.market.id.to_string()
     }
     fn url(&self) -> String {
-        METACULUS_SITE_BASE.to_owned() + &self.market.page_url
+        METACULUS_SITE_BASE.to_owned() + "/questions/" + &self.market.id.to_string() + "/"
     }
     fn open_dt(&self) -> Result<DateTime<Utc>, MarketConvertError> {
-        Ok(self.market.created_time)
+        match self.market.published_at {
+            Some(published_at) => Ok(published_at),
+            None => Ok(self.market.created_at),
+        }
     }
     fn close_dt(&self) -> Result<DateTime<Utc>, MarketConvertError> {
-        if let Some(close_time) = self.market.effected_close_time {
+        if let Some(close_time) = self.market.actual_close_time {
             Ok(close_time)
         } else {
             Err(MarketConvertError {
                 data: self.debug(),
-                message: "Metaculus: effected_close_time is missing from closed market".to_string(),
+                message: "Metaculus: actual_close_time is missing from closed market".to_string(),
                 level: 3,
             })
         }
     }
     fn volume_usd(&self) -> f32 {
-        self.market.prediction_count as f32 * METACULUS_USD_PER_FORECAST
+        self.market.forecasts_count as f32 * METACULUS_USD_PER_FORECAST
     }
     fn num_traders(&self) -> i32 {
-        self.market.number_of_forecasters
+        self.market.nr_forecasters
     }
     fn category(&self) -> String {
-        for category in &self.market_extra.categories {
-            match category.as_str() {
-                "bio--bioengineering" => return "Science".to_string(),
-                "bio--infectious-disease" => return "Science".to_string(),
-                "bio--medicine" => return "Science".to_string(),
-                "business" => return "Economics".to_string(),
-                "category--scientific-discoveries" => return "Science".to_string(),
-                "category--technological-advances" => return "Technology".to_string(),
-                "comp-sci--ai-and-machinelearning" => return "AI".to_string(),
-                "computing--ai" => return "AI".to_string(),
-                "computing--blockchain" => return "Crypto".to_string(),
-                "contests--cryptocurrency" => return "Crypto".to_string(),
-                "economy" => return "Economics".to_string(),
-                "elections--us--president" => return "Politics".to_string(),
-                "environment--climate" => return "Climate".to_string(),
-                "finance" => return "Economics".to_string(),
-                "finance--cryptocurrencies" => return "Crypto".to_string(),
-                "finance--market" => return "Economics".to_string(),
-                "geopolitics" => return "Politics".to_string(),
-                "geopolitics--armedconflict" => return "Politics".to_string(),
-                "industry--space" => return "Science".to_string(),
-                "industry--transportation" => return "Technology".to_string(),
-                "phys-sci--astro-and-cosmo" => return "Science".to_string(),
-                "politics" => return "Politics".to_string(),
-                "politics--europe" => return "Politics".to_string(),
-                "politics--us" => return "Politics".to_string(),
-                "series--aimilestones" => return "AI".to_string(),
-                "series--spacex" => return "Technology".to_string(),
-                "sports" => return "Sports".to_string(),
-                "tech--automotive" => return "Technology".to_string(),
-                "tech--energy" => return "Technology".to_string(),
-                "tech--general" => return "Technology".to_string(),
-                "tech--space" => return "Technology".to_string(),
-                _ => continue,
+        if let Some(categories) = &self.market.projects.category {
+            for category in categories {
+                match category.slug.as_str() {
+                    // TODO: need to re-do these categories, seem to have changed
+                    "bio--bioengineering" => return "Science".to_string(),
+                    "bio--infectious-disease" => return "Science".to_string(),
+                    "bio--medicine" => return "Science".to_string(),
+                    "business" => return "Economics".to_string(),
+                    "category--scientific-discoveries" => return "Science".to_string(),
+                    "category--technological-advances" => return "Technology".to_string(),
+                    "comp-sci--ai-and-machinelearning" => return "AI".to_string(),
+                    "computing--ai" => return "AI".to_string(),
+                    "computing--blockchain" => return "Crypto".to_string(),
+                    "contests--cryptocurrency" => return "Crypto".to_string(),
+                    "economy" => return "Economics".to_string(),
+                    "elections--us--president" => return "Politics".to_string(),
+                    "environment--climate" => return "Climate".to_string(),
+                    "finance" => return "Economics".to_string(),
+                    "finance--cryptocurrencies" => return "Crypto".to_string(),
+                    "finance--market" => return "Economics".to_string(),
+                    "geopolitics" => return "Politics".to_string(),
+                    "geopolitics--armedconflict" => return "Politics".to_string(),
+                    "industry--space" => return "Science".to_string(),
+                    "industry--transportation" => return "Technology".to_string(),
+                    "phys-sci--astro-and-cosmo" => return "Science".to_string(),
+                    "politics" => return "Politics".to_string(),
+                    "politics--europe" => return "Politics".to_string(),
+                    "politics--us" => return "Politics".to_string(),
+                    "series--aimilestones" => return "AI".to_string(),
+                    "series--spacex" => return "Technology".to_string(),
+                    "sports" => return "Sports".to_string(),
+                    "tech--automotive" => return "Technology".to_string(),
+                    "tech--energy" => return "Technology".to_string(),
+                    "tech--general" => return "Technology".to_string(),
+                    "tech--space" => return "Technology".to_string(),
+                    _ => continue,
+                }
             }
+            "None".to_string()
+        } else {
+            "None".to_string()
         }
-        "None".to_string()
     }
     fn events(&self) -> Vec<ProbUpdate> {
         self.events.to_owned()
     }
     fn resolution(&self) -> Result<f32, MarketConvertError> {
-        if let Some(resolution) = self.market.resolution {
-            if (0.0..=1.0).contains(&resolution) {
-                Ok(resolution)
-            } else {
-                Err(MarketConvertError {
+        if let Some(res_text) = &self.market.question.resolution {
+            match res_text.as_str() {
+                "yes" => Ok(1.0),
+                "no" => Ok(0.0),
+                _ => Err(MarketConvertError {
                     data: self.debug(),
-                    message: "Metaculus: Market resolution value out of bounds".to_string(),
+                    message: "Metaculus: Market resolution value is not \"yes\" or \"no\""
+                        .to_string(),
                     level: 3,
-                })
+                }),
             }
         } else {
             Err(MarketConvertError {
@@ -190,9 +211,7 @@ impl TryInto<MarketStandard> for MarketFull {
 
 /// Test if a market is suitable for analysis.
 fn is_valid(market: &MarketInfo) -> bool {
-    market.active_state == "RESOLVED"
-        && market.possibilities.r#type == Some("binary".to_string())
-        && market.resolution >= Some(0.0)
+    market.resolved == true && market.question.r#type == Some("binary".to_string())
 }
 
 /// Convert API events into standard events.
@@ -200,17 +219,28 @@ fn get_prob_updates(
     mut points: Vec<PredictionPoint>,
 ) -> Result<Vec<ProbUpdate>, MarketConvertError> {
     let mut result = Vec::new();
-    points.sort_unstable_by_key(|point| point.t as i64);
+    // not ideal to sort by start_time as i64 but they're always more than 1m apart anyways
+    points.sort_unstable_by_key(|point| point.start_time as i64);
     for point in points {
-        let dt_opt = DateTime::from_timestamp(point.t as i64, 0);
+        // get timestamp, ideally midpoint between start_time and end_time
+        let center_time = if let Some(end_time) = point.end_time {
+            ((point.start_time + end_time) / 2.0) as i64
+        } else {
+            // on live markets there is no end_time for the last bucket
+            // we shouldn't hit this in practice
+            point.start_time as i64
+        };
+        let dt_opt = DateTime::from_timestamp(center_time, 0);
         if let Some(time) = dt_opt {
-            //let time = DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc);
-            if let Some(prob) = point.x2.avg {
-                result.push(ProbUpdate { time, prob });
+            if let Some(prob) = point.means.first() {
+                result.push(ProbUpdate {
+                    time,
+                    prob: prob.clone(),
+                });
             } else {
                 return Err(MarketConvertError {
                     data: format!("{:?}", point),
-                    message: "Metaculus: History event point.x2.avg is missing".to_string(),
+                    message: "Metaculus: History event point \"means\" list is empty".to_string(),
                     level: 3,
                 });
             }
@@ -228,16 +258,24 @@ fn get_prob_updates(
 }
 
 /// Download full market history and store events in the container.
+/// TODO remove this?
 async fn get_extended_data(
-    client: &ClientWithMiddleware,
+    _client: &ClientWithMiddleware,
     market: &MarketInfo,
 ) -> Result<MarketFull, MarketConvertError> {
-    let api_url = METACULUS_API_BASE.to_owned() + "/questions/" + &market.id.to_string();
-    let market_extra: MarketInfoExtra = send_request(client.get(&api_url)).await?;
+    //let api_url = METACULUS_API_BASE.to_owned() + "/questions/" + &market.id.to_string();
+    //let market_extra: MarketInfoExtra = send_request(client.get(&api_url)).await?;
     Ok(MarketFull {
         market: market.clone(),
-        market_extra,
-        events: get_prob_updates(market.community_prediction.history.clone())?,
+        //market_extra,
+        events: get_prob_updates(
+            market
+                .question
+                .aggregations
+                .recency_weighted
+                .history
+                .clone(),
+        )?,
     })
 }
 
