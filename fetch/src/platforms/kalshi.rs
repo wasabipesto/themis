@@ -49,23 +49,40 @@ struct BulkMarketResponse {
     cursor: String,
 }
 
-/// (Indirect) API response with standard event info.
+/// (Indirect) API response with candlestick price info.
+/// These may be empty if there was no trade during the period.
 #[derive(Deserialize, Debug)]
-struct EventInfo {
+struct CandlestickPrice {
+    // Last traded YES contract price on the market during the candlestick period.
+    //close: Option<u32>,
+    // Highest traded YES contract price on the market during the candlestick period.
+    //high: Option<u32>,
+    // Lowest traded YES contract price on the market during the candlestick period.
+    //low: Option<u32>,
+    /// Mean traded YES contract price on the market during the candlestick period.
+    mean: Option<u32>,
+    // First traded YES contract price on the market during the candlestick period.
+    //open: Option<u32>,
+    // Last traded YES contract price on the market before the candlestick period.
+    //previous: Option<u32>,
+}
+
+/// (Indirect) API response with candlestick info.
+#[derive(Deserialize, Debug)]
+struct CandlestickInfo {
     #[serde(with = "ts_seconds")]
-    ts: DateTime<Utc>,
+    end_period_ts: DateTime<Utc>,
     //volume: u32,
     //yes_ask: u32,
     //yes_bid: u32,
-    yes_price: f32,
+    price: CandlestickPrice,
     //open_interest: u32,
 }
 
 /// API response after requesting market events from `/history`.
 #[derive(Deserialize, Debug)]
-struct BulkEventResponse {
-    history: Vec<EventInfo>,
-    cursor: String,
+struct BulkCandlestickResponse {
+    candlesticks: Vec<CandlestickInfo>,
 }
 
 /// Container for market data and events, used to hold data for conversion.
@@ -195,21 +212,21 @@ async fn get_login_token(client_opt: Option<ClientWithMiddleware>) -> String {
     let response: LoginResponse = send_request(client.post(api_url).json(&credentials))
         .await
         .expect("Kalshi: Login failed.");
+
+    println!("Kalshi: Logged in with token {}", response.token);
     response.token
 }
 
 /// Convert API events into standard events.
-fn get_prob_updates(mut events: Vec<EventInfo>) -> Result<Vec<ProbUpdate>, MarketConvertError> {
+fn get_prob_updates(events: Vec<CandlestickInfo>) -> Result<Vec<ProbUpdate>, MarketConvertError> {
     let mut result = Vec::new();
-    let mut prev_price = 0.0;
-    events.sort_unstable_by_key(|b| b.ts);
+    //events.sort_unstable_by_key(|b| b.end_period_ts);
     for event in events {
-        if event.yes_price != prev_price {
+        if let Some(mean_price) = event.price.mean {
             result.push(ProbUpdate {
-                time: event.ts,
-                prob: event.yes_price / 100.0,
+                time: event.end_period_ts, // subtract half an hour?
+                prob: mean_price as f32 / 100.0,
             });
-            prev_price = event.yes_price;
         }
     }
 
@@ -217,29 +234,47 @@ fn get_prob_updates(mut events: Vec<EventInfo>) -> Result<Vec<ProbUpdate>, Marke
 }
 
 /// Download full market history and store events in the container.
+/// Uses the GetMarketCandlesticks endpoint:
+/// https://trading-api.readme.io/reference/getmarketcandlesticks
+/// Note that we only get the data aggregated into hourly buckets.
 async fn get_extended_data(
     client: &ClientWithMiddleware,
     token: &String,
     market: &MarketInfo,
 ) -> Result<MarketFull, MarketConvertError> {
+    // url-encode the ticker by replacing all "%" with "%25"
     let ticker_urlencoded = Regex::new(r"%").unwrap().replace_all(&market.ticker, "%25");
-    let api_url = KALSHI_API_BASE.to_owned() + "/markets/" + &ticker_urlencoded + "/history";
-    let limit: usize = 1000;
-    let mut cursor: Option<String> = None;
+    // get the series ticker by taking the text up to the first "-"
+    let series_ticker = Regex::new(r"-.*").unwrap().replace_all(&market.ticker, "");
+    // url-encode it also
+    let series_ticker_urlencoded = Regex::new(r"%").unwrap().replace_all(&series_ticker, "%25");
+    // build url in the form of https://trading-api.kalshi.com/trade-api/v2/series/{series_ticker}/markets/{ticker}/candlesticks
+    let api_url = KALSHI_API_BASE.to_owned()
+        + "/series/"
+        + &series_ticker_urlencoded
+        + "/markets/"
+        + &ticker_urlencoded
+        + "/candlesticks";
+    // you can query by minute, hour, or day - I chose hour
+    // limit of 5000 data points per request (208 days)
+    let query_period_interval = 60i64;
+    let mut query_start_ts = market.open_time.timestamp();
+    let mut query_end_ts = query_start_ts + query_period_interval * 5000;
     let mut all_bet_data = Vec::new();
     loop {
-        let response: BulkEventResponse = send_request(
+        let response: BulkCandlestickResponse = send_request(
             client
                 .get(&api_url)
                 .bearer_auth(token)
-                .query(&[("limit", limit)])
-                .query(&[("cursor", cursor.clone())])
-                .query(&[("min_ts", 0)]),
+                .query(&[("period_interval", query_period_interval)])
+                .query(&[("start_ts", query_start_ts)])
+                .query(&[("end_ts", query_end_ts)]),
         )
         .await?;
-        all_bet_data.extend(response.history);
-        if response.cursor.len() > 1 {
-            cursor = Some(response.cursor);
+        all_bet_data.extend(response.candlesticks);
+        if query_end_ts <= market.close_time.timestamp() {
+            query_start_ts = query_end_ts;
+            query_end_ts = query_start_ts + query_period_interval * 5000;
         } else {
             break;
         }
