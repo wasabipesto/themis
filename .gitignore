@@ -1,4 +1,5 @@
-*/target
+**/target
+**/output
 .gitsecret/keys/random_seed
 !*.secret
 **/.env

@@ -1,28 +1,125 @@
-# Project Themis
+# What is this
 
-This is a work-in-progress rewrite of [Calibration City](https://github.com/wasabipesto/calibration-site), a prediction market scoring site. Project Themis includes a number of upgrades and changes to the original concept, such as:
+This is Project Themis, which powers the site [Calibration City](https://calibration.city/). The purpose of this project is to perform useful analysis of prediction market calibration and accuracy with data from each platform’s public API.
 
-- Orders of magnitude faster, thanks to a complete rewrite in rust! API calls to the v1 backend would take up to 15 seconds, while the new version handles hundreds of thousands of markets in under half a second.
-- Supports multiple prediction platforms! Now you can have a direct comparison across platforms with simultaneous filters and weights to modify the calibration plots and Brier scores.
-- Much nicer user interface! Upgraded from an HTML form with no documentation, now each option has an explanation and live-updating selectors.
+This project is currently undergoing a rewrite, and not all components may be usable as-is.
 
-## How it works
+# How to run this yourself
 
-We have three subprojects here: `fetch`, `serve`, and `client`. Fetch and serve are written in rust, and they save markets to or query markets from the database respectively. Client is a simple webpage to hit the serve API and show the results.
+## Step 0. Install dependencies
 
-### Fetch
+Clone this repository and enter it:
 
-In `fetch`, we have a library `lib` that holds the basic logic and `main` that serves it as a CLI with intelligent argument parsing. The valid arguments can be found in the serve README or `themis-fetch --help`. The `platform` module has type definitions, reused functions, and default trait implementations. Each sub-module has platform-specific download and parsing functions. Adding new platforms is fairly straightforward as long as the trait implementations are satisfied.
+```bash
+git clone git@github.com:wasabipesto/themis.git
+cd themis
+```
 
-In the default flow we spin up a group of async tasks to recursively download all markets on each platform and then sub-tasks to get additional information like bets and market history. Each platform has an independent ratelimit and deserializes immediately into typed structs upon response. We insert markets into the database or update if they already exist, printing errors to the console but largely skipping recoverable or row-specific faults.
+You will need the rust toolchain to run the downloader and extractor:
 
-### Serve
+```bash
+curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
+```
 
-Subproject `serve` queries an external Postgres database with saved markets, calculates calibration points and Brier scores, and ships it off to the client. Different user-selectable options are deserialized immediately and applied to the SQL filter. A paginated endpoint allows third parties to query markets for their own analysis. You can find the API schema in the serve README.
+## Step 1. Downloading API data to disk
 
-### Client
+In previous versions of this program, we deserialized all API responses immediately upon receiving them in order to work in a type-safe rust environment. This works great if APIs never change. Since external APIs can change unexpectedly, we have broken the download flow into two programs: a downloader and an extractor. The downloader will grab all relevant data from the platform APIs, then the extractor will deserialize that data into something we can use.
 
-The `client` subproject is a Vue project that is built upon deployment to be served behind nginx. There are only a few reused components, with most items being integrated directly into the view to allow for more flexibility. We use Vuetify for basic components and the ChartJS library for plotting the visualizations. 
+Before downloading, make sure you have enough disk space, memory, and time:
 
-## Disclaimer
-I use Manifold much more than any of the other platforms included in this analysis, and have received bounties from the Manifold team in both mana (play money) and real money. Their contributions did not affect the contents of this site in any way.
+- By default the download program will download from all platforms in parallel to avoid getting bottle-necked by any one platform’s API rate limit. In order to do this we first download the platform’s bulk list as an index and load it into memory. If you are running in the default mode, expect to use around 6 GB of memory. If you run out of memory, you can run the platforms one at a time with the `--platform` option.
+- This program will download all relevant data from each platform’s API to disk. We try to avoid reading or writing any more than necessary by buffering writes and appending data where possible. Still, a large amount of disk space will be required for this data. As of February 2025 it will use around 20 GB, but this will increase over time.
+- When run in parallel (default configuration), this utility takes around 6 hours to complete. It will first download the index and make a download plan. Then it will queue up batches of downloads that run asynchronously. If you interrupt the program or it runs into an error, simply restart it. It will look for an existing index file and attempt to resume the downloads.
+
+To run the downloader:
+
+```bash
+cd download
+cargo run -- --help # for options
+cargo run -r # run with default settings
+```
+
+## Step 2. Setting up the database
+
+While the downloader is running, set up the database.
+
+TODO:
+
+- Docker compose
+- Loading schema
+- Setting environment variables
+
+## Step 3. Importing data from the cache into the database
+
+Once everything has been downloaded from the platform APIs, we can extract and import that data into the database.
+
+```bash
+cd ../extract
+cargo run -- --help # for options
+cargo run -r # run with default settings
+```
+
+## Step 4. Creating and processing groups
+
+TODO
+
+## Step 5. Generating site
+
+TODO
+
+## Step 6. Downloading new markets
+
+Over time, new markets will be added and other markets will be updated. In order to update the database with the freshest data, you can re-run the download and extract programs to load the new data.
+
+The download program has two different arguments for resetting:
+
+- `--reset-index` will download and add *newly-added* markets to the database but not ones downloaded previously that have since been updated. This is a simple top-up and probably not what you want for updating a database.
+- `--reset-cache` will re-download *everything,* updating the database with 100% fresh data. Note that it will *not* remove markets from the database if they have been removed from the platform.
+
+Both options make a backup of the previous data files in case you want to look at past data.
+
+To run a full refresh and import the data into the database:
+
+```bash
+cd ../download
+cargo run -r -- --reset-cache
+cd ../extract
+cargo run -r
+```
+
+After the data is downloaded, you can add groups and edit data in the database as before. Then, build the site again and see the results.
+
+# I just want the data
+
+The production database is publicly readable via PostgREST here:
+
+- [https://data.todo.com](https://data.todo.com/)
+
+For example, to get items from various databases:
+
+```bash
+curl https://data.todo.com
+```
+
+You can find PostgREST documentation here:
+
+- https://docs.postgrest.org/en/v12/references/api/tables_views.html
+- https://docs.postgrest.org/en/v12/references/api/pagination_count.html
+
+# Notes, news, and disclaimers
+
+This project has been awarded the following grants:
+
+- $3,500 as part of the [Manifold Community Fund](https://manifund.org/projects/wasabipestos-umbrella-project), an impact certificate-based funding round.
+- $3,764 as part of the [EA Community Choice](https://manifund.org/projects/calibration-city), a donation matching pool.
+
+These grants have been used for furthering development but have not influenced the contents of this site towards or away from any viewpoint.
+
+This project has been featured in the following publications:
+
+- [Leveraging Log Probabilities in Language Models to Forecast Future Events](https://arxiv.org/abs/2501.04880v1)
+- [Forecasting Newsletter: June 2024](https://forecasting.substack.com/p/forecasting-newsletter-june-2024)
+
+I use prediction markets, mainly Manifold and Metaculus, as a personal exercise in calibration. This project grew out of an effort to see how useful they can be as information-gathering tools.
+
+As with any statistics, this data can be used to tell many stories. I do my best to present this data in a way that is fair, accurate, and with sufficient context.
