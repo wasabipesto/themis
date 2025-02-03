@@ -1,0 +1,22 @@
+[package]
+name = "themis-fetch"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-trait = "0.1.77"
+chrono = { version = "0.4.31", features = ["serde"] }
+clap = { version = "4.4", features = ["derive"] }
+diesel = { version = "2.1.0", features = ["postgres", "chrono", "serde_json"] }
+futures = { version = "0.3.30" }
+regex = { version = "1.10" }
+reqwest = { version = "0.11", features = ["blocking", "json"] }
+reqwest-chain = "0.1.0"
+reqwest-leaky-bucket = { version = "0.1.0" }
+reqwest-middleware = { version = "0.2.4" }
+reqwest-retry = { version = "0.3.0" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0" }
+tokio = { version = "1.35.0", features = ["macros"] }
