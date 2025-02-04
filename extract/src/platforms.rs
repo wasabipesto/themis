@@ -11,6 +11,8 @@ pub mod manifold;
 use manifold::ManifoldData;
 pub mod metaculus;
 use metaculus::MetaculusData;
+pub mod polymarket;
+use polymarket::PolymarketData;
 
 /// All possible platforms that are supported by this application.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, ValueEnum)]
@@ -18,6 +20,7 @@ pub enum Platform {
     Kalshi,
     Manifold,
     Metaculus,
+    Polymarket,
 }
 
 /// Container for different types of platform data as deserialized from file.
@@ -25,6 +28,7 @@ pub enum PlatformData {
     Kalshi(KalshiData),
     Manifold(ManifoldData),
     Metaculus(MetaculusData),
+    Polymarket(PolymarketData),
 }
 
 impl fmt::Display for Platform {
@@ -34,6 +38,7 @@ impl fmt::Display for Platform {
             Platform::Kalshi => write!(f, "Kalshi"),
             Platform::Manifold => write!(f, "Manifold"),
             Platform::Metaculus => write!(f, "Metaculus"),
+            Platform::Polymarket => write!(f, "Polymarket"),
         }
     }
 }
@@ -41,7 +46,12 @@ impl fmt::Display for Platform {
 impl Platform {
     /// Returns a list of all supported platform types.
     pub fn all() -> Vec<Platform> {
-        vec![Platform::Kalshi, Platform::Manifold, Platform::Metaculus]
+        vec![
+            Platform::Kalshi,
+            Platform::Manifold,
+            Platform::Metaculus,
+            Platform::Polymarket,
+        ]
     }
 }
 
@@ -59,6 +69,9 @@ impl PlatformHandler for Platform {
             }
             Platform::Metaculus => {
                 load_jsonl::<MetaculusData, _>(base_dir, *self, PlatformData::Metaculus)
+            }
+            Platform::Polymarket => {
+                load_jsonl::<PolymarketData, _>(base_dir, *self, PlatformData::Polymarket)
             }
         }
     }

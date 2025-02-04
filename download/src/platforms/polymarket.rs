@@ -36,6 +36,9 @@ fn get_clob_id(item: &Value) -> Result<String> {
         .as_array()
         .context("Expected 'tokens' field to be an array")?;
 
+    // TODO: get the token that resolved true (winner), not the first one
+    // also make sure there can only be one winning token
+    // I guess just don't get any price history for still-active markets?
     let first_token = tokens
         .first()
         .context("No tokens found in 'tokens' array")?;
