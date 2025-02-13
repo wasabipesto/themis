@@ -6,4 +6,5 @@
 **/*.env
 */dist
 */.vite
+*/.astro
 */node_modules
