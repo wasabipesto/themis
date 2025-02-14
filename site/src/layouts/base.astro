@@ -1,0 +1,21 @@
+---
+import "../styles/global.css";
+import Header from "../components/header.astro";
+import Footer from "../components/footer.astro";
+const { title } = Astro.props;
+---
+
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <meta name="viewport" content="width=device-width" />
+        <meta name="generator" content={Astro.generator} />
+        <title>{title} | Prediction Metrics</title>
+    </head>
+    <body class="bg-base selection:bg-selection/30 text-text font-display">
+        <Header />
+        <slot />
+        <Footer />
+    </body>
+</html>
