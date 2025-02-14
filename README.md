@@ -2,7 +2,7 @@
 
 This is Project Themis, which powers the site [Calibration City](https://calibration.city/). The purpose of this project is to perform useful analysis of prediction market calibration and accuracy with data from each platform’s public API.
 
-This project is currently undergoing a rewrite, and not all components may be usable as-is.
+NOTE: This project is currently undergoing a rewrite, and not all components may be usable as-is.
 
 # How to run this yourself
 
@@ -15,11 +15,12 @@ git clone git@github.com:wasabipesto/themis.git
 cd themis
 ```
 
-You will need the rust toolchain to run the downloader and extractor:
+Install any other dependencies:
 
-```bash
-curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
-```
+- The downloader and extractor are written in rust. To install the rust toolchain, follow the instuctions [here](https://www.rust-lang.org/tools/install). You could run these utilities in Docker but that is not officially supported.
+- The website is written with Astro, which uses JS/node package managers. To run `npm` in an isolated environment, I use Docker, which you can find installation instructions for [here](https://docs.docker.com/engine/install/).
+- For running tasks I have provided a `justfile`, which requires `just` to run. You can install that by following the instructions [here](https://just.systems/man/en/packages.html). The `justfile` is very simple, though, and if you don't want to install it you can just run the commands by hand.
+- There are a few Python scripts I use for development in the `scripts` folder. If you want to use these, ensure you have a recent version of Python installed.
 
 ## Step 1. Downloading API data to disk
 
@@ -34,10 +35,11 @@ Before downloading, make sure you have enough disk space, memory, and time:
 To run the downloader:
 
 ```bash
-cd download
-cargo run -- --help # for options
-cargo run -r # run with default settings
+just download --help # for options
+just download # run with default settings
 ```
+
+The download utility is designed to be robust so you can set it and forget it. Errors are much more likely in later steps. If the downloader crashes, please [submit an issue](https://github.com/wasabipesto/themis/issues/new).
 
 ## Step 2. Setting up the database
 
@@ -53,19 +55,25 @@ TODO:
 
 Once everything has been downloaded from the platform APIs, we can extract and import that data into the database.
 
+TODO: Incomplete.
+
 ```bash
-cd ../extract
-cargo run -- --help # for options
-cargo run -r # run with default settings
+just extract --help # for options
+just extract # run with default settings
 ```
 
 ## Step 4. Creating and processing groups
 
-TODO
+TODO: Incomplete.
 
 ## Step 5. Generating site
 
-TODO
+TODO: Incomplete.
+
+```bash
+just astro-dev # live preview the site
+just astro-build # build the site
+```
 
 ## Step 6. Downloading new markets
 
@@ -81,24 +89,24 @@ Both options make a backup of the previous data files in case you want to look a
 To run a full refresh and import the data into the database:
 
 ```bash
-cd ../download
-cargo run -r -- --reset-cache
-cd ../extract
-cargo run -r
+just download --reset-cache
+just extract
 ```
 
 After the data is downloaded, you can add groups and edit data in the database as before. Then, build the site again and see the results.
 
 # I just want the data
 
+TODO: This isn't actually set up yet. See https://calibration.city/ for the current live site.
+
 The production database is publicly readable via PostgREST here:
 
-- [https://data.todo.com](https://data.todo.com/)
+- [https://data.predictionmetrics.org](https://data.predictionmetrics.org/)
 
 For example, to get items from various databases:
 
 ```bash
-curl https://data.todo.com
+curl https://data.predictionmetrics.org/markets
 ```
 
 You can find PostgREST documentation here:
