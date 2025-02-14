@@ -1,0 +1,111 @@
+---
+import People from "../icons/people.svg";
+import Money from "../icons/money.svg";
+
+// Placeholder data to display in card.
+// TODO: Fetch this from database, given an ID? Or get passed as an object.
+const data = {
+    title: "Who will win the 2024 US Presidential Election? | Donald Trump",
+    category: "US Elections",
+    traders: 418,
+    volume: 598345,
+    platforms: [
+        { name: "Kalshi", grade: "D", score: -0.1 },
+        { name: "Manifold", grade: "C-", score: 0.4 },
+        { name: "Metaculus", grade: "B+", score: 0.0 },
+        { name: "Polymarket", grade: "A", score: 1.0 },
+    ],
+    overall: {
+        grade: "F",
+        score: 0.36,
+    },
+};
+
+// Formats an input amount as currency ($X,XXX,XXX).
+function formatVolume(amount: number): string {
+    return "$" + (amount / 1).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+// Rounds to nearest tenth and prefixes a sign if it's not already present.
+function formatRelScore(amount: number): string {
+    const rounded = Math.round(amount * 10) / 10;
+    return (rounded >= 0 ? "+" : "") + rounded.toFixed(1);
+}
+
+// Rounds to nearest hundredth and returns a string.
+function formatAbsScore(amount: number): string {
+    const rounded = Math.round(amount * 100) / 100;
+    return rounded.toFixed(2);
+}
+
+// Converts a grade S-F (with or without modifiers) to a background color.
+function getColorClassFromGrade(grade: string): string {
+    const gradeMap = {
+        S: "bg-blue/60",
+        A: "bg-green/60",
+        B: "bg-teal/50",
+        C: "bg-yellow/50",
+        D: "bg-peach/50",
+        F: "bg-red/50",
+    };
+
+    // @ts-ignore: Map lookup can fail but default is given
+    return gradeMap[grade.charAt(0).toUpperCase()] || "bg-red/50";
+}
+---
+
+<div class="max-w-90 bg-crust rounded-md shadow-sm p-4 m-2">
+    <div class="font-bold mb-2">
+        <a href="">
+            {data.title}
+        </a>
+    </div>
+    <div class="text-sm">
+        <a href="">{data.category}</a> |
+        {data.traders}
+        <People height={16} fill="currentColor" class="inline" /> |
+        {formatVolume(data.volume)}
+        <Money height={16} fill="currentColor" class="inline" />
+    </div>
+
+    <table class="mt-2 table-auto text-sm w-full">
+        <tbody>
+            {
+                data.platforms.map((item) => (
+                    <tr>
+                        <td class="px-2">{item.name}</td>
+                        <td class="px-2">
+                            <div
+                                class:list={[
+                                    getColorClassFromGrade(item.grade),
+                                    "rounded-md text-crust px-2 my-1 text-center",
+                                ]}
+                            >
+                                {item.grade}
+                            </div>
+                        </td>
+                        <td class="px-2 font-mono">
+                            {formatRelScore(item.score)}
+                        </td>
+                    </tr>
+                ))
+            }
+            <tr class="border-t-1">
+                <td class="px-2">Overall</td>
+                <td class="px-2">
+                    <div
+                        class:list={[
+                            getColorClassFromGrade(data.overall.grade),
+                            "rounded-md text-crust px-2 my-1 text-center",
+                        ]}
+                    >
+                        {data.overall.grade}
+                    </div>
+                </td>
+                <td class="px-2 font-mono"
+                    >{formatAbsScore(data.overall.score)}</td
+                >
+            </tr>
+        </tbody>
+    </table>
+</div>
