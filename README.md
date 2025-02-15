@@ -20,6 +20,7 @@ Install any other dependencies:
 - The downloader and extractor are written in rust. To install the rust toolchain, follow the instuctions [here](https://www.rust-lang.org/tools/install). You could run these utilities in Docker but that is not officially supported.
 - The website is written with Astro, which uses JS/node package managers. To run `npm` in an isolated environment, I use Docker, which you can find installation instructions for [here](https://docs.docker.com/engine/install/).
 - For running tasks I have provided a `justfile`, which requires `just` to run. You can install that by following the instructions [here](https://just.systems/man/en/packages.html). The `justfile` is very simple, though, and if you don't want to install it you can just run the commands by hand.
+- The script for site deployment uses `rclone` and thus can be deployed to any target supported by that utility. You can install rclone by following the instructions [here](https://rclone.org/install/), or build the site
 - There are a few Python scripts I use for development in the `scripts` folder. If you want to use these, ensure you have a recent version of Python installed.
 
 ## Step 1. Downloading API data to disk
@@ -49,7 +50,7 @@ TODO:
 
 - Docker compose
 - Loading schema
-- Setting environment variables
+- Setting up env file
 
 ## Step 3. Importing data from the cache into the database
 
@@ -73,6 +74,12 @@ TODO: Incomplete.
 ```bash
 just astro-dev # live preview the site
 just astro-build # build the site
+```
+
+```bash
+rclone config # set up a target
+nano .env # add rclone target
+just deploy # build and deploy site to target
 ```
 
 ## Step 6. Downloading new markets

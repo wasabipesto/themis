@@ -13,7 +13,7 @@ struct Args {
     platform: Option<Platform>,
 
     /// Directory for JSON files
-    #[arg(short, long, default_value = "../output")]
+    #[arg(short, long, default_value = "../cache")]
     directory: PathBuf,
 
     /// Set the log level (e.g., error, warn, info, debug, trace)

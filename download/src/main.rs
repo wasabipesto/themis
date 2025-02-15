@@ -18,7 +18,7 @@ struct Args {
     platform: Option<Platform>,
 
     /// Output directory for JSON files
-    #[arg(short, long, default_value = "../output")]
+    #[arg(short, long, default_value = "../cache")]
     output_dir: PathBuf,
 
     /// Reset the index before resuming cache downloads to catch new items

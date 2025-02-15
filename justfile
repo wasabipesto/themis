@@ -1,3 +1,5 @@
+set dotenv-load
+
 # List commands, default
 default:
   just --list
@@ -12,6 +14,17 @@ download *args:
 extract *args:
     cargo run -r -- {{args}}
 
+# Build the astro site in docker
+astro-build:
+    -docker run -it --rm \
+        -v .:/app \
+        -w /app/site \
+        -u "$(id -u):$(id -g)" \
+        -p 4321:4321 \
+        --name astro \
+        node:23-bookworm \
+        npx astro build
+
 # Start the astro dev server in docker
 astro-dev:
     -docker run -it --rm \
@@ -19,17 +32,21 @@ astro-dev:
         -w /app/site \
         -u "$(id -u):$(id -g)" \
         -p 4321:4321 \
-        --name node \
+        --name astro \
         node:23-bookworm \
         npx astro dev --host
 
-# Start an empty shell in the astro docker container
+# Start a shell in the astro docker container
 astro-shell:
     -docker run -it --rm \
         -v .:/app \
         -w /app/site \
         -u "$(id -u):$(id -g)" \
         -p 4321:4321 \
-        --name node \
+        --name astro \
         node:23-bookworm \
         bash
+
+# Build the site and deploy with rclone
+deploy: astro-build
+    rclone sync site/dist $SITE_TARGET --progress
