@@ -1,9 +1,11 @@
 ---
 import Base from "../layouts/base.astro";
-import MarketCard from "../components/market-card.astro";
 import Hero from "../components/hero.astro";
 import ReportCardDesktop from "../components/report-card-desktop.astro";
 import ReportCardMobile from "../components/report-card-mobile.astro";
+import MarketCard from "../components/market-card.astro";
+import CalibrationIntro from "../components/calibration-intro.astro";
+import CalibrationChart from "../components/calibration-chart.astro";
 ---
 
 <Base title="Home">
@@ -24,4 +26,7 @@ import ReportCardMobile from "../components/report-card-mobile.astro";
         <MarketCard />
         <MarketCard />
     </div>
+    <hr />
+    <CalibrationIntro />
+    <CalibrationChart />
 </Base>

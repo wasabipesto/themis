@@ -1,0 +1,74 @@
+---
+import points from "./sample-calibration-data.json";
+---
+
+<div
+    class="bg-base-light [&_h2]:text-2xl text-crust rounded-md drop-shadow-sm p-4 m-2 overflow-x-auto"
+>
+    <div id="plot" data-points={JSON.stringify(points)}></div>
+</div>
+
+<style>
+    .h2 {
+        font-size: var(--text-2xl);
+        line-height: var(--tw-leading, var(--text-2xl--line-height));
+    }
+</style>
+
+<script>
+    // @ts-nocheck
+    import * as Plot from "@observablehq/plot";
+    const plotElement = document.querySelector("#plot");
+    const points = JSON.parse(plotElement?.dataset.points || "[]");
+
+    const plot = Plot.plot({
+        title: "Calibration Plot",
+        subtitle: "All platforms, comparing matched markets only.",
+        width: 1200,
+        height: 600,
+        x: { domain: [0, 100], percent: true, label: "Prediction (Midpoint)" },
+        y: { domain: [0, 100], grid: true, percent: true, label: "Resolution" },
+        r: { label: "Scale" },
+        color: {
+            legend: true,
+            label: "Platform",
+            domain: ["Manifold", "Kalshi", "Metaculus", "Polymarket"],
+            range: ["#4337c9", "#00d298", "#283441", "#0072f9"],
+        },
+        marks: [
+            Plot.dot(points, {
+                x: "x",
+                y: "y",
+                r: 10,
+                fill: "platform",
+                stroke: "platform",
+                fillOpacity: 0.5,
+                channels: {
+                    Prediction: "point_title",
+                    Resolution: "resolution_fmt",
+                    Markets: "markets",
+                },
+                tip: {
+                    format: {
+                        x: null,
+                        y: null,
+                        r: null,
+                    },
+                },
+            }),
+            Plot.ruleX([0]),
+            Plot.ruleY([0]),
+            Plot.lineY(
+                [
+                    { x: 0, y: 0 },
+                    { x: 1, y: 1 },
+                ],
+                { x: "x", y: "y" },
+            ),
+        ],
+    });
+
+    plotElement?.append(plot);
+
+    /* TODO: Use half the datapoints and hide the legend for mobile. */
+</script>

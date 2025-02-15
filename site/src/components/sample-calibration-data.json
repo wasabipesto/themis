@@ -1,0 +1,721 @@
+[
+  {
+    "platform": "Kalshi",
+    "x": 0.025,
+    "y": 0.026465029,
+    "r": 8.40089,
+    "point_title": "0 to 5%",
+    "resolution_fmt": "2.6%",
+    "markets": 10580
+  },
+  {
+    "platform": "Kalshi",
+    "x": 0.075,
+    "y": 0.07456855,
+    "r": 8.226087,
+    "point_title": "5 to 10%",
+    "resolution_fmt": "7.5%",
+    "markets": 6142
+  },
+  {
+    "platform": "Kalshi",
+    "x": 0.125,
+    "y": 0.11917309,
+    "r": 8.178506,
+    "point_title": "10 to 15%",
+    "resolution_fmt": "11.9%",
+    "markets": 4934
+  },
+  {
+    "platform": "Kalshi",
+    "x": 0.17500001,
+    "y": 0.17642446,
+    "r": 8.134864,
+    "point_title": "15 to 20%",
+    "resolution_fmt": "17.6%",
+    "markets": 3826
+  },
+  {
+    "platform": "Kalshi",
+    "x": 0.22500001,
+    "y": 0.20854592,
+    "r": 8.107687,
+    "point_title": "20 to 25%",
+    "resolution_fmt": "20.9%",
+    "markets": 3136
+  },
+  {
+    "platform": "Kalshi",
+    "x": 0.275,
+    "y": 0.2640306,
+    "r": 8.076806,
+    "point_title": "25 to 30%",
+    "resolution_fmt": "26.4%",
+    "markets": 2352
+  },
+  {
+    "x": 0.32500002,
+    "y": 0.3200776,
+    "r": 8.065384,
+    "point_title": "30 to 35%",
+    "resolution_fmt": "32.0%",
+    "markets": 2062
+  },
+  {
+    "platform": "Kalshi",
+    "x": 0.37500003,
+    "y": 0.37910086,
+    "r": 8.048999,
+    "point_title": "35 to 40%",
+    "resolution_fmt": "37.9%",
+    "markets": 1646
+  },
+  {
+    "platform": "Kalshi",
+    "x": 0.42500004,
+    "y": 0.43153527,
+    "r": 8.031629,
+    "point_title": "40 to 45%",
+    "resolution_fmt": "43.2%",
+    "markets": 1205
+  },
+  {
+    "platform": "Kalshi",
+    "x": 0.47500005,
+    "y": 0.45836613,
+    "r": 20.0,
+    "point_title": "45 to 50%",
+    "resolution_fmt": "45.8%",
+    "markets": 305064
+  },
+  {
+    "platform": "Kalshi",
+    "x": 0.52500004,
+    "y": 0.5501253,
+    "r": 8.015597,
+    "point_title": "50 to 55%",
+    "resolution_fmt": "55.0%",
+    "markets": 798
+  },
+  {
+    "platform": "Kalshi",
+    "x": 0.57500005,
+    "y": 0.60755336,
+    "r": 8.008153,
+    "point_title": "55 to 60%",
+    "resolution_fmt": "60.8%",
+    "markets": 609
+  },
+  {
+    "platform": "Kalshi",
+    "x": 0.62500006,
+    "y": 0.65843624,
+    "r": 8.003308,
+    "point_title": "60 to 65%",
+    "resolution_fmt": "65.8%",
+    "markets": 486
+  },
+  {
+    "platform": "Kalshi",
+    "x": 0.6750001,
+    "y": 0.6611227,
+    "r": 8.003112,
+    "point_title": "65 to 70%",
+    "resolution_fmt": "66.1%",
+    "markets": 481
+  },
+  {
+    "platform": "Kalshi",
+    "x": 0.7250001,
+    "y": 0.75124377,
+    "r": 8.0,
+    "point_title": "70 to 75%",
+    "resolution_fmt": "75.1%",
+    "markets": 402
+  },
+  {
+    "platform": "Kalshi",
+    "x": 0.7750001,
+    "y": 0.8009259,
+    "r": 8.001182,
+    "point_title": "75 to 80%",
+    "resolution_fmt": "80.1%",
+    "markets": 432
+  },
+  {
+    "platform": "Kalshi",
+    "x": 0.8250001,
+    "y": 0.8428246,
+    "r": 8.001457,
+    "point_title": "80 to 85%",
+    "resolution_fmt": "84.3%",
+    "markets": 439
+  },
+  {
+    "platform": "Kalshi",
+    "x": 0.8750001,
+    "y": 0.89881957,
+    "r": 8.007524,
+    "point_title": "85 to 90%",
+    "resolution_fmt": "89.9%",
+    "markets": 593
+  },
+  {
+    "platform": "Kalshi",
+    "x": 0.92500013,
+    "y": 0.93860847,
+    "r": 8.013038,
+    "point_title": "90 to 95%",
+    "resolution_fmt": "93.9%",
+    "markets": 733
+  },
+  {
+    "platform": "Kalshi",
+    "x": 0.97500014,
+    "y": 0.9600826,
+    "r": 8.041397,
+    "point_title": "95 to 100%",
+    "resolution_fmt": "96.0%",
+    "markets": 1453
+  },
+  {
+    "platform": "Manifold",
+    "x": 0.025,
+    "y": 0.023914054,
+    "r": 11.290586,
+    "point_title": "0 to 5%",
+    "resolution_fmt": "2.4%",
+    "markets": 3025
+  },
+  {
+    "platform": "Manifold",
+    "x": 0.075,
+    "y": 0.05613239,
+    "r": 12.682128,
+    "point_title": "5 to 10%",
+    "resolution_fmt": "5.6%",
+    "markets": 3450
+  },
+  {
+    "platform": "Manifold",
+    "x": 0.125,
+    "y": 0.10008719,
+    "r": 11.496862,
+    "point_title": "10 to 15%",
+    "resolution_fmt": "10.0%",
+    "markets": 3088
+  },
+  {
+    "platform": "Manifold",
+    "x": 0.17500001,
+    "y": 0.142846,
+    "r": 11.447749,
+    "point_title": "15 to 20%",
+    "resolution_fmt": "14.3%",
+    "markets": 3073
+  },
+  {
+    "platform": "Manifold",
+    "x": 0.22500001,
+    "y": 0.18729387,
+    "r": 10.563711,
+    "point_title": "20 to 25%",
+    "resolution_fmt": "18.7%",
+    "markets": 2803
+  },
+  {
+    "platform": "Manifold",
+    "x": 0.275,
+    "y": 0.24518193,
+    "r": 9.964529,
+    "point_title": "25 to 30%",
+    "resolution_fmt": "24.5%",
+    "markets": 2620
+  },
+  {
+    "platform": "Manifold",
+    "x": 0.32500002,
+    "y": 0.29239222,
+    "r": 10.570259,
+    "point_title": "30 to 35%",
+    "resolution_fmt": "29.2%",
+    "markets": 2805
+  },
+  {
+    "platform": "Manifold",
+    "x": 0.37500003,
+    "y": 0.33309132,
+    "r": 10.593179,
+    "point_title": "35 to 40%",
+    "resolution_fmt": "33.3%",
+    "markets": 2812
+  },
+  {
+    "platform": "Manifold",
+    "x": 0.42500004,
+    "y": 0.3958845,
+    "r": 12.423466,
+    "point_title": "40 to 45%",
+    "resolution_fmt": "39.6%",
+    "markets": 3371
+  },
+  {
+    "platform": "Manifold",
+    "x": 0.47500005,
+    "y": 0.48211628,
+    "r": 20.0,
+    "point_title": "45 to 50%",
+    "resolution_fmt": "48.2%",
+    "markets": 5685
+  },
+  {
+    "platform": "Manifold",
+    "x": 0.52500004,
+    "y": 0.5278759,
+    "r": 14.718691,
+    "point_title": "50 to 55%",
+    "resolution_fmt": "52.8%",
+    "markets": 4072
+  },
+  {
+    "platform": "Manifold",
+    "x": 0.57500005,
+    "y": 0.5699679,
+    "r": 13.49086,
+    "point_title": "55 to 60%",
+    "resolution_fmt": "57.0%",
+    "markets": 3697
+  },
+  {
+    "platform": "Manifold",
+    "x": 0.62500006,
+    "y": 0.587532,
+    "r": 10.792906,
+    "point_title": "60 to 65%",
+    "resolution_fmt": "58.8%",
+    "markets": 2873
+  },
+  {
+    "platform": "Manifold",
+    "x": 0.6750001,
+    "y": 0.6497597,
+    "r": 10.763438,
+    "point_title": "65 to 70%",
+    "resolution_fmt": "65.0%",
+    "markets": 2864
+  },
+  {
+    "platform": "Manifold",
+    "x": 0.7250001,
+    "y": 0.7037841,
+    "r": 9.912142,
+    "point_title": "70 to 75%",
+    "resolution_fmt": "70.4%",
+    "markets": 2604
+  },
+  {
+    "platform": "Manifold",
+    "x": 0.7750001,
+    "y": 0.7369872,
+    "r": 9.738608,
+    "point_title": "75 to 80%",
+    "resolution_fmt": "73.7%",
+    "markets": 2551
+  },
+  {
+    "platform": "Manifold",
+    "x": 0.8250001,
+    "y": 0.7937602,
+    "r": 9.165621,
+    "point_title": "80 to 85%",
+    "resolution_fmt": "79.4%",
+    "markets": 2376
+  },
+  {
+    "platform": "Manifold",
+    "x": 0.8750001,
+    "y": 0.8586635,
+    "r": 8.79236,
+    "point_title": "85 to 90%",
+    "resolution_fmt": "85.9%",
+    "markets": 2262
+  },
+  {
+    "platform": "Manifold",
+    "x": 0.92500013,
+    "y": 0.8894022,
+    "r": 8.39618,
+    "point_title": "90 to 95%",
+    "resolution_fmt": "88.9%",
+    "markets": 2141
+  },
+  {
+    "platform": "Manifold",
+    "x": 0.97500014,
+    "y": 0.9601286,
+    "r": 8.0,
+    "point_title": "95 to 100%",
+    "resolution_fmt": "96.0%",
+    "markets": 2020
+  },
+  {
+    "platform": "Metaculus",
+    "x": 0.025,
+    "y": 0.0031847134,
+    "r": 20.0,
+    "point_title": "0 to 5%",
+    "resolution_fmt": "0.3%",
+    "markets": 314
+  },
+  {
+    "platform": "Metaculus",
+    "x": 0.075,
+    "y": 0.02027027,
+    "r": 19.262798,
+    "point_title": "5 to 10%",
+    "resolution_fmt": "2.0%",
+    "markets": 296
+  },
+  {
+    "platform": "Metaculus",
+    "x": 0.125,
+    "y": 0.07048458,
+    "r": 16.43686,
+    "point_title": "10 to 15%",
+    "resolution_fmt": "7.0%",
+    "markets": 227
+  },
+  {
+    "platform": "Metaculus",
+    "x": 0.17500001,
+    "y": 0.085365854,
+    "r": 13.856655,
+    "point_title": "15 to 20%",
+    "resolution_fmt": "8.5%",
+    "markets": 164
+  },
+  {
+    "platform": "Metaculus",
+    "x": 0.22500001,
+    "y": 0.107344635,
+    "r": 14.389078,
+    "point_title": "20 to 25%",
+    "resolution_fmt": "10.7%",
+    "markets": 177
+  },
+  {
+    "platform": "Metaculus",
+    "x": 0.275,
+    "y": 0.15333334,
+    "r": 13.283277,
+    "point_title": "25 to 30%",
+    "resolution_fmt": "15.3%",
+    "markets": 150
+  },
+  {
+    "platform": "Metaculus",
+    "x": 0.32500002,
+    "y": 0.13548388,
+    "r": 13.488054,
+    "point_title": "30 to 35%",
+    "resolution_fmt": "13.5%",
+    "markets": 155
+  },
+  {
+    "platform": "Metaculus",
+    "x": 0.37500003,
+    "y": 0.21276596,
+    "r": 12.914676,
+    "point_title": "35 to 40%",
+    "resolution_fmt": "21.3%",
+    "markets": 141
+  },
+  {
+    "platform": "Metaculus",
+    "x": 0.42500004,
+    "y": 0.26190478,
+    "r": 12.300342,
+    "point_title": "40 to 45%",
+    "resolution_fmt": "26.2%",
+    "markets": 126
+  },
+  {
+    "platform": "Metaculus",
+    "x": 0.47500005,
+    "y": 0.2925532,
+    "r": 14.839591,
+    "point_title": "45 to 50%",
+    "resolution_fmt": "29.3%",
+    "markets": 188
+  },
+  {
+    "platform": "Metaculus",
+    "x": 0.52500004,
+    "y": 0.46923077,
+    "r": 12.464164,
+    "point_title": "50 to 55%",
+    "resolution_fmt": "46.9%",
+    "markets": 130
+  },
+  {
+    "platform": "Metaculus",
+    "x": 0.57500005,
+    "y": 0.5426357,
+    "r": 12.423208,
+    "point_title": "55 to 60%",
+    "resolution_fmt": "54.3%",
+    "markets": 129
+  },
+  {
+    "platform": "Metaculus",
+    "x": 0.62500006,
+    "y": 0.59615386,
+    "r": 11.399317,
+    "point_title": "60 to 65%",
+    "resolution_fmt": "59.6%",
+    "markets": 104
+  },
+  {
+    "platform": "Metaculus",
+    "x": 0.6750001,
+    "y": 0.7019231,
+    "r": 11.399317,
+    "point_title": "65 to 70%",
+    "resolution_fmt": "70.2%",
+    "markets": 104
+  },
+  {
+    "platform": "Metaculus",
+    "x": 0.7250001,
+    "y": 0.7977528,
+    "r": 10.784983,
+    "point_title": "70 to 75%",
+    "resolution_fmt": "79.8%",
+    "markets": 89
+  },
+  {
+    "platform": "Metaculus",
+    "x": 0.7750001,
+    "y": 0.85507244,
+    "r": 9.96587,
+    "point_title": "75 to 80%",
+    "resolution_fmt": "85.5%",
+    "markets": 69
+  },
+  {
+    "platform": "Metaculus",
+    "x": 0.8250001,
+    "y": 0.88135594,
+    "r": 9.556314,
+    "point_title": "80 to 85%",
+    "resolution_fmt": "88.1%",
+    "markets": 59
+  },
+  {
+    "platform": "Metaculus",
+    "x": 0.8750001,
+    "y": 0.953125,
+    "r": 9.761092,
+    "point_title": "85 to 90%",
+    "resolution_fmt": "95.3%",
+    "markets": 64
+  },
+  {
+    "platform": "Metaculus",
+    "x": 0.92500013,
+    "y": 0.9787234,
+    "r": 9.064846,
+    "point_title": "90 to 95%",
+    "resolution_fmt": "97.9%",
+    "markets": 47
+  },
+  {
+    "platform": "Metaculus",
+    "x": 0.97500014,
+    "y": 1.0,
+    "r": 8.0,
+    "point_title": "95 to 100%",
+    "resolution_fmt": "100.0%",
+    "markets": 21
+  },
+  {
+    "platform": "Polymarket",
+    "x": 0.025,
+    "y": 0.010729614,
+    "r": 17.53917,
+    "point_title": "0 to 5%",
+    "resolution_fmt": "1.1%",
+    "markets": 1864
+  },
+  {
+    "platform": "Polymarket",
+    "x": 0.075,
+    "y": 0.065671645,
+    "r": 10.936405,
+    "point_title": "5 to 10%",
+    "resolution_fmt": "6.6%",
+    "markets": 670
+  },
+  {
+    "platform": "Polymarket",
+    "x": 0.125,
+    "y": 0.09375,
+    "r": 9.7087555,
+    "point_title": "10 to 15%",
+    "resolution_fmt": "9.4%",
+    "markets": 448
+  },
+  {
+    "platform": "Polymarket",
+    "x": 0.17500001,
+    "y": 0.14133333,
+    "r": 9.305069,
+    "point_title": "15 to 20%",
+    "resolution_fmt": "14.1%",
+    "markets": 375
+  },
+  {
+    "platform": "Polymarket",
+    "x": 0.22500001,
+    "y": 0.19638243,
+    "r": 9.3714285,
+    "point_title": "20 to 25%",
+    "resolution_fmt": "19.6%",
+    "markets": 387
+  },
+  {
+    "platform": "Polymarket",
+    "x": 0.275,
+    "y": 0.25671643,
+    "r": 9.083871,
+    "point_title": "25 to 30%",
+    "resolution_fmt": "25.7%",
+    "markets": 335
+  },
+  {
+    "platform": "Polymarket",
+    "x": 0.32500002,
+    "y": 0.32818532,
+    "r": 8.663594,
+    "point_title": "30 to 35%",
+    "resolution_fmt": "32.8%",
+    "markets": 259
+  },
+  {
+    "platform": "Polymarket",
+    "x": 0.37500003,
+    "y": 0.29457363,
+    "r": 8.658065,
+    "point_title": "35 to 40%",
+    "resolution_fmt": "29.5%",
+    "markets": 258
+  },
+  {
+    "platform": "Polymarket",
+    "x": 0.42500004,
+    "y": 0.35146442,
+    "r": 8.552996,
+    "point_title": "40 to 45%",
+    "resolution_fmt": "35.1%",
+    "markets": 239
+  },
+  {
+    "platform": "Polymarket",
+    "x": 0.47500005,
+    "y": 0.4763967,
+    "r": 20.0,
+    "point_title": "45 to 50%",
+    "resolution_fmt": "47.6%",
+    "markets": 2309
+  },
+  {
+    "platform": "Polymarket",
+    "x": 0.52500004,
+    "y": 0.46596858,
+    "r": 9.343779,
+    "point_title": "50 to 55%",
+    "resolution_fmt": "46.6%",
+    "markets": 382
+  },
+  {
+    "platform": "Polymarket",
+    "x": 0.57500005,
+    "y": 0.5687204,
+    "r": 8.398157,
+    "point_title": "55 to 60%",
+    "resolution_fmt": "56.9%",
+    "markets": 211
+  },
+  {
+    "platform": "Polymarket",
+    "x": 0.62500006,
+    "y": 0.61904764,
+    "r": 8.392627,
+    "point_title": "60 to 65%",
+    "resolution_fmt": "61.9%",
+    "markets": 210
+  },
+  {
+    "platform": "Polymarket",
+    "x": 0.6750001,
+    "y": 0.7156398,
+    "r": 8.398157,
+    "point_title": "65 to 70%",
+    "resolution_fmt": "71.6%",
+    "markets": 211
+  },
+  {
+    "platform": "Polymarket",
+    "x": 0.7250001,
+    "y": 0.685,
+    "r": 8.337327,
+    "point_title": "70 to 75%",
+    "resolution_fmt": "68.5%",
+    "markets": 200
+  },
+  {
+    "platform": "Polymarket",
+    "x": 0.7750001,
+    "y": 0.7245509,
+    "r": 8.154839,
+    "point_title": "75 to 80%",
+    "resolution_fmt": "72.5%",
+    "markets": 167
+  },
+  {
+    "platform": "Polymarket",
+    "x": 0.8250001,
+    "y": 0.77922076,
+    "r": 8.08295,
+    "point_title": "80 to 85%",
+    "resolution_fmt": "77.9%",
+    "markets": 154
+  },
+  {
+    "platform": "Polymarket",
+    "x": 0.8750001,
+    "y": 0.89928055,
+    "r": 8.0,
+    "point_title": "85 to 90%",
+    "resolution_fmt": "89.9%",
+    "markets": 139
+  },
+  {
+    "platform": "Polymarket",
+    "x": 0.92500013,
+    "y": 0.9455782,
+    "r": 8.04424,
+    "point_title": "90 to 95%",
+    "resolution_fmt": "94.6%",
+    "markets": 147
+  },
+  {
+    "platform": "Polymarket",
+    "x": 0.97500014,
+    "y": 0.98832685,
+    "r": 8.6525345,
+    "point_title": "95 to 100%",
+    "resolution_fmt": "98.8%",
+    "markets": 257
+  }
+]
