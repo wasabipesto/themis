@@ -30,9 +30,6 @@
     --color-crust: rgb(35, 38, 52);
 }
 
-a {
-    color: var(--color-rosewater);
-}
 a:hover {
     text-decoration: underline;
 }

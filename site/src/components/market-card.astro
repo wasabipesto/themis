@@ -1,0 +1,72 @@
+---
+import People from "../icons/people.svg";
+import Money from "../icons/money.svg";
+import GradeFancy from "../components/grade-fancy.astro";
+import { formatRelScore, formatVolume } from "../scripts/formatting.ts";
+
+// Placeholder data to display in card.
+// TODO: Fetch this from database, given an ID? Or get passed as an object.
+const data = {
+    title: "Who will win the 2024 US Presidential Election? | Donald Trump",
+    category: "US Elections",
+    traders: 418,
+    volume: 598345,
+    platforms: [
+        { name: "Kalshi", grade: "D", score: -0.1 },
+        { name: "Manifold", grade: "C-", score: 0.4 },
+        { name: "Metaculus", grade: "B+", score: 0.0 },
+        { name: "Polymarket", grade: "A", score: 1.0 },
+    ],
+    overall: {
+        grade: "F",
+        score: 0.36,
+    },
+};
+---
+
+<div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
+    <div class="font-bold mb-2">
+        <a href="">
+            {data.title}
+        </a>
+    </div>
+    <div class="text-sm">
+        <a href="">{data.category}</a> |
+        {data.traders}
+        <People height={16} fill="currentColor" class="inline" /> |
+        {formatVolume(data.volume)}
+        <Money height={16} fill="currentColor" class="inline" />
+    </div>
+
+    <table class="mt-2 table-auto text-sm w-full">
+        <tbody>
+            {
+                data.platforms.map((platform) => (
+                    <tr>
+                        <td class="px-2">{platform.name}</td>
+                        <td class="px-2">
+                            <GradeFancy grade={platform.grade} />
+                        </td>
+                        <td class="px-2 font-mono">
+                            {formatRelScore(platform.score)}
+                        </td>
+                    </tr>
+                ))
+            }
+            {
+                /* TODO: I don't like how the line makes the overall row look like a sum/average.
+            }
+            <tr class="border-t-1">
+                <td class="px-2">Overall</td>
+                <td class="px-2">
+                    <GradeFancy grade={data.overall.grade} />
+                </td>
+                <td class="px-2 font-mono"
+                    >{formatAbsScore(data.overall.score)}</td
+                >
+            </tr>
+            { */
+            }
+        </tbody>
+    </table>
+</div>

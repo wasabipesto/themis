@@ -1,23 +1,27 @@
 ---
 import Base from "../layouts/base.astro";
-import Card from "../components/card.astro";
+import MarketCard from "../components/market-card.astro";
+import Hero from "../components/hero.astro";
+import ReportCardDesktop from "../components/report-card-desktop.astro";
+import ReportCardMobile from "../components/report-card-mobile.astro";
 ---
 
 <Base title="Home">
-    <div
-        class="max-w-6xl mx-auto items-center grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 py-6 drop-shadow-lg"
-    >
-        <Card />
-        <Card />
-        <Card />
-        <Card />
-        <Card />
-        <Card />
-        <Card />
-        <Card />
-        <Card />
-        <Card />
-        <Card />
-        <Card />
+    <div class="grid grid-cols-1 md:grid-cols-2 pt-4">
+        <Hero />
+        <div class="hidden md:block">
+            <ReportCardDesktop />
+        </div>
+        <div class="md:hidden">
+            <ReportCardMobile />
+        </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 py-4">
+        <MarketCard />
+        <MarketCard />
+        <MarketCard />
+        <MarketCard />
+        <MarketCard />
+        <MarketCard />
     </div>
 </Base>

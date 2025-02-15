@@ -1,0 +1,141 @@
+---
+import GradeFancy from "../components/grade-fancy.astro";
+import { formatRelScore } from "../scripts/formatting.ts";
+
+const platforms = [
+    { name: "Kalshi", link: "/platform/kalshi" },
+    { name: "Manifold", link: "/platform/manifold" },
+    { name: "Metaculus", link: "/platform/metaculus" },
+    { name: "Polymarket", link: "/platform/polymarket" },
+];
+
+const categories = [
+    {
+        name: "AI",
+        link: "/tags/ai",
+        platforms: [
+            { name: "Kalshi", grade: "B-", score: -0.1 },
+            { name: "Manifold", grade: "-", score: 0.4 },
+            { name: "Metaculus", grade: "A+", score: 0.0 },
+            { name: "Polymarket", grade: "C+", score: 1.0 },
+        ],
+        overall: {
+            grade: "B",
+            score: 0.36,
+        },
+    },
+    {
+        name: "Culture",
+        link: "/tags/culture",
+        platforms: [
+            { name: "Kalshi", grade: "F", score: -0.1 },
+            { name: "Manifold", grade: "A-", score: 0.4 },
+            { name: "Metaculus", grade: "-", score: 0.0 },
+            { name: "Polymarket", grade: "B+", score: 1.0 },
+        ],
+        overall: {
+            grade: "C+",
+            score: 0.36,
+        },
+    },
+    {
+        name: "Economics",
+        link: "/tags/economics",
+        platforms: [
+            { name: "Kalshi", grade: "A", score: -0.1 },
+            { name: "Manifold", grade: "D+", score: 0.4 },
+            { name: "Metaculus", grade: "C-", score: 0.0 },
+            { name: "Polymarket", grade: "-", score: 1.0 },
+        ],
+        overall: {
+            grade: "C",
+            score: 0.36,
+        },
+    },
+    {
+        name: "Politics",
+        link: "/tags/politics",
+        platforms: [
+            { name: "Kalshi", grade: "B+", score: -0.1 },
+            { name: "Manifold", grade: "F", score: 0.4 },
+            { name: "Metaculus", grade: "A-", score: 0.0 },
+            { name: "Polymarket", grade: "D-", score: 1.0 },
+        ],
+        overall: {
+            grade: "C-",
+            score: 0.36,
+        },
+    },
+    {
+        name: "Science",
+        link: "/tags/science",
+        platforms: [
+            { name: "Kalshi", grade: "-", score: -0.1 },
+            { name: "Manifold", grade: "B", score: 0.4 },
+            { name: "Metaculus", grade: "A+", score: 0.0 },
+            { name: "Polymarket", grade: "C", score: 1.0 },
+        ],
+        overall: {
+            grade: "B+",
+            score: 0.36,
+        },
+    },
+    {
+        name: "Sports",
+        link: "/tags/sports",
+        platforms: [
+            { name: "Kalshi", grade: "C+", score: -0.1 },
+            { name: "Manifold", grade: "B-", score: 0.4 },
+            { name: "Metaculus", grade: "-", score: 0.0 },
+            { name: "Polymarket", grade: "A", score: 1.0 },
+        ],
+        overall: {
+            grade: "B-",
+            score: 0.36,
+        },
+    },
+    {
+        name: "Technology",
+        link: "/tags/technology",
+        platforms: [
+            { name: "Kalshi", grade: "D", score: -0.1 },
+            { name: "Manifold", grade: "A+", score: 0.4 },
+            { name: "Metaculus", grade: "B", score: 0.0 },
+            { name: "Polymarket", grade: "-", score: 1.0 },
+        ],
+        overall: {
+            grade: "B",
+            score: 0.36,
+        },
+    },
+];
+---
+
+<div
+    class="bg-base-light text-crust rounded-md shadow-sm p-4 m-2 overflow-x-auto"
+>
+    {
+        categories.map((cat) => (
+            <div class="pb-2">
+                <h2 class="font-bold border-b-2">
+                    <a href={cat.link}>{cat.name}</a>
+                </h2>
+                <table class="mt-2 table-auto text-sm w-full">
+                    <tbody>
+                        {cat.platforms.map((platform) => (
+                            <tr>
+                                <td class="px-2">{platform.name}</td>
+                                <td class="px-2">
+                                    <GradeFancy grade={platform.grade} />
+                                </td>
+                                <td class="px-2 font-mono">
+                                    {formatRelScore(platform.score)}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        ))
+    }
+</div>
