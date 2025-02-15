@@ -3,6 +3,7 @@ import Base from "../layouts/base.astro";
 import Hero from "../components/hero.astro";
 import ReportCardDesktop from "../components/report-card-desktop.astro";
 import ReportCardMobile from "../components/report-card-mobile.astro";
+import MarketCardIntro from "../components/market-card-intro.astro";
 import MarketCard from "../components/market-card.astro";
 import CalibrationIntro from "../components/calibration-intro.astro";
 import CalibrationChart from "../components/calibration-chart.astro";
@@ -18,7 +19,12 @@ import CalibrationChart from "../components/calibration-chart.astro";
             <ReportCardMobile />
         </div>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 py-4">
+    <hr />
+    <MarketCardIntro />
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-4">
+        <MarketCard />
+        <MarketCard />
+        <MarketCard />
         <MarketCard />
         <MarketCard />
         <MarketCard />
