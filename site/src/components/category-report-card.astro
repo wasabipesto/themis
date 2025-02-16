@@ -1,0 +1,84 @@
+---
+import Markets from "@atoms/num-markets.astro";
+import Grade from "@atoms/grade.astro";
+import ScoreRel from "@atoms/score-rel.astro";
+import ScoreAbs from "@atoms/score-abs.astro";
+---
+
+<div
+    class="p-4 m-2 bg-base-light text-crust rounded-md drop-shadow-sm overflow-x-auto"
+>
+    <table class="w-full">
+        <thead>
+            <tr class="border-b-2">
+                <th class="text-left min-w-24 pb-1">Category</th>
+                <th class="text-center min-w-20 w-24 pb-1"># Markets</th>
+                <th class="text-center min-w-20 w-24 pb-1">Score</th>
+                <th class="text-center min-w-20 w-24 pb-1">Rel. Score</th>
+                <th class="text-center min-w-20 w-24 pb-1">Abs. Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="px-2 pt-1 text-left">Kalshi</td>
+                <td class="px-2 pt-1 text-center">
+                    <Markets amount="59" />
+                </td>
+                <td class="px-2 pt-1 text-center">
+                    <Grade grade="B" />
+                </td>
+                <td class="px-2 pt-1 text-center">
+                    <ScoreRel score="0.1" />
+                </td>
+                <td class="px-2 pt-1 text-center">
+                    <ScoreAbs score="0.25" />
+                </td>
+            </tr>
+            <tr>
+                <td class="px-2 pt-1 text-left">Manifold</td>
+                <td class="px-2 pt-1 text-center">
+                    <Markets amount="63" />
+                </td>
+                <td class="px-2 pt-1 text-center">
+                    <Grade grade="A" />
+                </td>
+                <td class="px-2 pt-1 text-center">
+                    <ScoreRel score="0.1" />
+                </td>
+                <td class="px-2 pt-1 text-center">
+                    <ScoreAbs score="0.25" />
+                </td>
+            </tr>
+            <tr>
+                <td class="px-2 pt-1 text-left">Metaculus</td>
+                <td class="px-2 pt-1 text-center">
+                    <Markets amount="99" />
+                </td>
+                <td class="px-2 pt-1 text-center">
+                    <Grade grade="D-" />
+                </td>
+                <td class="px-2 pt-1 text-center">
+                    <ScoreRel score="0" />
+                </td>
+                <td class="px-2 pt-1 text-center">
+                    <ScoreAbs score="0.25" />
+                </td>
+            </tr>
+            <tr>
+                <td class="px-2 pt-1 text-left">Polymarket</td>
+                <td class="px-2 pt-1 text-center">
+                    <Markets amount="24" />
+                </td>
+                <td class="px-2 pt-1 text-center">
+                    <Grade grade="A" />
+                </td>
+                <td class="px-2 pt-1 text-center">
+                    <ScoreRel score="-0.1" />
+                </td>
+                <td class="px-2 pt-1 text-center">
+                    <ScoreAbs score="0.20" />
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>

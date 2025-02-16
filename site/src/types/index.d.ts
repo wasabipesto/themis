@@ -3,10 +3,18 @@ export interface Platform {
   name_display: string;
   slug: string;
   description: string;
-  avatar_url: string;
+  icon_url: string;
   site_url: string;
   color_primary: string;
   color_accent: string;
+}
+
+export interface Category {
+  name_display: string;
+  slug: string;
+  parent_slug: string | null;
+  description: string;
+  icon_url: string;
 }
 
 export interface Question {
