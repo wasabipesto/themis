@@ -1,5 +1,5 @@
 ---
-import points from "./sample-calibration-data.json";
+import points from "../data/sample-calibration-data.json";
 ---
 
 <div
@@ -8,18 +8,12 @@ import points from "./sample-calibration-data.json";
     <div id="plot" data-points={JSON.stringify(points)}></div>
 </div>
 
-<style>
-    .h2 {
-        font-size: var(--text-2xl);
-        line-height: var(--tw-leading, var(--text-2xl--line-height));
-    }
-</style>
-
 <script>
     // @ts-nocheck
     import * as Plot from "@observablehq/plot";
     const plotElement = document.querySelector("#plot");
     const points = JSON.parse(plotElement?.dataset.points || "[]");
+    const binWidth = 0.05;
 
     const plot = Plot.plot({
         title: "Calibration Plot",
@@ -28,7 +22,7 @@ import points from "./sample-calibration-data.json";
         height: 600,
         x: { domain: [0, 100], percent: true, label: "Prediction (Midpoint)" },
         y: { domain: [0, 100], grid: true, percent: true, label: "Resolution" },
-        r: { label: "Scale" },
+        r: { range: [10, 20], label: "Scale" },
         color: {
             legend: true,
             label: "Platform",
@@ -39,14 +33,18 @@ import points from "./sample-calibration-data.json";
             Plot.dot(points, {
                 x: "x",
                 y: "y",
-                r: 10,
+                r: "n",
                 fill: "platform",
                 stroke: "platform",
                 fillOpacity: 0.5,
                 channels: {
-                    Prediction: "point_title",
-                    Resolution: "resolution_fmt",
-                    Markets: "markets",
+                    Prediction: (i) =>
+                        ((i.x - binWidth / 2) * 100).toFixed(0) +
+                        "-" +
+                        ((i.x + binWidth / 2) * 100).toFixed(0) +
+                        "%",
+                    Resolution: (i) => (i.y * 100).toFixed(1) + "%",
+                    Markets: "n",
                 },
                 tip: {
                     format: {

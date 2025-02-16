@@ -1,0 +1,99 @@
+---
+// @ts-nocheck
+import Traders from "@atoms/traders.astro";
+import Volume from "@atoms/volume.astro";
+import Duration from "@atoms/duration.astro";
+import DateEnd from "@atoms/date-end.astro";
+import Grade from "@atoms/grade.astro";
+import ScoreRel from "@atoms/score-rel.astro";
+import ScoreAbs from "@atoms/score-abs.astro";
+import LinkOut from "@icons/link-out.svg";
+const { data } = Astro.props;
+---
+
+<div class="pt-6 overflow-x-auto">
+    <table class="table-auto text-left p-4 m-2 w-full">
+        <thead>
+            <tr class="border-b-2">
+                <th class="px-4 py-2 w-40">Platform</th>
+                <th class="px-4 py-2">Link</th>
+                <th class="px-4 py-2">Traders</th>
+                <th class="px-4 py-2">Volume (USD)</th>
+                <th class="px-4 py-2">Duration</th>
+                <th class="px-4 py-2">Letter Grade</th>
+                <th class="px-4 py-2">Relative Brier</th>
+                <th class="px-4 py-2">Absolute Brier</th>
+            </tr>
+        </thead>
+        <tbody>
+            {
+                data.platforms.map((platform) => (
+                    <tr>
+                        <td class="px-4 py-2">{platform.name}</td>
+                        <td class="px-6 py-2">
+                            <a href={platform.link}>
+                                <LinkOut
+                                    height={18}
+                                    fill="currentColor"
+                                    class="inline"
+                                />
+                            </a>
+                        </td>
+                        <td class="px-4 py-2">
+                            <Traders traders={platform.traders} />
+                        </td>
+                        <td class="px-4 py-2">
+                            <Volume amount={platform.volume} />
+                        </td>
+                        <td class="px-4 py-2">
+                            <Duration days={platform.duration} />
+                        </td>
+                        <td class="px-4 py-2">
+                            <Grade grade={platform.grade} />
+                        </td>
+                        <td class="px-4 py-2">
+                            <ScoreRel score={platform.scoreRel} />
+                        </td>
+                        <td class="px-4 py-2">
+                            <ScoreAbs score={platform.scoreAbs} />
+                        </td>
+                    </tr>
+                ))
+            }
+            <tr class="border-t-2">
+                <td class="px-4 py-2">Overall</td>
+                <td class="px-6 py-2"></td>
+                <td class="px-4 py-2">
+                    <Traders
+                        traders={data.platforms.reduce(
+                            (sum, platform) => sum + platform.traders,
+                            0,
+                        )}
+                    />
+                </td>
+                <td class="px-4 py-2">
+                    <Volume
+                        amount={data.platforms.reduce(
+                            (sum, platform) => sum + platform.volume,
+                            0,
+                        )}
+                    />
+                </td>
+                <td class="px-4 py-2">
+                    <Duration
+                        days={data.platforms
+                            .map((platform) => platform.duration)
+                            .sort((a, b) => b - a)[1]}
+                    />
+                </td>
+                <td class="px-4 py-2">
+                    <Grade grade={data.overall.grade} />
+                </td>
+                <td class="px-4 py-2"> </td>
+                <td class="px-4 py-2">
+                    <ScoreAbs score={data.overall.scoreAbs} />
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>

@@ -1,17 +1,16 @@
 ---
-import Base from "../layouts/base.astro";
-import Hero from "../components/hero.astro";
-import ReportCardDesktop from "../components/report-card-desktop.astro";
-import ReportCardMobile from "../components/report-card-mobile.astro";
-import MarketCardIntro from "../components/market-card-intro.astro";
-import MarketCard from "../components/market-card.astro";
-import CalibrationIntro from "../components/calibration-intro.astro";
-import CalibrationChart from "../components/calibration-chart.astro";
+import Base from "@layouts/base.astro";
+import IndexHero from "@components/index-hero.astro";
+import ReportCardDesktop from "@components/report-card-desktop.astro";
+import ReportCardMobile from "@components/report-card-mobile.astro";
+import MarketCard from "@components/market-card.astro";
+import CalibrationIntro from "@components/calibration-intro.astro";
+import CalibrationChart from "@components/calibration-chart.astro";
 ---
 
 <Base title="Home">
     <div class="grid grid-cols-1 md:grid-cols-2 pt-4">
-        <Hero />
+        <IndexHero />
         <div class="hidden md:block">
             <ReportCardDesktop />
         </div>
@@ -20,7 +19,10 @@ import CalibrationChart from "../components/calibration-chart.astro";
         </div>
     </div>
     <hr />
-    <MarketCardIntro />
+    <div class="p-4 m-2">
+        <h1 class="text-4xl font-bold">Top Markets</h1>
+        {/* TODO: Selector for montly/all time, volume, score, etc. */}
+    </div>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-4">
         <MarketCard />
         <MarketCard />

@@ -1,6 +1,6 @@
 ---
-import GradeFancy from "../components/grade-fancy.astro";
-import { formatRelScore } from "../scripts/formatting.ts";
+import Grade from "@atoms/grade.astro";
+import ScoreRel from "@atoms/score-rel.astro";
 
 const platforms = [
     { name: "Kalshi", link: "/platform/kalshi" },
@@ -124,12 +124,12 @@ const categories = [
                     <tbody>
                         {cat.platforms.map((platform) => (
                             <tr>
-                                <td class="px-2">{platform.name}</td>
-                                <td class="px-2">
-                                    <GradeFancy grade={platform.grade} />
+                                <td class="px-2 pt-1">{platform.name}</td>
+                                <td class="px-2 pt-1">
+                                    <Grade grade={platform.grade} />
                                 </td>
-                                <td class="px-2 font-mono">
-                                    {formatRelScore(platform.score)}
+                                <td class="px-2 pt-1">
+                                    <ScoreRel score={platform.score} />
                                 </td>
                             </tr>
                         ))}

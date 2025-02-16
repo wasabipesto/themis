@@ -1,0 +1,17 @@
+---
+import People from "@icons/people.svg";
+const { traders } = Astro.props;
+
+// Rounds to nearest tenth and prefixes a sign if it's not already present.
+function formatTraders(amount: number): string {
+    if (amount === null) {
+        return "N/A";
+    }
+    return (amount / 1).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+---
+
+<div>
+    <People height={18} fill="currentColor" class="inline" />
+    {formatTraders(traders)}
+</div>

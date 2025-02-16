@@ -1,0 +1,13 @@
+---
+const { score } = Astro.props;
+
+// Rounds to nearest hundredth and returns a string.
+export function formatAbsScore(amount: number): string {
+    const rounded = Math.round(amount * 100) / 100;
+    return rounded.toFixed(2);
+}
+---
+
+<div class="font-mono">
+    {formatAbsScore(score)}
+</div>

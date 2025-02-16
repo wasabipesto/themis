@@ -1,8 +1,8 @@
 ---
-import People from "../icons/people.svg";
-import Money from "../icons/money.svg";
-import GradeFancy from "../components/grade-fancy.astro";
-import { formatRelScore, formatVolume } from "../scripts/formatting.ts";
+import Grade from "@atoms/grade.astro";
+import Volume from "@atoms/volume.astro";
+import Traders from "@atoms/traders.astro";
+import ScoreRel from "@atoms/score-rel.astro";
 
 // Placeholder data to display in card.
 // TODO: Fetch this from database, given an ID? Or get passed as an object.
@@ -31,11 +31,11 @@ const data = {
         </a>
     </div>
     <div class="text-sm">
-        <a href="">{data.category}</a> |
-        {data.traders}
-        <People height={16} fill="currentColor" class="inline" /> |
-        {formatVolume(data.volume)}
-        <Money height={16} fill="currentColor" class="inline" />
+        <ul class="flex items-center space-x-4">
+            <li><a href="">{data.category}</a></li>
+            <li><Traders traders={data.traders} /></li>
+            <li><Volume amount={data.volume} /></li>
+        </ul>
     </div>
 
     <table class="mt-2 table-auto text-sm w-full">
@@ -43,12 +43,12 @@ const data = {
             {
                 data.platforms.map((platform) => (
                     <tr>
-                        <td class="px-2">{platform.name}</td>
-                        <td class="px-2">
-                            <GradeFancy grade={platform.grade} />
+                        <td class="px-2 pt-1">{platform.name}</td>
+                        <td class="px-2 pt-1">
+                            <Grade grade={platform.grade} />
                         </td>
-                        <td class="px-2 font-mono">
-                            {formatRelScore(platform.score)}
+                        <td class="px-2 pt-1 font-mono">
+                            <ScoreRel score={platform.score} />
                         </td>
                     </tr>
                 ))

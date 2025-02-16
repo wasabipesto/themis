@@ -1,5 +1,5 @@
 ---
-import GradeFancy from "../components/grade-fancy.astro";
+import Grade from "@atoms/grade.astro";
 
 const platforms = [
     { name: "Kalshi", link: "/platform/kalshi" },
@@ -134,8 +134,8 @@ const categories = [
                             <a href={cat.link}>{cat.name}</a>
                         </td>
                         {cat.platforms.map((platform) => (
-                            <td class="text-center px-2">
-                                <GradeFancy grade={platform.grade} />
+                            <td class="text-center px-2 pt-1">
+                                <Grade grade={platform.grade} />
                             </td>
                         ))}
                     </tr>
