@@ -12,6 +12,7 @@ const cat_response = await fetch(
     "https://data.predictionmetrics.org/categories",
 );
 const categories: Category[] = await cat_response.json();
+const parentCategories = categories.filter((cat) => cat.is_parent);
 ---
 
 <Base title="Categories">
@@ -19,47 +20,71 @@ const categories: Category[] = await cat_response.json();
         <h1 class="text-4xl font-bold">All Categories</h1>
     </div>
 
-    <div class="px-4 m-2">
-        <div class="flex space-x-8 pb-2 border-b-2 items-center">
-            <h2 class="font-bold text-2xl">
-                <a href="/category/climate">Climate</a>
-            </h2>
-            <div class="">
-                <ul class="flex items-center space-x-4">
-                    <li><Markets num={1234} /></li>
-                    <li><Traders num={1234} /></li>
-                    <li><Volume num={123456} /></li>
-                </ul>
+    {
+        parentCategories.map((category) => (
+            <div class="px-4 m-2">
+                <div class="flex space-x-8 pb-2 border-b-2 items-center">
+                    <h2 class="font-bold text-2xl">
+                        <a href={`/category/${category.slug}`}>
+                            {category.name}
+                        </a>
+                    </h2>
+                    <div class="">
+                        <ul class="flex items-center space-x-4">
+                            <li>
+                                <Markets num={category.total_markets} />
+                            </li>
+                            <li>
+                                <Traders num={category.total_traders} />
+                            </li>
+                            <li>
+                                <Volume num={category.total_volume} />
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2">
+                    <div class="m-2">
+                        <p class="my-2">{category.description}</p>
+                        <ul class="my-2">
+                            <li>Subcategories:</li>
+                            {categories
+                                .filter(
+                                    (sub) => sub.parent_slug === category.slug,
+                                )
+                                .map((sub) => (
+                                    <li class="ml-4">
+                                        <a href={`/category/${sub.slug}`}>
+                                            {sub.name}
+                                        </a>
+                                    </li>
+                                ))}
+                        </ul>
+                    </div>
+                    <CategoryReportCard />
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                    <QuestionCard />
+                    <QuestionCard />
+                    <QuestionCard />
+                    <QuestionCard />
+                    <QuestionCard />
+                    <QuestionCard />
+                </div>
+                <div class="flex justify-end m-2 mt-0 p-2">
+                    <a
+                        href={`/category/${category.slug}#questions`}
+                        class="inline-flex items-center px-4 py-2 bg-blue text-crust rounded-md hover:bg-blue/90 transition-colors duration-200 font-medium"
+                    >
+                        See all {category.name} questions
+                        <ArrowRight
+                            height={20}
+                            fill="currentColor"
+                            class="ml-1"
+                        />
+                    </a>
+                </div>
             </div>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2">
-            <div class="m-2">
-                <p class="my-2">
-                    Predictions focusing on climate change impacts,
-                    environmental metrics, and sustainability goals. Includes
-                    temperature forecasts, emission levels, renewable energy
-                    adoption, and natural disasters.
-                </p>
-                <ul class="my-2"><li>Subcategories:</li></ul>
-            </div>
-            <CategoryReportCard />
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            <QuestionCard />
-            <QuestionCard />
-            <QuestionCard />
-            <QuestionCard />
-            <QuestionCard />
-            <QuestionCard />
-        </div>
-        <div class="flex justify-end m-2 mt-0 p-2">
-            <a
-                href="/category/climate#questions"
-                class="inline-flex items-center px-4 py-2 bg-blue text-crust rounded-md hover:bg-blue/90 transition-colors duration-200 font-medium"
-            >
-                See all Climate questions
-                <ArrowRight height={20} fill="currentColor" class="ml-1" />
-            </a>
-        </div>
-    </div>
+        ))
+    }
 </Base>
