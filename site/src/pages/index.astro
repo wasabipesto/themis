@@ -1,15 +1,50 @@
 ---
 import Base from "@layouts/base.astro";
-import IndexHero from "@components/index-hero.astro";
 import ReportCardDesktop from "@components/report-card-desktop.astro";
 import ReportCardMobile from "@components/report-card-mobile.astro";
 import QuestionCard from "@components/question-card.astro";
+import PlatformCard from "@components/platform-card.astro";
 import CalibrationChart from "@components/calibration-chart.astro";
+import type { Platform } from "../types/index.ts";
+
+const response = await fetch("https://data.predictionmetrics.org/platforms");
+const platforms: Platform[] = await response.json();
 ---
 
 <Base title="Home">
     <div class="grid grid-cols-1 md:grid-cols-2 pt-4">
-        <IndexHero />
+        <div class="p-4 m-2">
+            <h1 class="text-4xl font-bold">
+                How accurate are prediction markets?
+            </h1>
+            <p class="my-2">
+                In the past it's been hard to measure the accuracy of prediction
+                markets since question difficulty can vary so drastically. You
+                can't compare apples to oranges!
+            </p>
+            <p class="my-2">
+                In order to solve that problem we've matched markets across
+                platforms and curated a collection of predictive questions that
+                are actually comparable. Using those matches, we can generate a
+                score for each platform in each category that rewards whichever
+                market was correct earliest.
+            </p>
+            <ul class="list-disc px-4">
+                <li>
+                    <a href="#intro" class="underline">
+                        What's a prediction market?
+                    </a>
+                </li>
+                <li>
+                    <a href="#calibration" class="underline">
+                        What about calibration?
+                    </a>
+                </li>
+                <li>
+                    <a href="#math" class="underline"> Show me the math! </a>
+                </li>
+            </ul>
+        </div>
         <div class="hidden md:block">
             <ReportCardDesktop />
         </div>
@@ -17,7 +52,7 @@ import CalibrationChart from "@components/calibration-chart.astro";
             <ReportCardMobile />
         </div>
     </div>
-    <hr />
+    <hr class="my-2" />
     <div class="p-4 m-2">
         <h1 class="text-4xl font-bold">Top Questions</h1>
         {/* TODO: Selector for montly/all time, volume, score, etc. */}
@@ -40,8 +75,56 @@ import CalibrationChart from "@components/calibration-chart.astro";
         <QuestionCard />
         <QuestionCard />
     </div>
-    <hr class="my-4" />
-    <div class="p-4 m-2">
+    <hr class="my-2" />
+    <div class="p-4 m-2" id="intro">
+        <h1 class="text-4xl font-bold">What's a prediction market?</h1>
+        <p class="my-2">
+            Predicting the future is hard, but it's also incredibly important.
+            Let's say someone starts making predictions about important events.
+            How much should you believe them when they say the world will end
+            tomorrow? What about when they say there's a 70% chance the world
+            will end in 50 years?
+        </p>
+        <p class="my-2">
+            Prediction markets are based on a simple concept: If you're
+            confident about something, you can place a bet on it. If someone
+            else disagrees with you, declare terms with them and whoever wins
+            takes the money. By aggregating the implied odds of these trades,
+            you can gain an insight into the <b>wisdom of the crowds</b>.
+        </p>
+        <p class="my-2">
+            Imagine a stock exchange, but instead of trading shares, you trade
+            on the likelihood of future events. Each prediction market offers
+            contracts tied to specific events, like elections, economic
+            indicators, or scientific breakthroughs. You can buy or sell these
+            contracts based on your belief about the outcome - if you are very
+            confident about something, or you have specialized information, you
+            can make a lot of money from a market.
+        </p>
+        <p class="my-2">
+            Markets give participants a <b>financial incentive</b> to be correct,
+            encouraging researchers and skilled forecasters to spend time investigating
+            events. Individuals with insider information or niche skills can profit
+            by trading, which also updates the market's probability. Prediction markets
+            have <a
+                href="https://daily.jstor.org/how-accurate-are-prediction-markets/"
+                class="text-rosewater"
+            >
+                out-performed polls
+            </a> and <a
+                href="https://news.manifold.markets/p/manifold-predicted-the-ai-extinction"
+                class="text-rosewater"
+            >
+                revealed insider information</a
+            >, making them a useful tool for information gathering or profit.
+        </p>
+        <p class="my-2">Some popular prediction market platforms include:</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+            {platforms.map((platform) => <PlatformCard platform={platform} />)}
+        </div>
+    </div>
+    <hr class="my-2" />
+    <div class="p-4 m-2" id="calibration">
         <h1 class="text-4xl font-bold">What about calibration?</h1>
         <p class="my-2">
             Accuracy is a good metric, but another lens we can use for analysis
