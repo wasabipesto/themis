@@ -46,20 +46,24 @@ const parentCategories = categories.filter((cat) => cat.is_parent);
                 <div class="grid grid-cols-1 md:grid-cols-2">
                     <div class="m-2">
                         <p class="my-2">{category.description}</p>
-                        <ul class="my-2">
-                            <li>Subcategories:</li>
-                            {categories
-                                .filter(
-                                    (sub) => sub.parent_slug === category.slug,
-                                )
-                                .map((sub) => (
-                                    <li class="ml-4">
-                                        <a href={`/category/${sub.slug}`}>
+                        <div class="my-2">
+                            <p class="mb-2">Subcategories:</p>
+                            <div class="flex flex-wrap gap-2">
+                                {categories
+                                    .filter(
+                                        (sub) =>
+                                            sub.parent_slug === category.slug,
+                                    )
+                                    .map((sub) => (
+                                        <a
+                                            href={`/category/${sub.slug}`}
+                                            class="inline-block px-3 py-1 bg-lavender text-crust hover:bg-lavender/90 text-sm rounded-full transition-colors duration-200"
+                                        >
                                             {sub.name}
                                         </a>
-                                    </li>
-                                ))}
-                        </ul>
+                                    ))}
+                            </div>
+                        </div>
                     </div>
                     <CategoryReportCard />
                 </div>
@@ -74,7 +78,7 @@ const parentCategories = categories.filter((cat) => cat.is_parent);
                 <div class="flex justify-end m-2 mt-0 p-2">
                     <a
                         href={`/category/${category.slug}#questions`}
-                        class="inline-flex items-center px-4 py-2 bg-blue text-crust rounded-md hover:bg-blue/90 transition-colors duration-200 font-medium"
+                        class="inline-flex items-center px-4 py-2 bg-lavender text-crust rounded-md hover:bg-lavender/90 transition-colors duration-200 font-medium"
                     >
                         See all {category.name} questions
                         <ArrowRight

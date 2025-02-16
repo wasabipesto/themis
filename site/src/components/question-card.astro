@@ -23,14 +23,14 @@ if (!question) {
 
 <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
     <div class="font-bold mb-2">
-        <a href={"q/" + question.slug}>
+        <a href={`/question/${question.slug}`}>
             {question.title}
         </a>
     </div>
     <div class="text-sm">
         <ul class="flex items-center space-x-4">
             <li>
-                <a href={"/categories/" + question.category_slug}>
+                <a href={`/category/${question.category_slug}`}>
                     {question.category_name}
                 </a>
             </li>
