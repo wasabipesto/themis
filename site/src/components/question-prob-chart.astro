@@ -1,5 +1,10 @@
 ---
-import points from "../data/sample-prob-history.json";
+import type { DailyProbability } from "@types";
+
+const response = await fetch(
+    "https://data.predictionmetrics.org/daily_probabilities",
+);
+const points: DailyProbability[] = await response.json();
 ---
 
 <div

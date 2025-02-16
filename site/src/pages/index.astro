@@ -5,10 +5,17 @@ import ReportCardMobile from "@components/report-card-mobile.astro";
 import QuestionCard from "@components/question-card.astro";
 import PlatformCard from "@components/platform-card.astro";
 import CalibrationChart from "@components/calibration-chart.astro";
-import type { Platform } from "../types/index.ts";
+import type { Platform, Question } from "@types";
 
-const response = await fetch("https://data.predictionmetrics.org/platforms");
-const platforms: Platform[] = await response.json();
+const plt_response = await fetch(
+    "https://data.predictionmetrics.org/platforms",
+);
+const platforms: Platform[] = await plt_response.json();
+
+const qst_response = await fetch(
+    "https://data.predictionmetrics.org/questions",
+);
+const questions: Question[] = await qst_response.json();
 ---
 
 <Base title="Home">
@@ -65,15 +72,7 @@ const platforms: Platform[] = await response.json();
         </p>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        <QuestionCard />
-        <QuestionCard />
-        <QuestionCard />
-        <QuestionCard />
-        <QuestionCard />
-        <QuestionCard />
-        <QuestionCard />
-        <QuestionCard />
-        <QuestionCard />
+        {questions.map((question) => <QuestionCard question={question} />)}
     </div>
     <hr class="my-2" />
     <div class="p-4 m-2" id="intro">

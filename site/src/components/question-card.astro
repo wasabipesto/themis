@@ -3,69 +3,44 @@ import Grade from "@atoms/grade.astro";
 import Volume from "@atoms/volume.astro";
 import Traders from "@atoms/traders.astro";
 import ScoreRel from "@atoms/score-rel.astro";
+import type { Question } from "@types";
 
-// Placeholder data to display in card.
-// TODO: Fetch this from database, given an ID? Or get passed as an object.
-const data = {
-    title: "Who will win the 2024 US Presidential Election? | Donald Trump",
-    category: "US Elections",
-    traders: 418,
-    volume: 598345,
-    platforms: [
-        { name: "Kalshi", grade: "D", score: -0.1 },
-        { name: "Manifold", grade: "C-", score: 0.4 },
-        { name: "Metaculus", grade: "B+", score: 0.0 },
-        { name: "Polymarket", grade: "A", score: 1.0 },
-    ],
-    overall: {
-        grade: "F",
-        score: 0.36,
-    },
-};
+interface Props {
+    question: Question;
+}
+const { question } = Astro.props;
 ---
 
 <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
     <div class="font-bold mb-2">
-        <a href="">
-            {data.title}
+        <a href={"q/" + question.slug}>
+            {question.title}
         </a>
     </div>
     <div class="text-sm">
         <ul class="flex items-center space-x-4">
-            <li><a href="">{data.category}</a></li>
-            <li><Traders traders={data.traders} /></li>
-            <li><Volume amount={data.volume} /></li>
+            <li>
+                <a href="">{question.subCategory || question.parentCategory}</a>
+            </li>
+            <li><Traders traders={question.totalTraders} /></li>
+            <li><Volume amount={question.totalVolume} /></li>
         </ul>
     </div>
 
     <table class="mt-2 table-auto text-sm w-full">
         <tbody>
             {
-                data.platforms.map((platform) => (
+                question.markets.map((market) => (
                     <tr>
-                        <td class="px-2 pt-1">{platform.name}</td>
+                        <td class="px-2 pt-1">{market.platform}</td>
                         <td class="px-2 pt-1">
-                            <Grade grade={platform.grade} />
+                            <Grade grade={market.grade} />
                         </td>
                         <td class="px-2 pt-1 font-mono">
-                            <ScoreRel score={platform.score} />
+                            <ScoreRel score={market.scoreRel} />
                         </td>
                     </tr>
                 ))
-            }
-            {
-                /* TODO: I don't like how the line makes the overall row look like a sum/average.
-            }
-            <tr class="border-t-1">
-                <td class="px-2">Overall</td>
-                <td class="px-2">
-                    <GradeFancy grade={data.overall.grade} />
-                </td>
-                <td class="px-2 font-mono"
-                    >{formatAbsScore(data.overall.score)}</td
-                >
-            </tr>
-            { */
             }
         </tbody>
     </table>

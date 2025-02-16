@@ -1,5 +1,10 @@
 ---
-import points from "../data/sample-calibration-data.json";
+import type { CalibrationPoint } from "@types";
+
+const response = await fetch(
+    "https://data.predictionmetrics.org/calibration_points",
+);
+const points: CalibrationPoint[] = await response.json();
 ---
 
 <div
@@ -31,19 +36,19 @@ import points from "../data/sample-calibration-data.json";
         },
         marks: [
             Plot.dot(points, {
-                x: "x",
-                y: "y",
-                r: "n",
+                x: "x_center",
+                y: "y_center",
+                r: "count",
                 fill: "platform",
                 stroke: "platform",
                 fillOpacity: 0.5,
                 channels: {
                     Prediction: (i) =>
-                        ((i.x - binWidth / 2) * 100).toFixed(0) +
+                        ((i.x_center - binWidth / 2) * 100).toFixed(0) +
                         "-" +
-                        ((i.x + binWidth / 2) * 100).toFixed(0) +
+                        ((i.x_center + binWidth / 2) * 100).toFixed(0) +
                         "%",
-                    Resolution: (i) => (i.y * 100).toFixed(1) + "%",
+                    Resolution: (i) => (i.y_center * 100).toFixed(1) + "%",
                     Markets: "n",
                 },
                 tip: {
