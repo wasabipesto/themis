@@ -1,7 +1,7 @@
 ---
 import Base from "@layouts/base.astro";
-import MarketProbChart from "@components/market-prob-chart.astro";
-import MarketPlatformTable from "@components/market-platform-table.astro";
+import QuestionProbChart from "@components/question-prob-chart.astro";
+import QuestionPlatformTable from "@components/question-platform-table.astro";
 
 const data = {
     title: "Will Donald Trump win the 2024 US Presidential Election?",
@@ -77,8 +77,8 @@ const data = {
             <div class="whitespace-pre-wrap">{data.description}</div>
         </div>
         <div>
-            <MarketProbChart />
+            <QuestionProbChart />
         </div>
     </div>
-    <MarketPlatformTable data={data} />
+    <QuestionPlatformTable data={data} />
 </Base>

@@ -3,8 +3,7 @@ import Base from "@layouts/base.astro";
 import IndexHero from "@components/index-hero.astro";
 import ReportCardDesktop from "@components/report-card-desktop.astro";
 import ReportCardMobile from "@components/report-card-mobile.astro";
-import MarketCard from "@components/market-card.astro";
-import CalibrationIntro from "@components/calibration-intro.astro";
+import QuestionCard from "@components/question-card.astro";
 import CalibrationChart from "@components/calibration-chart.astro";
 ---
 
@@ -20,21 +19,51 @@ import CalibrationChart from "@components/calibration-chart.astro";
     </div>
     <hr />
     <div class="p-4 m-2">
-        <h1 class="text-4xl font-bold">Top Markets</h1>
+        <h1 class="text-4xl font-bold">Top Questions</h1>
         {/* TODO: Selector for montly/all time, volume, score, etc. */}
+        <p class="mt-2">
+            Each of these cards links to a question about a high-level
+            predictable outcome with some amount of uncertainty. Each question
+            is predicted by markets from each prediction market platform, and
+            those markets are graded to create the scores for each platform
+            above.
+        </p>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-4">
-        <MarketCard />
-        <MarketCard />
-        <MarketCard />
-        <MarketCard />
-        <MarketCard />
-        <MarketCard />
-        <MarketCard />
-        <MarketCard />
-        <MarketCard />
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
     </div>
-    <hr />
-    <CalibrationIntro />
+    <hr class="my-4" />
+    <div class="p-4 m-2">
+        <h1 class="text-4xl font-bold">What about calibration?</h1>
+        <p class="my-2">
+            Accuracy is a good metric, but another lens we can use for analysis
+            is calibration. For a group of markets to be perfectly calibrated,
+            their average resolution values much match their average prediction
+            values.
+        </p>
+        <p class="my-2">
+            For example, let's say there are a handful of markets that will be
+            determined by rolling a 6 on a fair six-sided die. We would expect
+            each market to have an average probability of around 17%, and once
+            they resolve we would expect around 17% of them to resolve
+            positively. If both are true, then those markets were
+            well-calibrated. If not, then some of our assumptions were
+            incorrect.
+        </p>
+        <p class="my-2">
+            This plot takes all of the prediction and resolution values and
+            shows how closely they match. They should form a straight line from
+            the bottom-left to the top-right - points significantly under or
+            over that line represent systemic errors.
+        </p>
+    </div>
     <CalibrationChart />
 </Base>

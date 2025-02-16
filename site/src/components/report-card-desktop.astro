@@ -115,11 +115,11 @@ const categories = [
 >
     <table class="table-auto w-full">
         <thead>
-            <tr>
-                <th class="text-left min-w-24 underline">Category</th>
+            <tr class="border-b-2">
+                <th class="text-left min-w-24 pb-1">Category</th>
                 {
                     platforms.map((platform) => (
-                        <th class="text-center text-crust min-w-20 w-24 underline">
+                        <th class="text-center text-crust min-w-20 w-24 pb-1">
                             <a href={platform.link}>{platform.name}</a>
                         </th>
                     ))
@@ -130,17 +130,33 @@ const categories = [
             {
                 categories.map((cat) => (
                     <tr>
-                        <td class="text-left font-semibold">
+                        <td class="text-left">
                             <a href={cat.link}>{cat.name}</a>
                         </td>
                         {cat.platforms.map((platform) => (
-                            <td class="text-center px-2 pt-1">
+                            <td class="text-center px-2 py-2">
                                 <Grade grade={platform.grade} />
                             </td>
                         ))}
                     </tr>
                 ))
             }
+
+            <tr class="mt-4 border-t-2">
+                <td class="text-left"> Overall </td>
+                <td class="text-center px-2 py-2">
+                    <Grade grade="B+" />
+                </td>
+                <td class="text-center px-2 py-2">
+                    <Grade grade="C" />
+                </td>
+                <td class="text-center px-2 py-2">
+                    <Grade grade="A" />
+                </td>
+                <td class="text-center px-2 py-2">
+                    <Grade grade="B-" />
+                </td>
+            </tr>
         </tbody>
     </table>
 </div>
