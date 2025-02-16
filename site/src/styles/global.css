@@ -25,7 +25,7 @@
     --color-selection: rgb(148, 156, 187);
 
     --color-base-light: rgb(204, 208, 218);
-    --color-base: rgb(48, 52, 70);
+    --color-base-dark: rgb(48, 52, 70);
     --color-mantle: rgb(41, 44, 60);
     --color-crust: rgb(35, 38, 52);
 }

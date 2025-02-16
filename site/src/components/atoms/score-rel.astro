@@ -1,13 +1,19 @@
 ---
-const { score } = Astro.props;
-
-// Rounds to nearest tenth and prefixes a sign if it's not already present.
-export function formatRelScore(amount: number): string {
-    const rounded = Math.round(amount * 10) / 10;
-    return (rounded >= 0 ? "+" : "") + rounded.toFixed(1);
+interface Props {
+    num: number | null;
 }
+
+const { num = null } = Astro.props;
 ---
 
 <div class="font-mono">
-    {formatRelScore(score)}
+    {
+        num != null
+            ? `${num >= 0 ? "+" : ""}${num.toLocaleString("en-US", {
+                  minimumFractionDigits: 1,
+                  maximumFractionDigits: 1,
+                  useGrouping: false,
+              })}`
+            : "N/A"
+    }
 </div>

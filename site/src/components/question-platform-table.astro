@@ -32,9 +32,9 @@ const { question } = Astro.props;
             {
                 question.markets.map((market) => (
                     <tr>
-                        <td class="px-4 py-2">{market.platform}</td>
+                        <td class="px-4 py-2">{market.platform_name}</td>
                         <td class="px-6 py-2">
-                            <a href={market.link}>
+                            <a href={market.market_link}>
                                 <LinkOut
                                     height={18}
                                     fill="currentColor"
@@ -43,22 +43,22 @@ const { question } = Astro.props;
                             </a>
                         </td>
                         <td class="px-4 py-2">
-                            <Traders traders={market.traders} />
+                            <Traders num={market.traders} />
                         </td>
                         <td class="px-4 py-2">
-                            <Volume amount={market.volume} />
+                            <Volume num={market.volume} />
                         </td>
                         <td class="px-4 py-2">
-                            <Duration days={market.duration} />
+                            <Duration num={market.duration} />
                         </td>
                         <td class="px-4 py-2">
                             <Grade grade={market.grade} />
                         </td>
                         <td class="px-4 py-2">
-                            <ScoreRel score={market.scoreRel} />
+                            <ScoreRel num={market.score_rel} />
                         </td>
                         <td class="px-4 py-2">
-                            <ScoreAbs score={market.scoreAbs} />
+                            <ScoreAbs num={market.score_abs} />
                         </td>
                     </tr>
                 ))
@@ -67,20 +67,20 @@ const { question } = Astro.props;
                 <td class="px-4 py-2">Overall</td>
                 <td class="px-6 py-2"></td>
                 <td class="px-4 py-2">
-                    <Traders traders={question.totalTraders} />
+                    <Traders num={question.total_traders} />
                 </td>
                 <td class="px-4 py-2">
-                    <Volume amount={question.totalVolume} />
+                    <Volume num={question.total_volume} />
                 </td>
                 <td class="px-4 py-2">
-                    <Duration days={question.totalDuration} />
+                    <Duration num={question.total_duration} />
                 </td>
                 <td class="px-4 py-2">
-                    <Grade grade={question.overall.grade} />
+                    <Grade grade={question.overall_grade} />
                 </td>
                 <td class="px-4 py-2"> </td>
                 <td class="px-4 py-2">
-                    <ScoreAbs score={question.overall.scoreAbs} />
+                    <ScoreAbs num={question.overall_score_abs} />
                 </td>
             </tr>
         </tbody>

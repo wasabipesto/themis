@@ -4,19 +4,21 @@ import QuestionCard from "@components/question-card.astro";
 import Traders from "@atoms/traders.astro";
 import Volume from "@atoms/volume.astro";
 import Markets from "@atoms/num-markets.astro";
+import ArrowRight from "@icons/arrow-right.svg";
 import Base from "@layouts/base.astro";
-import type { Category, Question } from "@types";
+import type { Category } from "@types";
 
-const qst_response = await fetch(
-    "https://data.predictionmetrics.org/questions",
+const cat_response = await fetch(
+    "https://data.predictionmetrics.org/categories",
 );
-const questions: Question[] = await qst_response.json();
+const categories: Category[] = await cat_response.json();
 ---
 
 <Base title="Categories">
     <div class="p-4 m-2">
         <h1 class="text-4xl font-bold">All Categories</h1>
     </div>
+
     <div class="px-4 m-2">
         <div class="flex space-x-8 pb-2 border-b-2 items-center">
             <h2 class="font-bold text-2xl">
@@ -24,18 +26,21 @@ const questions: Question[] = await qst_response.json();
             </h2>
             <div class="">
                 <ul class="flex items-center space-x-4">
-                    <li><Markets amount="1234" /></li>
-                    <li><Traders traders="1234" /></li>
-                    <li><Volume amount="123456" /></li>
+                    <li><Markets num={1234} /></li>
+                    <li><Traders num={1234} /></li>
+                    <li><Volume num={123456} /></li>
                 </ul>
             </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2">
-            <div class="p-4 m-2 border-2 rounded-md">
-                Predictions focusing on climate change impacts, environmental
-                metrics, and sustainability goals. Includes temperature
-                forecasts, emission levels, renewable energy adoption, and
-                natural disasters.
+            <div class="m-2">
+                <p class="my-2">
+                    Predictions focusing on climate change impacts,
+                    environmental metrics, and sustainability goals. Includes
+                    temperature forecasts, emission levels, renewable energy
+                    adoption, and natural disasters.
+                </p>
+                <ul class="my-2"><li>Subcategories:</li></ul>
             </div>
             <CategoryReportCard />
         </div>
@@ -46,6 +51,15 @@ const questions: Question[] = await qst_response.json();
             <QuestionCard />
             <QuestionCard />
             <QuestionCard />
+        </div>
+        <div class="flex justify-end m-2 mt-0 p-2">
+            <a
+                href="/category/climate#questions"
+                class="inline-flex items-center px-4 py-2 bg-blue text-crust rounded-md hover:bg-blue/90 transition-colors duration-200 font-medium"
+            >
+                See all Climate questions
+                <ArrowRight height={20} fill="currentColor" class="ml-1" />
+            </a>
         </div>
     </div>
 </Base>

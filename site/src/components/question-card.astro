@@ -30,10 +30,12 @@ if (!question) {
     <div class="text-sm">
         <ul class="flex items-center space-x-4">
             <li>
-                <a href="">{question.subCategory || question.parentCategory}</a>
+                <a href={"/categories/" + question.category_slug}>
+                    {question.category_name}
+                </a>
             </li>
-            <li><Traders traders={question.totalTraders} /></li>
-            <li><Volume amount={question.totalVolume} /></li>
+            <li><Traders num={question.total_traders} /></li>
+            <li><Volume num={question.total_volume} /></li>
         </ul>
     </div>
 
@@ -42,12 +44,12 @@ if (!question) {
             {
                 question.markets.map((market) => (
                     <tr>
-                        <td class="px-2 pt-1">{market.platform}</td>
+                        <td class="px-2 pt-1">{market.platform_name}</td>
                         <td class="px-2 pt-1">
                             <Grade grade={market.grade} />
                         </td>
                         <td class="px-2 pt-1 font-mono">
-                            <ScoreRel score={market.scoreRel} />
+                            <ScoreRel num={market.score_rel} />
                         </td>
                     </tr>
                 ))

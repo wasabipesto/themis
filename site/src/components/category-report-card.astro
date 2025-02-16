@@ -12,8 +12,8 @@ import ScoreAbs from "@atoms/score-abs.astro";
         <thead>
             <tr class="border-b-2">
                 <th class="text-left min-w-24 pb-1">Category</th>
-                <th class="text-center min-w-20 w-24 pb-1"># Markets</th>
-                <th class="text-center min-w-20 w-24 pb-1">Score</th>
+                <th class="text-center min-w-20 w-24 pb-1">Markets</th>
+                <th class="text-center min-w-20 w-24 pb-1">Grade</th>
                 <th class="text-center min-w-20 w-24 pb-1">Rel. Score</th>
                 <th class="text-center min-w-20 w-24 pb-1">Abs. Score</th>
             </tr>
@@ -22,61 +22,61 @@ import ScoreAbs from "@atoms/score-abs.astro";
             <tr>
                 <td class="px-2 pt-1 text-left">Kalshi</td>
                 <td class="px-2 pt-1 text-center">
-                    <Markets amount="59" />
+                    <Markets num={59} />
                 </td>
                 <td class="px-2 pt-1 text-center">
                     <Grade grade="B" />
                 </td>
                 <td class="px-2 pt-1 text-center">
-                    <ScoreRel score="0.1" />
+                    <ScoreRel num={0.1} />
                 </td>
                 <td class="px-2 pt-1 text-center">
-                    <ScoreAbs score="0.25" />
+                    <ScoreAbs num={0.25} />
                 </td>
             </tr>
             <tr>
                 <td class="px-2 pt-1 text-left">Manifold</td>
                 <td class="px-2 pt-1 text-center">
-                    <Markets amount="63" />
+                    <Markets num={63} />
                 </td>
                 <td class="px-2 pt-1 text-center">
                     <Grade grade="A" />
                 </td>
                 <td class="px-2 pt-1 text-center">
-                    <ScoreRel score="0.1" />
+                    <ScoreRel num={0.1} />
                 </td>
                 <td class="px-2 pt-1 text-center">
-                    <ScoreAbs score="0.25" />
+                    <ScoreAbs num={0.25} />
                 </td>
             </tr>
             <tr>
                 <td class="px-2 pt-1 text-left">Metaculus</td>
                 <td class="px-2 pt-1 text-center">
-                    <Markets amount="99" />
-                </td>
-                <td class="px-2 pt-1 text-center">
-                    <Grade grade="D-" />
-                </td>
-                <td class="px-2 pt-1 text-center">
-                    <ScoreRel score="0" />
-                </td>
-                <td class="px-2 pt-1 text-center">
-                    <ScoreAbs score="0.25" />
-                </td>
-            </tr>
-            <tr>
-                <td class="px-2 pt-1 text-left">Polymarket</td>
-                <td class="px-2 pt-1 text-center">
-                    <Markets amount="24" />
+                    <Markets num={63} />
                 </td>
                 <td class="px-2 pt-1 text-center">
                     <Grade grade="A" />
                 </td>
                 <td class="px-2 pt-1 text-center">
-                    <ScoreRel score="-0.1" />
+                    <ScoreRel num={0.1} />
                 </td>
                 <td class="px-2 pt-1 text-center">
-                    <ScoreAbs score="0.20" />
+                    <ScoreAbs num={0.25} />
+                </td>
+            </tr>
+            <tr>
+                <td class="px-2 pt-1 text-left">Polymarket</td>
+                <td class="px-2 pt-1 text-center">
+                    <Markets num={63} />
+                </td>
+                <td class="px-2 pt-1 text-center">
+                    <Grade grade="A" />
+                </td>
+                <td class="px-2 pt-1 text-center">
+                    <ScoreRel num={0.1} />
+                </td>
+                <td class="px-2 pt-1 text-center">
+                    <ScoreAbs num={0.25} />
                 </td>
             </tr>
         </tbody>

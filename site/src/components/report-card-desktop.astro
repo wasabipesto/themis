@@ -134,7 +134,7 @@ const categories = [
                             <a href={cat.link}>{cat.name}</a>
                         </td>
                         {cat.platforms.map((platform) => (
-                            <td class="text-center px-2 py-2">
+                            <td class="text-center px-2 py-1.5">
                                 <Grade grade={platform.grade} />
                             </td>
                         ))}
@@ -142,7 +142,7 @@ const categories = [
                 ))
             }
 
-            <tr class="mt-4 border-t-2">
+            <tr class="border-t-2">
                 <td class="text-left"> Overall </td>
                 <td class="text-center px-2 py-2">
                     <Grade grade="B+" />

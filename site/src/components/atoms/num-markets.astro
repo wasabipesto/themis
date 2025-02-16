@@ -1,9 +1,19 @@
 ---
 import Markets from "@icons/markets.svg";
-const { amount } = Astro.props;
+
+interface Props {
+    num: number;
+}
+
+const { num } = Astro.props;
 ---
 
 <div>
     <Markets height={18} fill="currentColor" class="inline" />
-    {amount}
+    {
+        num?.toLocaleString("en-US", {
+            maximumFractionDigits: 0,
+            useGrouping: true,
+        }) ?? "N/A"
+    }
 </div>

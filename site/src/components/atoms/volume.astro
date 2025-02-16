@@ -1,17 +1,20 @@
 ---
 import Money from "@icons/money.svg";
-const { amount } = Astro.props;
 
-// Formats an input amount as currency ($X,XXX,XXX). Returns "N/A" if amount is null.
-function formatVolume(amount: number | null): string {
-    if (amount === null) {
-        return "N/A";
-    }
-    return "$" + (amount / 1).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+interface Props {
+    num: number | null;
 }
+
+const { num = null } = Astro.props;
 ---
 
 <div>
     <Money height={18} fill="currentColor" class="inline" />
-    {formatVolume(amount)}
+    {
+        num?.toLocaleString("en-US", {
+            style: "currency",
+            currency: "USD",
+            maximumFractionDigits: 0,
+        }) ?? "N/A"
+    }
 </div>
