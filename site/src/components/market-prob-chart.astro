@@ -18,7 +18,7 @@ import points from "../data/sample-prob-history.json";
         title: "Market Probability History",
         width: 600,
         height: 300,
-        x: { percent: true, label: "Date" },
+        x: { type: "utc", label: "Date" },
         y: {
             domain: [0, 100],
             grid: true,
@@ -26,20 +26,20 @@ import points from "../data/sample-prob-history.json";
             label: "Probability",
         },
         color: {
-            //legend: true,
             label: "Platform",
             domain: ["Manifold", "Kalshi", "Metaculus", "Polymarket"],
             range: ["#4337c9", "#00d298", "#283441", "#0072f9"],
         },
         marks: [
             Plot.line(points, {
-                x: "x", // date
-                y: "y", // prob
+                x: "date",
+                y: "prob",
                 stroke: "platform",
                 curve: "step",
                 tip: {
                     format: {
                         platform: null,
+                        y: (i) => i.toFixed(0) + "%",
                     },
                 },
             }),
