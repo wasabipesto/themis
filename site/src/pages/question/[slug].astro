@@ -2,7 +2,7 @@
 import Base from "@layouts/base.astro";
 import QuestionProbChart from "@components/question-prob-chart.astro";
 import QuestionPlatformTable from "@components/question-platform-table.astro";
-import type { Question } from "@types";
+import type { DailyProbability, Question } from "@types";
 
 export function getStaticPaths() {
     // TODO: Build this from collections
@@ -10,10 +10,13 @@ export function getStaticPaths() {
     return [{ params: { slug: "us-president-2024" } }];
 }
 
-const qst_response = await fetch(
+const question = (await fetch(
     "https://data.predictionmetrics.org/question_by_slug",
-);
-const question: Question = await qst_response.json();
+).then((res) => res.json())) as Question;
+
+const points = (await fetch(
+    "https://data.predictionmetrics.org/daily_probabilities",
+).then((res) => res.json())) as DailyProbability;
 ---
 
 <Base title="Market">
@@ -46,7 +49,7 @@ const question: Question = await qst_response.json();
             <div class="whitespace-pre-wrap my-2">{question.description}</div>
         </div>
         <div>
-            <QuestionProbChart />
+            <QuestionProbChart points={points} />
         </div>
     </div>
     <QuestionPlatformTable question={question} />

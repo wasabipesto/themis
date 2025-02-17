@@ -21,11 +21,9 @@ export function getStaticPaths() {
         { params: { slug: "technology" } },
     ];
 }
-
-const cat_response = await fetch(
+const category = (await fetch(
     "https://data.predictionmetrics.org/category_by_slug",
-);
-const category: Category = await cat_response.json();
+).then((res) => res.json())) as Category;
 ---
 
 <Base title="Market">

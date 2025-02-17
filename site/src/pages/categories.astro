@@ -8,10 +8,9 @@ import ArrowRight from "@icons/arrow-right.svg";
 import Base from "@layouts/base.astro";
 import type { Category } from "@types";
 
-const cat_response = await fetch(
+const categories = (await fetch(
     "https://data.predictionmetrics.org/categories",
-);
-const categories: Category[] = await cat_response.json();
+).then((res) => res.json())) as Category[];
 const parentCategories = categories.filter((cat) => cat.is_parent);
 ---
 

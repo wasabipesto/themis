@@ -3,11 +3,10 @@ import Grade from "@atoms/grade.astro";
 import ScoreRel from "@atoms/score-rel.astro";
 import type { PlatformScore } from "../types";
 
-// Common data fetching and processing logic
-const response = await fetch(
-    "https://data.predictionmetrics.org/platform_scores",
-);
-const scores: PlatformScore[] = await response.json();
+interface Props {
+    scores: PlatformScore[];
+}
+const { scores } = Astro.props;
 
 // Collect unique platforms for columns/headers
 const platforms = Array.from(new Set(scores.map((s) => s.platform_slug))).map(

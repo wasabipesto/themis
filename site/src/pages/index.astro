@@ -4,17 +4,19 @@ import ReportCard from "@components/index-report-card.astro";
 import QuestionCard from "@components/question-card.astro";
 import PlatformCard from "@components/platform-card.astro";
 import CalibrationChart from "@components/calibration-chart.astro";
-import type { Platform, Question } from "@types";
+import type { Platform, PlatformScore, Question } from "@types";
 
-const plt_response = await fetch(
+const platforms = (await fetch(
     "https://data.predictionmetrics.org/platforms",
-);
-const platforms: Platform[] = await plt_response.json();
+).then((res) => res.json())) as Platform[];
 
-const qst_response = await fetch(
+const featuredQuestions = (await fetch(
     "https://data.predictionmetrics.org/questions",
-);
-const questions: Question[] = await qst_response.json();
+).then((res) => res.json())) as Question[];
+
+const platformScores = (await fetch(
+    "https://data.predictionmetrics.org/platform_scores",
+).then((res) => res.json())) as PlatformScore[];
 ---
 
 <Base title="Home">
@@ -52,7 +54,7 @@ const questions: Question[] = await qst_response.json();
             </ul>
         </div>
         <div class="">
-            <ReportCard />
+            <ReportCard scores={platformScores} />
         </div>
     </div>
     <hr class="my-2" />
@@ -68,7 +70,11 @@ const questions: Question[] = await qst_response.json();
         </p>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {questions.map((question) => <QuestionCard question={question} />)}
+        {
+            featuredQuestions.map((question) => (
+                <QuestionCard question={question} />
+            ))
+        }
     </div>
     <hr class="my-2" />
     <div class="p-4 m-2" id="intro">

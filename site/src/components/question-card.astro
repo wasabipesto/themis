@@ -12,6 +12,7 @@ interface Props {
 let { question } = Astro.props;
 
 if (!question) {
+    // only for prototyping
     const qst_response = await fetch(
         "https://data.predictionmetrics.org/questions",
     );
