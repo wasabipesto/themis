@@ -1,0 +1,78 @@
+---
+import Base from "@layouts/base.astro";
+import CategoryReportCard from "@components/category-report-card.astro";
+import QuestionCard from "@components/question-card.astro";
+import Traders from "@atoms/traders.astro";
+import Volume from "@atoms/volume.astro";
+import Markets from "@atoms/num-markets.astro";
+import type { Category } from "@types";
+
+export function getStaticPaths() {
+    // TODO: Build this from collections
+    // https://docs.astro.build/en/guides/content-collections/#building-for-static-output-default
+    return [
+        { params: { slug: "ai" } },
+        { params: { slug: "culture" } },
+        { params: { slug: "economics" } },
+        { params: { slug: "politics" } },
+        { params: { slug: "us-elections" } },
+        { params: { slug: "science" } },
+        { params: { slug: "sports" } },
+        { params: { slug: "technology" } },
+    ];
+}
+
+const cat_response = await fetch(
+    "https://data.predictionmetrics.org/category_by_slug",
+);
+const category: Category = await cat_response.json();
+---
+
+<Base title="Market">
+    <div class="grid grid-cols-1 md:grid-cols-2 pt-4">
+        <div class="p-4 m-2">
+            <div class="text-2xl border-b-2">Category: {category.name}</div>
+            <div class="my-2">
+                <ul class="flex items-center space-x-4">
+                    <li>
+                        <Markets num={category.total_markets} />
+                    </li>
+                    <li>
+                        <Traders num={category.total_traders} />
+                    </li>
+                    <li>
+                        <Volume num={category.total_volume} />
+                    </li>
+                </ul>
+            </div>
+            <div class="whitespace-pre-wrap my-2">{category.description}</div>
+        </div>
+        <CategoryReportCard />
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+        <QuestionCard />
+    </div>
+</Base>
