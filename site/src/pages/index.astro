@@ -1,7 +1,6 @@
 ---
 import Base from "@layouts/base.astro";
-import ReportCardDesktop from "@components/report-card-desktop.astro";
-import ReportCardMobile from "@components/report-card-mobile.astro";
+import ReportCard from "@components/index-report-card.astro";
 import QuestionCard from "@components/question-card.astro";
 import PlatformCard from "@components/platform-card.astro";
 import CalibrationChart from "@components/calibration-chart.astro";
@@ -52,11 +51,8 @@ const questions: Question[] = await qst_response.json();
                 </li>
             </ul>
         </div>
-        <div class="hidden md:block">
-            <ReportCardDesktop />
-        </div>
-        <div class="md:hidden">
-            <ReportCardMobile />
+        <div class="">
+            <ReportCard />
         </div>
     </div>
     <hr class="my-2" />
