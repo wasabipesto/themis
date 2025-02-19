@@ -3,6 +3,16 @@ import Markets from "@atoms/num-markets.astro";
 import Grade from "@atoms/grade.astro";
 import ScoreRel from "@atoms/score-rel.astro";
 import ScoreAbs from "@atoms/score-abs.astro";
+import type { PlatformScore } from "@types";
+
+interface Props {
+    scores: PlatformScore[];
+    pivot: "platform" | "category";
+}
+const { scores, pivot } = Astro.props;
+
+const headerLabel = pivot === "platform" ? "Platform" : "Category";
+const scoreField = pivot === "platform" ? "platform_name" : "category_name";
 ---
 
 <div
@@ -11,7 +21,7 @@ import ScoreAbs from "@atoms/score-abs.astro";
     <table class="w-full">
         <thead>
             <tr class="border-b-2">
-                <th class="text-left min-w-24 pb-1">Category</th>
+                <th class="text-left min-w-24 pb-1">{headerLabel}</th>
                 <th class="text-center min-w-20 w-24 pb-1">Markets</th>
                 <th class="text-center min-w-20 w-24 pb-1">Grade</th>
                 <th class="text-center min-w-20 w-24 pb-1">Rel. Score</th>
@@ -19,81 +29,25 @@ import ScoreAbs from "@atoms/score-abs.astro";
             </tr>
         </thead>
         <tbody>
-            <tr>
-                <td class="px-2 pt-1 text-left">Kalshi</td>
-                <td class="px-2 pt-1 text-center">
-                    <Markets num={59} />
-                </td>
-                <td class="px-2 pt-1 text-center">
-                    <Grade grade="B" />
-                </td>
-                <td class="px-2 pt-1 text-center">
-                    <ScoreRel num={0.1} />
-                </td>
-                <td class="px-2 pt-1 text-center">
-                    <ScoreAbs num={0.25} />
-                </td>
-            </tr>
-            <tr>
-                <td class="px-2 pt-1 text-left">Manifold</td>
-                <td class="px-2 pt-1 text-center">
-                    <Markets num={63} />
-                </td>
-                <td class="px-2 pt-1 text-center">
-                    <Grade grade="A" />
-                </td>
-                <td class="px-2 pt-1 text-center">
-                    <ScoreRel num={0.1} />
-                </td>
-                <td class="px-2 pt-1 text-center">
-                    <ScoreAbs num={0.25} />
-                </td>
-            </tr>
-            <tr>
-                <td class="px-2 pt-1 text-left">Metaculus</td>
-                <td class="px-2 pt-1 text-center">
-                    <Markets num={63} />
-                </td>
-                <td class="px-2 pt-1 text-center">
-                    <Grade grade="A" />
-                </td>
-                <td class="px-2 pt-1 text-center">
-                    <ScoreRel num={0.1} />
-                </td>
-                <td class="px-2 pt-1 text-center">
-                    <ScoreAbs num={0.25} />
-                </td>
-            </tr>
-            <tr>
-                <td class="px-2 pt-1 pb-1 text-left">Polymarket</td>
-                <td class="px-2 pt-1 pb-1 text-center">
-                    <Markets num={63} />
-                </td>
-                <td class="px-2 pt-1 pb-1 text-center">
-                    <Grade grade="A" />
-                </td>
-                <td class="px-2 pt-1 pb-1 text-center">
-                    <ScoreRel num={0.1} />
-                </td>
-                <td class="px-2 pt-1 pb-1 text-center">
-                    <ScoreAbs num={0.25} />
-                </td>
-            </tr>
-            <tr class="border-t-2">
-                <td class="px-2 pt-1 text-left">Overall</td>
-                <td class="px-2 pt-1 text-center">
-                    <Markets num={63} />
-                </td>
-                <td class="px-2 pt-1 text-center">
-                    <Grade grade="A" />
-                </td>
-                <td class="px-2 pt-1 text-center">
-                    <ScoreRel num={0.1} />
-                </td>
-                <td class="px-2 pt-1 text-center">
-                    <ScoreAbs num={0.25} />
-                </td>
-            </tr>
+            {
+                scores.map((score) => (
+                    <tr class="last:border-t-2">
+                        <td class="px-2 py-1 text-left">{score[scoreField]}</td>
+                        <td class="px-2 py-1 text-center">
+                            <Markets num={score.num_markets} />
+                        </td>
+                        <td class="px-2 py-1 text-center">
+                            <Grade grade={score.grade} />
+                        </td>
+                        <td class="px-2 py-1 text-center">
+                            <ScoreRel num={score.score_rel} />
+                        </td>
+                        <td class="px-2 py-1 text-center">
+                            <ScoreAbs num={score.score_abs} />
+                        </td>
+                    </tr>
+                ))
+            }
         </tbody>
     </table>
 </div>

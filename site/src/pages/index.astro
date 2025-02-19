@@ -54,7 +54,11 @@ const platformScores = (await fetch(
             </ul>
         </div>
         <div class="">
-            <ReportCard scores={platformScores} />
+            <ReportCard
+                scores={platformScores.filter(
+                    (score) => score.platform_slug !== "overall",
+                )}
+            />
         </div>
     </div>
     <hr class="my-2" />
