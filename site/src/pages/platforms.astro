@@ -2,6 +2,7 @@
 import PlatformReportCard from "@components/category-report-card.astro";
 import QuestionCard from "@components/question-card.astro";
 import SeeMoreLink from "@components/see-more-link.astro";
+import LongText from "@atoms/long-text.astro";
 import Traders from "@atoms/traders.astro";
 import Volume from "@atoms/volume.astro";
 import LinkOut from "@icons/link-out.svg";
@@ -56,8 +57,8 @@ const platformScores = (await fetch(
                     </div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2">
-                    <div class="m-2">
-                        <p class="my-2">{platform.description}</p>
+                    <div class="my-2">
+                        <LongText text={platform.long_description} />
                     </div>
                     <PlatformReportCard
                         scores={platformScores.filter(

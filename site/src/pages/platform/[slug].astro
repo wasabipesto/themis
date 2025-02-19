@@ -3,6 +3,7 @@ import Base from "@layouts/base.astro";
 import CategoryReportCard from "@components/category-report-card.astro";
 import LinkButton from "@components/link-button.astro";
 import SeeMoreLink from "@components/see-more-link.astro";
+import LongText from "@atoms/long-text.astro";
 import Grade from "@atoms/grade.astro";
 import ScoreRel from "@atoms/score-rel.astro";
 import ScoreAbs from "@atoms/score-abs.astro";
@@ -58,9 +59,7 @@ const featuredQuestions = (await fetch(
                     </li>
                 </ul>
             </div>
-            <div class="whitespace-pre-wrap my-2">
-                {platform.long_description}
-            </div>
+            <LongText text={platform.long_description} />
         </div>
         <div>
             <CategoryReportCard scores={platformScores} pivot="category" />
