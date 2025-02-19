@@ -1,10 +1,14 @@
 ---
+import ArrowRight from "@icons/arrow-right.svg";
+import LinkOut from "@icons/link-out.svg";
+
 interface Props {
     link: string;
     text: string;
+    icon: "arrow-right" | "link-out" | null;
 }
 
-const { link, text } = Astro.props;
+const { link, text, icon = null } = Astro.props;
 ---
 
 <a
@@ -12,4 +16,14 @@ const { link, text } = Astro.props;
     class="inline-flex w-full items-center justify-center px-4 py-2 bg-lavender text-crust rounded-md hover:bg-lavender/90 transition-colors duration-200 font-medium"
 >
     {text}
+    {
+        icon === "arrow-right" && (
+            <ArrowRight height={20} fill="currentColor" class="ml-1" />
+        )
+    }
+    {
+        icon === "link-out" && (
+            <LinkOut height={16} fill="currentColor" class="ml-2" />
+        )
+    }
 </a>

@@ -1,5 +1,5 @@
 ---
-import ArrowRight from "@icons/arrow-right.svg";
+import LinkButton from "./link-button.astro";
 
 interface Props {
     link: string;
@@ -10,11 +10,7 @@ const { link, text } = Astro.props;
 ---
 
 <div class="flex justify-end m-2 mt-0 p-2">
-    <a
-        href={link}
-        class="inline-flex items-center px-4 py-2 bg-lavender text-crust rounded-md hover:bg-lavender/90 transition-colors duration-200 font-medium"
-    >
-        {text}
-        <ArrowRight height={20} fill="currentColor" class="ml-1" />
-    </a>
+    <div class="w-auto">
+        <LinkButton link={link} text={text} icon="arrow-right" />
+    </div>
 </div>

@@ -66,12 +66,17 @@ const featuredQuestions = (await fetch(
             <CategoryReportCard scores={platformScores} pivot="category" />
             <div class="grid grid-cols-1 md:grid-cols-2 mx-2">
                 <div class="flex p-2">
-                    <LinkButton link={platform.site_url} text="Platform Home" />
+                    <LinkButton
+                        link={platform.site_url}
+                        text="Platform Home"
+                        icon="link-out"
+                    />
                 </div>
                 <div class="flex p-2">
                     <LinkButton
                         link={platform.wikipedia_url}
                         text="Wikipedia Entry"
+                        icon="link-out"
                     />
                 </div>
             </div>
