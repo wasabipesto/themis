@@ -11,6 +11,7 @@ import QuestionCard from "@components/question-card.astro";
 import Traders from "@atoms/traders.astro";
 import Volume from "@atoms/volume.astro";
 import Markets from "@atoms/num-markets.astro";
+import Star from "@icons/star.svg";
 import type { Platform, PlatformScore, Question } from "@types";
 
 export function getStaticPaths() {
@@ -90,8 +91,14 @@ const featuredQuestions = (await fetch(
                 .filter((score) => score.category_slug !== "overall")
                 .sort((a, b) => b.score_abs - a.score_abs)
                 .slice(0, 4)
-                .map((score) => (
-                    <div class="bg-base-light text-crust p-4 m-2 rounded-lg">
+                .map((score, index) => (
+                    <div class="bg-base-light text-crust p-4 m-2 rounded-lg first:border-4 first:border-amber-600/60 relative">
+                        {index === 0 && (
+                            <div class="absolute top-2 right-2 text-amber-600/60">
+                                <Star height={24} fill="currentColor" />
+                            </div>
+                            /* TODO: Not a huge fan of this, come back to it later. */
+                        )}
                         <div class="flex justify-between items-center">
                             <h3 class="text-lg font-semibold">
                                 {score.category_name}

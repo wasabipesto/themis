@@ -27,13 +27,13 @@ const platformScores = (await fetch(
     {
         parentCategories.map((category) => (
             <div class="px-4 m-2">
-                <div class="flex space-x-8 pb-2 border-b-2 items-center">
+                <div class="flex space-x-8 pb-2 border-b-2 flex-col sm:flex-row">
                     <h2 class="font-bold text-2xl">
                         <a href={`/category/${category.slug}`}>
                             {category.name}
                         </a>
                     </h2>
-                    <div class="">
+                    <div class="self-baseline sm:self-center">
                         <ul class="flex items-center space-x-4">
                             <li>
                                 <Markets num={category.total_markets} />

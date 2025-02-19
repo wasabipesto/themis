@@ -27,7 +27,7 @@ const platformScores = (await fetch(
     {
         platforms.map((platform) => (
             <div class="px-4 m-2">
-                <div class="flex space-x-8 pb-2 border-b-2 items-center">
+                <div class="flex space-x-8 pb-2 border-b-2 flex-col sm:flex-row">
                     <h2 class="font-bold text-2xl">
                         <a href={`/platform/${platform.slug}`}>
                             {platform.name}
@@ -42,7 +42,7 @@ const platformScores = (await fetch(
                         </a>
                         */}
                     </h2>
-                    <div class="">
+                    <div class="self-baseline sm:self-center">
                         <ul class="flex items-center space-x-4">
                             <li>
                                 <Markets num={platform.total_markets} />
