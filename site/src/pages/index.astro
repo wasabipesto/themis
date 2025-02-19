@@ -2,6 +2,7 @@
 import Base from "@layouts/base.astro";
 import ReportCard from "@components/index-report-card.astro";
 import QuestionCard from "@components/question-card.astro";
+import SeeMoreLink from "@components/see-more-link.astro";
 import PlatformCard from "@components/platform-card.astro";
 import CalibrationChart from "@components/calibration-chart.astro";
 import type { Platform, PlatformScore, Question } from "@types";
@@ -48,9 +49,6 @@ const platformScores = (await fetch(
                         What about calibration?
                     </a>
                 </li>
-                <li>
-                    <a href="#math" class="underline"> Show me the math! </a>
-                </li>
             </ul>
         </div>
         <div class="">
@@ -74,12 +72,14 @@ const platformScores = (await fetch(
         </p>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {
-            featuredQuestions.map((question) => (
-                <QuestionCard question={question} />
-            ))
-        }
+        <QuestionCard question={featuredQuestions[0]} />
+        <QuestionCard question={featuredQuestions[0]} />
+        <QuestionCard question={featuredQuestions[0]} />
+        <QuestionCard question={featuredQuestions[0]} />
+        <QuestionCard question={featuredQuestions[0]} />
+        <QuestionCard question={featuredQuestions[0]} />
     </div>
+    <SeeMoreLink link={`/questions`} text={`See all questions`} />
     <hr class="my-2" />
     <div class="p-4 m-2" id="intro">
         <h1 class="text-4xl font-bold">What's a prediction market?</h1>

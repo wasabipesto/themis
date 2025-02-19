@@ -1,16 +1,20 @@
 ---
 interface Props {
     num: number | null;
+    detailed: boolean;
 }
 
-const { num = null } = Astro.props;
+const { num = null, detailed = false } = Astro.props;
+const prefix = detailed && "Brier:";
+const decimals = detailed ? 4 : 2;
 ---
 
 <div class="font-mono">
+    {prefix}
     {
         num?.toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals,
             useGrouping: false,
         }) ?? "N/A"
     }

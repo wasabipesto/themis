@@ -1,0 +1,129 @@
+---
+import Base from "@layouts/base.astro";
+import CategoryReportCard from "@components/category-report-card.astro";
+import LinkButton from "@components/link-button.astro";
+import SeeMoreLink from "@components/see-more-link.astro";
+import Grade from "@atoms/grade.astro";
+import ScoreRel from "@atoms/score-rel.astro";
+import ScoreAbs from "@atoms/score-abs.astro";
+import QuestionCard from "@components/question-card.astro";
+import Traders from "@atoms/traders.astro";
+import Volume from "@atoms/volume.astro";
+import Markets from "@atoms/num-markets.astro";
+import type { Platform, PlatformScore, Question } from "@types";
+
+export function getStaticPaths() {
+    // TODO: Build this from collections
+    // https://docs.astro.build/en/guides/content-collections/#building-for-static-output-default
+    return [
+        { params: { slug: "kalshi" } },
+        { params: { slug: "manifold" } },
+        { params: { slug: "metaculus" } },
+        { params: { slug: "polymarket" } },
+    ];
+}
+const platform = (
+    await fetch("https://data.predictionmetrics.org/platforms").then((res) =>
+        res.json(),
+    )
+)[0] as Platform;
+
+const platformScores = (
+    (await fetch("https://data.predictionmetrics.org/platform_scores").then(
+        (res) => res.json(),
+    )) as PlatformScore[]
+).filter((score) => score.platform_slug == platform.slug);
+
+const featuredQuestions = (await fetch(
+    "https://data.predictionmetrics.org/questions",
+).then((res) => res.json())) as Question[];
+---
+
+<Base title={platform.name}>
+    <div class="grid grid-cols-1 md:grid-cols-2 pt-4">
+        <div class="p-4 m-2">
+            <div class="text-2xl font-semibold border-b-2">
+                Platform: {platform.name}
+            </div>
+            <div class="my-2">
+                <ul class="flex items-center space-x-4">
+                    <li>
+                        <Markets num={platform.total_markets} />
+                    </li>
+                    <li>
+                        <Traders num={platform.total_traders} />
+                    </li>
+                    <li>
+                        <Volume num={platform.total_volume} />
+                    </li>
+                </ul>
+            </div>
+            <div class="whitespace-pre-wrap my-2">
+                {platform.long_description}
+            </div>
+        </div>
+        <div>
+            <CategoryReportCard scores={platformScores} pivot="category" />
+            <div class="grid grid-cols-1 md:grid-cols-2 mx-2">
+                <div class="flex p-2">
+                    <LinkButton link={platform.site_url} text="Platform Home" />
+                </div>
+                <div class="flex p-2">
+                    <LinkButton
+                        link={platform.wikipedia_url}
+                        text="Wikipedia Entry"
+                    />
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="p-2 m-2">
+        <h1 class="text-2xl font-bold">Top Categories</h1>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+        {
+            platformScores
+                .filter((score) => score.category_slug !== "overall")
+                .sort((a, b) => b.score_abs - a.score_abs)
+                .slice(0, 4)
+                .map((score) => (
+                    <div class="bg-base-light text-crust p-4 m-2 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-semibold">
+                                {score.category_name}
+                            </h3>
+                            <span class="text-xl font-semibold w-20">
+                                <Grade grade={score.grade} />
+                            </span>
+                        </div>
+                        <ul class="flex justify-between items-baseline p-2">
+                            <li>
+                                <Markets num={score.num_markets} />
+                            </li>
+                            <li>
+                                <ScoreAbs
+                                    num={score.score_abs}
+                                    detailed={true}
+                                />
+                            </li>
+                        </ul>
+                    </div>
+                ))
+        }
+    </div>
+    <div class="p-2 m-2">
+        <h1 class="text-2xl font-bold">Top-Performing Questions</h1>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <QuestionCard question={featuredQuestions[0]} />
+        <QuestionCard question={featuredQuestions[0]} />
+        <QuestionCard question={featuredQuestions[0]} />
+        <QuestionCard question={featuredQuestions[0]} />
+        <QuestionCard question={featuredQuestions[0]} />
+        <QuestionCard question={featuredQuestions[0]} />
+    </div>
+    <SeeMoreLink
+        link={`/questions?platform=${platform.slug}`}
+        text={`See all ${platform.name} questions`}
+    />
+</Base>

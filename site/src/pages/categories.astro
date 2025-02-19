@@ -1,6 +1,7 @@
 ---
 import CategoryReportCard from "@components/category-report-card.astro";
 import QuestionCard from "@components/question-card.astro";
+import SeeMoreLink from "@components/see-more-link.astro";
 import Traders from "@atoms/traders.astro";
 import Volume from "@atoms/volume.astro";
 import Markets from "@atoms/num-markets.astro";
@@ -83,19 +84,10 @@ const platformScores = (await fetch(
                     <QuestionCard />
                     <QuestionCard />
                 </div>
-                <div class="flex justify-end m-2 mt-0 p-2">
-                    <a
-                        href={`/category/${category.slug}#questions`}
-                        class="inline-flex items-center px-4 py-2 bg-lavender text-crust rounded-md hover:bg-lavender/90 transition-colors duration-200 font-medium"
-                    >
-                        See all {category.name} questions
-                        <ArrowRight
-                            height={20}
-                            fill="currentColor"
-                            class="ml-1"
-                        />
-                    </a>
-                </div>
+                <SeeMoreLink
+                    link={`/questions?category=${category.slug}`}
+                    text={`See all ${category.name} questions`}
+                />
             </div>
         ))
     }

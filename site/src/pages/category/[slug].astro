@@ -2,10 +2,11 @@
 import Base from "@layouts/base.astro";
 import CategoryReportCard from "@components/category-report-card.astro";
 import QuestionCard from "@components/question-card.astro";
+import SeeMoreLink from "@components/see-more-link.astro";
 import Traders from "@atoms/traders.astro";
 import Volume from "@atoms/volume.astro";
 import Markets from "@atoms/num-markets.astro";
-import type { Category } from "@types";
+import type { Category, PlatformScore } from "@types";
 
 export function getStaticPaths() {
     // TODO: Build this from collections
@@ -21,15 +22,23 @@ export function getStaticPaths() {
         { params: { slug: "technology" } },
     ];
 }
-const category = (await fetch(
-    "https://data.predictionmetrics.org/category_by_slug",
-).then((res) => res.json())) as Category;
+const category = (
+    await fetch("https://data.predictionmetrics.org/categories").then((res) =>
+        res.json(),
+    )
+)[0] as Category;
+
+const platformScores = (await fetch(
+    "https://data.predictionmetrics.org/platform_scores",
+).then((res) => res.json())) as PlatformScore[];
 ---
 
-<Base title="Market">
+<Base title={category.name}>
     <div class="grid grid-cols-1 md:grid-cols-2 pt-4">
         <div class="p-4 m-2">
-            <div class="text-2xl border-b-2">Category: {category.name}</div>
+            <div class="text-2xl font-semibold border-b-2">
+                Category: {category.name}
+            </div>
             <div class="my-2">
                 <ul class="flex items-center space-x-4">
                     <li>
@@ -45,7 +54,12 @@ const category = (await fetch(
             </div>
             <div class="whitespace-pre-wrap my-2">{category.description}</div>
         </div>
-        <CategoryReportCard />
+        <CategoryReportCard
+            scores={platformScores.filter(
+                (score) => score.category_slug == category.slug,
+            )}
+            pivot="platform"
+        />
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         <QuestionCard />
@@ -60,17 +74,9 @@ const category = (await fetch(
         <QuestionCard />
         <QuestionCard />
         <QuestionCard />
-        <QuestionCard />
-        <QuestionCard />
-        <QuestionCard />
-        <QuestionCard />
-        <QuestionCard />
-        <QuestionCard />
-        <QuestionCard />
-        <QuestionCard />
-        <QuestionCard />
-        <QuestionCard />
-        <QuestionCard />
-        <QuestionCard />
     </div>
+    <SeeMoreLink
+        link={`/questions?category=${category.slug}`}
+        text={`See all ${category.name} questions`}
+    />
 </Base>

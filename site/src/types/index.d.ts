@@ -3,10 +3,15 @@ export interface Platform {
   slug: string;
   name: string;
   description: string;
+  long_description: string;
+  wikipedia_url: string;
   icon_url: string;
   site_url: string;
   color_primary: string;
   color_accent: string;
+  total_markets: number;
+  total_traders: number;
+  total_volume: number;
 }
 
 /** Score data for a platform's performance within a category, or overall. */

@@ -1,11 +1,11 @@
 ---
 import PlatformReportCard from "@components/category-report-card.astro";
 import QuestionCard from "@components/question-card.astro";
+import SeeMoreLink from "@components/see-more-link.astro";
 import Traders from "@atoms/traders.astro";
 import Volume from "@atoms/volume.astro";
 import LinkOut from "@icons/link-out.svg";
 import Markets from "@atoms/num-markets.astro";
-import ArrowRight from "@icons/arrow-right.svg";
 import Base from "@layouts/base.astro";
 import type { Platform, PlatformScore } from "@types";
 
@@ -28,9 +28,10 @@ const platformScores = (await fetch(
             <div class="px-4 m-2">
                 <div class="flex space-x-8 pb-2 border-b-2 items-center">
                     <h2 class="font-bold text-2xl">
-                        <a href={`/paltform/${platform.slug}`}>
+                        <a href={`/platform/${platform.slug}`}>
                             {platform.name}
                         </a>
+                        {/*
                         <a href={platform.site_url}>
                             <LinkOut
                                 height={24}
@@ -38,6 +39,7 @@ const platformScores = (await fetch(
                                 class="inline"
                             />
                         </a>
+                        */}
                     </h2>
                     <div class="">
                         <ul class="flex items-center space-x-4">
@@ -72,19 +74,10 @@ const platformScores = (await fetch(
                     <QuestionCard />
                     <QuestionCard />
                 </div>
-                <div class="flex justify-end m-2 mt-0 p-2">
-                    <a
-                        href={`/category/${platform.slug}#questions`}
-                        class="inline-flex items-center px-4 py-2 bg-lavender text-crust rounded-md hover:bg-lavender/90 transition-colors duration-200 font-medium"
-                    >
-                        See all {platform.name} questions
-                        <ArrowRight
-                            height={20}
-                            fill="currentColor"
-                            class="ml-1"
-                        />
-                    </a>
-                </div>
+                <SeeMoreLink
+                    link={`/questions?platform=${platform.slug}`}
+                    text={`See all ${platform.name} questions`}
+                />
             </div>
         ))
     }

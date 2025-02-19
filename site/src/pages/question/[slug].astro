@@ -10,13 +10,15 @@ export function getStaticPaths() {
     return [{ params: { slug: "us-president-2024" } }];
 }
 
-const question = (await fetch(
-    "https://data.predictionmetrics.org/question_by_slug",
-).then((res) => res.json())) as Question;
+const question = (
+    await fetch("https://data.predictionmetrics.org/questions").then((res) =>
+        res.json(),
+    )
+)[0] as Question;
 
-const points = (await fetch(
+const dailyProbabilityPoints = (await fetch(
     "https://data.predictionmetrics.org/daily_probabilities",
-).then((res) => res.json())) as DailyProbability;
+).then((res) => res.json())) as DailyProbability[];
 ---
 
 <Base title="Market">
@@ -49,7 +51,7 @@ const points = (await fetch(
             <div class="whitespace-pre-wrap my-2">{question.description}</div>
         </div>
         <div>
-            <QuestionProbChart points={points} />
+            <QuestionProbChart points={dailyProbabilityPoints} />
         </div>
     </div>
     <QuestionPlatformTable question={question} />
