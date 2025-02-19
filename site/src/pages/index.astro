@@ -45,6 +45,11 @@ const platformScores = (await fetch(
                     </a>
                 </li>
                 <li>
+                    <a href="#scoring" class="underline">
+                        How do you calculate the scores?
+                    </a>
+                </li>
+                <li>
                     <a href="#calibration" class="underline">
                         What about calibration?
                     </a>
@@ -62,7 +67,6 @@ const platformScores = (await fetch(
     <hr class="my-2" />
     <div class="p-4 m-2">
         <h1 class="text-4xl font-bold">Top Questions</h1>
-        {/* TODO: Selector for montly/all time, volume, score, etc. */}
         <p class="mt-2">
             Each of these cards links to a question about a high-level
             predictable outcome with some amount of uncertainty. Each question
@@ -79,7 +83,7 @@ const platformScores = (await fetch(
         <QuestionCard question={featuredQuestions[0]} />
         <QuestionCard question={featuredQuestions[0]} />
     </div>
-    <SeeMoreLink link={`/questions`} text={`See all questions`} />
+    <SeeMoreLink link={`/questions`} text="See all questions" />
     <hr class="my-2" />
     <div class="p-4 m-2" id="intro">
         <h1 class="text-4xl font-bold">What's a prediction market?</h1>
@@ -127,6 +131,36 @@ const platformScores = (await fetch(
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
             {platforms.map((platform) => <PlatformCard platform={platform} />)}
         </div>
+        <SeeMoreLink link={`/introduction`} text="Learn more" />
+    </div>
+    <hr class="my-2" />
+    <div class="p-4 m-2" id="scoring">
+        <h1 class="text-4xl font-bold">How do you calculate the scores?</h1>
+        <p class="my-2">
+            The traditional way to score predictions is using Brier scores,
+            which measure how far off your prediction was from reality. While
+            these work great for individual predictions, they struggle to
+            compare predictions across different time periods - being 90%
+            confident a month before an event is more impressive than being 90%
+            confident the day before.
+        </p>
+        <p class="my-2">
+            To account for this, we use a relative Brier scoring system. For
+            each matched question across platforms, we compare how early each
+            platform reached the correct probability range. Platforms that
+            arrive at accurate predictions earlier receive more points, while
+            those that take longer or never reach accuracy receive fewer points.
+        </p>
+        <p class="my-2">
+            For example, if Platform A predicts an event at 80% likelihood three
+            months out and Platform B reaches the same prediction one month
+            before, Platform A would score higher - assuming they were both
+            correct. This rewards both accuracy and early insight, giving us a
+            better picture of which platforms are best at surfacing predictive
+            information quickly.
+        </p>
+        {/* TODO: Add an actual example here. */}
+        <SeeMoreLink link={`/scoring`} text="Learn more" />
     </div>
     <hr class="my-2" />
     <div class="p-4 m-2" id="calibration">
@@ -152,6 +186,9 @@ const platformScores = (await fetch(
             the bottom-left to the top-right - points significantly under or
             over that line represent systemic errors.
         </p>
+        <div class="my-4">
+            <CalibrationChart />
+        </div>
+        <SeeMoreLink link={`/questions`} text="See all charts" />
     </div>
-    <CalibrationChart />
 </Base>

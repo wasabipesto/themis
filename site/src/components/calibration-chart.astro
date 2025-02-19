@@ -8,7 +8,7 @@ const points: CalibrationPoint[] = await response.json();
 ---
 
 <div
-    class="bg-base-light [&_h2]:text-2xl text-crust rounded-md drop-shadow-sm p-4 m-2 overflow-x-auto"
+    class="bg-base-light [&_h2]:text-2xl text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
 >
     <div id="plot" data-points={JSON.stringify(points)}></div>
 </div>
