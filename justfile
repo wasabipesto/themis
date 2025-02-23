@@ -14,7 +14,30 @@ download *args:
 extract *args:
     cargo run -r -- {{args}}
 
-# Build the astro site in docker
+# Start the database containers
+db-up:
+    docker compose up -d
+
+# Stop the database containers
+db-down:
+    docker compose down
+
+# Stop the database containers
+db-logs:
+    docker compose logs -f
+
+# Get the database schema
+db-schema:
+    docker compose exec postgres pg_dump \
+    --username=$POSTGRES_USER \
+    --dbname=$POSTGRES_DB \
+    --schema-only
+
+# Run a manual database backup
+db-backup:
+    docker compose exec pgbackups /backup.sh
+
+# Build the astro site
 astro-build:
     -docker run -it --rm \
         -v .:/app \
@@ -25,7 +48,7 @@ astro-build:
         node:23-bookworm \
         npx astro build
 
-# Start the astro dev server in docker
+# Start the astro dev server
 astro-dev:
     -docker run -it --rm \
         -v .:/app \
@@ -36,7 +59,7 @@ astro-dev:
         node:23-bookworm \
         npx astro dev --host
 
-# Start a shell in the astro docker container
+# Start a shell in the astro environment
 astro-shell:
     -docker run -it --rm \
         -v .:/app \
@@ -49,4 +72,4 @@ astro-shell:
 
 # Build the site and deploy with rclone
 deploy: astro-build
-    rclone sync site/dist $SITE_TARGET --progress
+    rclone sync site/dist $RCLONE_TARGET --progress
