@@ -1,12 +1,16 @@
 ---
 import Base from "@layouts/base.astro";
 import QuestionProbChart from "@components/question-prob-chart.astro";
-import QuestionPlatformTable from "@components/question-platform-table.astro";
+import Traders from "@atoms/traders.astro";
+import Volume from "@atoms/volume.astro";
+import Duration from "@atoms/duration.astro";
+import Grade from "@atoms/grade.astro";
+import ScoreRel from "@atoms/score-rel.astro";
+import ScoreAbs from "@atoms/score-abs.astro";
+import LinkOut from "@icons/link-out.svg";
 import type { DailyProbability, Question } from "@types";
 
 export function getStaticPaths() {
-    // TODO: Build this from collections
-    // https://docs.astro.build/en/guides/content-collections/#building-for-static-output-default
     return [{ params: { slug: "us-president-2024" } }];
 }
 
@@ -30,7 +34,7 @@ const dailyProbabilityPoints = (await fetch(
                 <li>
                     <a
                         href={`/category/${question.category_slug}`}
-                        class="text-rosewater"
+                        class="text-lavender"
                     >
                         {question.category_name}
                     </a>
@@ -38,7 +42,7 @@ const dailyProbabilityPoints = (await fetch(
                 <li>
                     <a
                         href={`/category/${question.parent_category_slug}`}
-                        class="text-rosewater"
+                        class="text-lavender"
                     >
                         {question.parent_category_name}
                     </a>
@@ -54,5 +58,84 @@ const dailyProbabilityPoints = (await fetch(
             <QuestionProbChart points={dailyProbabilityPoints} />
         </div>
     </div>
-    <QuestionPlatformTable question={question} />
+
+    <!-- Platform Table -->
+    <div class="pt-6 overflow-x-auto md:overflow-x-hidden">
+        <table class="table-auto text-left p-4 m-2 w-full">
+            <thead>
+                <tr class="border-b-2">
+                    <th class="px-4 py-2 w-40">Platform</th>
+                    <th class="px-4 py-2">Link</th>
+                    <th class="px-4 py-2">Traders</th>
+                    <th class="px-4 py-2">Volume (USD)</th>
+                    <th class="px-4 py-2">Duration</th>
+                    <th class="px-4 py-2">Letter Grade</th>
+                    <th class="px-4 py-2">Relative Brier</th>
+                    <th class="px-4 py-2">Absolute Brier</th>
+                </tr>
+            </thead>
+            <tbody>
+                {
+                    question.markets.map((market) => (
+                        <tr>
+                            <td class="px-4 py-2">{market.platform_name}</td>
+                            <td class="px-6 py-2">
+                                <a href={market.market_link}>
+                                    <LinkOut
+                                        height={18}
+                                        fill="currentColor"
+                                        class="inline"
+                                    />
+                                </a>
+                            </td>
+                            <td class="px-4 py-2">
+                                <Traders num={market.traders} />
+                            </td>
+                            <td class="px-4 py-2">
+                                <Volume num={market.volume} />
+                            </td>
+                            <td class="px-4 py-2">
+                                <Duration num={market.duration} />
+                            </td>
+                            <td class="px-4 py-2">
+                                <Grade grade={market.grade} />
+                            </td>
+                            <td class="px-4 py-2">
+                                <ScoreRel num={market.score_rel} />
+                            </td>
+                            <td class="px-4 py-2">
+                                <ScoreAbs
+                                    num={market.score_abs}
+                                    detailed={false}
+                                />
+                            </td>
+                        </tr>
+                    ))
+                }
+                <tr class="border-t-2">
+                    <td class="px-4 py-2">Overall</td>
+                    <td class="px-6 py-2"></td>
+                    <td class="px-4 py-2">
+                        <Traders num={question.total_traders} />
+                    </td>
+                    <td class="px-4 py-2">
+                        <Volume num={question.total_volume} />
+                    </td>
+                    <td class="px-4 py-2">
+                        <Duration num={question.total_duration} />
+                    </td>
+                    <td class="px-4 py-2">
+                        <Grade grade={question.overall_grade} />
+                    </td>
+                    <td class="px-4 py-2"> </td>
+                    <td class="px-4 py-2">
+                        <ScoreAbs
+                            num={question.overall_score_abs}
+                            detailed={false}
+                        />
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 </Base>

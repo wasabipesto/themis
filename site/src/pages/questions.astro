@@ -4,6 +4,7 @@ import Traders from "@atoms/traders.astro";
 import Volume from "@atoms/volume.astro";
 import Duration from "@atoms/duration.astro";
 import Grade from "@atoms/grade.astro";
+import ScoreAbs from "@atoms/score-abs.astro";
 import type { Question } from "@types";
 
 // Fetch all questions at build time
@@ -65,6 +66,7 @@ questions.sort((a, b) => b.total_volume - a.total_volume);
                         Volume
                         <span class="sort-indicator"></span>
                     </th>
+                    <!--
                     <th
                         class="text-center py-3 px-4 cursor-pointer hover:text-lavender"
                         data-sort="duration"
@@ -72,11 +74,19 @@ questions.sort((a, b) => b.total_volume - a.total_volume);
                         Duration
                         <span class="sort-indicator"></span>
                     </th>
+                    -->
                     <th
-                        class="text-center py-3 px-4 cursor-pointer hover:text-lavender"
+                        class="text-center py-3 px-4 w-26 cursor-pointer hover:text-lavender"
                         data-sort="grade"
                     >
                         Grade
+                        <span class="sort-indicator"></span>
+                    </th>
+                    <th
+                        class="text-center py-3 px-4 w-26 cursor-pointer hover:text-lavender"
+                        data-sort="score"
+                    >
+                        Score
                         <span class="sort-indicator"></span>
                     </th>
                 </tr>
@@ -92,6 +102,7 @@ questions.sort((a, b) => b.total_volume - a.total_volume);
                             data-volume={question.total_volume}
                             data-duration={question.total_duration}
                             data-grade={question.overall_grade}
+                            data-score={question.overall_score_abs}
                         >
                             <td class="py-3 px-4 pr-6">
                                 <a
@@ -115,11 +126,19 @@ questions.sort((a, b) => b.total_volume - a.total_volume);
                             <td class="py-3 px-4 text-center">
                                 <Volume num={question.total_volume} />
                             </td>
+                            <!--
                             <td class="py-3 px-4 text-center">
                                 <Duration num={question.total_duration} />
                             </td>
+                            -->
                             <td class="py-3 px-4 text-center">
                                 <Grade grade={question.overall_grade} />
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                <ScoreAbs
+                                    num={question.overall_score_abs}
+                                    detailed={false}
+                                />
                             </td>
                         </tr>
                     ))
