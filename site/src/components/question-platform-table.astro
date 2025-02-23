@@ -58,7 +58,7 @@ const { question } = Astro.props;
                             <ScoreRel num={market.score_rel} />
                         </td>
                         <td class="px-4 py-2">
-                            <ScoreAbs num={market.score_abs} />
+                            <ScoreAbs num={market.score_abs} detailed={false} />
                         </td>
                     </tr>
                 ))
@@ -80,7 +80,10 @@ const { question } = Astro.props;
                 </td>
                 <td class="px-4 py-2"> </td>
                 <td class="px-4 py-2">
-                    <ScoreAbs num={question.overall_score_abs} />
+                    <ScoreAbs
+                        num={question.overall_score_abs}
+                        detailed={false}
+                    />
                 </td>
             </tr>
         </tbody>

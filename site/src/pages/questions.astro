@@ -1,10 +1,135 @@
 ---
 import Base from "@layouts/base.astro";
-import type { Platform, PlatformScore } from "@types";
+import Traders from "@atoms/traders.astro";
+import Volume from "@atoms/volume.astro";
+import Duration from "@atoms/duration.astro";
+import Grade from "@atoms/grade.astro";
+import type { Question } from "@types";
+
+// Fetch all questions at build time
+const questions = (await fetch(
+    "https://data.predictionmetrics.org/questions",
+).then((res) => res.json())) as Question[];
 ---
 
-<Base title="Categories">
+<Base title="Questions">
     <div class="p-4 m-2">
         <h1 class="text-4xl font-bold">All Questions</h1>
     </div>
+
+    <!-- Search Bar -->
+    <div class="my-4">
+        <div class="relative">
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="Search questions..."
+                class="w-full px-4 py-2 pl-4 bg-crust rounded-lg focus:outline-none focus:ring-1 focus:ring-lavender"
+            />
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="overflow-x-auto">
+        <table class="w-full border-collapse">
+            <thead>
+                <tr class="border-b-2">
+                    <th class="text-left py-3 px-4">Question</th>
+                    <th class="text-left py-3 px-4">Category</th>
+                    <th class="text-center py-3 px-4">Traders</th>
+                    <th class="text-center py-3 px-4">Volume</th>
+                    <th class="text-center py-3 px-4">Duration</th>
+                    <th class="text-center py-3 px-4">Grade</th>
+                </tr>
+            </thead>
+            <tbody id="questionsTable">
+                {
+                    questions.map((question) => (
+                        <tr
+                            class="border-b border-surface1 hover:bg-surface1/50 question-row"
+                            data-title={question.title.toLowerCase()}
+                            data-category={question.category_slug}
+                        >
+                            <td class="py-3 px-4 pr-6">
+                                <a
+                                    href={`/question/${question.slug}`}
+                                    class="hover:text-lavender"
+                                >
+                                    {question.title}
+                                </a>
+                            </td>
+                            <td class="py-3 px-4">
+                                <a
+                                    href={`/category/${question.category_slug}`}
+                                    class="hover:text-lavender"
+                                >
+                                    {question.category_name}
+                                </a>
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                <Traders num={question.total_traders} />
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                <Volume num={question.total_volume} />
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                <Duration num={question.total_duration} />
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                <Grade grade={question.overall_grade} />
+                            </td>
+                        </tr>
+                    ))
+                }
+            </tbody>
+        </table>
+
+        <div id="noResults" class="hidden text-center py-8 text-overlay1">
+            No questions found
+        </div>
+    </div>
 </Base>
+
+<script>
+    // Client-side search functionality
+    const searchInput = document.getElementById(
+        "searchInput",
+    ) as HTMLInputElement;
+    const questionRows = document.querySelectorAll(".question-row");
+    const noResults = document.getElementById("noResults");
+
+    function filterQuestions() {
+        const searchTerm = searchInput.value.toLowerCase();
+        let visibleCount = 0;
+
+        questionRows.forEach((row) => {
+            const title = (row as HTMLElement).dataset.title || "";
+            const matches = title.includes(searchTerm);
+            row.classList.toggle("hidden", !matches);
+            if (matches) visibleCount++;
+        });
+
+        if (noResults) {
+            noResults.classList.toggle("hidden", visibleCount > 0);
+        }
+    }
+
+    searchInput.addEventListener("input", filterQuestions);
+
+    // Preserve search state on navigation
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialSearch = urlParams.get("q");
+    if (initialSearch) {
+        searchInput.value = initialSearch;
+        filterQuestions();
+    }
+
+    // Update URL when searching
+    searchInput.addEventListener("input", () => {
+        const searchTerm = searchInput.value;
+        const newUrl = searchTerm
+            ? `${window.location.pathname}?q=${encodeURIComponent(searchTerm)}`
+            : window.location.pathname;
+        window.history.replaceState({}, "", newUrl);
+    });
+</script>
