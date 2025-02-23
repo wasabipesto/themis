@@ -80,6 +80,7 @@ type QMarketScore = {
 
 /** Single point on a daily probability plot. */
 export interface DailyProbability {
+  question_id: string;
   platform: string;
   date: string;
   prob: number;

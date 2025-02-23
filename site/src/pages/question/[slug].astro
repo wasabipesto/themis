@@ -10,18 +10,20 @@ import ScoreAbs from "@atoms/score-abs.astro";
 import LinkOut from "@icons/link-out.svg";
 import type { DailyProbability, Question } from "@types";
 
-export function getStaticPaths() {
-    return [{ params: { slug: "us-president-2024" } }];
+// Generate routes for all items
+export async function getStaticPaths() {
+    const questions = (await fetch(
+        "https://data.predictionmetrics.org/questions",
+    ).then((res) => res.json())) as Question[];
+    return questions.map((question) => ({
+        params: { slug: question.slug },
+        props: { question },
+    }));
 }
-
-const question = (
-    await fetch("https://data.predictionmetrics.org/questions").then((res) =>
-        res.json(),
-    )
-)[0] as Question;
+const { question } = Astro.props;
 
 const dailyProbabilityPoints = (await fetch(
-    "https://data.predictionmetrics.org/daily_probabilities",
+    `https://data.predictionmetrics.org/daily_probabilities?question_id=${question.question_id}`,
 ).then((res) => res.json())) as DailyProbability[];
 ---
 
