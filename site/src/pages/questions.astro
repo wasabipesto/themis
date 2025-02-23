@@ -10,6 +10,9 @@ import type { Question } from "@types";
 const questions = (await fetch(
     "https://data.predictionmetrics.org/questions",
 ).then((res) => res.json())) as Question[];
+
+// Default sort: volume descending
+questions.sort((a, b) => b.total_volume - a.total_volume);
 ---
 
 <Base title="Questions">
@@ -34,12 +37,48 @@ const questions = (await fetch(
         <table class="w-full border-collapse">
             <thead>
                 <tr class="border-b-2">
-                    <th class="text-left py-3 px-4">Question</th>
-                    <th class="text-left py-3 px-4">Category</th>
-                    <th class="text-center py-3 px-4">Traders</th>
-                    <th class="text-center py-3 px-4">Volume</th>
-                    <th class="text-center py-3 px-4">Duration</th>
-                    <th class="text-center py-3 px-4">Grade</th>
+                    <th
+                        class="text-left py-3 px-4 cursor-pointer hover:text-lavender"
+                        data-sort="title"
+                    >
+                        Question
+                        <span class="sort-indicator"></span>
+                    </th>
+                    <th
+                        class="text-left py-3 px-4 cursor-pointer hover:text-lavender"
+                        data-sort="category"
+                    >
+                        Category
+                        <span class="sort-indicator"></span>
+                    </th>
+                    <th
+                        class="text-center py-3 px-4 cursor-pointer hover:text-lavender"
+                        data-sort="traders"
+                    >
+                        Traders
+                        <span class="sort-indicator"></span>
+                    </th>
+                    <th
+                        class="text-center py-3 px-4 cursor-pointer hover:text-lavender"
+                        data-sort="volume"
+                    >
+                        Volume
+                        <span class="sort-indicator"></span>
+                    </th>
+                    <th
+                        class="text-center py-3 px-4 cursor-pointer hover:text-lavender"
+                        data-sort="duration"
+                    >
+                        Duration
+                        <span class="sort-indicator"></span>
+                    </th>
+                    <th
+                        class="text-center py-3 px-4 cursor-pointer hover:text-lavender"
+                        data-sort="grade"
+                    >
+                        Grade
+                        <span class="sort-indicator"></span>
+                    </th>
                 </tr>
             </thead>
             <tbody id="questionsTable">
@@ -49,6 +88,10 @@ const questions = (await fetch(
                             class="border-b border-surface1 hover:bg-surface1/50 question-row"
                             data-title={question.title.toLowerCase()}
                             data-category={question.category_slug}
+                            data-traders={question.total_traders}
+                            data-volume={question.total_volume}
+                            data-duration={question.total_duration}
+                            data-grade={question.overall_grade}
                         >
                             <td class="py-3 px-4 pr-6">
                                 <a
@@ -90,13 +133,120 @@ const questions = (await fetch(
     </div>
 </Base>
 
+<style>
+    .sort-indicator::after {
+        content: "";
+        margin-left: 2px;
+        opacity: 0.5;
+    }
+    th[data-sort-dir="asc"] .sort-indicator::after {
+        content: "↑";
+        opacity: 1;
+    }
+    th[data-sort-dir="desc"] .sort-indicator::after {
+        content: "↓";
+        opacity: 1;
+    }
+</style>
+
 <script>
-    // Client-side search functionality
+    // Client-side search and sort functionality
     const searchInput = document.getElementById(
         "searchInput",
     ) as HTMLInputElement;
     const questionRows = document.querySelectorAll(".question-row");
     const noResults = document.getElementById("noResults");
+    const headers = document.querySelectorAll("th[data-sort]");
+
+    let currentSort = {
+        column: "volume",
+        direction: "desc",
+    };
+
+    // Initialize from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialSearch = urlParams.get("q") || "";
+    const initialSort = urlParams.get("sort") || "volume";
+    const initialDir = urlParams.get("dir") || "desc";
+
+    searchInput.value = initialSearch;
+    currentSort = { column: initialSort, direction: initialDir };
+
+    function updateUrl() {
+        const params = new URLSearchParams();
+        if (searchInput.value) params.set("q", searchInput.value);
+        params.set("sort", currentSort.column);
+        params.set("dir", currentSort.direction);
+        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        window.history.replaceState({}, "", newUrl);
+    }
+
+    function sortQuestions() {
+        const tbody = document.getElementById("questionsTable");
+        const rows = Array.from(questionRows);
+
+        // Update sort indicators
+        headers.forEach((header) => {
+            const sortCol = header.getAttribute("data-sort");
+            if (sortCol === currentSort.column) {
+                header.setAttribute("data-sort-dir", currentSort.direction);
+            } else {
+                header.removeAttribute("data-sort-dir");
+            }
+        });
+
+        // Sort rows
+        rows.sort((a, b) => {
+            const aVal = a.getAttribute(`data-${currentSort.column}`);
+            const bVal = b.getAttribute(`data-${currentSort.column}`);
+
+            if (
+                currentSort.column === "title" ||
+                currentSort.column === "category"
+            ) {
+                return currentSort.direction === "asc"
+                    ? aVal!.localeCompare(bVal!)
+                    : bVal!.localeCompare(aVal!);
+            } else {
+                const aNum =
+                    currentSort.column === "grade"
+                        ? gradeToNumber(aVal!)
+                        : Number(aVal);
+                const bNum =
+                    currentSort.column === "grade"
+                        ? gradeToNumber(bVal!)
+                        : Number(bVal);
+                return currentSort.direction === "asc"
+                    ? aNum - bNum
+                    : bNum - aNum;
+            }
+        });
+
+        // Reorder DOM
+        rows.forEach((row) => tbody!.appendChild(row));
+    }
+
+    function gradeToNumber(grade: string): number {
+        const grades = [
+            "-",
+            "F-",
+            "F",
+            "F+",
+            "D-",
+            "D",
+            "D+",
+            "C-",
+            "C",
+            "C+",
+            "B-",
+            "B",
+            "B+",
+            "A-",
+            "A",
+            "A+",
+        ];
+        return grades.indexOf(grade);
+    }
 
     function filterQuestions() {
         const searchTerm = searchInput.value.toLowerCase();
@@ -114,22 +264,27 @@ const questions = (await fetch(
         }
     }
 
-    searchInput.addEventListener("input", filterQuestions);
-
-    // Preserve search state on navigation
-    const urlParams = new URLSearchParams(window.location.search);
-    const initialSearch = urlParams.get("q");
-    if (initialSearch) {
-        searchInput.value = initialSearch;
-        filterQuestions();
-    }
-
-    // Update URL when searching
-    searchInput.addEventListener("input", () => {
-        const searchTerm = searchInput.value;
-        const newUrl = searchTerm
-            ? `${window.location.pathname}?q=${encodeURIComponent(searchTerm)}`
-            : window.location.pathname;
-        window.history.replaceState({}, "", newUrl);
+    // Event Listeners
+    headers.forEach((header) => {
+        header.addEventListener("click", () => {
+            const column = header.getAttribute("data-sort")!;
+            if (column === currentSort.column) {
+                currentSort.direction =
+                    currentSort.direction === "asc" ? "desc" : "asc";
+            } else {
+                currentSort = { column, direction: "desc" };
+            }
+            sortQuestions();
+            updateUrl();
+        });
     });
+
+    searchInput.addEventListener("input", () => {
+        filterQuestions();
+        updateUrl();
+    });
+
+    // Initial sort and filter
+    sortQuestions();
+    filterQuestions();
 </script>
