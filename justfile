@@ -27,6 +27,13 @@ db-logs:
     docker compose logs -f
 
 # Get the database schema
+db-run-sql file:
+    docker compose exec -T postgres psql \
+    --username=$POSTGRES_USER \
+    --dbname=$POSTGRES_DB \
+    < {{file}}
+
+# Get the database schema
 db-schema:
     docker compose exec postgres pg_dump \
     --username=$POSTGRES_USER \

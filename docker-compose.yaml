@@ -10,7 +10,7 @@ services:
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -22,7 +22,7 @@ services:
     container_name: postgrest
     restart: always
     environment:
-      PGRST_DB_URI: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}
+      PGRST_DB_URI: postgres://${PGRST_USER}:${PGRST_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}
       PGRST_DB_SCHEMA: ${PGRST_DB_SCHEMA}
       PGRST_DB_ANON_ROLE: ${PGRST_DB_ANON_ROLE}
       PGRST_JWT_SECRET: ${PGRST_JWT_SECRET:?error}

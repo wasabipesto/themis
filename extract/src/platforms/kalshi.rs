@@ -59,6 +59,8 @@ pub enum KalshiMarketStrikeType {
     /// A mapping from expiration values to settlement values of the YES/LONG side will be in "functional_strike".
     /// This is currently not used.
     Functional,
+    /// A key value map from relationship -> structured target IDs. Metadata for these structured targets can be fetched via the /structured_targets endpoints.
+    Structured,
     /// It will be one or more non-numerical values. For YES outcome the expiration values should be equal to the values in "custom_strike".
     Custom,
 }
