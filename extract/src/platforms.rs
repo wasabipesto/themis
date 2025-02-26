@@ -1,20 +1,18 @@
 use anyhow::{Context, Result};
+use chrono::{DateTime, Utc};
 use clap::ValueEnum;
+use serde::Serialize;
 use std::fmt;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
+pub mod helpers;
 pub mod kalshi;
-use kalshi::KalshiData;
 pub mod manifold;
-use manifold::ManifoldData;
 pub mod metaculus;
-use metaculus::MetaculusData;
 pub mod polymarket;
-use polymarket::PolymarketData;
 
-/// All possible platforms that are supported by this application.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, ValueEnum)]
 pub enum Platform {
     Kalshi,
@@ -23,16 +21,58 @@ pub enum Platform {
     Polymarket,
 }
 
-/// Container for different types of platform data as deserialized from file.
+#[derive(Debug, Serialize, Clone)]
+pub struct MarketAndProbs {
+    pub market: StandardMarket,
+    pub daily_probabilities: Vec<DailyProbability>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct StandardMarket {
+    pub title: String,
+    pub platform_slug: String,
+    pub platform_name: String,
+    pub question_id: Option<u32>,
+    pub question_invert: bool,
+    pub question_dismissed: u32,
+    pub url: String,
+    pub open_datetime: DateTime<Utc>,
+    pub close_datetime: DateTime<Utc>,
+    pub traders_count: Option<u32>,
+    pub volume_usd: Option<f32>,
+    pub duration_days: u32,
+    pub category: String,
+    pub prob_at_midpoint: f32,
+    pub prob_time_avg: f32,
+    pub resolution: f32,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct DailyProbability {
+    /// The linked Market ID is only None for a short period during processing.
+    /// We set this after submitting the market but before submitting the probs.
+    pub market_id: Option<u32>,
+    pub platform_slug: String,
+    pub date: DateTime<Utc>,
+    pub prob: f32,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct ProbSegment {
+    pub start: DateTime<Utc>,
+    pub end: DateTime<Utc>,
+    pub prob: f32,
+}
+
+#[derive(Clone)]
 pub enum PlatformData {
-    Kalshi(KalshiData),
-    Manifold(ManifoldData),
-    Metaculus(MetaculusData),
-    Polymarket(PolymarketData),
+    Kalshi(kalshi::KalshiData),
+    Manifold(manifold::ManifoldData),
+    Metaculus(metaculus::MetaculusData),
+    Polymarket(polymarket::PolymarketData),
 }
 
 impl fmt::Display for Platform {
-    /// Allow formatting as a string.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Platform::Kalshi => write!(f, "Kalshi"),
@@ -44,7 +84,6 @@ impl fmt::Display for Platform {
 }
 
 impl Platform {
-    /// Returns a list of all supported platform types.
     pub fn all() -> Vec<Platform> {
         vec![
             Platform::Kalshi,
@@ -53,76 +92,54 @@ impl Platform {
             Platform::Polymarket,
         ]
     }
-}
 
-pub trait PlatformHandler {
-    /// Locate, read, and deserialize the data file.
-    fn load_data(&self, base_dir: &Path) -> Result<Vec<PlatformData>>;
-}
-
-impl PlatformHandler for Platform {
-    fn load_data(&self, base_dir: &Path) -> Result<Vec<PlatformData>> {
+    pub fn deserialize_line(&self, line: &str) -> Result<PlatformData> {
         match self {
-            Platform::Kalshi => load_jsonl::<KalshiData, _>(base_dir, *self, PlatformData::Kalshi),
-            Platform::Manifold => {
-                load_jsonl::<ManifoldData, _>(base_dir, *self, PlatformData::Manifold)
-            }
-            Platform::Metaculus => {
-                load_jsonl::<MetaculusData, _>(base_dir, *self, PlatformData::Metaculus)
-            }
-            Platform::Polymarket => {
-                load_jsonl::<PolymarketData, _>(base_dir, *self, PlatformData::Polymarket)
-            }
-        }
-    }
-}
-
-/// Fetch the JSON file then deserialize each line with the appropriate platform's data scructure.
-fn load_jsonl<T, F>(base_dir: &Path, platform: Platform, wrap: F) -> Result<Vec<PlatformData>>
-where
-    T: serde::de::DeserializeOwned,
-    F: Fn(T) -> PlatformData,
-{
-    // build the file path
-    let file_name = format!("{}-data.jsonl", platform).to_lowercase();
-    let data_file_path: PathBuf = base_dir.join(file_name);
-
-    // get the file and open it
-    let file = File::open(&data_file_path)
-        .with_context(|| format!("Failed to open file: {}", data_file_path.display()))?;
-    let reader = BufReader::new(file);
-    let mut items = Vec::new();
-
-    // iterate over each line of the file
-    for (line_number, line) in reader.lines().enumerate() {
-        let line = line.with_context(|| {
-            format!(
-                "Failed to read line {} in file: {}",
-                line_number + 1,
-                data_file_path.display()
-            )
-        })?;
-
-        // deserialize and check result
-        match serde_json::from_str::<T>(&line) {
-            Ok(parsed) => items.push(wrap(parsed)),
-            Err(err) => {
-                let trim_chars = 1000;
-                let trimmed_line = if line.len() > trim_chars {
-                    format!("{}...", &line[..trim_chars])
-                } else {
-                    line.clone()
-                };
-                log::error!(
-                    "Failed to deserialize JSON at line {} in file {}: {} \nProblematic line: {}",
-                    line_number + 1,
-                    data_file_path.display(),
-                    err,
-                    trimmed_line
-                );
-            }
+            Platform::Kalshi => Ok(PlatformData::Kalshi(serde_json::from_str(line)?)),
+            Platform::Manifold => Ok(PlatformData::Manifold(serde_json::from_str(line)?)),
+            Platform::Metaculus => Ok(PlatformData::Metaculus(serde_json::from_str(line)?)),
+            Platform::Polymarket => Ok(PlatformData::Polymarket(serde_json::from_str(line)?)),
         }
     }
 
-    Ok(items)
+    pub fn load_data(&self, base_dir: &Path) -> Result<Vec<PlatformData>> {
+        let file_name = format!("{}-data.jsonl", self).to_lowercase();
+        let data_file_path = base_dir.join(file_name);
+
+        let file = File::open(&data_file_path)
+            .with_context(|| format!("Failed to open file: {}", data_file_path.display()))?;
+        let reader = BufReader::new(file);
+
+        Ok(reader
+            .lines()
+            .enumerate()
+            .filter_map(move |(line_number, line)| match line {
+                Ok(line_content) => match self.deserialize_line(&line_content) {
+                    Ok(item) => Some(item),
+                    Err(err) => {
+                        log::error!("Failed to deserialize line {}: {}", line_number + 1, err);
+                        None
+                    }
+                },
+                Err(err) => {
+                    log::error!("Failed to read line {}: {}", line_number + 1, err);
+                    None
+                }
+            })
+            .collect())
+    }
+
+    pub fn standardize(&self, input_unsorted: PlatformData) -> Result<Vec<MarketAndProbs>> {
+        let rovm = match input_unsorted {
+            PlatformData::Kalshi(input) => kalshi::standardize(&input)?,
+            PlatformData::Manifold(input) => manifold::standardize(&input)?,
+            PlatformData::Metaculus(input) => metaculus::standardize(&input)?,
+            PlatformData::Polymarket(input) => polymarket::standardize(&input)?,
+        };
+        // Convert None into empty vec
+        match rovm {
+            Some(market_vec) => Ok(market_vec),
+            None => Ok(Vec::new()),
+        }
+    }
 }

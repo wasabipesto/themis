@@ -1,9 +1,12 @@
+use anyhow::{Context, Result};
 use chrono::serde::ts_milliseconds;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
+use super::{DailyProbability, MarketAndProbs, StandardMarket};
+
 /// This is the container format we used to save items to disk earlier.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct PolymarketData {
     /// Market ID used for lookups.
     pub id: String,
@@ -17,7 +20,7 @@ pub struct PolymarketData {
 
 /// Data on each token part of the market.
 /// This is where we get resolution data.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct PolymarketToken {
     /// The unique ID for this token.
     /// TODO: Verify there will always be two tokens per market.
@@ -35,7 +38,7 @@ pub struct PolymarketToken {
 }
 
 /// Values returned from the `/market` endpoint.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct PolymarketMarket {
     /// The unique ID of this market.
     pub question_id: String,
@@ -86,7 +89,7 @@ pub struct PolymarketMarket {
 }
 
 /// Values returned from the `/prices-history` endpoint.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct PolymarketPricePoint {
     /// Timestamp of provided probability point.
     /// TODO: Verify these are evenly-spaced in time.
@@ -95,4 +98,14 @@ pub struct PolymarketPricePoint {
     pub t: DateTime<Utc>,
     /// Probability at the given timestamp.
     pub p: f32,
+}
+
+/// Convert data pulled from the API into a standardized market item.
+/// Returns Error if there were any actual problems with the processing.
+/// Returns None if the market was invalid in an expected way.
+/// Otherwise, returns a list of markets with probabilities.
+/// Note: This is not a 1:1 conversion because some inputs contain multiple
+/// discrete markets, and each of those have their own histories.
+pub fn standardize(_input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>> {
+    todo!();
 }

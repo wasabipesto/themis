@@ -1,9 +1,13 @@
+use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::collections::HashMap;
 
+use super::helpers;
+use super::{DailyProbability, MarketAndProbs, ProbSegment, StandardMarket};
+
 /// This is the container format we used to save items to disk earlier.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct KalshiData {
     /// Market ID used for lookups.
     /// For Kalshi, this is `ticker`.
@@ -17,7 +21,7 @@ pub struct KalshiData {
 }
 
 /// What kind of market this is.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum KalshiMarketType {
     /// Binary is the only market type at this time.
@@ -26,7 +30,7 @@ pub enum KalshiMarketType {
 }
 
 /// What stage of the market lifecycle this is in.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum KalshiMarketStatus {
     Initialized,
@@ -42,7 +46,7 @@ pub enum KalshiMarketStatus {
 
 /// Details about how the strikes are configured.
 /// Not particularly relevant unless we want to estimate a numerical estimation from these.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum KalshiMarketStrikeType {
     /// For YES outcome the expiration value should be greater than "floor_strike".
@@ -66,7 +70,7 @@ pub enum KalshiMarketStrikeType {
 }
 
 /// Used for multiple types. Can be Yes, No, or empty string (Blank).
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum YesNoBlank {
     Yes,
@@ -77,7 +81,7 @@ pub enum YesNoBlank {
 
 /// Values returned from the `/markets` endpoint.
 /// https://trading-api.readme.io/reference/getmarkets
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct KalshiMarket {
     /// The unique ID of the individual binary market.
     pub ticker: String,
@@ -155,7 +159,7 @@ pub struct KalshiMarket {
 
 /// Values returned from the `/trades` endpoint.
 /// https://trading-api.readme.io/reference/gettrades
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct KalshiHistoryItem {
     /// Corresponds to market ticker.
     pub ticker: String,
@@ -174,4 +178,66 @@ pub struct KalshiHistoryItem {
     /// opposite side. If the user was buying YES, then the taker will be on
     /// the NO side. Here, `taker_side` NO means the user bought YES shares.
     pub taker_side: YesNoBlank,
+}
+
+/// Convert data pulled from the API into a standardized market item.
+/// Returns Error if there were any actual problems with the processing.
+/// Returns None if the market was invalid in an expected way.
+/// Otherwise, returns a list of markets with probabilities.
+/// Note: This is not a 1:1 conversion because some inputs contain multiple
+/// discrete markets, and each of those have their own histories.
+pub fn standardize(input: &KalshiData) -> Result<Option<Vec<MarketAndProbs>>> {
+    // Only process finalized markets
+    match input.market.status {
+        KalshiMarketStatus::Finalized => {}
+        _ => return Ok(None),
+    }
+
+    // Convert based on market type
+    // (currently only binary markets)
+    match input.market.market_type {
+        KalshiMarketType::Binary => {
+            let start = input.market.open_time;
+            let end = input.market.close_time;
+            let probs = build_prob_segments(&input.history);
+            let market = StandardMarket {
+                title: input.market.title.clone(),
+                platform_slug: "kalshi".to_string(),
+                platform_name: "Kalshi".to_string(),
+                question_id: None,
+                question_invert: false,
+                question_dismissed: 0,
+                url: get_url(&input.market),
+                open_datetime: input.market.open_time,
+                close_datetime: input.market.close_time,
+                traders_count: None, // Not available in API
+                volume_usd: Some(input.market.volume),
+                duration_days: helpers::get_market_duration(start, end),
+                category: get_category(&input.market),
+                prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end),
+                prob_time_avg: helpers::get_prob_time_avg(&probs, start, end),
+                resolution: match input.market.result {
+                    YesNoBlank::Yes => 1.0,
+                    YesNoBlank::No => 0.0,
+                    YesNoBlank::Blank => return Ok(None),
+                },
+            };
+            Ok(Some(vec![MarketAndProbs {
+                market,
+                daily_probabilities: helpers::get_daily_probabilities(&probs),
+            }]))
+        }
+    }
+}
+
+fn build_prob_segments(_history: &Vec<KalshiHistoryItem>) -> Vec<ProbSegment> {
+    todo!();
+}
+
+fn get_url(_market: &KalshiMarket) -> String {
+    todo!();
+}
+
+fn get_category(_market: &KalshiMarket) -> String {
+    todo!();
 }

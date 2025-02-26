@@ -1,9 +1,12 @@
+use anyhow::{Context, Result};
 use clap::Parser;
 use log::{debug, info};
+use reqwest::blocking::Client;
 use std::env;
 use std::path::PathBuf;
+use std::time::Duration;
 
-use themis_extract::platforms::{Platform, PlatformHandler};
+use themis_extract::platforms::{MarketAndProbs, Platform};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about)]
@@ -19,9 +22,17 @@ struct Args {
     /// Set the log level (e.g., error, warn, info, debug, trace)
     #[arg(short, long, default_value = "info")]
     log_level: String,
+
+    /// Only check the schema, do not convert or upload to database.
+    #[arg(short, long)]
+    schema_only: bool,
+
+    /// API endpoint URL
+    #[arg(short, long, default_value = "http://localhost:8000/api")]
+    api_url: String,
 }
 
-fn main() {
+fn main() -> Result<()> {
     // get command line args
     let args = Args::parse();
 
@@ -30,7 +41,6 @@ fn main() {
     match log_level.as_str() {
         "error" | "warn" | "info" | "debug" | "trace" => env::set_var("RUST_LOG", log_level),
         _ => {
-            // invalid, reset to 'info' as a default
             println!("Invalid log level, resetting to INFO.");
             env::set_var("RUST_LOG", "info")
         }
@@ -46,11 +56,54 @@ fn main() {
     };
     debug!("Platforms to process: {:?}", platforms);
 
-    info!("Loading data from file.");
+    // Initialize HTTP client
+    let client = Client::builder()
+        .timeout(Duration::from_secs(30))
+        .build()
+        .context("Failed to create HTTP client")?;
+
+    info!("Processing data for each platform");
     for platform in platforms {
-        let items = platform
-            .load_data(&args.directory)
-            .expect("Failed to load platform data");
-        info!("{platform}: {} items loaded.", items.len());
+        let mut items_processed = 0;
+
+        for line in platform.load_data(&args.directory)? {
+            if !args.schema_only {
+                let standardized_markets = platform.standardize(line)?;
+                for market_data in standardized_markets {
+                    debug!("Uploading item {} for {}", items_processed, platform);
+                    upload_item(&client, &args.api_url, &market_data)?;
+                }
+            }
+            items_processed += 1;
+        }
+
+        info!("{}: {} items processed", platform, items_processed);
     }
+
+    Ok(())
+}
+
+fn upload_item(client: &Client, api_url: &str, market_data: &MarketAndProbs) -> Result<()> {
+    // Upload market
+    debug!("Uploading market: {}", market_data.market.title);
+    client
+        .post(format!("{}/markets", api_url))
+        .json(&market_data.market)
+        .send()
+        .context("Failed to upload market")?;
+    // TODO: Get returned ID, set linked market prob
+    // Or ideally submit them all at once and have PG link them
+
+    // Upload probabilities
+    debug!(
+        "Uploading {} probabilities for market",
+        market_data.daily_probabilities.len()
+    );
+    client
+        .post(format!("{}/probabilities", api_url))
+        .json(&market_data.daily_probabilities)
+        .send()
+        .context("Failed to upload probabilities")?;
+
+    Ok(())
 }

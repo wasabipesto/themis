@@ -1,8 +1,11 @@
+use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
+use super::{DailyProbability, MarketAndProbs, StandardMarket};
+
 /// This is the container format we used to save items to disk earlier.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct MetaculusData {
     /// Market ID used for lookups.
     pub id: String,
@@ -18,7 +21,7 @@ pub struct MetaculusData {
 /// A point within the aggregation history.
 /// Aggregation methods are internal, we don't get detailed data.
 /// TODO: Look into ForecastDataCSV in the future
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct MetaculusAggregationHistoryPoint {
     /// Start time of history bucket.
     /// Time is in milliseconds since epoch but formatted as foating-point.
@@ -42,7 +45,7 @@ pub struct MetaculusAggregationHistoryPoint {
 
 /// Within each aggregation series, get the history as a series of buckets or
 /// just the latest snapshot. Also includes score data which we don't care about.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct MetaculusAggregationTypes {
     /// Aggregation of forecast data over time.
     #[serde(default)] // default to empty vec
@@ -54,7 +57,7 @@ pub struct MetaculusAggregationTypes {
 
 /// The different aggregation types that Metaculus uses.
 /// https://www.metaculus.com/notebooks/28595/104-update-updates-to-metaculus-api/
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct MetaculusAggregationSeries {
     /// The official Metaculus prediction.
     pub metaculus_prediction: MetaculusAggregationTypes,
@@ -67,7 +70,7 @@ pub struct MetaculusAggregationSeries {
 }
 
 /// Info on each tag applied to the question.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct MetaculusTag {
     /// The tag's ID.
     pub id: u32,
@@ -79,7 +82,7 @@ pub struct MetaculusTag {
 
 /// Some additional information.
 /// This object has a lot of redundant information.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct MetaculusQuestion {
     /// Question description.
     /// Can be multiple lines, separated with "\n\n".
@@ -109,7 +112,7 @@ pub struct MetaculusQuestion {
 }
 
 /// What kind of market this is.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum MetaculusType {
     /// Typical binary market. Predictions are single points or distributions.
@@ -119,7 +122,7 @@ pub enum MetaculusType {
 }
 
 /// Info on each project associated with the question.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct MetaculusProjects {
     /// The project's ID.
     pub id: u32,
@@ -128,7 +131,7 @@ pub struct MetaculusProjects {
 }
 
 /// Info on each project associated with the question.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct MetaculusProjectSeries {
     /// TODO: Unknown.
     pub default_project: MetaculusProjects,
@@ -141,7 +144,7 @@ pub struct MetaculusProjectSeries {
 }
 
 /// What stage of the market lifecycle this is in.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum MetaculusStatus {
     Approved,
@@ -155,7 +158,7 @@ pub enum MetaculusStatus {
 
 /// Resolution states for a question.
 /// Essentially Yes, No, or Cancel.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum MetaculusResolution {
     /// Resolved positively.
@@ -170,7 +173,7 @@ pub enum MetaculusResolution {
 
 /// Values returned from the `/questions/{id}` endpoint.
 /// https://www.metaculus.com/api/
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct MetaculusInfo {
     /// The unique ID of this question.
     /// Used to built the site URL: https://www.metaculus.com/questions/{id}
@@ -222,4 +225,14 @@ pub struct MetaculusInfo {
     pub resolution_set_time: Option<DateTime<Utc>>,
     /// If resolved, the value of the resolution.
     pub resolution: Option<MetaculusResolution>,
+}
+
+/// Convert data pulled from the API into a standardized market item.
+/// Returns Error if there were any actual problems with the processing.
+/// Returns None if the market was invalid in an expected way.
+/// Otherwise, returns a list of markets with probabilities.
+/// Note: This is not a 1:1 conversion because some inputs contain multiple
+/// discrete markets, and each of those have their own histories.
+pub fn standardize(_input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>> {
+    todo!();
 }

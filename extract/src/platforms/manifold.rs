@@ -1,9 +1,12 @@
+use anyhow::{Context, Result};
 use chrono::serde::{ts_milliseconds, ts_milliseconds_option};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
+use super::{DailyProbability, MarketAndProbs, StandardMarket};
+
 /// This is the container format we used to save items to disk earlier.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct ManifoldData {
     /// Market ID used for lookups.
     pub id: String,
@@ -19,7 +22,7 @@ pub struct ManifoldData {
 }
 
 /// Yes or No, used for betting up or down in a few different places.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum YesNo {
     Yes,
@@ -27,7 +30,7 @@ pub enum YesNo {
 }
 
 /// The mechanism for automatic market-making (AMM).
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ManifoldMechanism {
     /// CPMM-1 is the mechanism for all binary markets.
@@ -45,7 +48,7 @@ pub enum ManifoldMechanism {
 }
 
 /// The axis for the market (binary, MC, numeric, etc.).
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ManifoldOutcomeType {
     /// Typical binary market.
@@ -67,7 +70,7 @@ pub enum ManifoldOutcomeType {
 }
 
 /// Which in-app currency the market uses.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ManifoldToken {
     /// Default, play-money.
@@ -77,14 +80,14 @@ pub enum ManifoldToken {
 }
 
 /// For multiple-choice markets, details on each answer.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ManifoldAnswer {
     pub id: String,
 }
 
 /// Values returned from the `/market` endpoint.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ManifoldMarket {
     /// The unique ID of this market.
@@ -173,7 +176,7 @@ pub struct ManifoldMarket {
 }
 
 /// Values returned from the `/bets` endpoint.
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ManifoldBet {
     /// The unique ID of this bet.
@@ -229,4 +232,14 @@ pub struct ManifoldBet {
     /// True if this trade caused the user to own simultaneous shares in
     /// YES and NO, automatically redeeming them for cash.
     pub is_redemption: Option<bool>,
+}
+
+/// Convert data pulled from the API into a standardized market item.
+/// Returns Error if there were any actual problems with the processing.
+/// Returns None if the market was invalid in an expected way.
+/// Otherwise, returns a list of markets with probabilities.
+/// Note: This is not a 1:1 conversion because some inputs contain multiple
+/// discrete markets, and each of those have their own histories.
+pub fn standardize(_input: &ManifoldData) -> Result<Option<Vec<MarketAndProbs>>> {
+    todo!();
 }
