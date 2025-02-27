@@ -200,6 +200,8 @@ pub fn standardize(input: &KalshiData) -> Result<Option<Vec<MarketAndProbs>>> {
             let start = input.market.open_time;
             let end = input.market.close_time;
             let probs = build_prob_segments(&input.history);
+            helpers::validate_prob_segments(&probs)?;
+
             let market = StandardMarket {
                 title: input.market.title.clone(),
                 platform_slug: "kalshi".to_string(),
@@ -212,10 +214,10 @@ pub fn standardize(input: &KalshiData) -> Result<Option<Vec<MarketAndProbs>>> {
                 close_datetime: input.market.close_time,
                 traders_count: None, // Not available in API
                 volume_usd: Some(input.market.volume),
-                duration_days: helpers::get_market_duration(start, end),
+                duration_days: helpers::get_market_duration(start, end)?,
                 category: get_category(&input.market),
-                prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end),
-                prob_time_avg: helpers::get_prob_time_avg(&probs, start, end),
+                prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
+                prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)?,
                 resolution: match input.market.result {
                     YesNoBlank::Yes => 1.0,
                     YesNoBlank::No => 0.0,
@@ -224,13 +226,13 @@ pub fn standardize(input: &KalshiData) -> Result<Option<Vec<MarketAndProbs>>> {
             };
             Ok(Some(vec![MarketAndProbs {
                 market,
-                daily_probabilities: helpers::get_daily_probabilities(&probs),
+                daily_probabilities: helpers::get_daily_probabilities(&probs)?,
             }]))
         }
     }
 }
 
-fn build_prob_segments(_history: &Vec<KalshiHistoryItem>) -> Vec<ProbSegment> {
+fn build_prob_segments(_history: &[KalshiHistoryItem]) -> Vec<ProbSegment> {
     todo!();
 }
 

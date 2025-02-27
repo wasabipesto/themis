@@ -24,7 +24,7 @@ pub enum Platform {
 #[derive(Debug, Serialize, Clone)]
 pub struct MarketAndProbs {
     pub market: StandardMarket,
-    pub daily_probabilities: Vec<DailyProbability>,
+    pub daily_probabilities: Vec<DailyProbabilityPartial>,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -49,10 +49,16 @@ pub struct StandardMarket {
 
 #[derive(Debug, Serialize, Clone)]
 pub struct DailyProbability {
-    /// The linked Market ID is only None for a short period during processing.
-    /// We set this after submitting the market but before submitting the probs.
     pub market_id: Option<u32>,
     pub platform_slug: String,
+    pub date: DateTime<Utc>,
+    pub prob: f32,
+}
+
+/// We don't have all of the information while building these
+/// points so this version is a partially-constructed object.
+#[derive(Debug, Serialize, Clone)]
+pub struct DailyProbabilityPartial {
     pub date: DateTime<Utc>,
     pub prob: f32,
 }
