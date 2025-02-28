@@ -14,6 +14,11 @@ download *args:
 extract *args:
     cargo run -r -- {{args}}
 
+# Run extract tests
+[working-directory: 'extract']
+test-extract *args:
+    cargo test -- {{args}}
+
 # Start the database containers
 db-up:
     docker compose up -d
