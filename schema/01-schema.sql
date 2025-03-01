@@ -64,7 +64,7 @@ CREATE TABLE markets (
     traders_count INTEGER,
     volume_usd DECIMAL,
     duration_days INTEGER NOT NULL,
-    category TEXT DEFAULT 'None' NOT NULL,
+    category TEXT,
     prob_at_midpoint DECIMAL NOT NULL,
     prob_time_avg DECIMAL NOT NULL,
     resolution DECIMAL NOT NULL,

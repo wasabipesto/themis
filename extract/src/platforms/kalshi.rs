@@ -255,21 +255,26 @@ pub fn standardize(input: &KalshiData) -> Result<Option<Vec<MarketAndProbs>>> {
 /// Converts Kalshi events into standard probability segments.
 /// For brevity we will ignore any event that does not change the price or has a duration less than one second.
 fn build_prob_segments(
-    history: &[KalshiHistoryItem],
+    raw_history: &[KalshiHistoryItem],
     market_end: &DateTime<Utc>,
 ) -> Vec<ProbSegment> {
+    // Sort the history by time
+    // This is actually quite fast, basically no performance impact on the grand scheme
+    let mut history = raw_history.to_vec();
+    history.sort_by_key(|item| item.created_time);
+
     let mut segments: Vec<ProbSegment> = Vec::new();
 
     for (i, event) in history.iter().enumerate() {
-        // The start of the event will equal the end of the previous one unless we skipped some.
+        // The start of the segment will equal the end of the previous one unless we skipped some.
         // Err on the side of using the previous segment's end timestamp unless it's the first one.
         let start = match segments.last() {
             Some(previous_segment) => previous_segment.end,
             None => event.created_time,
         };
 
-        // The duration of the event is either the time between this event and the next or
-        // (for the last event) the time between this event and the end of the market.
+        // The end of the segment will be the beginning of the next event or
+        // (for the last event) the end of the market.
         let end = if i < history.len() - 1 {
             history[i + 1].created_time
         } else {
@@ -321,8 +326,8 @@ fn get_url(market_ticker: &str) -> Result<String> {
 }
 
 /// TODO: Get the series data and pull category.
-/// So categories used to be in the market item but they moved to the series level.
+/// Categories used to be in the market item but they moved to the series level.
 /// It's not necessary but I'd like to have it for easy grouping and client-side charts later.
-fn get_category(_market: &KalshiMarket) -> String {
-    "TODO".into()
+fn get_category(_market: &KalshiMarket) -> Option<String> {
+    None
 }

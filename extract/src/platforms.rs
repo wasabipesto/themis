@@ -47,7 +47,7 @@ pub struct StandardMarket {
     pub traders_count: Option<u32>,
     pub volume_usd: Option<f32>,
     pub duration_days: u32,
-    pub category: String,
+    pub category: Option<String>,
     pub prob_at_midpoint: f32,
     pub prob_time_avg: f32,
     pub resolution: f32,
