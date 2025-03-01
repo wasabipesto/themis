@@ -12,6 +12,8 @@ use std::time::Duration;
 
 use themis_extract::platforms::{MarketAndProbs, Platform};
 
+const BATCH_SIZE: usize = 10000;
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about)]
 struct Args {
@@ -79,95 +81,105 @@ fn main() -> Result<()> {
     for platform in platforms {
         info!("{platform}: Loading data from disk.");
         let lines = platform.load_data(&args.directory)?;
+        if args.schema_only {
+            info!(
+                "{platform}: Data loaded. All {} items deserialized correctly.",
+                lines.len()
+            );
+            continue;
+        }
+
         info!(
             "{platform}: Data loaded. Extracting {} items...",
             lines.len()
         );
+        let mut market_batch: Vec<MarketAndProbs> = Vec::with_capacity(BATCH_SIZE);
+        for line in lines {
+            let standardized_markets = platform.standardize(line)?;
+            if !args.offline {
+                for market_data in standardized_markets {
+                    market_batch.push(market_data);
 
-        if !args.schema_only {
-            for line in lines {
-                let standardized_markets = platform.standardize(line)?;
-                if !args.offline {
-                    for market_data in standardized_markets {
-                        upload_item(
+                    // When we reach batch size, upload and clear the batch
+                    if market_batch.len() >= BATCH_SIZE {
+                        upload_batch(
                             &client,
                             &postgrest_api_base,
                             &postgrest_api_key,
-                            &market_data,
+                            &market_batch,
                         )?;
+                        market_batch.clear();
                     }
                 }
             }
         }
-
+        // Upload any remaining items in the final batch
+        if !market_batch.is_empty() && !args.offline {
+            upload_batch(
+                &client,
+                &postgrest_api_base,
+                &postgrest_api_key,
+                &market_batch,
+            )?;
+        }
         info!("{platform}: All items processed.");
     }
 
     Ok(())
 }
 
-/// TODO: This needs some work. Upsert correctly? Send probs with market? Batch uploads?
-/// https://docs.postgrest.org/en/latest/references/api/tables_views.html#prefer-resolution
-fn upload_item(
+/// Uploads a batch of standardized markets and their associated probability history.
+/// PostgREST handles the insert/update logic. See docs here:
+///   https://docs.postgrest.org/en/latest/references/api/tables_views.html#prefer-resolution
+fn upload_batch(
     client: &Client,
     postgrest_api_base: &str,
     postgrest_api_key: &str,
-    market_data: &MarketAndProbs,
+    market_batch: &[MarketAndProbs],
 ) -> Result<()> {
-    // Upload market
-    debug!("Uploading market: {}", market_data.market.title);
+    // Upload markets batch
+    debug!("Uploading batch of {} markets", market_batch.len());
+    let markets: Vec<_> = market_batch.iter().map(|m| &m.market).collect();
     let market_response = client
         .post(format!("{}/markets", postgrest_api_base))
         .bearer_auth(postgrest_api_key)
         .header("Prefer", "resolution=merge-duplicates")
         .header("On-Conflict-Update", "*")
-        .json(&market_data.market)
+        .json(&markets)
         .send()
-        .context("Failed to send market upload request")?;
+        .context("Failed to send markets batch upload request")?;
 
     let market_status = market_response.status();
-    let market_body = market_response
-        .text()
-        .context("Failed to read market response body")?;
-    debug!(
-        "Market upload response ({}): {}",
-        market_status, market_body
-    );
-
     if !market_status.is_success() {
+        let market_body = market_response.text()?;
         return Err(anyhow::anyhow!(
-            "Market upload failed with status {} and body: {}",
+            "Markets batch upload failed with status {} and body: {}",
             market_status,
             market_body
         ));
     }
 
-    // Upload probabilities
-    debug!(
-        "Uploading {} probabilities for market",
-        market_data.daily_probabilities.len()
-    );
+    // Upload probabilities batch
+    let all_probs: Vec<_> = market_batch
+        .iter()
+        .flat_map(|m| &m.daily_probabilities)
+        .collect();
+
+    debug!("Uploading batch of {} probabilities", all_probs.len());
     let probs_response = client
         .post(format!("{}/daily_probabilities", postgrest_api_base))
         .bearer_auth(postgrest_api_key)
         .header("Prefer", "resolution=merge-duplicates")
         .header("On-Conflict-Update", "*")
-        .json(&market_data.daily_probabilities)
+        .json(&all_probs)
         .send()
-        .context("Failed to send probabilities upload request")?;
+        .context("Failed to send probabilities batch upload request")?;
 
     let probs_status = probs_response.status();
-    let probs_body = probs_response
-        .text()
-        .context("Failed to read probabilities response body")?;
-    debug!(
-        "Probabilities upload response ({}): {}",
-        probs_status, probs_body
-    );
-
     if !probs_status.is_success() {
+        let probs_body = probs_response.text()?;
         return Err(anyhow::anyhow!(
-            "Probabilities upload failed with status {} and body: {}",
+            "Probabilities batch upload failed with status {} and body: {}",
             probs_status,
             probs_body
         ));
