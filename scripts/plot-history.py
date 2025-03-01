@@ -83,7 +83,8 @@ if result.returncode != 0:
     raise ValueError(f"Segment script failed: {result.stderr}")
 segment_data = json.loads(result.stdout)
 segment_df = pd.DataFrame(segment_data)
-segment_df['date'] = pd.to_datetime(segment_df['start'])
+segment_df['start'] = pd.to_datetime(segment_df['start'])
+#segment_df['end'] = pd.to_datetime(segment_df['end'])
 
 # %%
 # Create the plot
@@ -92,8 +93,8 @@ plt.figure(figsize=(12, 6))
 plt.step(source_df['date'], source_df['prob'], '-', color='red', where='post', alpha=0.5, label='Source Events')
 plt.scatter(source_df['date'], source_df['prob'], color='red', s=20, alpha=0.5)
 
-plt.step(segment_df['date'], segment_df['prob'], '-', color='orange', where='post', alpha=0.5, label='Segments')
-plt.scatter(segment_df['date'], segment_df['prob'], color='orange', s=20, alpha=0.5)
+plt.step(segment_df['start'], segment_df['prob'], '-', color='orange', where='post', alpha=0.5, label='Segments')
+plt.scatter(segment_df['start'], segment_df['prob'], color='orange', s=20, alpha=0.5)
 
 plt.step(pg_df['date'], pg_df['prob'], '-', color='blue', where='mid', alpha=0.5, label='Database')
 plt.scatter(pg_df['date'], pg_df['prob'], color='blue', s=20, alpha=0.5)

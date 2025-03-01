@@ -2,12 +2,14 @@
 //! Manifold API docs: https://docs.manifold.markets/api
 //! Source code: https://github.com/manifoldmarkets/manifold/tree/main/backend/api/src
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use chrono::serde::{ts_milliseconds, ts_milliseconds_option};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
-use super::MarketAndProbs;
+use super::{helpers, MarketAndProbs, ProbSegment, StandardMarket};
+
+const MANIFOLD_EXCHANGE_RATE: f32 = 100.0;
 
 /// This is the container format we used to save items to disk earlier.
 #[derive(Debug, Clone, Deserialize)]
@@ -244,6 +246,254 @@ pub struct ManifoldBet {
 /// Otherwise, returns a list of markets with probabilities.
 /// Note: This is not a 1:1 conversion because some inputs contain multiple
 /// discrete markets, and each of those have their own histories.
-pub fn standardize(_input: &ManifoldData) -> Result<Option<Vec<MarketAndProbs>>> {
-    todo!();
+pub fn standardize(input: &ManifoldData) -> Result<Option<Vec<MarketAndProbs>>> {
+    // Skip markets that have not resolved
+    if !input.full_market.is_resolved {
+        return Ok(None);
+    }
+    // Skip markets that were canceled
+    if input.full_market.resolution == Some("CANCEL".to_string()) {
+        return Ok(None);
+    }
+
+    // Convert based on market type
+    match input.full_market.outcome_type {
+        // Typical single binary market
+        ManifoldOutcomeType::Binary => {
+            // Get market ID. Construct from platform slug and ID within platform.
+            let platform_slug = "manifold".to_string();
+            let market_id = format!("{}:{}", platform_slug, input.full_market.id);
+
+            // Get probability segments. If there are none then skip.
+            let probs = build_prob_segments(&input.bets);
+            if probs.is_empty() {
+                return Ok(None);
+            }
+
+            // Validate probability segments and collate into daily prob segments.
+            helpers::validate_prob_segments(&probs)?;
+            let daily_probabilities =
+                helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)?;
+
+            // We only consider the market to be open while there are actual probabilities.
+            let start = probs.first().unwrap().start;
+            let end = probs.last().unwrap().end;
+
+            // Build standard market item.
+            let market = StandardMarket {
+                id: market_id,
+                title: input.full_market.question.clone(),
+                platform_slug,
+                platform_name: "Manifold".to_string(),
+                question_id: None,
+                question_invert: false,
+                question_dismissed: 0,
+                url: get_url(&input.full_market),
+                open_datetime: start,
+                close_datetime: end,
+                traders_count: Some(get_traders_count(&input.bets)),
+                volume_usd: Some(get_volume_usd(&input.full_market.volume)),
+                duration_days: helpers::get_market_duration(start, end)?,
+                category: get_category(&input.full_market.group_slugs),
+                prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
+                prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)?,
+                resolution: match get_resolution_value(&input.full_market)? {
+                    Some(res) => res,
+                    None => return Ok(None),
+                },
+            };
+            Ok(Some(vec![MarketAndProbs {
+                market,
+                daily_probabilities,
+            }]))
+        }
+        ManifoldOutcomeType::MultipleChoice => Ok(None),
+        ManifoldOutcomeType::PseudoNumeric => Ok(None),
+        ManifoldOutcomeType::Number => Ok(None),
+        // The remaining types are not actual markets - skip them
+        ManifoldOutcomeType::Stonk => Ok(None),
+        ManifoldOutcomeType::BountiedQuestion => Ok(None),
+        ManifoldOutcomeType::QuadraticFunding => Ok(None),
+        ManifoldOutcomeType::Poll => Ok(None),
+    }
+}
+
+/// Converts Manifold bets into standard probability segments.
+/// Manifold's close dates are so unreliable we don't even consider them.
+pub fn build_prob_segments(raw_history: &[ManifoldBet]) -> Vec<ProbSegment> {
+    // Sort the history by time.
+    let mut history = raw_history.to_vec();
+    history.sort_by_key(|item| item.created_time);
+
+    let mut segments: Vec<ProbSegment> = Vec::new();
+
+    for (i, bet) in history.iter().enumerate() {
+        // The start of the segment will equal the end of the previous one unless we skipped some.
+        // Err on the side of using the previous segment's end timestamp unless it's the first one.
+        let start = match segments.last() {
+            Some(previous_segment) => previous_segment.end,
+            None => bet.created_time,
+        };
+
+        // The end of the segment will be the beginning of the next event.
+        // We don't trust Manifold end dates so the last trade is the end of the market.
+        let end = if i < history.len() - 1 {
+            history[i + 1].created_time
+        } else {
+            continue;
+        };
+
+        // If the duration is exactly 0, skip.
+        // Decided to keep this due to issues with how the windowing functions work.
+        if start == end {
+            continue;
+        }
+
+        // Get the probability after the bet was made.
+        let prob = bet.prob_after;
+
+        segments.push(ProbSegment { start, end, prob });
+    }
+    segments
+}
+
+fn get_url(market: &ManifoldMarket) -> String {
+    format!(
+        "https://manifold.markets/{}/{}",
+        market.creator_username, market.slug
+    )
+}
+
+fn get_traders_count(bets: &[ManifoldBet]) -> u32 {
+    bets.iter()
+        .map(|bet| bet.user_id.clone())
+        .collect::<std::collections::HashSet<_>>()
+        .len() as u32
+}
+
+fn get_volume_usd(volume: &f32) -> f32 {
+    volume / MANIFOLD_EXCHANGE_RATE
+}
+
+/// Checks and returns the resolution probability.
+/// Resolution values can be 1, 0, or in-between for binary markets.
+fn get_resolution_value(market: &ManifoldMarket) -> Result<Option<f32>> {
+    match &market.resolution {
+        Some(resolution) => match resolution.as_str() {
+            "YES" => Ok(Some(1.0)),
+            "NO" => Ok(Some(0.0)),
+            "MKT" => match market.resolution_probability {
+                None => {
+                    // Sometimes they return MKT but don't specify a probability.
+                    // Currently this is the case on 4 markets:
+                    //  - ESgg78HIKX8kmbjnR0Kr
+                    //  - MWzNRuVifNR8NB9WVoeC
+                    //  - V288UeQ98h4j3KPbceiJ
+                    //  - ooiNbYz6Adqcv7eUfLPa
+                    log::debug!(
+                        "Market {} resolution value is not one of YES/NO/MKT/CANCEL",
+                        market.id
+                    );
+                    Ok(None)
+                }
+                Some(res_prob) => Ok(Some(res_prob)),
+            },
+            _ => Err(anyhow!(
+                "Market resolution value is not one of YES/NO/MKT/CANCEL: {:?}",
+                market
+            )),
+        },
+        None => Err(anyhow!("Market lacks resolution value: {:?}", market)),
+    }
+}
+
+/// Manual mapping of group slugs to our standard categories.
+fn get_category(group_slugs: &[String]) -> Option<String> {
+    for group in group_slugs {
+        match group.as_str() {
+            "118th-congress" => return Some("Politics".to_string()),
+            "2024-us-presidential-election" => return Some("Politics".to_string()),
+            //"africa" => return Some("Other".to_string()),
+            "ai" => return Some("AI".to_string()),
+            "ai-alignment" => return Some("AI".to_string()),
+            "ai-safety" => return Some("AI".to_string()),
+            "arabisraeli-conflict" => return Some("Politics".to_string()),
+            "apple" => return Some("Technology".to_string()),
+            "baseball" => return Some("Sports".to_string()),
+            "basketball" => return Some("Sports".to_string()),
+            "biotech" => return Some("Science".to_string()),
+            "bitcoin" => return Some("Crypto".to_string()),
+            "celebrities" => return Some("Culture".to_string()),
+            "chatgpt" => return Some("AI".to_string()),
+            "chess" => return Some("Sports".to_string()),
+            //"china" => return Some("Other".to_string()),
+            "climate" => return Some("Climate".to_string()),
+            "crypto-speculation" => return Some("Crypto".to_string()),
+            "culture-default" => return Some("Culture".to_string()),
+            //"daliban-hq" => return Some("Other".to_string()),
+            //"destinygg" => return Some("Other".to_string()),
+            //"destinygg-stocks" => return Some("Other".to_string()),
+            "donald-trump" => return Some("Politics".to_string()),
+            "economics-default" => return Some("Economics".to_string()),
+            //"effective-altruism" => return Some("Other".to_string()),
+            //"elon-musk-14d9d9498c7e" => return Some("Other".to_string()),
+            //"europe" => return Some("Other".to_string()),
+            "f1" => return Some("Sports".to_string()),
+            "finance" => return Some("Economics".to_string()),
+            "football" => return Some("Sports".to_string()),
+            "formula-1" => return Some("Sports".to_string()),
+            //"fun" => return Some("Other".to_string()),
+            "gaming" => return Some("Culture".to_string()),
+            "gpt4-speculation" => return Some("AI".to_string()),
+            //"health" => return Some("Other".to_string()),
+            //"india" => return Some("Other".to_string()),
+            "internet" => return Some("Technology".to_string()),
+            //"israel" => return Some("Other".to_string()),
+            "israelhamas-conflict-2023" => return Some("Politics".to_string()),
+            "israeli-politics" => return Some("Politics".to_string()),
+            //"latin-america" => return Some("Other".to_string()),
+            //"lgbtqia" => return Some("Other".to_string()),
+            //"mathematics" => return Some("Other".to_string()),
+            "medicine" => return Some("Science".to_string()),
+            //"middle-east" => return Some("Other".to_string()),
+            "movies" => return Some("Culture".to_string()),
+            "music-f213cbf1eab5" => return Some("Culture".to_string()),
+            "nfl" => return Some("Sports".to_string()),
+            "nuclear" => return Some("Science".to_string()),
+            "nuclear-risk" => return Some("Politics".to_string()),
+            //"one-piece-stocks" => return Some("Other".to_string()),
+            "openai" => return Some("AI".to_string()),
+            "openai-9e1c42b2bb1e" => return Some("AI".to_string()),
+            "openai-crisis" => return Some("AI".to_string()),
+            //"personal-goals" => return Some("Other".to_string()),
+            "physics" => return Some("Science".to_string()),
+            "politics-default" => return Some("Politics".to_string()),
+            "programming" => return Some("Technology".to_string()),
+            //"russia" => return Some("Other".to_string()),
+            //"sam-altman" => return Some("Other".to_string()),
+            "science-default" => return Some("Science".to_string()),
+            //"sex-and-love" => return Some("Other".to_string()),
+            "soccer" => return Some("Sports".to_string()),
+            "space" => return Some("Science".to_string()),
+            "speaker-of-the-house-election" => return Some("Politics".to_string()),
+            "sports-default" => return Some("Sports".to_string()),
+            "startups" => return Some("Economics".to_string()),
+            "stocks" => return Some("Economics".to_string()),
+            "technical-ai-timelines" => return Some("AI".to_string()),
+            "technology-default" => return Some("Technology".to_string()),
+            "tennis" => return Some("Sports".to_string()),
+            //"the-life-of-biden" => return Some("Other".to_string()),
+            "time-person-of-the-year" => return Some("Culture".to_string()),
+            "tv" => return Some("Culture".to_string()),
+            //"twitter" => return Some("Technology".to_string()),
+            "uk-politics" => return Some("Politics".to_string()),
+            "ukraine" => return Some("Politics".to_string()),
+            "ukrainerussia-war" => return Some("Politics".to_string()),
+            "us-politics" => return Some("Politics".to_string()),
+            "wars" => return Some("Politics".to_string()),
+            "world-default" => return Some("Politics".to_string()),
+            _ => continue,
+        }
+    }
+    None
 }

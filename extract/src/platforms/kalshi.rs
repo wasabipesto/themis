@@ -209,10 +209,12 @@ pub fn standardize(input: &KalshiData) -> Result<Option<Vec<MarketAndProbs>>> {
 
             // Get probability segments. If there are none then skip.
             let probs = build_prob_segments(&input.history, &input.market.close_time);
-            helpers::validate_prob_segments(&probs)?;
             if probs.is_empty() {
                 return Ok(None);
             }
+
+            // Validate probability segments and collate into daily prob segments.
+            helpers::validate_prob_segments(&probs)?;
             let daily_probabilities =
                 helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)?;
 
@@ -230,8 +232,8 @@ pub fn standardize(input: &KalshiData) -> Result<Option<Vec<MarketAndProbs>>> {
                 question_invert: false,
                 question_dismissed: 0,
                 url: get_url(&input.market.ticker)?,
-                open_datetime: input.market.open_time,
-                close_datetime: input.market.close_time,
+                open_datetime: start,
+                close_datetime: end,
                 traders_count: None, // Not available in API
                 volume_usd: Some(input.market.volume),
                 duration_days: helpers::get_market_duration(start, end)?,
@@ -253,13 +255,12 @@ pub fn standardize(input: &KalshiData) -> Result<Option<Vec<MarketAndProbs>>> {
 }
 
 /// Converts Kalshi events into standard probability segments.
-/// For brevity we will ignore any event that does not change the price or has a duration less than one second.
 pub fn build_prob_segments(
     raw_history: &[KalshiHistoryItem],
     market_end: &DateTime<Utc>,
 ) -> Vec<ProbSegment> {
     // Sort the history by time
-    // This is actually quite fast, basically no performance impact on the grand scheme
+    // This is actually quite fast, basically no performance impact in the grand scheme
     let mut history = raw_history.to_vec();
     history.sort_by_key(|item| item.created_time);
 
@@ -288,23 +289,35 @@ pub fn build_prob_segments(
             }
         };
 
+        // The probability of the event is based on the event's yes_price.
+        // The yes price is in cents so we divide by 100 to get a value in [0, 1].
+        let prob = event.yes_price / 100.0;
+
+        // These were originally added to reduce the total number of segments and save a little memory.
+        // I've commented them out because there were some inconsistencies with how trades were being
+        // handled and they weren't saving much memory after all. I think any remaining inconsistencies
+        // are more likely due to how Kalshi orders their events.
+        /*
+
         // If the duration is less than 1 millisecond, skip.
         if (end - start).num_milliseconds() < 1 {
             continue;
         }
 
-        // The probability of the event is based on the event's yes_price.
-        // The yes price is in cents so we divide by 100 to get a value in [0, 1].
-        let prob = event.yes_price / 100.0;
-
         // If the probability is the same as the previous segment's prob, skip.
-        /*
         if let Some(previous_segment) = segments.last() {
             if (previous_segment.prob - prob).abs() < f32::EPSILON {
                 continue;
             }
         }
+
         */
+
+        // If the duration is exactly 0, skip.
+        // Decided to keep this due to issues with how the windowing functions work.
+        if start == end {
+            continue;
+        }
 
         segments.push(ProbSegment { start, end, prob });
     }

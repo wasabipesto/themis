@@ -163,9 +163,9 @@ pub fn validate_prob_segments(probs: &[ProbSegment]) -> Result<()> {
 
     for segment in probs {
         // Check that the segment has positive width
-        if segment.end < segment.start {
+        if segment.end <= segment.start {
             return Err(anyhow::anyhow!(
-                "Invalid segment: end time ({}) < start time ({})",
+                "Invalid segment: end time ({}) <= start time ({})",
                 segment.end,
                 segment.start,
             ));
@@ -345,61 +345,6 @@ mod tests {
         // Time outside any segment
         let outside_time = create_dt(2023, 1, 3, 0);
         assert!(get_prob_at_time(&probs, outside_time).is_err());
-    }
-
-    #[test]
-    fn test_zero_duration_segments() {
-        let base = create_dt(2023, 1, 1, 0);
-        let mid = create_dt(2023, 1, 1, 12);
-        let end = create_dt(2023, 1, 2, 0);
-
-        // Create segments where one has zero duration
-        let probs = vec![
-            ProbSegment {
-                start: base,
-                end: base, // Zero duration
-                prob: 0.3,
-            },
-            ProbSegment {
-                start: base,
-                end: mid,
-                prob: 0.6,
-            },
-            ProbSegment {
-                start: mid,
-                end: mid, // Another zero duration
-                prob: 0.5,
-            },
-            ProbSegment {
-                start: mid,
-                end,
-                prob: 0.9,
-            },
-        ];
-
-        // The zero duration segments should be effectively ignored
-        // Only the non-zero duration segments should contribute to the average
-        let avg = get_prob_time_avg(&probs, base, end).unwrap();
-
-        // Expected average: (0.6 * 12 hours + 0.9 * 12 hours) / 24 hours = 0.75
-        assert!((avg - 0.75).abs() < 0.0001);
-
-        // Test with all zero duration segments
-        let all_zero_probs = vec![
-            ProbSegment {
-                start: base,
-                end: base,
-                prob: 0.3,
-            },
-            ProbSegment {
-                start: mid,
-                end: mid,
-                prob: 0.5,
-            },
-        ];
-
-        // Should return an error when no valid segments are found
-        assert!(get_prob_time_avg(&all_zero_probs, base, end).is_err());
     }
 
     #[test]
