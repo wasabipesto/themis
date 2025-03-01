@@ -1,9 +1,12 @@
-use anyhow::{Context, Result};
+//! Tools to download and process markets from the Polymarket API.
+//! Polymarket API docs: https://docs.polymarket.com/#clob-api
+
+use anyhow::Result;
 use chrono::serde::ts_milliseconds;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
-use super::{DailyProbability, MarketAndProbs, StandardMarket};
+use super::MarketAndProbs;
 
 /// This is the container format we used to save items to disk earlier.
 #[derive(Debug, Clone, Deserialize)]
@@ -38,6 +41,7 @@ pub struct PolymarketToken {
 }
 
 /// Values returned from the `/market` endpoint.
+/// https://docs.polymarket.com/#markets
 #[derive(Debug, Clone, Deserialize)]
 pub struct PolymarketMarket {
     /// The unique ID of this market.
@@ -89,6 +93,7 @@ pub struct PolymarketMarket {
 }
 
 /// Values returned from the `/prices-history` endpoint.
+/// Undocumented API endpoint.
 #[derive(Debug, Clone, Deserialize)]
 pub struct PolymarketPricePoint {
     /// Timestamp of provided probability point.

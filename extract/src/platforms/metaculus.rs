@@ -1,8 +1,11 @@
-use anyhow::{Context, Result};
+//! Tools to download and process markets from the Metaculus API.
+//! Metaculus API docs: https://www.metaculus.com/api/
+
+use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
-use super::{DailyProbability, MarketAndProbs, StandardMarket};
+use super::MarketAndProbs;
 
 /// This is the container format we used to save items to disk earlier.
 #[derive(Debug, Clone, Deserialize)]

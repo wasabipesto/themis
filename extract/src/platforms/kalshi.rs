@@ -1,10 +1,13 @@
-use anyhow::{Context, Result};
+//! Utilities for processing Kalshi market data.
+//! Kalshi API docs: https://trading-api.readme.io/
+
+use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::collections::HashMap;
 
 use super::helpers;
-use super::{DailyProbability, MarketAndProbs, ProbSegment, StandardMarket};
+use super::{MarketAndProbs, ProbSegment, StandardMarket};
 
 /// This is the container format we used to save items to disk earlier.
 #[derive(Debug, Clone, Deserialize)]
@@ -16,6 +19,8 @@ pub struct KalshiData {
     pub last_updated: DateTime<Utc>,
     /// Values returned from the `/markets` endpoint.
     pub market: KalshiMarket,
+    // Values returned from the `/series` endpoint.
+    //pub series: Vec<KalshiSeriesItem>, // TODO
     /// Values returned from the `/trades` endpoint.
     pub history: Vec<KalshiHistoryItem>,
 }
@@ -158,6 +163,7 @@ pub struct KalshiMarket {
 }
 
 /// Values returned from the `/trades` endpoint.
+/// TODO: Might change to GetMarketCandlesticks in the future.
 /// https://trading-api.readme.io/reference/gettrades-1
 #[derive(Debug, Clone, Deserialize)]
 pub struct KalshiHistoryItem {
@@ -194,8 +200,8 @@ pub fn standardize(input: &KalshiData) -> Result<Option<Vec<MarketAndProbs>>> {
     }
 
     // Convert based on market type
-    // (currently only binary markets)
     match input.market.market_type {
+        // Currently only binary markets exist
         KalshiMarketType::Binary => {
             // Get probability segments. If there are none then skip.
             let probs = build_prob_segments(&input.history, &input.market.close_time);
@@ -216,7 +222,7 @@ pub fn standardize(input: &KalshiData) -> Result<Option<Vec<MarketAndProbs>>> {
                 question_id: None,
                 question_invert: false,
                 question_dismissed: 0,
-                url: get_url(&input.market),
+                url: get_url(&input.market.ticker)?,
                 open_datetime: input.market.open_time,
                 close_datetime: input.market.close_time,
                 traders_count: None, // Not available in API
@@ -286,10 +292,30 @@ fn build_prob_segments(
     segments
 }
 
-fn get_url(_market: &KalshiMarket) -> String {
-    todo!();
+/// TODO: Get the rest of the items needed for this, somehow.
+/// Kalshi market URLs follow the form:
+///   https://kalshi.com/markets/{series_ticker}/{series_slug}#{event_ticker}
+/// You can't link to a specific market within an event, but you can target an event within a series.
+/// Tickers are constructed by combining the series, event, and market IDs:
+///   Series Ticker: KXETHD (Ethereum price)
+///   Event Ticker:  KXETHD-24DEC1721 (Ethereum price on Dec 17th 2024 at 21:00 EST)
+///   Market Ticker: KXETHD-24DEC1721-T3939.99
+///     (Ethereum price on Dec 17th 2024 at 21:00 EST is $3,940 or above.)
+/// Currently I'm not sure how to get the series_slug. That portion is not required
+/// for basic links but it is required to target a specific event.
+/// In this case the series URL is:
+///   https://kalshi.com/markets/kxethd/ethereum-price-abovebelow#kxethd-24dec1721
+fn get_url(market_ticker: &str) -> Result<String> {
+    let mut ticker_parts = market_ticker.split('-');
+    let series_ticker = ticker_parts
+        .next()
+        .ok_or_else(|| anyhow!("Invalid ticker format (missing hyphen): {market_ticker}"))?;
+    Ok(format!("https://kalshi.com/markets/{series_ticker}"))
 }
 
+/// TODO: Get the series data and pull category.
+/// So categories used to be in the market item but they moved to the series level.
+/// It's not necessary but I'd like to have it for easy grouping and client-side charts later.
 fn get_category(_market: &KalshiMarket) -> String {
-    todo!();
+    "TODO".into()
 }

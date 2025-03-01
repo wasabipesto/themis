@@ -1,3 +1,5 @@
+//! Helper functions for dealing with probabilities over time
+
 use super::{DailyProbabilityPartial, ProbSegment};
 use anyhow::{Context, Result};
 use chrono::{DateTime, Duration, Utc};

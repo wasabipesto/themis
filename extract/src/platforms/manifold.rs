@@ -1,9 +1,13 @@
-use anyhow::{Context, Result};
+//! Tools to download and process markets from the Manifold API.
+//! Manifold API docs: https://docs.manifold.markets/api
+//! Source code: https://github.com/manifoldmarkets/manifold/tree/main/backend/api/src
+
+use anyhow::Result;
 use chrono::serde::{ts_milliseconds, ts_milliseconds_option};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
-use super::{DailyProbability, MarketAndProbs, StandardMarket};
+use super::MarketAndProbs;
 
 /// This is the container format we used to save items to disk earlier.
 #[derive(Debug, Clone, Deserialize)]
