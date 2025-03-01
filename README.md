@@ -21,7 +21,9 @@ Install any other dependencies:
 - The website is written with Astro, which uses JS/node package managers. To run `npm` in an isolated environment, I use Docker, which you can find installation instructions for [here](https://docs.docker.com/engine/install/). Docker and the [docker compose](https://docs.docker.com/compose/install/linux) plugin are also used to run the database and its connectors.
 - For running tasks I have provided a `justfile`, which requires `just` to run. You can install that by following the instructions [here](https://just.systems/man/en/packages.html). The `justfile` is very simple, though, and if you don't want to install it you can just run the commands by hand.
 - The script for site deployment uses `rclone` and thus can be deployed to any target supported by that utility. You can install rclone by following the instructions [here](https://rclone.org/install/), or deploy the site some other way.
-- There are a few Python scripts I use for development in the `scripts` folder. If you want to use these, ensure you have a recent version of Python installed.
+- Some other optional utilities:
+  - There are a few Python scripts I use for development in the `scripts` folder. If you want to use these, ensure you have a recent version of Python installed.
+  - When testing API responses I use `jq` for filtering and general formatting.
 
 ## Step 1. Downloading API data to disk
 
@@ -104,6 +106,8 @@ Then you can test that everything is working with curl:
 just db-curl platforms
 ```
 
+You should see data for each platform, formatted for readability with `jq`.
+
 We don't need to do this yet, but to completely stop the database and services:
 
 ```bash
@@ -124,8 +128,8 @@ just extract # run with default settings
 Then you can test that everything is working with curl:
 
 ```bash
-just db-curl markets?limit=10
-just db-curl daily_probabilities?limit=10
+just db-curl "markets?limit=10"
+just db-curl "daily_probabilities?limit=10"
 ```
 
 ## Step 4. Creating and processing groups
