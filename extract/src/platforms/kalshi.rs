@@ -29,7 +29,7 @@ pub enum KalshiMarketType {
     Binary,
 }
 
-/// What stage of the market lifecycle this is in.
+/// What stage of the market life-cycle this is in.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum KalshiMarketStatus {
@@ -80,7 +80,7 @@ pub enum YesNoBlank {
 }
 
 /// Values returned from the `/markets` endpoint.
-/// https://trading-api.readme.io/reference/getmarkets
+/// https://trading-api.readme.io/reference/getmarkets-1
 #[derive(Debug, Clone, Deserialize)]
 pub struct KalshiMarket {
     /// The unique ID of the individual binary market.
@@ -153,12 +153,12 @@ pub struct KalshiMarket {
     pub liquidity: f32,
     /// Number of contracts bought on this market.
     pub volume: f32,
-    /// Number of contracts bought on this market disconsidering netting.
+    /// Number of contracts bought on this market dis-considering netting.
     pub open_interest: f32,
 }
 
 /// Values returned from the `/trades` endpoint.
-/// https://trading-api.readme.io/reference/gettrades
+/// https://trading-api.readme.io/reference/gettrades-1
 #[derive(Debug, Clone, Deserialize)]
 pub struct KalshiHistoryItem {
     /// Corresponds to market ticker.
@@ -197,11 +197,18 @@ pub fn standardize(input: &KalshiData) -> Result<Option<Vec<MarketAndProbs>>> {
     // (currently only binary markets)
     match input.market.market_type {
         KalshiMarketType::Binary => {
-            let start = input.market.open_time;
-            let end = input.market.close_time;
-            let probs = build_prob_segments(&input.history);
+            // Get probability segments. If there are none then skip.
+            let probs = build_prob_segments(&input.history, &input.market.close_time);
             helpers::validate_prob_segments(&probs)?;
+            if probs.is_empty() {
+                return Ok(None);
+            }
 
+            // We only consider the market to be open while there are actual probabilities.
+            let start = probs.first().unwrap().start;
+            let end = probs.last().unwrap().end;
+
+            // Build standard market item.
             let market = StandardMarket {
                 title: input.market.title.clone(),
                 platform_slug: "kalshi".to_string(),
@@ -232,8 +239,51 @@ pub fn standardize(input: &KalshiData) -> Result<Option<Vec<MarketAndProbs>>> {
     }
 }
 
-fn build_prob_segments(_history: &[KalshiHistoryItem]) -> Vec<ProbSegment> {
-    todo!();
+/// Converts Kalshi events into standard probability segments.
+/// For brevity we will ignore any event that does not change the price or has a duration less than one second.
+fn build_prob_segments(
+    history: &[KalshiHistoryItem],
+    market_end: &DateTime<Utc>,
+) -> Vec<ProbSegment> {
+    let mut segments: Vec<ProbSegment> = Vec::new();
+
+    for (i, event) in history.iter().enumerate() {
+        // The start of the event will equal the end of the previous one unless we skipped some.
+        // Err on the side of using the previous segment's end timestamp unless it's the first one.
+        let start = match segments.last() {
+            Some(previous_segment) => previous_segment.end,
+            None => event.created_time,
+        };
+
+        // The duration of the event is either the time between this event and the next or
+        // (for the last event) the time between this event and the end of the market.
+        let end = if i < history.len() - 1 {
+            history[i + 1].created_time
+        } else {
+            market_end.to_owned()
+        };
+
+        // If the duration is less than 1 second, skip.
+        // This has the side effect of ignoring negative duration events.
+        // This also has the side effect of ignoring when the close date is before the last trade.
+        if (end - start).num_seconds() < 1 {
+            continue;
+        }
+
+        // The probability of the event is based on the event's yes_price.
+        // The yes price is in cents so we divide by 100 to get a value in [0, 1].
+        let prob = event.yes_price / 100.0;
+
+        // If the probability is the same as the previous segment's prob, skip.
+        if let Some(previous_segment) = segments.last() {
+            if (previous_segment.prob - prob).abs() < f32::EPSILON {
+                continue;
+            }
+        }
+
+        segments.push(ProbSegment { start, end, prob });
+    }
+    segments
 }
 
 fn get_url(_market: &KalshiMarket) -> String {

@@ -27,16 +27,20 @@ struct Args {
     #[arg(short, long)]
     schema_only: bool,
 
+    /// Only load and convert items, do not upload to database.
+    #[arg(short, long)]
+    offline: bool,
+
     /// API endpoint URL
     #[arg(short, long, default_value = "http://localhost:8000/api")]
     api_url: String,
 }
 
 fn main() -> Result<()> {
-    // get command line args
+    // Get command line args
     let args = Args::parse();
 
-    // read log level from arg and update environment variable
+    // Read log level from arg and update environment variable
     let log_level = args.log_level.to_lowercase();
     match log_level.as_str() {
         "error" | "warn" | "info" | "debug" | "trace" => env::set_var("RUST_LOG", log_level),
@@ -48,8 +52,8 @@ fn main() -> Result<()> {
     env_logger::init();
     debug!("Command line args: {:?}", args);
 
-    // if the user requested a specific platform, format it into a list
-    // otherwise, return the default platform list
+    // If the user requested a specific platform, format it into a list
+    // Otherwise, return the default platform list
     let platforms: Vec<Platform> = match args.platform {
         Some(platform) => Vec::from([platform]),
         None => Platform::all(),
@@ -69,9 +73,11 @@ fn main() -> Result<()> {
         for line in platform.load_data(&args.directory)? {
             if !args.schema_only {
                 let standardized_markets = platform.standardize(line)?;
-                for market_data in standardized_markets {
-                    debug!("Uploading item {} for {}", items_processed, platform);
-                    upload_item(&client, &args.api_url, &market_data)?;
+                if !args.offline {
+                    for market_data in standardized_markets {
+                        debug!("Uploading item {} for {}", items_processed, platform);
+                        upload_item(&client, &args.api_url, &market_data)?;
+                    }
                 }
             }
             items_processed += 1;
