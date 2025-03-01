@@ -3,6 +3,7 @@
 
 use anyhow::{Context, Result};
 use clap::Parser;
+use dotenvy::dotenv;
 use log::{debug, info};
 use reqwest::blocking::Client;
 use std::env;
@@ -33,10 +34,6 @@ struct Args {
     /// Only load and convert items, do not upload to database.
     #[arg(short, long)]
     offline: bool,
-
-    /// API endpoint URL
-    #[arg(short, long, default_value = "http://localhost:8000/api")]
-    api_url: String,
 }
 
 fn main() -> Result<()> {
@@ -54,6 +51,16 @@ fn main() -> Result<()> {
     }
     env_logger::init();
     debug!("Command line args: {:?}", args);
+
+    // Get environment variables
+    dotenv().ok();
+    let postgrest_host =
+        env::var("PGRST_HOST").expect("Required environment variable PGRST_HOST not set.");
+    let postgrest_port =
+        env::var("PGRST_PORT").expect("Required environment variable PGRST_PORT not set.");
+    let postgrest_api_base = format!("http://{postgrest_host}:{postgrest_port}");
+    let postgrest_api_key =
+        env::var("PGRST_APIKEY").expect("Required environment variable PGRST_APIKEY not set.");
 
     // If the user requested a specific platform, format it into a list
     // Otherwise, return the default platform list
@@ -79,7 +86,12 @@ fn main() -> Result<()> {
                 if !args.offline {
                     for market_data in standardized_markets {
                         debug!("Uploading item {} for {}", items_processed, platform);
-                        upload_item(&client, &args.api_url, &market_data)?;
+                        upload_item(
+                            &client,
+                            &postgrest_api_base,
+                            &postgrest_api_key,
+                            &market_data,
+                        )?;
                     }
                 }
             }
@@ -92,11 +104,17 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn upload_item(client: &Client, api_url: &str, market_data: &MarketAndProbs) -> Result<()> {
+fn upload_item(
+    client: &Client,
+    postgrest_api_base: &str,
+    postgrest_api_key: &str,
+    market_data: &MarketAndProbs,
+) -> Result<()> {
     // Upload market
     debug!("Uploading market: {}", market_data.market.title);
     client
-        .post(format!("{}/markets", api_url))
+        .post(format!("{}/markets", postgrest_api_base))
+        .bearer_auth(postgrest_api_key)
         .json(&market_data.market)
         .send()
         .context("Failed to upload market")?;
@@ -109,7 +127,8 @@ fn upload_item(client: &Client, api_url: &str, market_data: &MarketAndProbs) -> 
         market_data.daily_probabilities.len()
     );
     client
-        .post(format!("{}/probabilities", api_url))
+        .post(format!("{}/daily_probabilities", postgrest_api_base))
+        .bearer_auth(postgrest_api_key)
         .json(&market_data.daily_probabilities)
         .send()
         .context("Failed to upload probabilities")?;

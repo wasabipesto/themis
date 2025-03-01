@@ -49,6 +49,12 @@ db-schema:
 db-backup:
     docker compose exec pgbackups /backup.sh
 
+# Get items from an endpoint (example)
+db-curl *endpoint:
+    curl -sf \
+    -X GET "http://${PGRST_HOST}:${PGRST_PORT}/{{endpoint}}" \
+    -H "Authorization: Bearer ${PGRST_APIKEY}" | jq
+
 # Build the astro site
 astro-build:
     -docker run -it --rm \

@@ -217,6 +217,7 @@ pub fn standardize(input: &KalshiData) -> Result<Option<Vec<MarketAndProbs>>> {
             // Build standard market item.
             let market = StandardMarket {
                 title: input.market.title.clone(),
+                platform_id: input.market.ticker.clone(),
                 platform_slug: "kalshi".to_string(),
                 platform_name: "Kalshi".to_string(),
                 question_id: None,

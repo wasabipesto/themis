@@ -56,6 +56,14 @@ sed -i "s/^PGRST_JWT_SECRET=.*/PGRST_JWT_SECRET=$(openssl rand -base64 32 | tr -
 
 Once the `.env` file has been created, you can go in and edit any settings you'd like.
 
+Next, we'll generate our JWT key to authenticate to PostgREST. You can do this with many services, but we'll generate it with this script:
+
+```bash
+sed -i "s/^PGRST_APIKEY=.*/PGRST_APIKEY=$(python3 scripts/generate-db-jwt.py)/" .env
+```
+
+That key will be valid for 30 days, to refresh it just run that line again.
+
 To actually start our database and associated services:
 
 ```bash
@@ -75,25 +83,49 @@ just db-backup # run a backup and save in the postgres_backups folder
 just db-schema # extract the current schema and output to stdout
 ```
 
-To stop the database and services:
+Import the schema, roles, and some basic data by running the following SQL files:
+
+```bash
+just db-run-sql 01-schema.sql
+just db-run-sql 02-postgrest.sql
+just db-run-sql 03-platforms.sql
+```
+
+Reload PostgREST for it to see the new schema:
+
+```bash
+docker kill -s SIGUSR1 postgrest # trigger a reload
+docker restart postgrest # or restart the whole container
+```
+
+Then you can test that everything is working with curl:
+
+```bash
+just db-curl platforms
+```
+
+We don't need to do this yet, but to completely stop the database and services:
 
 ```bash
 just db-down
 ```
 
-TODO: Loading schema
-
 ## Step 3. Importing data from the cache into the database
 
 Once everything has been downloaded from the platform APIs, we can extract and import that data into the database.
-
-TODO: Incomplete.
 
 Ensure the database services are running and then run:
 
 ```bash
 just extract --help # for options
 just extract # run with default settings
+```
+
+Then you can test that everything is working with curl:
+
+```bash
+just db-curl markets?limit=10
+just db-curl daily_probabilities?limit=10
 ```
 
 ## Step 4. Creating and processing groups

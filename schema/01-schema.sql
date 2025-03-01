@@ -53,6 +53,7 @@ CREATE TABLE questions (
 CREATE TABLE markets (
     id SERIAL PRIMARY KEY,
     title TEXT NOT NULL,
+    platform_id TEXT NOT NULL,
     platform_slug TEXT NOT NULL,
     platform_name TEXT NOT NULL,
     question_id INTEGER,

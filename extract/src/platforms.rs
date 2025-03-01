@@ -35,6 +35,7 @@ pub struct MarketAndProbs {
 #[derive(Debug, Serialize, Clone)]
 pub struct StandardMarket {
     pub title: String,
+    pub platform_id: String,
     pub platform_slug: String,
     pub platform_name: String,
     pub question_id: Option<u32>,
