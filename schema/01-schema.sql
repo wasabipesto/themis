@@ -51,9 +51,8 @@ CREATE TABLE questions (
 );
 
 CREATE TABLE markets (
-    id SERIAL PRIMARY KEY,
+    id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
-    platform_id TEXT NOT NULL,
     platform_slug TEXT NOT NULL,
     platform_name TEXT NOT NULL,
     question_id INTEGER,
@@ -70,8 +69,7 @@ CREATE TABLE markets (
     prob_time_avg DECIMAL NOT NULL,
     resolution DECIMAL NOT NULL,
     FOREIGN KEY (platform_slug) REFERENCES platforms (slug),
-    FOREIGN KEY (question_id) REFERENCES questions (id),
-    CONSTRAINT market_unique_platform_id UNIQUE (platform_slug, platform_id)
+    FOREIGN KEY (question_id) REFERENCES questions (id)
 );
 
 CREATE TABLE platform_scores (
@@ -92,7 +90,7 @@ CREATE TABLE market_scores (
     question_id INTEGER NOT NULL,
     platform_slug TEXT NOT NULL,
     platform_name TEXT NOT NULL,
-    market_id INTEGER NOT NULL,
+    market_id TEXT NOT NULL,
     market_link TEXT NOT NULL,
     traders INTEGER NOT NULL,
     volume DECIMAL NOT NULL,
@@ -106,7 +104,7 @@ CREATE TABLE market_scores (
 );
 
 CREATE TABLE daily_probabilities (
-    market_id INTEGER NOT NULL,
+    market_id TEXT NOT NULL,
     platform_slug TEXT NOT NULL,
     date TIMESTAMPTZ NOT NULL,
     prob DECIMAL NOT NULL,

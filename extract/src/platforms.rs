@@ -28,14 +28,14 @@ pub enum Platform {
 #[derive(Debug, Serialize, Clone)]
 pub struct MarketAndProbs {
     pub market: StandardMarket,
-    pub daily_probabilities: Vec<DailyProbabilityPartial>,
+    pub daily_probabilities: Vec<DailyProbability>,
 }
 
 /// Standardized market. It has everything we need.
 #[derive(Debug, Serialize, Clone)]
 pub struct StandardMarket {
+    pub id: String,
     pub title: String,
-    pub platform_id: String,
     pub platform_slug: String,
     pub platform_name: String,
     pub question_id: Option<u32>,
@@ -53,19 +53,10 @@ pub struct StandardMarket {
     pub resolution: f32,
 }
 
-/// Historic probability data point.
-/// We don't have all of the information while building these
-/// points so this version is a partially-constructed object.
-#[derive(Debug, Serialize, Clone)]
-pub struct DailyProbabilityPartial {
-    pub date: DateTime<Utc>,
-    pub prob: f32,
-}
-
-/// A fully-constructed probability point.
+/// A fully-constructed probability data point.
 #[derive(Debug, Serialize, Clone)]
 pub struct DailyProbability {
-    pub market_id: Option<u32>,
+    pub market_id: String,
     pub platform_slug: String,
     pub date: DateTime<Utc>,
     pub prob: f32,

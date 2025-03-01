@@ -203,12 +203,18 @@ pub fn standardize(input: &KalshiData) -> Result<Option<Vec<MarketAndProbs>>> {
     match input.market.market_type {
         // Currently only binary markets exist
         KalshiMarketType::Binary => {
+            // Get market ID. Construct from platform slug and ID within platform.
+            let platform_slug = "kalshi".to_string();
+            let market_id = format!("{}:{}", platform_slug, input.market.ticker);
+
             // Get probability segments. If there are none then skip.
             let probs = build_prob_segments(&input.history, &input.market.close_time);
             helpers::validate_prob_segments(&probs)?;
             if probs.is_empty() {
                 return Ok(None);
             }
+            let daily_probabilities =
+                helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)?;
 
             // We only consider the market to be open while there are actual probabilities.
             let start = probs.first().unwrap().start;
@@ -216,9 +222,9 @@ pub fn standardize(input: &KalshiData) -> Result<Option<Vec<MarketAndProbs>>> {
 
             // Build standard market item.
             let market = StandardMarket {
+                id: market_id,
                 title: input.market.title.clone(),
-                platform_id: input.market.ticker.clone(),
-                platform_slug: "kalshi".to_string(),
+                platform_slug,
                 platform_name: "Kalshi".to_string(),
                 question_id: None,
                 question_invert: false,
@@ -240,7 +246,7 @@ pub fn standardize(input: &KalshiData) -> Result<Option<Vec<MarketAndProbs>>> {
             };
             Ok(Some(vec![MarketAndProbs {
                 market,
-                daily_probabilities: helpers::get_daily_probabilities(&probs)?,
+                daily_probabilities,
             }]))
         }
     }

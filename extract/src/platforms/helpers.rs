@@ -1,6 +1,6 @@
 //! Helper functions for dealing with probabilities over time
 
-use super::{DailyProbabilityPartial, ProbSegment};
+use super::{DailyProbability, ProbSegment};
 use anyhow::{Context, Result};
 use chrono::{DateTime, Duration, Utc};
 use log::{debug, error};
@@ -115,7 +115,11 @@ fn dt_set_hour(dt: DateTime<Utc>, hour: u32) -> Result<DateTime<Utc>> {
 /// Convert probability segments of varying width into daily segments.
 /// The day starts and ends at midnight UTC. Date point is at noon UTC.
 /// Probabilities are time-averaged over that window.
-pub fn get_daily_probabilities(probs: &[ProbSegment]) -> Result<Vec<DailyProbabilityPartial>> {
+pub fn get_daily_probabilities(
+    probs: &[ProbSegment],
+    market_id: &str,
+    platform_slug: &str,
+) -> Result<Vec<DailyProbability>> {
     if probs.is_empty() {
         debug!("No probability segments provided for daily probability calculation");
         return Ok(vec![]);
@@ -139,7 +143,9 @@ pub fn get_daily_probabilities(probs: &[ProbSegment]) -> Result<Vec<DailyProbabi
         let prob = get_prob_time_avg(probs, day_start, day_end)
             .context("Failed to calculate daily probability")?;
 
-        daily_probs.push(DailyProbabilityPartial {
+        daily_probs.push(DailyProbability {
+            market_id: market_id.to_owned(),
+            platform_slug: platform_slug.to_owned(),
             date: day_midpoint,
             prob,
         });
@@ -449,13 +455,15 @@ mod tests {
                 prob: 0.8,
             },
         ];
-        let daily_probs = get_daily_probabilities(&probs).unwrap();
+        let daily_probs = get_daily_probabilities(&probs, "", "").unwrap();
         assert_eq!(daily_probs.len(), 2);
         assert_eq!(daily_probs[0].prob, 0.7); // Average for first day
 
         // Empty input
         let empty_probs: Vec<ProbSegment> = vec![];
-        assert!(get_daily_probabilities(&empty_probs).unwrap().is_empty());
+        assert!(get_daily_probabilities(&empty_probs, "", "")
+            .unwrap()
+            .is_empty());
     }
 
     #[test]
@@ -527,7 +535,7 @@ mod tests {
         let duration = get_market_duration(start, far_future).unwrap();
         assert!(duration > 365000);
 
-        let daily_probs = get_daily_probabilities(&long_prob).unwrap();
+        let daily_probs = get_daily_probabilities(&long_prob, "", "").unwrap();
         assert!(daily_probs.len() > 365000);
         assert_eq!(daily_probs.first().unwrap().prob, 0.5);
         assert_eq!(daily_probs.last().unwrap().prob, 0.5);

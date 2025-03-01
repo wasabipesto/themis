@@ -76,16 +76,19 @@ fn main() -> Result<()> {
         .build()
         .context("Failed to create HTTP client")?;
 
-    info!("Processing data for each platform");
     for platform in platforms {
-        let mut items_processed = 0;
+        info!("{platform}: Loading data from disk.");
+        let lines = platform.load_data(&args.directory)?;
+        info!(
+            "{platform}: Data loaded. Extracting {} items...",
+            lines.len()
+        );
 
-        for line in platform.load_data(&args.directory)? {
-            if !args.schema_only {
+        if !args.schema_only {
+            for line in lines {
                 let standardized_markets = platform.standardize(line)?;
                 if !args.offline {
                     for market_data in standardized_markets {
-                        debug!("Uploading item {} for {}", items_processed, platform);
                         upload_item(
                             &client,
                             &postgrest_api_base,
@@ -95,15 +98,16 @@ fn main() -> Result<()> {
                     }
                 }
             }
-            items_processed += 1;
         }
 
-        info!("{}: {} items processed", platform, items_processed);
+        info!("{platform}: All items processed.");
     }
 
     Ok(())
 }
 
+/// TODO: This needs some work. Upsert correctly? Send probs with market? Batch uploads?
+/// https://docs.postgrest.org/en/latest/references/api/tables_views.html#prefer-resolution
 fn upload_item(
     client: &Client,
     postgrest_api_base: &str,
@@ -115,6 +119,8 @@ fn upload_item(
     let market_response = client
         .post(format!("{}/markets", postgrest_api_base))
         .bearer_auth(postgrest_api_key)
+        .header("Prefer", "resolution=merge-duplicates")
+        .header("On-Conflict-Update", "*")
         .json(&market_data.market)
         .send()
         .context("Failed to send market upload request")?;
@@ -144,6 +150,8 @@ fn upload_item(
     let probs_response = client
         .post(format!("{}/daily_probabilities", postgrest_api_base))
         .bearer_auth(postgrest_api_key)
+        .header("Prefer", "resolution=merge-duplicates")
+        .header("On-Conflict-Update", "*")
         .json(&market_data.daily_probabilities)
         .send()
         .context("Failed to send probabilities upload request")?;
