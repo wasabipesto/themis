@@ -112,26 +112,58 @@ fn upload_item(
 ) -> Result<()> {
     // Upload market
     debug!("Uploading market: {}", market_data.market.title);
-    client
+    let market_response = client
         .post(format!("{}/markets", postgrest_api_base))
         .bearer_auth(postgrest_api_key)
         .json(&market_data.market)
         .send()
-        .context("Failed to upload market")?;
-    // TODO: Get returned ID, set linked market prob
-    // Or ideally submit them all at once and have PG link them
+        .context("Failed to send market upload request")?;
+
+    let market_status = market_response.status();
+    let market_body = market_response
+        .text()
+        .context("Failed to read market response body")?;
+    debug!(
+        "Market upload response ({}): {}",
+        market_status, market_body
+    );
+
+    if !market_status.is_success() {
+        return Err(anyhow::anyhow!(
+            "Market upload failed with status {} and body: {}",
+            market_status,
+            market_body
+        ));
+    }
 
     // Upload probabilities
     debug!(
         "Uploading {} probabilities for market",
         market_data.daily_probabilities.len()
     );
-    client
+    let probs_response = client
         .post(format!("{}/daily_probabilities", postgrest_api_base))
         .bearer_auth(postgrest_api_key)
         .json(&market_data.daily_probabilities)
         .send()
-        .context("Failed to upload probabilities")?;
+        .context("Failed to send probabilities upload request")?;
+
+    let probs_status = probs_response.status();
+    let probs_body = probs_response
+        .text()
+        .context("Failed to read probabilities response body")?;
+    debug!(
+        "Probabilities upload response ({}): {}",
+        probs_status, probs_body
+    );
+
+    if !probs_status.is_success() {
+        return Err(anyhow::anyhow!(
+            "Probabilities upload failed with status {} and body: {}",
+            probs_status,
+            probs_body
+        ));
+    }
 
     Ok(())
 }
