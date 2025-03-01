@@ -1,3 +1,5 @@
+//! Anything that switches based on platform.
+
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use clap::ValueEnum;
@@ -13,6 +15,7 @@ pub mod manifold;
 pub mod metaculus;
 pub mod polymarket;
 
+/// Supported platforms.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, ValueEnum)]
 pub enum Platform {
     Kalshi,
@@ -21,12 +24,14 @@ pub enum Platform {
     Polymarket,
 }
 
+/// Standardized market with history data.
 #[derive(Debug, Serialize, Clone)]
 pub struct MarketAndProbs {
     pub market: StandardMarket,
     pub daily_probabilities: Vec<DailyProbabilityPartial>,
 }
 
+/// Standardized market. It has everything we need.
 #[derive(Debug, Serialize, Clone)]
 pub struct StandardMarket {
     pub title: String,
@@ -47,14 +52,7 @@ pub struct StandardMarket {
     pub resolution: f32,
 }
 
-#[derive(Debug, Serialize, Clone)]
-pub struct DailyProbability {
-    pub market_id: Option<u32>,
-    pub platform_slug: String,
-    pub date: DateTime<Utc>,
-    pub prob: f32,
-}
-
+/// Historic probability data point.
 /// We don't have all of the information while building these
 /// points so this version is a partially-constructed object.
 #[derive(Debug, Serialize, Clone)]
@@ -63,6 +61,16 @@ pub struct DailyProbabilityPartial {
     pub prob: f32,
 }
 
+/// A fully-constructed probability point.
+#[derive(Debug, Serialize, Clone)]
+pub struct DailyProbability {
+    pub market_id: Option<u32>,
+    pub platform_slug: String,
+    pub date: DateTime<Utc>,
+    pub prob: f32,
+}
+
+/// A segment of time and the market probability during that period.
 #[derive(Debug, Serialize, Clone)]
 pub struct ProbSegment {
     pub start: DateTime<Utc>,
@@ -70,12 +78,14 @@ pub struct ProbSegment {
     pub prob: f32,
 }
 
+/// Deserialized JSONL line straight from the disk. One of any platform type.
+/// Boxed due to large size differences between each platform.
 #[derive(Clone)]
 pub enum PlatformData {
-    Kalshi(kalshi::KalshiData),
-    Manifold(manifold::ManifoldData),
-    Metaculus(metaculus::MetaculusData),
-    Polymarket(polymarket::PolymarketData),
+    Kalshi(Box<kalshi::KalshiData>),
+    Manifold(Box<manifold::ManifoldData>),
+    Metaculus(Box<metaculus::MetaculusData>),
+    Polymarket(Box<polymarket::PolymarketData>),
 }
 
 impl fmt::Display for Platform {
@@ -99,6 +109,7 @@ impl Platform {
         ]
     }
 
+    /// Based on platform, deserialize a line into that platform's datatype.
     pub fn deserialize_line(&self, line: &str) -> Result<PlatformData> {
         match self {
             Platform::Kalshi => Ok(PlatformData::Kalshi(serde_json::from_str(line)?)),
@@ -108,6 +119,7 @@ impl Platform {
         }
     }
 
+    /// Find the appropriate data file based on platform name, then load and deserialize all lines.
     pub fn load_data(&self, base_dir: &Path) -> Result<Vec<PlatformData>> {
         let file_name = format!("{}-data.jsonl", self).to_lowercase();
         let data_file_path = base_dir.join(file_name);
@@ -135,6 +147,7 @@ impl Platform {
             .collect())
     }
 
+    /// Call each platform's standardize function.
     pub fn standardize(&self, input_unsorted: PlatformData) -> Result<Vec<MarketAndProbs>> {
         let rovm = match input_unsorted {
             PlatformData::Kalshi(input) => kalshi::standardize(&input)?,

@@ -27,19 +27,19 @@ pub struct MetaculusData {
 #[derive(Debug, Clone, Deserialize)]
 pub struct MetaculusAggregationHistoryPoint {
     /// Start time of history bucket.
-    /// Time is in milliseconds since epoch but formatted as foating-point.
+    /// Time is in milliseconds since epoch but formatted as floating-point.
     pub start_time: Option<f32>,
     /// End time of history bucket.
-    /// Time is in milliseconds since epoch but formatted as foating-point.
+    /// Time is in milliseconds since epoch but formatted as floating-point.
     pub end_time: Option<f32>,
     /// Prediction point mean.
     /// If we have to use just one, this is the point we use.
     pub means: Option<Vec<f32>>,
-    /// Cofidence interval lower bound.
+    /// Confidence interval lower bound.
     pub interval_lower_bounds: Option<Vec<f32>>,
-    /// Cofidence interval upper bound.
+    /// Confidence interval upper bound.
     pub interval_upper_bounds: Option<Vec<f32>>,
-    /// Cofidence interval center.
+    /// Confidence interval center.
     pub centers: Option<Vec<f32>>,
     /// The number of forecasters who have logged predictions up to this point.
     /// This number can only increase over the history of a market.
@@ -146,7 +146,7 @@ pub struct MetaculusProjectSeries {
     pub site_main: Vec<MetaculusProjects>,
 }
 
-/// What stage of the market lifecycle this is in.
+/// What stage of the market life-cycle this is in.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum MetaculusStatus {
@@ -166,11 +166,11 @@ pub enum MetaculusStatus {
 pub enum MetaculusResolution {
     /// Resolved positively.
     Yes,
-    /// Resolved negtively.
+    /// Resolved negatively.
     No,
-    /// Cancelled due to issues with the question interpretation.
+    /// Canceled due to issues with the question interpretation.
     Ambiguous,
-    /// Cancelled due to other issues or because the premise is no longer valid.
+    /// Canceled due to other issues or because the premise is no longer valid.
     Annulled,
 }
 

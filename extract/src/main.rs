@@ -1,3 +1,6 @@
+//! Themis extract binary source.
+//! Pulls all markets from cache files and standardizes them
+
 use anyhow::{Context, Result};
 use clap::Parser;
 use log::{debug, info};

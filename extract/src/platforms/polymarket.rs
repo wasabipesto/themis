@@ -30,7 +30,7 @@ pub struct PolymarketToken {
     pub token_id: String,
     /// The outcome for this token.
     /// For binary markets, this is Yes or No. Both tokens will be present.
-    /// For multiple choice, this will be each option name (Even/Odd, Cheifs/Eagles).
+    /// For multiple choice, this will be each option name (Even/Odd, Chiefs/Eagles).
     pub outcome: String,
     /// The (current?) price of this option.
     /// TODO: Verify all prices in this list should sum to 1.0.
@@ -71,11 +71,11 @@ pub struct PolymarketMarket {
     /// Whether the market has been archived.
     /// Unsure of the effect of archiving.
     pub archived: bool,
-    /// Uncertian. Very few markets have this.
+    /// Uncertain. Very few markets have this.
     pub is_50_50_outcome: bool,
 
     /// Negative risk markets are mutually exclusive with another market.
-    /// This allows users to hold positions in both wihtout spending extra capital.
+    /// This allows users to hold positions in both without spending extra capital.
     pub neg_risk: bool,
     pub neg_risk_market_id: Option<String>,
     pub neg_risk_request_id: Option<String>,
@@ -88,7 +88,7 @@ pub struct PolymarketMarket {
     pub taker_base_fee: f32,
 
     /// All tokens part of this market.
-    /// Each token corresponds to a posisble outcome.
+    /// Each token corresponds to a possible outcome.
     pub tokens: Vec<PolymarketToken>,
 }
 

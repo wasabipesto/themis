@@ -95,7 +95,7 @@ pub struct ManifoldAnswer {
 #[serde(rename_all = "camelCase")]
 pub struct ManifoldMarket {
     /// The unique ID of this market.
-    /// Can conatin multiple sub-markets (multiple choice, numeric).
+    /// Can contain multiple sub-markets (multiple choice, numeric).
     pub id: String,
 
     /// Question text, also used as the title.
@@ -123,7 +123,7 @@ pub struct ManifoldMarket {
     pub creator_name: String,
 
     /// Moment the market was created.
-    /// Manifold markets are open for trade immedtaely upon creation.
+    /// Manifold markets are open for trade immediately upon creation.
     /// All times are in milliseconds since epoch.
     #[serde(with = "ts_milliseconds")]
     pub created_time: DateTime<Utc>,
@@ -185,7 +185,7 @@ pub struct ManifoldMarket {
 pub struct ManifoldBet {
     /// The unique ID of this bet.
     pub bet_id: String,
-    /// Correponds to the market ID this bet was placed on.
+    /// Corresponds to the market ID this bet was placed on.
     pub contract_id: String,
     /// Bettor's user ID.
     pub user_id: String,
@@ -229,7 +229,7 @@ pub struct ManifoldBet {
     pub is_api: Option<bool>,
     /// True if the order was part of a challenge bet.
     /// Challenge bets are placed at a probability agreed upon by both sides,
-    /// not necessarialy the market probability. These are no longer possible to make.
+    /// not necessarily the market probability. These are no longer possible to make.
     pub is_challenge: Option<bool>,
     /// True if the order is completely filled.
     pub is_filled: Option<bool>,
