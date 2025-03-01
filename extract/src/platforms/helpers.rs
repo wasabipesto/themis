@@ -159,58 +159,39 @@ pub fn get_daily_probabilities(
 /// Validates that probability segments are properly ordered and continuous.
 /// Returns Ok(()) if segments are valid, or an Error with details about the issue found.
 pub fn validate_prob_segments(probs: &[ProbSegment]) -> Result<()> {
-    if probs.len() <= 1 {
-        // Even for a single segment, we should validate start/end times
-        if let Some(segment) = probs.first() {
-            if segment.end <= segment.start {
+    let mut previous: Option<&ProbSegment> = None;
+
+    for segment in probs {
+        // Check that the segment has positive width
+        if segment.end < segment.start {
+            return Err(anyhow::anyhow!(
+                "Invalid segment: end time ({}) < start time ({})",
+                segment.end,
+                segment.start,
+            ));
+        }
+
+        if let Some(prev) = &previous {
+            // Check that the previous segment does not intrude
+            if segment.start < prev.end {
                 return Err(anyhow::anyhow!(
-                    "Invalid segment: end time ({}) <= start time ({})",
-                    segment.start,
-                    segment.end
-                ));
+                "Overlapping segments detected: previous segment ends at {}, this segment starts at {}",
+                prev.end,
+                segment.start
+            ));
+            }
+
+            // Check that the previous segment meets this one
+            if segment.start > prev.end {
+                return Err(anyhow::anyhow!(
+                "Gap between segments detected: previous segment ends at {}, this segment starts at {}",
+                prev.end,
+                segment.start
+            ));
             }
         }
-        return Ok(());
-    }
 
-    let mut prev = &probs[0];
-
-    // Check first item before entering loop
-    if prev.start >= prev.end {
-        return Err(anyhow::anyhow!(
-            "Invalid segment: start time ({}) >= end time ({})",
-            prev.start,
-            prev.end
-        ));
-    }
-
-    // Single pass through the array checking both ordering and continuity
-    for segment in &probs[1..] {
-        if segment.start >= segment.end {
-            return Err(anyhow::anyhow!(
-                "Invalid segment: start time ({}) >= end time ({})",
-                segment.start,
-                segment.end
-            ));
-        }
-
-        if segment.start < prev.end {
-            return Err(anyhow::anyhow!(
-                "Overlapping segments detected: previous segment ends at {}, next segment starts at {}",
-                prev.end,
-                segment.start
-            ));
-        }
-
-        if segment.start > prev.end {
-            return Err(anyhow::anyhow!(
-                "Gap between segments detected: previous segment ends at {}, next segment starts at {}",
-                prev.end,
-                segment.start
-            ));
-        }
-
-        prev = segment;
+        previous = Some(segment);
     }
 
     Ok(())
@@ -364,6 +345,61 @@ mod tests {
         // Time outside any segment
         let outside_time = create_dt(2023, 1, 3, 0);
         assert!(get_prob_at_time(&probs, outside_time).is_err());
+    }
+
+    #[test]
+    fn test_zero_duration_segments() {
+        let base = create_dt(2023, 1, 1, 0);
+        let mid = create_dt(2023, 1, 1, 12);
+        let end = create_dt(2023, 1, 2, 0);
+
+        // Create segments where one has zero duration
+        let probs = vec![
+            ProbSegment {
+                start: base,
+                end: base, // Zero duration
+                prob: 0.3,
+            },
+            ProbSegment {
+                start: base,
+                end: mid,
+                prob: 0.6,
+            },
+            ProbSegment {
+                start: mid,
+                end: mid, // Another zero duration
+                prob: 0.5,
+            },
+            ProbSegment {
+                start: mid,
+                end,
+                prob: 0.9,
+            },
+        ];
+
+        // The zero duration segments should be effectively ignored
+        // Only the non-zero duration segments should contribute to the average
+        let avg = get_prob_time_avg(&probs, base, end).unwrap();
+
+        // Expected average: (0.6 * 12 hours + 0.9 * 12 hours) / 24 hours = 0.75
+        assert!((avg - 0.75).abs() < 0.0001);
+
+        // Test with all zero duration segments
+        let all_zero_probs = vec![
+            ProbSegment {
+                start: base,
+                end: base,
+                prob: 0.3,
+            },
+            ProbSegment {
+                start: mid,
+                end: mid,
+                prob: 0.5,
+            },
+        ];
+
+        // Should return an error when no valid segments are found
+        assert!(get_prob_time_avg(&all_zero_probs, base, end).is_err());
     }
 
     #[test]
