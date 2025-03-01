@@ -38,7 +38,7 @@ pub fn get_prob_time_avg(
         let overlap_end = end.min(segment.end);
 
         if overlap_start < overlap_end {
-            let duration = (overlap_end - overlap_start).num_seconds() as f32;
+            let duration = (overlap_end - overlap_start).num_milliseconds() as f32;
             weighted_sum += segment.prob * duration;
             total_weight += duration;
         }
@@ -47,7 +47,10 @@ pub fn get_prob_time_avg(
     if total_weight > 0.0 {
         Ok(weighted_sum / total_weight)
     } else {
-        error!("No overlapping time segments found between start and end times");
+        error!(
+            "No prob segments found in window ({start} to {end}): {:?}",
+            probs
+        );
         Err(anyhow::anyhow!(
             "No valid time segments found for probability calculation"
         ))
@@ -287,6 +290,46 @@ mod tests {
 
         // Invalid time window
         assert!(get_prob_time_avg(&probs, end, start).is_err());
+    }
+
+    #[test]
+    fn test_subsecond_time_avg() {
+        // Test handling of very small time differences (less than 1 second)
+        let base = create_dt(2023, 1, 1, 0);
+        let plus_500ms = base + Duration::milliseconds(500);
+        let plus_750ms = base + Duration::milliseconds(750);
+        let plus_1sec = base + Duration::seconds(1);
+
+        let probs = vec![
+            ProbSegment {
+                start: base,
+                end: plus_500ms,
+                prob: 0.3,
+            },
+            ProbSegment {
+                start: plus_500ms,
+                end: plus_750ms,
+                prob: 0.6,
+            },
+            ProbSegment {
+                start: plus_750ms,
+                end: plus_1sec,
+                prob: 0.9,
+            },
+        ];
+
+        // Calculate time-weighted average over the full second
+        let avg = get_prob_time_avg(&probs, base, plus_1sec).unwrap();
+
+        // Expected average: (0.3 * 0.5 + 0.6 * 0.25 + 0.9 * 0.25) = 0.525
+        let expected = 0.3 * 0.5 + 0.6 * 0.25 + 0.9 * 0.25;
+        assert!((avg - expected).abs() < 0.0001);
+
+        // Test with even smaller window
+        let tiny_start = plus_500ms;
+        let tiny_end = tiny_start + Duration::milliseconds(1);
+        let tiny_avg = get_prob_time_avg(&probs, tiny_start, tiny_end).unwrap();
+        assert_eq!(tiny_avg, 0.6);
     }
 
     #[test]
