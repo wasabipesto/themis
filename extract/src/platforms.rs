@@ -111,6 +111,34 @@ impl Platform {
         }
     }
 
+    /// Find the first line in the platform data file matching the search term and deserialize it.
+    pub fn load_line_match(&self, base_dir: &Path, search: &str) -> Result<PlatformData> {
+        let file_name = format!("{}-data.jsonl", self).to_lowercase();
+        let data_file_path = base_dir.join(file_name);
+
+        let file = File::open(&data_file_path)
+            .with_context(|| format!("Failed to open file: {}", data_file_path.display()))?;
+        let reader = BufReader::new(file);
+
+        for (line_number, line) in reader.lines().enumerate() {
+            match line {
+                Ok(line_content) => {
+                    if line_content.contains(search) {
+                        return self.deserialize_line(&line_content).with_context(|| {
+                            format!("Failed to deserialize matching line {}", line_number + 1)
+                        });
+                    }
+                }
+                Err(err) => {
+                    log::error!("Failed to read line {}: {}", line_number + 1, err);
+                    continue;
+                }
+            }
+        }
+
+        anyhow::bail!("No line found containing search term: {}", search)
+    }
+
     /// Find the appropriate data file based on platform name, then load and deserialize all lines.
     pub fn load_data(&self, base_dir: &Path) -> Result<Vec<PlatformData>> {
         let file_name = format!("{}-data.jsonl", self).to_lowercase();

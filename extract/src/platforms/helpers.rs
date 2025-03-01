@@ -162,9 +162,9 @@ pub fn validate_prob_segments(probs: &[ProbSegment]) -> Result<()> {
     if probs.len() <= 1 {
         // Even for a single segment, we should validate start/end times
         if let Some(segment) = probs.first() {
-            if segment.start >= segment.end {
+            if segment.end <= segment.start {
                 return Err(anyhow::anyhow!(
-                    "Invalid segment: start time ({}) >= end time ({})",
+                    "Invalid segment: end time ({}) <= start time ({})",
                     segment.start,
                     segment.end
                 ));

@@ -254,7 +254,7 @@ pub fn standardize(input: &KalshiData) -> Result<Option<Vec<MarketAndProbs>>> {
 
 /// Converts Kalshi events into standard probability segments.
 /// For brevity we will ignore any event that does not change the price or has a duration less than one second.
-fn build_prob_segments(
+pub fn build_prob_segments(
     raw_history: &[KalshiHistoryItem],
     market_end: &DateTime<Utc>,
 ) -> Vec<ProbSegment> {
@@ -278,13 +278,18 @@ fn build_prob_segments(
         let end = if i < history.len() - 1 {
             history[i + 1].created_time
         } else {
-            market_end.to_owned()
+            // Check if the market end is after the beginning of this segment
+            if market_end > &start {
+                market_end.to_owned()
+            } else {
+                // Sometimes the market end is set in the past or some other weird date
+                // If it would make the last segment negative, skip it
+                continue;
+            }
         };
 
-        // If the duration is less than 1 second, skip.
-        // This has the side effect of ignoring negative duration events.
-        // This also has the side effect of ignoring when the close date is before the last trade.
-        if (end - start).num_seconds() < 1 {
+        // If the duration is less than 1 millisecond, skip.
+        if (end - start).num_milliseconds() < 1 {
             continue;
         }
 
@@ -293,11 +298,13 @@ fn build_prob_segments(
         let prob = event.yes_price / 100.0;
 
         // If the probability is the same as the previous segment's prob, skip.
+        /*
         if let Some(previous_segment) = segments.last() {
             if (previous_segment.prob - prob).abs() < f32::EPSILON {
                 continue;
             }
         }
+        */
 
         segments.push(ProbSegment { start, end, prob });
     }

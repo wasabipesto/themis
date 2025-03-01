@@ -7,6 +7,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 import random
 import os
+import subprocess
 
 load_dotenv()
 postgrest_host = os.environ.get('PGRST_HOST')
@@ -60,14 +61,45 @@ if not source_market:
 source_df = pd.DataFrame(source_market.get("history"))
 source_df['date'] = pd.to_datetime(source_df['created_time'])
 source_df['prob'] = source_df['yes_price'] / 100
+source_df = source_df.sort_values(by='date')
+
+# Get the progress prob segments
+current_dir = os.path.dirname(os.path.abspath(__file__))
+segment_script = os.path.join(current_dir, "build-prob-segments.rs")
+result = subprocess.run(
+    [
+        "rust-script",
+        "--force",
+        segment_script,
+        "--platform",
+        platform,
+        "--search",
+        market_id,
+    ],
+    capture_output=True,
+    text=True
+)
+if result.returncode != 0:
+    raise ValueError(f"Segment script failed: {result.stderr}")
+segment_data = json.loads(result.stdout)
+segment_df = pd.DataFrame(segment_data)
+segment_df['date'] = pd.to_datetime(segment_df['start'])
 
 # %%
 # Create the plot
 plt.figure(figsize=(12, 6))
-plt.step(pg_df['date'], pg_df['prob'], '-', where='mid', label='Database')
-plt.step(source_df['date'], source_df['prob'], '-', where='pre', label='Source')
+
+plt.step(source_df['date'], source_df['prob'], '-', color='red', where='post', alpha=0.5, label='Source Events')
+plt.scatter(source_df['date'], source_df['prob'], color='red', s=20, alpha=0.5)
+
+plt.step(segment_df['date'], segment_df['prob'], '-', color='orange', where='post', alpha=0.5, label='Segments')
+plt.scatter(segment_df['date'], segment_df['prob'], color='orange', s=20, alpha=0.5)
+
+plt.step(pg_df['date'], pg_df['prob'], '-', color='blue', where='mid', alpha=0.5, label='Database')
+plt.scatter(pg_df['date'], pg_df['prob'], color='blue', s=20, alpha=0.5)
+
 plt.grid(True, alpha=0.3)
-plt.title(f"{market['title']}\nProbability Over Time")
+plt.title(f"{market['id']}: {market['title']}\nProbability Over Time")
 plt.xlabel('Date')
 plt.ylabel('Probability')
 plt.ylim(0, 1)

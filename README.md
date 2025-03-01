@@ -23,7 +23,8 @@ Install any other dependencies:
 - The script for site deployment uses `rclone` and thus can be deployed to any target supported by that utility. You can install rclone by following the instructions [here](https://rclone.org/install/), or deploy the site some other way.
 - Some other optional utilities:
   - There are a few Python scripts I use for development in the `scripts` folder. If you want to use these, ensure you have a recent version of Python installed.
-  - When testing API responses I use `jq` for filtering and general formatting.
+  - When testing API responses I use `jq` for filtering and general formatting. You can get that [here](https://jqlang.org/download/).
+  - A couple scripts for debugging are written with `rust-script`. Installation instructions are [here](https://rust-script.org/#installation).
 
 ## Step 1. Downloading API data to disk
 
