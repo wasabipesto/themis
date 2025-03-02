@@ -2,7 +2,7 @@
 
 use super::{DailyProbability, ProbSegment};
 use anyhow::{Context, Result};
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Duration, TimeZone, Utc};
 use log::{debug, error};
 
 /// Gets the number of calendar days covered (in UTC) by start and end,
@@ -162,6 +162,26 @@ pub fn validate_prob_segments(probs: &[ProbSegment]) -> Result<()> {
     let mut previous: Option<&ProbSegment> = None;
 
     for segment in probs {
+        // Segment start and end date sanity checks
+        let too_early = Utc::with_ymd_and_hms(&Utc, 2000, 1, 1, 0, 0, 0).unwrap();
+        let too_late = Utc::now();
+        if segment.start < too_early || segment.start > too_late {
+            return Err(anyhow::anyhow!(
+                "Segment end date ({}) is out of bounds [{} - {}]",
+                segment.end,
+                too_early,
+                too_late,
+            ));
+        }
+        if segment.end < too_early || segment.end > too_late {
+            return Err(anyhow::anyhow!(
+                "Segment end date ({}) is out of bounds [{} - {}]",
+                segment.end,
+                too_early,
+                too_late,
+            ));
+        }
+
         // Check that the segment has positive width
         if segment.end <= segment.start {
             return Err(anyhow::anyhow!(

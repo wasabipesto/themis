@@ -1,8 +1,9 @@
 //! Tools to download and process markets from the Metaculus API.
 //! Metaculus API docs: https://www.metaculus.com/api/
 
-use anyhow::Result;
+use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Utc};
+use log::error;
 use serde::Deserialize;
 
 use super::{helpers, MarketAndProbs, ProbSegment, StandardMarket};
@@ -28,12 +29,12 @@ pub struct MetaculusData {
 pub struct MetaculusAggregationHistoryPoint {
     /// Start time of history bucket.
     /// Time is in milliseconds since epoch but formatted as floating-point.
-    pub start_time: Option<f32>,
+    pub start_time: f32,
     /// End time of history bucket.
     /// Time is in milliseconds since epoch but formatted as floating-point.
     pub end_time: Option<f32>,
     /// Prediction point mean.
-    /// If we have to use just one, this is the point we use.
+    /// If we have to use just one, this is the point we use. (The first one?)
     pub means: Option<Vec<f32>>,
     /// Confidence interval lower bound.
     pub interval_lower_bounds: Option<Vec<f32>>,
@@ -109,6 +110,9 @@ pub struct MetaculusQuestion {
     /// What type of question this is.
     #[serde(rename = "type")]
     pub market_type: MetaculusType,
+
+    /// If resolved, the value of the resolution.
+    pub resolution: Option<MetaculusResolution>,
 
     /// How much this question is weighted (for competitions?)
     /// Always between 0 and 1 so far.
@@ -227,8 +231,6 @@ pub struct MetaculusInfo {
     pub actual_close_time: Option<DateTime<Utc>>,
     /// If resolved, the resolution time.
     pub resolution_set_time: Option<DateTime<Utc>>,
-    /// If resolved, the value of the resolution.
-    pub resolution: Option<MetaculusResolution>,
 }
 
 /// Convert data pulled from the API into a standardized market item.
@@ -264,13 +266,17 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
                     .recency_weighted
                     .history,
                 &input.extended_data.actual_close_time,
-            );
+            )
+            .with_context(|| format!("Error building probability segments. ID: {market_id}"))?;
             if probs.is_empty() {
                 return Ok(None);
             }
 
             // Validate probability segments and collate into daily prob segments.
-            helpers::validate_prob_segments(&probs)?;
+            if helpers::validate_prob_segments(&probs).is_err() {
+                log::error!("Error validating probability segments. ID: {market_id}");
+                return Ok(None);
+            }
             let daily_probabilities =
                 helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)?;
 
@@ -280,7 +286,7 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
 
             // Build standard market item.
             let market = StandardMarket {
-                id: market_id,
+                id: market_id.clone(),
                 title: input.extended_data.title.clone(),
                 platform_slug,
                 platform_name: "Metaculus".to_string(),
@@ -299,12 +305,15 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
                 category: None, // TODO
                 prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
                 prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)?,
-                resolution: match input.extended_data.resolution {
+                resolution: match input.extended_data.question.resolution {
                     Some(MetaculusResolution::Yes) => 1.0,
                     Some(MetaculusResolution::No) => 0.0,
                     Some(MetaculusResolution::Ambiguous) => return Ok(None),
                     Some(MetaculusResolution::Annulled) => return Ok(None),
-                    None => return Ok(None),
+                    None => {
+                        error!("Resolved market {market_id} had no resolution value.");
+                        return Ok(None);
+                    }
                 },
             };
             Ok(Some(vec![MarketAndProbs {
@@ -321,8 +330,66 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
 
 /// Converts Metaculus aggregated history points into standard probability segments.
 pub fn build_prob_segments(
-    _raw_history: &[MetaculusAggregationHistoryPoint],
-    _market_end: &Option<DateTime<Utc>>,
-) -> Vec<ProbSegment> {
-    todo!()
+    raw_history: &[MetaculusAggregationHistoryPoint],
+    actual_close_time: &Option<DateTime<Utc>>,
+) -> Result<Vec<ProbSegment>> {
+    // Sort the history by time.
+    let mut history = raw_history.to_vec();
+    history.sort_by_key(|item| item.start_time as u32);
+
+    let mut segments: Vec<ProbSegment> = Vec::new();
+    for item in history {
+        // Get the start and end dates
+        let start = DateTime::from_timestamp(item.start_time as i64, 0)
+            .with_context(|| "Could not create datetime from history start point")?;
+        let end = match item.end_time {
+            Some(end_time) => DateTime::from_timestamp(end_time as i64, 0)
+                .with_context(|| "Could not create datetime from history end point")?,
+            None => {
+                // If end_time is null, then the segment extends to the end of the market.
+                // This should only happen for the very last item.
+                let end = actual_close_time
+                    .with_context(|| "Market actual_close_time not present for resolved market.")?;
+
+                // The actual_close_time may be before the final history point if the market was closed retroactively.
+                // We could properly redact those but I'd rather keep those predictions for comparison.
+                // For question analysis we set our own end dates anyways so more data will only be more helpful.
+                if end < start {
+                    continue;
+                }
+                end
+            }
+        };
+
+        // If the duration is exactly 0, skip.
+        if end == start {
+            continue;
+        }
+
+        // If the start of this segment is prior to the end of the previous one, skip it.
+        // There are some overlapping items but if we filter them out everything seems to work out.
+        // Relevant Question IDs:
+        //   1640, 2599, 2616, 2788, 3238, 3682, 5174, 11274, 11528, 18177, 20533, 20694,
+        //   20747, 20748, 20751, 20762, 20766, 20768, 20771, 20774, 20775, 20783, 20789,
+        //   24020, 30251, 30297
+        if let Some(previous_segment) = segments.last() {
+            if previous_segment.end > start {
+                continue;
+            }
+        }
+
+        // Get the means list and check it. We'll use the first listed probability.
+        // There is (so far) only ever one per aggregation but there could be more in the future.
+        let means = item.means.unwrap_or_default();
+        let prob = match means.first() {
+            None => return Err(anyhow!("Aggregation series has no mean.")),
+            Some(prob) => prob.to_owned(),
+        };
+        if means.len() > 1 {
+            log::warn!("Aggregation series has multiple means. Using the first one.");
+        }
+
+        segments.push(ProbSegment { start, end, prob });
+    }
+    Ok(segments)
 }

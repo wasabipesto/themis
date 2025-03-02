@@ -31,17 +31,25 @@ struct Args {
 fn main() -> Result<()> {
     let args = Args::parse();
 
-    let line = args
+    let input = args
         .platform
         .load_line_match(&args.directory, &args.search)?;
 
-    let segments = match line {
-        PlatformData::Kalshi(line) => {
-            kalshi::build_prob_segments(&line.history, &line.market.close_time)
+    let segments = match input {
+        PlatformData::Kalshi(input) => {
+            kalshi::build_prob_segments(&input.history, &input.market.close_time)
         }
-        PlatformData::Manifold(_line) => todo!(),
-        PlatformData::Metaculus(_line) => todo!(),
-        PlatformData::Polymarket(_line) => todo!(),
+        PlatformData::Manifold(input) => manifold::build_prob_segments(&input.bets),
+        PlatformData::Metaculus(input) => metaculus::build_prob_segments(
+            &input
+                .extended_data
+                .question
+                .aggregations
+                .recency_weighted
+                .history,
+            &input.extended_data.actual_close_time,
+        )?,
+        PlatformData::Polymarket(_input) => todo!(),
     };
     println!("{}", serde_json::to_string(&segments)?);
     Ok(())

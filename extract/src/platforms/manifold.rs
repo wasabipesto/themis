@@ -271,7 +271,10 @@ pub fn standardize(input: &ManifoldData) -> Result<Option<Vec<MarketAndProbs>>> 
             }
 
             // Validate probability segments and collate into daily prob segments.
-            helpers::validate_prob_segments(&probs)?;
+            if helpers::validate_prob_segments(&probs).is_err() {
+                log::error!("Error validating probability segments. ID: {market_id}");
+                return Ok(None);
+            }
             let daily_probabilities =
                 helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)?;
 
@@ -391,7 +394,7 @@ fn get_resolution_value(market: &ManifoldMarket) -> Result<Option<f32>> {
                     //  - MWzNRuVifNR8NB9WVoeC
                     //  - V288UeQ98h4j3KPbceiJ
                     //  - ooiNbYz6Adqcv7eUfLPa
-                    log::debug!(
+                    log::error!(
                         "Market {} resolution value is not one of YES/NO/MKT/CANCEL",
                         market.id
                     );
