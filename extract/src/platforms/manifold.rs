@@ -307,6 +307,7 @@ pub fn standardize(input: &ManifoldData) -> Result<Option<Vec<MarketAndProbs>>> 
                 daily_probabilities,
             }]))
         }
+        // Not yet implemented
         ManifoldOutcomeType::MultipleChoice => Ok(None),
         ManifoldOutcomeType::PseudoNumeric => Ok(None),
         ManifoldOutcomeType::Number => Ok(None),

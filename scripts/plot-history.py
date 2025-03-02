@@ -22,6 +22,7 @@ response = requests.get(
     f"{postgrest_base}/markets",
     params={
         #"id": f"eq.kalshi:PRES-2024-DJT",
+        "platform_slug": f"eq.kalshi",
         "duration_days": f"gt.90",
         "volume_usd": f"gt.10000",
     }

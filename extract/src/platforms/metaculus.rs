@@ -5,7 +5,7 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
-use super::MarketAndProbs;
+use super::{helpers, MarketAndProbs, ProbSegment, StandardMarket};
 
 /// This is the container format we used to save items to disk earlier.
 #[derive(Debug, Clone, Deserialize)]
@@ -72,6 +72,16 @@ pub struct MetaculusAggregationSeries {
     pub unweighted: MetaculusAggregationTypes,
 }
 
+/// What kind of market this is.
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MetaculusType {
+    /// Typical binary market. Predictions are single points or distributions.
+    Binary,
+    /// Potential future market type. Currently unused.
+    Continuous,
+}
+
 /// Info on each tag applied to the question.
 #[derive(Debug, Clone, Deserialize)]
 pub struct MetaculusTag {
@@ -96,6 +106,9 @@ pub struct MetaculusQuestion {
     /// Question fine print.
     /// Can be multiple lines, separated with "\n\n".
     pub fine_print: String,
+    /// What type of question this is.
+    #[serde(rename = "type")]
+    pub market_type: MetaculusType,
 
     /// How much this question is weighted (for competitions?)
     /// Always between 0 and 1 so far.
@@ -112,16 +125,6 @@ pub struct MetaculusQuestion {
     /// Unsure if we should use this or projects for categorization.
     #[serde(default)] // default to empty vec
     pub tag: Vec<MetaculusTag>,
-}
-
-/// What kind of market this is.
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum MetaculusType {
-    /// Typical binary market. Predictions are single points or distributions.
-    Binary,
-    /// Potential future market type.
-    Continuous,
 }
 
 /// Info on each project associated with the question.
@@ -184,10 +187,8 @@ pub struct MetaculusInfo {
     /// Question text, also used as title.
     pub title: String,
     /// The URL slug for this question.
+    /// Can optionally be added to the end of the URL.
     pub slug: String,
-    /// What type of question this is. Always `binary`.
-    #[serde(rename = "type")]
-    pub mkt_type: Option<MetaculusType>,
 
     /// More information about the question.
     /// This object has a lot of redundant information.
@@ -234,8 +235,94 @@ pub struct MetaculusInfo {
 /// Returns Error if there were any actual problems with the processing.
 /// Returns None if the market was invalid in an expected way.
 /// Otherwise, returns a list of markets with probabilities.
-/// Note: This is not a 1:1 conversion because some inputs contain multiple
-/// discrete markets, and each of those have their own histories.
-pub fn standardize(_input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>> {
-    todo!();
+pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>> {
+    // Only process resolved markets
+    match input.extended_data.status {
+        MetaculusStatus::Resolved => {}
+        _ => return Ok(None),
+    }
+    // Skip markets that have not resolved
+    if !input.extended_data.resolved {
+        return Ok(None);
+    }
+
+    // Convert based on market type
+    match input.extended_data.question.market_type {
+        // Currently only binary markets exist
+        MetaculusType::Binary => {
+            // Get market ID. Construct from platform slug and ID within platform.
+            let platform_slug = "metaculus".to_string();
+            let market_id = format!("{}:{}", platform_slug, input.extended_data.id);
+
+            // Get probability segments. If there are none then skip.
+            // Using recency_weighted (community prediction) here, may change in the future.
+            let probs = build_prob_segments(
+                &input
+                    .extended_data
+                    .question
+                    .aggregations
+                    .recency_weighted
+                    .history,
+                &input.extended_data.actual_close_time,
+            );
+            if probs.is_empty() {
+                return Ok(None);
+            }
+
+            // Validate probability segments and collate into daily prob segments.
+            helpers::validate_prob_segments(&probs)?;
+            let daily_probabilities =
+                helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)?;
+
+            // We only consider the market to be open while there are actual probabilities.
+            let start = probs.first().unwrap().start;
+            let end = probs.last().unwrap().end;
+
+            // Build standard market item.
+            let market = StandardMarket {
+                id: market_id,
+                title: input.extended_data.title.clone(),
+                platform_slug,
+                platform_name: "Metaculus".to_string(),
+                question_id: None,
+                question_invert: false,
+                question_dismissed: 0,
+                url: format!(
+                    "https://www.metaculus.com/questions/{}",
+                    input.extended_data.id
+                ),
+                open_datetime: start,
+                close_datetime: end,
+                traders_count: Some(input.extended_data.nr_forecasters),
+                volume_usd: None, // Not available in API
+                duration_days: helpers::get_market_duration(start, end)?,
+                category: None, // TODO
+                prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
+                prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)?,
+                resolution: match input.extended_data.resolution {
+                    Some(MetaculusResolution::Yes) => 1.0,
+                    Some(MetaculusResolution::No) => 0.0,
+                    Some(MetaculusResolution::Ambiguous) => return Ok(None),
+                    Some(MetaculusResolution::Annulled) => return Ok(None),
+                    None => return Ok(None),
+                },
+            };
+            Ok(Some(vec![MarketAndProbs {
+                market,
+                daily_probabilities,
+            }]))
+        }
+        MetaculusType::Continuous => {
+            log::error!("Metaculus `continuous` type detected. We don't have enough information on that type to properly standardize it. Market ID: {}", input.extended_data.id);
+            Ok(None)
+        }
+    }
+}
+
+/// Converts Metaculus aggregated history points into standard probability segments.
+pub fn build_prob_segments(
+    _raw_history: &[MetaculusAggregationHistoryPoint],
+    _market_end: &Option<DateTime<Utc>>,
+) -> Vec<ProbSegment> {
+    todo!()
 }
