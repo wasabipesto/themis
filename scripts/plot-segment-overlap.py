@@ -42,8 +42,8 @@ fig, ax = plt.subplots(figsize=(12, 6))
 # Plot each segment
 prev_end = None
 for i, segment in enumerate(data):
-    start_time = datetime.strptime(segment['start'], '%Y-%m-%dT%H:%M:%SZ')
-    end_time = datetime.strptime(segment['end'], '%Y-%m-%dT%H:%M:%SZ')
+    start_time = datetime.strptime(segment['start'], '%Y-%m-%dT%H:%M:%S.%fZ')
+    end_time = datetime.strptime(segment['end'], '%Y-%m-%dT%H:%M:%S.%fZ')
     prob = segment['prob']
 
     # Plot horizontal line for each segment

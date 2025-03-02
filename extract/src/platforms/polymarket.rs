@@ -6,7 +6,7 @@ use chrono::serde::ts_milliseconds;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
-use super::MarketAndProbs;
+use super::{helpers, MarketAndProbs, ProbSegment, StandardMarket};
 
 /// This is the container format we used to save items to disk earlier.
 #[derive(Debug, Clone, Deserialize)]
@@ -97,7 +97,6 @@ pub struct PolymarketMarket {
 #[derive(Debug, Clone, Deserialize)]
 pub struct PolymarketPricePoint {
     /// Timestamp of provided probability point.
-    /// TODO: Verify these are evenly-spaced in time.
     /// TODO: Check if the timestamp is the start, middle, or end of he time bucket.
     #[serde(with = "ts_milliseconds")]
     pub t: DateTime<Utc>,
@@ -111,6 +110,94 @@ pub struct PolymarketPricePoint {
 /// Otherwise, returns a list of markets with probabilities.
 /// Note: This is not a 1:1 conversion because some inputs contain multiple
 /// discrete markets, and each of those have their own histories.
-pub fn standardize(_input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>> {
-    todo!();
+pub fn standardize(input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>> {
+    // Only process inactive, closed markets
+    // (A market can be both active and closed)
+    if input.market.active || !input.market.closed {
+        return Ok(None);
+    }
+
+    // Get market ID. Construct from platform slug and ID within platform.
+    let platform_slug = "polymarket".to_string();
+    let market_id = format!("{}:{}", platform_slug, input.market.question_id);
+
+    // Get probability segments. If there are none then skip.
+    let probs = build_prob_segments(&input.prices_history);
+    if probs.is_empty() {
+        return Ok(None);
+    }
+
+    // Validate probability segments and collate into daily prob segments.
+    if let Err(e) = helpers::validate_prob_segments(&probs) {
+        log::error!("Error validating probability segments. ID: {market_id} Error: {e}");
+        return Ok(None);
+    }
+    let daily_probabilities = helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)?;
+
+    // We only consider the market to be open while there are actual probabilities.
+    let start = probs.first().unwrap().start;
+    let end = probs.last().unwrap().end;
+
+    // Build standard market item.
+    let market = StandardMarket {
+        id: market_id,
+        title: input.market.question.clone(),
+        platform_slug,
+        platform_name: "Polymarket".to_string(),
+        question_id: None,
+        question_invert: false,
+        question_dismissed: 0,
+        url: "".into(), // TODO
+        open_datetime: start,
+        close_datetime: end,
+        traders_count: None, // TODO
+        volume_usd: None,    // TODO
+        duration_days: helpers::get_market_duration(start, end)?,
+        category: None, // TODO
+        prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
+        prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)?,
+        resolution: 0.5, // TODO
+    };
+    Ok(Some(vec![MarketAndProbs {
+        market,
+        daily_probabilities,
+    }]))
+}
+
+/// Converts Polymarket price points into standard probability segments.
+pub fn build_prob_segments(raw_history: &[PolymarketPricePoint]) -> Vec<ProbSegment> {
+    // Sort the history by time.
+    let mut history = raw_history.to_vec();
+    history.sort_by_key(|item| item.t);
+
+    let mut segments: Vec<ProbSegment> = Vec::new();
+
+    for (i, point) in history.iter().enumerate() {
+        // The start of the segment will equal the end of the previous one unless we skipped some.
+        // Err on the side of using the previous segment's end timestamp unless it's the first one.
+        let start = match segments.last() {
+            Some(previous_segment) => previous_segment.end,
+            None => point.t,
+        };
+
+        // The end of the segment will be the beginning of the next event.
+        // We don't trust end dates so the last trade is the end of the market.
+        let end = if i < history.len() - 1 {
+            history[i + 1].t
+        } else {
+            continue;
+        };
+
+        // If the duration is exactly 0, skip.
+        // Decided to keep this due to issues with how the windowing functions work.
+        if start == end {
+            continue;
+        }
+
+        // Get the probability after the bet was made.
+        let prob = point.p;
+
+        segments.push(ProbSegment { start, end, prob });
+    }
+    segments
 }

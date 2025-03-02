@@ -49,7 +49,7 @@ fn main() -> Result<()> {
                 .history,
             &input.extended_data.actual_close_time,
         )?,
-        PlatformData::Polymarket(_input) => todo!(),
+        PlatformData::Polymarket(input) => polymarket::build_prob_segments(&input.prices_history),
     };
     println!("{}", serde_json::to_string(&segments)?);
     Ok(())

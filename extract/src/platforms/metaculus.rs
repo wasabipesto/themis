@@ -273,8 +273,8 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
             }
 
             // Validate probability segments and collate into daily prob segments.
-            if helpers::validate_prob_segments(&probs).is_err() {
-                log::error!("Error validating probability segments. ID: {market_id}");
+            if let Err(e) = helpers::validate_prob_segments(&probs) {
+                log::error!("Error validating probability segments. ID: {market_id} Error: {e}");
                 return Ok(None);
             }
             let daily_probabilities =
