@@ -17,26 +17,27 @@ pub struct PolymarketData {
     pub last_updated: DateTime<Utc>,
     // Values returned from the `/markets` endpoint.
     pub market: PolymarketMarket,
+    /// The token that we got the price history for.
+    pub prices_history_token: String,
     /// Values returned from the `/prices-history` endpoint.
     pub prices_history: Vec<PolymarketPricePoint>,
 }
 
 /// Data on each token part of the market.
 /// This is where we get resolution data.
+/// There are always exactly two tokens per market.
 #[derive(Debug, Clone, Deserialize)]
 pub struct PolymarketToken {
     /// The unique ID for this token.
-    /// TODO: Verify there will always be two tokens per market.
     pub token_id: String,
     /// The outcome for this token.
     /// For binary markets, this is Yes or No. Both tokens will be present.
     /// For multiple choice, this will be each option name (Even/Odd, Chiefs/Eagles).
     pub outcome: String,
-    /// The (current?) price of this option.
-    /// TODO: Verify all prices in this list should sum to 1.0.
+    /// The most recent price of this option.
     pub price: f32,
     /// True on the token that paid out to holders (resolved Yes).
-    /// False on all others including still-active markets.
+    /// It is possible but rare for both tokens to have winner = true.
     pub winner: bool,
 }
 
@@ -64,12 +65,13 @@ pub struct PolymarketMarket {
     pub end_date_iso: Option<DateTime<Utc>>,
 
     /// Whether the market is live.
+    /// Unsure what this signifies.
     pub active: bool,
     /// Whether the market is closed for trading.
-    /// This can be true at the same time as `active`.
+    /// This can be true at the same time as `active`!
     pub closed: bool,
     /// Whether the market has been archived.
-    /// Unsure of the effect of archiving.
+    /// Unsure what this signifies.
     pub archived: bool,
     /// Uncertain. Very few markets have this.
     pub is_50_50_outcome: bool,
@@ -111,9 +113,8 @@ pub struct PolymarketPricePoint {
 /// Note: This is not a 1:1 conversion because some inputs contain multiple
 /// discrete markets, and each of those have their own histories.
 pub fn standardize(input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>> {
-    // Only process inactive, closed markets
-    // (A market can be both active and closed)
-    if input.market.active || !input.market.closed {
+    // Only process closed markets
+    if !input.market.closed {
         return Ok(None);
     }
 
@@ -126,6 +127,9 @@ pub fn standardize(input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>
     if probs.is_empty() {
         return Ok(None);
     }
+
+    // Check tokens for resolution. If both are winners, error.
+    // TODO
 
     // Validate probability segments and collate into daily prob segments.
     if let Err(e) = helpers::validate_prob_segments(&probs) {

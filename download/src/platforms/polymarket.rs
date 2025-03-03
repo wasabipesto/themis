@@ -24,6 +24,7 @@ pub struct PolymarketItem {
     id: String,
     last_updated: DateTime<Utc>,
     market: Value,
+    prices_history_token: String,
     prices_history: Vec<Value>,
 }
 
@@ -36,9 +37,8 @@ fn get_clob_id(item: &Value) -> Result<String> {
         .as_array()
         .context("Expected 'tokens' field to be an array")?;
 
-    // TODO: get the token that resolved true (winner), not the first one
-    // also make sure there can only be one winning token
-    // I guess just don't get any price history for still-active markets?
+    // we take the first token, which is usually YES
+    // but save it so that we know which it was
     let first_token = tokens
         .first()
         .context("No tokens found in 'tokens' array")?;
@@ -55,18 +55,21 @@ fn get_clob_id(item: &Value) -> Result<String> {
 
 /// Download extended data from the `/prices-history` endpoint.
 /// Detect errors and warn but don't stop processing.
-async fn get_prices_history(client: &ClientWithMiddleware, market: &Value) -> Result<Vec<Value>> {
+async fn get_prices_history(
+    client: &ClientWithMiddleware,
+    market: &Value,
+) -> Result<(String, Vec<Value>)> {
     // get the CLOB ID, which is not the same as the market ID
-    let clob_id = get_clob_id(market)?;
-    if clob_id.is_empty() {
+    let prices_history_token = get_clob_id(market)?;
+    if prices_history_token.is_empty() {
         // sometimes this is empty even when the market ID is not
         // the API will throw an error if we try to submit a blank market ID so we'll just skip it
         debug!("Polymarket CLOB ID is empty, skipping market.");
-        return Ok(Vec::new());
+        return Ok(("None".into(), Vec::new()));
     }
 
     let api_url = POLYMARKET_CLOB_API_BASE.to_owned() + "/prices-history";
-    let mut history = Vec::new();
+    let mut prices_history = Vec::new();
     let fidelity_levels = [10, 60, 180, 360, 1200, 3600];
     for fidelity in fidelity_levels {
         //trace!("Attempting to get Polymarket price history for Token ID {clob_id} at fidelity level {fidelity}");
@@ -74,28 +77,28 @@ async fn get_prices_history(client: &ClientWithMiddleware, market: &Value) -> Re
             client
                 .get(&api_url)
                 .query(&[("interval", "all")])
-                .query(&[("market", &clob_id)])
+                .query(&[("market", &prices_history_token)])
                 .query(&[("fidelity", fidelity)]),
         )
         .await?;
-        history = response
+        prices_history = response
             .get("history")
             .context("Expected 'history' field in market.")?
             .as_array()
             .context("Failed to interpret 'history' as array.")?
             .to_owned();
-        if history.is_empty() {
-            trace!("Polymarket price history for Token ID {clob_id} at fidelity level {fidelity} returned no items, escalating to next fidelity level.");
+        if prices_history.is_empty() {
+            trace!("Polymarket price history for Token ID {prices_history_token} at fidelity level {fidelity} returned no items, escalating to next fidelity level.");
         } else {
-            trace!("Polymarket price history for Token ID {clob_id} at fidelity level {fidelity} returned {} items, saving and escaping.", history.len());
+            trace!("Polymarket price history for Token ID {prices_history_token} at fidelity level {fidelity} returned {} items, saving and escaping.", prices_history.len());
             break;
         }
     }
-    if history.is_empty() {
-        debug!("Polymarket price history for Token ID {clob_id} returned no items at any fidelity level.");
+    if prices_history.is_empty() {
+        debug!("Polymarket price history for Token ID {prices_history_token} returned no items at any fidelity level.");
     }
     // return history even if it has no items
-    Ok(history)
+    Ok((prices_history_token, prices_history))
 }
 
 /// Downloads everything to build a market item.
@@ -109,12 +112,14 @@ async fn get_data_and_build_item(
         .ok_or_else(|| anyhow!("Cache missing market key {market_id}!"))?
         .data
         .clone();
+    let (prices_history_token, prices_history) = get_prices_history(client, &market).await?;
     // return the row ready for writing
     Ok(PolymarketItem {
         id: market_id.to_owned(),
         last_updated: Utc::now(),
         market: market.clone(),
-        prices_history: get_prices_history(client, &market).await?,
+        prices_history_token,
+        prices_history,
     })
 }
 
