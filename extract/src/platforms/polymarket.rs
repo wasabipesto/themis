@@ -1,8 +1,8 @@
 //! Tools to download and process markets from the Polymarket API.
 //! Polymarket API docs: https://docs.polymarket.com/#clob-api
 
-use anyhow::Result;
-use chrono::serde::ts_milliseconds;
+use anyhow::{anyhow, Result};
+use chrono::serde::ts_seconds;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
@@ -99,8 +99,8 @@ pub struct PolymarketMarket {
 #[derive(Debug, Clone, Deserialize)]
 pub struct PolymarketPricePoint {
     /// Timestamp of provided probability point.
-    /// TODO: Check if the timestamp is the start, middle, or end of he time bucket.
-    #[serde(with = "ts_milliseconds")]
+    /// TODO: Check if the timestamp is the start, middle, or end of the time bucket.
+    #[serde(with = "ts_seconds")]
     pub t: DateTime<Utc>,
     /// Probability at the given timestamp.
     pub p: f32,
@@ -128,9 +128,6 @@ pub fn standardize(input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>
         return Ok(None);
     }
 
-    // Check tokens for resolution. If both are winners, error.
-    // TODO
-
     // Validate probability segments and collate into daily prob segments.
     if let Err(e) = helpers::validate_prob_segments(&probs) {
         log::error!("Error validating probability segments. ID: {market_id} Error: {e}");
@@ -142,10 +139,59 @@ pub fn standardize(input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>
     let start = probs.first().unwrap().start;
     let end = probs.last().unwrap().end;
 
+    // Sanity check for number of tokens (should always be 2).
+    let num_tokens = input.market.tokens.len();
+    if num_tokens != 2 {
+        return Err(anyhow!(
+            "Expected 2 tokens, found {num_tokens} tokens! ID: {market_id}"
+        ));
+    }
+
+    // Sanity check for number of winners (should always be 1).
+    let num_winners = input.market.tokens.iter().filter(|t| t.winner).count();
+    if num_winners == 0 {
+        // This happens fairly often
+        return Ok(None);
+    }
+    if num_winners > 1 {
+        log::error!(
+            "Expected 1 winning tokens, found {num_winners} winning tokens! ID: {market_id}"
+        );
+        return Ok(None);
+    }
+
+    // Sanity check for token prices (should always sum to 1).
+    let sum_prices: f32 = input.market.tokens.iter().map(|t| t.price).sum();
+    if !(0.99..1.01).contains(&sum_prices) {
+        return Err(anyhow!("Expected token prices to sum to 1.0, found they summed to {sum_prices}! ID: {market_id}"));
+    }
+
+    // Get the token that we tracked in order to determine which outcome resolution to pick.
+    let tracked_token = input
+        .market
+        .tokens
+        .iter()
+        .find(|t| t.token_id == input.prices_history_token)
+        .cloned()
+        .ok_or_else(|| {
+            anyhow!(
+                "Tracked price history token ID {} not found in market ID: {market_id}",
+                input.prices_history_token
+            )
+        })?;
+    let resolution = if tracked_token.winner { 1.0 } else { 0.0 };
+
+    // Append the tracked outcome to the market title so we know which side we're tracking.
+    let market_title = input.market.question.clone();
+    let title = match tracked_token.outcome.as_str() {
+        "Yes" => market_title,
+        _ => format!("{market_title} | {}", tracked_token.outcome),
+    };
+
     // Build standard market item.
     let market = StandardMarket {
         id: market_id,
-        title: input.market.question.clone(),
+        title,
         platform_slug,
         platform_name: "Polymarket".to_string(),
         question_id: None,
@@ -160,7 +206,7 @@ pub fn standardize(input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>
         category: None, // TODO
         prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
         prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)?,
-        resolution: 0.5, // TODO
+        resolution,
     };
     Ok(Some(vec![MarketAndProbs {
         market,
