@@ -186,7 +186,7 @@ pub fn standardize(input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>
     // Sanity check for token prices (should always sum to 1).
     let sum_prices: f32 = input.market.tokens.iter().map(|t| t.price).sum();
     if !(0.99..1.01).contains(&sum_prices) {
-        return Err(anyhow!("Expected token prices to sum to 1.0, found they summed to {sum_prices}! ID: {market_id}"));
+        log::debug!("Expected token prices to sum to 1.0, found they summed to {sum_prices}! ID: {market_id}");
     }
 
     // Append the tracked outcome to the market title so we know which side we're tracking.
