@@ -100,7 +100,6 @@ pub struct PolymarketMarket {
 #[derive(Debug, Clone, Deserialize)]
 pub struct PolymarketPricePoint {
     /// Timestamp of provided probability point.
-    /// TODO: Check if the timestamp is the start, middle, or end of the time bucket.
     #[serde(with = "ts_seconds")]
     pub t: DateTime<Utc>,
     /// Probability at the given timestamp.
@@ -206,11 +205,11 @@ pub fn standardize(input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>
         question_id: None,
         question_invert: false,
         question_dismissed: 0,
-        url: "".into(), // TODO
+        url: format!("https://polymarket.com/event/{}", input.market.market_slug),
         open_datetime: start,
         close_datetime: end,
-        traders_count: None, // TODO
-        volume_usd: None,    // TODO
+        traders_count: None, // TODO: Polymarket has never exposed this easily but should be doable
+        volume_usd: None, // TODO: Used to be in /markets, not sure where to find now (maybe /search?)
         duration_days: helpers::get_market_duration(start, end)?,
         category: get_category(&input.market.tags),
         prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
@@ -261,6 +260,7 @@ pub fn build_prob_segments(raw_history: &[PolymarketPricePoint]) -> Vec<ProbSegm
     segments
 }
 
+/// Manual mapping of tags to our standard categories.
 fn get_category(tags: &Option<Vec<String>>) -> Option<String> {
     const CATEGORIES: [(&str, &str); 17] = [
         ("AI", "AI"),
