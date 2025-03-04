@@ -396,7 +396,7 @@ fn get_resolution_value(market: &ManifoldMarket) -> Result<Option<f32>> {
                     //  - V288UeQ98h4j3KPbceiJ
                     //  - ooiNbYz6Adqcv7eUfLPa
                     log::error!(
-                        "Market {} resolution value is not one of YES/NO/MKT/CANCEL",
+                        "Market {} resolved MKT with no resolution probability.",
                         market.id
                     );
                     Ok(None)
