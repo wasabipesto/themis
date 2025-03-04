@@ -290,9 +290,6 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
                 title: input.extended_data.title.clone(),
                 platform_slug,
                 platform_name: "Metaculus".to_string(),
-                question_id: None,
-                question_invert: false,
-                question_dismissed: 0,
                 url: format!(
                     "https://www.metaculus.com/questions/{}",
                     input.extended_data.id
