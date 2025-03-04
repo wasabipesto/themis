@@ -56,38 +56,15 @@ db-curl *endpoint:
     -H "Authorization: Bearer ${PGRST_APIKEY}" | jq
 
 # Build the astro site
-astro-build:
-    -docker run -it --rm \
-        -v .:/app \
-        -w /app/site \
-        -u "$(id -u):$(id -g)" \
-        -p 4321:4321 \
-        --name astro \
-        node:23-bookworm \
-        npx astro build
+[working-directory: 'site']
+site-build:
+    npx astro build
 
 # Start the astro dev server
-astro-dev:
-    -docker run -it --rm \
-        -v .:/app \
-        -w /app/site \
-        -u "$(id -u):$(id -g)" \
-        -p 4321:4321 \
-        --name astro \
-        node:23-bookworm \
-        npx astro dev --host
-
-# Start a shell in the astro environment
-astro-shell:
-    -docker run -it --rm \
-        -v .:/app \
-        -w /app/site \
-        -u "$(id -u):$(id -g)" \
-        -p 4321:4321 \
-        --name astro \
-        node:23-bookworm \
-        bash
+[working-directory: 'site']
+site-dev:
+    npx astro dev
 
 # Build the site and deploy with rclone
-deploy: astro-build
+deploy: site-build
     rclone sync site/dist $RCLONE_TARGET --progress

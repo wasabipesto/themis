@@ -18,8 +18,9 @@ cd themis
 Install any other dependencies:
 
 - The downloader and extractor are written in rust. To install the rust toolchain, follow the instructions [here](https://www.rust-lang.org/tools/install). You could run these utilities in Docker but that is not officially supported.
-- The website is written with Astro, which uses JS/node package managers. To run `npm` in an isolated environment, I use Docker, which you can find installation instructions for [here](https://docs.docker.com/engine/install/). Docker and the [docker compose](https://docs.docker.com/compose/install/linux) plugin are also used to run the database and its connectors.
-- For running tasks I have provided a `justfile`, which requires `just` to run. You can install that by following the instructions [here](https://just.systems/man/en/packages.html). The `justfile` is very simple, though, and if you don't want to install it you can just run the commands by hand.
+- The website is written with Astro, which uses `node` and `npm`. You can find the official node/npm installation instructions [here](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm), run everything in Docker, or use whatever version Debian stable is shipping.
+- [Docker](https://docs.docker.com/engine/install/) and the [docker compose](https://docs.docker.com/compose/install/linux) plugin are used to run the database and its connectors. It's possible to run these without docker by installing [Postgres](https://www.postgresql.org/download/) and [PostgREST](https://docs.postgrest.org/en/stable/tutorials/tut0.html) manually.
+- For running tasks I have provided a `justfile`, which requires `just` to run. You can install that by following the instructions [here](https://just.systems/man/en/packages.html). The `justfile` is very simple, and you can just run the commands by hand if you don't want to install it.
 - The script for site deployment uses `rclone` and thus can be deployed to any target supported by that utility. You can install rclone by following the instructions [here](https://rclone.org/install/), or deploy the site some other way.
 - Some other optional utilities:
   - There are a few Python scripts I use for development in the `scripts` folder. If you want to use these, ensure you have a recent version of Python installed.
@@ -34,7 +35,7 @@ Before downloading, make sure you have enough disk space, memory, and time:
 
 - By default the download program will download from all platforms in parallel to avoid getting bottle-necked by any one platform's API rate limit. In order to do this we first download the platform's bulk list as an index and load it into memory. If you are running in the default mode, expect to use around 6 GB of memory. If you run out of memory, you can run the platforms one at a time with the `--platform` option.
 - This program will download all relevant data from each platform's API to disk. We try to avoid reading or writing any more than necessary by buffering writes and appending data where possible. Still, a large amount of disk space will be required for this data. As of February 2025 it uses around 20 GB, but this will increase over time.
-- When run in parallel (default configuration), this utility takes around 6 hours to complete. It will first download the index and make a download plan. Then it will queue up batches of downloads that run asynchronously. If you interrupt the program or it runs into an error, simply restart it. It will look for an existing index file and attempt to resume the downloads.
+- When run in parallel (default configuration), this utility takes around 8 hours to complete. It will first download the index and make a download plan. Then it will queue up batches of downloads that run asynchronously. If you interrupt the program or it runs into an error, simply restart it. It will look for an existing index file and attempt to resume the downloads automatically.
 
 To run the downloader:
 
@@ -43,7 +44,7 @@ just download --help # for options
 just download # run with default settings
 ```
 
-The download utility is designed to be robust so you can set it and forget it. Errors are much more likely in later steps. If the downloader crashes, please [submit an issue](https://github.com/wasabipesto/themis/issues/new).
+The download utility is designed to be robust so you can set it and forget it. Errors are much more likely in later steps. If the downloader crashes and resuming a few minutes later does not solve the problem, please [submit an issue](https://github.com/wasabipesto/themis/issues/new). This could be caused by a major shift in a platform's API structure or rate limits.
 
 ## Step 2. Setting up the database
 
@@ -119,19 +120,32 @@ just db-down
 
 Once everything has been downloaded from the platform APIs, we can extract and import that data into the database.
 
+This utility will read the data files you just downloaded and make sure every item matches our known API schemas. If anything changes on the API end, this is where you will see the errors. Please [submit an issue](https://github.com/wasabipesto/themis/issues/new) if you encounter any fatal errors in this step.
+
+Running this program in full on default settings will take about 5 minutes and probably produce a few dozen non-fatal errors. Every platform has a couple items that are "invalid" in some way, and we've taken those into account when setting up our error handling.
+
+After a few thousand items are ready to upload, the program will send them to the database through the PostgREST endpoints. It should fail quickly if it's unable to connect to the database.
+
 Ensure the database services are running and then run:
 
 ```bash
 just extract --help # for options
+just extract --schema-only # check that schemas pass
 just extract # run with default settings
 ```
+
+If you get an error like `Connection refused (os error 111)`, make sure you imported all schemas and reloaded the PostGREST configuration from the previous section.
 
 Then you can test that everything is working with curl:
 
 ```bash
 just db-curl "markets?limit=10"
+just db-curl "markets?select=count"
 just db-curl "daily_probabilities?limit=10"
+just db-curl "daily_probabilities?select=count"
 ```
+
+You should see a few sample markets and data points, with total counts for each.
 
 ## Step 4. Creating and processing groups
 
