@@ -5,6 +5,7 @@ use anyhow::{anyhow, Result};
 use chrono::serde::ts_seconds;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
+use std::collections::HashMap;
 
 use super::{helpers, MarketAndProbs, ProbSegment, StandardMarket};
 
@@ -203,7 +204,7 @@ pub fn standardize(input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>
         traders_count: None, // TODO
         volume_usd: None,    // TODO
         duration_days: helpers::get_market_duration(start, end)?,
-        category: None, // TODO
+        category: get_category(&input.market.tags),
         prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
         prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)?,
         resolution,
@@ -250,4 +251,34 @@ pub fn build_prob_segments(raw_history: &[PolymarketPricePoint]) -> Vec<ProbSegm
         segments.push(ProbSegment { start, end, prob });
     }
     segments
+}
+
+fn get_category(tags: &Option<Vec<String>>) -> Option<String> {
+    const CATEGORIES: [(&str, &str); 17] = [
+        ("AI", "AI"),
+        ("Business", "Economics"),
+        ("CBB", "Sports"),
+        ("Coronavirus", "Science"),
+        ("Crypto", "Crypto"),
+        ("EPL", "Sports"),
+        //("Games", "Sports"),
+        //("Mentions", "Culture"),
+        ("NBA", "Sports"),
+        ("NFL", "Sports"),
+        ("NFTs", "Crypto"),
+        ("Politics", "Politics"),
+        ("Pop Culture", "Culture"),
+        ("Science", "Science"),
+        ("Soccer", "Sports"),
+        ("Sports", "Sports"),
+        ("Trump", "Politics"),
+        ("Trump Presidency", "Politics"),
+        ("USA Election", "Politics"),
+    ];
+
+    let category_map: HashMap<&str, &str> = CATEGORIES.iter().cloned().collect();
+
+    tags.as_ref()?
+        .iter()
+        .find_map(|tag| category_map.get(tag.as_str()).map(|&cat| cat.to_string()))
 }
