@@ -231,6 +231,11 @@ pub fn standardize(input: &KalshiData) -> Result<Option<Vec<MarketAndProbs>>> {
                 title: input.market.title.clone(),
                 platform_slug,
                 platform_name: "Kalshi".to_string(),
+                description: format!(
+                    "{}\n\n{}",
+                    input.market.rules_primary.clone(),
+                    input.market.rules_secondary.clone(),
+                ),
                 url: get_url(&input.market.ticker)?,
                 open_datetime: start,
                 close_datetime: end,

@@ -55,6 +55,7 @@ CREATE TABLE markets (
     title TEXT NOT NULL,
     platform_slug TEXT NOT NULL,
     platform_name TEXT NOT NULL,
+    description TEXT,
     question_id INTEGER,
     question_invert BOOLEAN DEFAULT false NOT NULL,
     question_dismissed INTEGER DEFAULT 0 NOT NULL,

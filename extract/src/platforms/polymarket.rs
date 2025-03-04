@@ -202,6 +202,7 @@ pub fn standardize(input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>
         title,
         platform_slug,
         platform_name: "Polymarket".to_string(),
+        description: input.market.description.clone(),
         url: format!("https://polymarket.com/event/{}", input.market.market_slug),
         open_datetime: start,
         close_datetime: end,

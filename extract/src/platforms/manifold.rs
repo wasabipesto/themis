@@ -289,6 +289,7 @@ pub fn standardize(input: &ManifoldData) -> Result<Option<Vec<MarketAndProbs>>> 
                 title: input.full_market.question.clone(),
                 platform_slug,
                 platform_name: "Manifold".to_string(),
+                description: input.full_market.text_description.clone(), // TODO: Get links
                 url: get_url(&input.full_market),
                 open_datetime: start,
                 close_datetime: end,

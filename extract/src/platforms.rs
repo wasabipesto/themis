@@ -38,6 +38,7 @@ pub struct StandardMarket {
     pub title: String,
     pub platform_slug: String,
     pub platform_name: String,
+    pub description: String,
     pub url: String,
     pub open_datetime: DateTime<Utc>,
     pub close_datetime: DateTime<Utc>,
