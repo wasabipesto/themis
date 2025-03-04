@@ -55,8 +55,8 @@ pub struct PolymarketMarket {
     pub question: String,
     /// Full text description with line breaks (\n\n).
     pub description: String,
-    /// The URL slug for this market.
-    /// TODO: Find proper prefix, https://polymarket.com/event/ does not seem to work.
+    /// The URL slug for this market in the form https://polymarket.com/event/{slug}
+    /// This pattern does not always seem to work - need to establish why.
     pub market_slug: String,
     /// List of tags applied to this market.
     pub tags: Option<Vec<String>>,
@@ -148,25 +148,6 @@ pub fn standardize(input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>
         ));
     }
 
-    // Sanity check for number of winners (should always be 1).
-    let num_winners = input.market.tokens.iter().filter(|t| t.winner).count();
-    if num_winners == 0 {
-        // This happens fairly often
-        return Ok(None);
-    }
-    if num_winners > 1 {
-        log::error!(
-            "Expected 1 winning tokens, found {num_winners} winning tokens! ID: {market_id}"
-        );
-        return Ok(None);
-    }
-
-    // Sanity check for token prices (should always sum to 1).
-    let sum_prices: f32 = input.market.tokens.iter().map(|t| t.price).sum();
-    if !(0.99..1.01).contains(&sum_prices) {
-        return Err(anyhow!("Expected token prices to sum to 1.0, found they summed to {sum_prices}! ID: {market_id}"));
-    }
-
     // Get the token that we tracked in order to determine which outcome resolution to pick.
     let tracked_token = input
         .market
@@ -180,7 +161,34 @@ pub fn standardize(input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>
                 input.prices_history_token
             )
         })?;
-    let resolution = if tracked_token.winner { 1.0 } else { 0.0 };
+
+    // Check number of winners. For one winner, check the token status. For two winners = 50/50.
+    let num_winners = input.market.tokens.iter().filter(|t| t.winner).count();
+    let resolution = match num_winners {
+        0 => return Ok(None), // Market not yet finalized
+        1 => {
+            // Normal case, check if our token won
+            if tracked_token.winner {
+                1.0
+            } else {
+                0.0
+            }
+        }
+        2 => 0.5, // Two winners, prizes were split 50/50
+        _ => {
+            // More than two winners (not possible)
+            log::error!(
+                "Expected 1 or 2 winning tokens, found {num_winners} winning tokens! ID: {market_id}"
+            );
+            return Ok(None);
+        }
+    };
+
+    // Sanity check for token prices (should always sum to 1).
+    let sum_prices: f32 = input.market.tokens.iter().map(|t| t.price).sum();
+    if !(0.99..1.01).contains(&sum_prices) {
+        return Err(anyhow!("Expected token prices to sum to 1.0, found they summed to {sum_prices}! ID: {market_id}"));
+    }
 
     // Append the tracked outcome to the market title so we know which side we're tracking.
     let market_title = input.market.question.clone();
