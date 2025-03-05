@@ -8,11 +8,13 @@ import Volume from "@atoms/volume.astro";
 import Markets from "@atoms/num-markets.astro";
 import type { Category, PlatformScore } from "@types";
 
+const pgrst_url = "https://data.predictionmetrics.org"; // import.meta.env.PGRST_URL;
+
 // Generate routes for all items
 export async function getStaticPaths() {
-    const categories = (await fetch(
-        "https://data.predictionmetrics.org/categories",
-    ).then((res) => res.json())) as Category[];
+    const categories = (await fetch(`${pgrst_url}/categories`).then((res) =>
+        res.json(),
+    )) as Category[];
     return categories.map((category) => ({
         params: { slug: category.slug },
         props: { category },
@@ -20,9 +22,9 @@ export async function getStaticPaths() {
 }
 const { category } = Astro.props;
 
-const platformScores = (await fetch(
-    "https://data.predictionmetrics.org/platform_scores",
-).then((res) => res.json())) as PlatformScore[];
+const platformScores = (await fetch(`${pgrst_url}/platform_scores`).then(
+    (res) => res.json(),
+)) as PlatformScore[];
 ---
 
 <Base title={category.name}>

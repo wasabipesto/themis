@@ -52,19 +52,19 @@ db-backup:
 # Get items from an endpoint (example)
 db-curl *endpoint:
     curl -sf \
-    -X GET "http://${PGRST_HOST}:${PGRST_PORT}/{{endpoint}}" \
+    -X GET "${PGRST_URL}/{{endpoint}}" \
     -H "Authorization: Bearer ${PGRST_APIKEY}" | jq
 
 # Build the astro site
 [working-directory: 'site']
-site-build:
+build:
     npx astro build
 
 # Start the astro dev server
 [working-directory: 'site']
-site-dev:
+dev:
     npx astro dev
 
 # Build the site and deploy with rclone
-deploy: site-build
+deploy: build
     rclone sync site/dist $RCLONE_TARGET --progress

@@ -43,7 +43,7 @@ const scoreField = pivot === "platform" ? "platform_name" : "category_name";
                             <ScoreRel num={score.score_rel} />
                         </td>
                         <td class="px-2 py-1 text-center">
-                            <ScoreAbs num={score.score_abs} />
+                            <ScoreAbs num={score.score_abs} detailed={false} />
                         </td>
                     </tr>
                 ))

@@ -158,8 +158,8 @@ The site is static and designed to be deployed behind any standard web server su
 You can view a preview of the site or build it like so:
 
 ```bash
-just astro-dev # live preview the site in a browser
-just astro-build # build the site to the site/dist directory
+just dev # live preview the site in a browser
+just build # build the site to the site/dist directory
 ```
 
 We use `rclone` to deploy the site to your provider of choice. First, configure your `rclone` target and add the details to the `.env` file:

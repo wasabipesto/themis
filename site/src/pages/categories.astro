@@ -9,14 +9,16 @@ import ArrowRight from "@icons/arrow-right.svg";
 import Base from "@layouts/base.astro";
 import type { Category, PlatformScore } from "@types";
 
-const categories = (await fetch(
-    "https://data.predictionmetrics.org/categories",
-).then((res) => res.json())) as Category[];
+const pgrst_url = "https://data.predictionmetrics.org"; // import.meta.env.PGRST_URL;
+
+const categories = (await fetch(`${pgrst_url}/categories`).then((res) =>
+    res.json(),
+)) as Category[];
 const parentCategories = categories.filter((cat) => cat.is_parent);
 
-const platformScores = (await fetch(
-    "https://data.predictionmetrics.org/platform_scores",
-).then((res) => res.json())) as PlatformScore[];
+const platformScores = (await fetch(`${pgrst_url}/platform_scores`).then(
+    (res) => res.json(),
+)) as PlatformScore[];
 ---
 
 <Base title="Categories">

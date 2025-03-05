@@ -1,9 +1,9 @@
 ---
 import type { CalibrationPoint } from "@types";
 
-const response = await fetch(
-    "https://data.predictionmetrics.org/calibration_points",
-);
+const pgrst_url = "https://data.predictionmetrics.org"; // import.meta.env.PGRST_URL;
+
+const response = await fetch(`${pgrst_url}/calibration_points`);
 const points: CalibrationPoint[] = await response.json();
 
 // Generate a unique ID for each instance

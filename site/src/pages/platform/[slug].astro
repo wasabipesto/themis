@@ -14,11 +14,13 @@ import Markets from "@atoms/num-markets.astro";
 import Star from "@icons/star.svg";
 import type { Platform, PlatformScore, Question } from "@types";
 
+const pgrst_url = "https://data.predictionmetrics.org"; // import.meta.env.PGRST_URL;
+
 // Generate routes for all items
 export async function getStaticPaths() {
-    const platforms = (await fetch(
-        "https://data.predictionmetrics.org/platforms",
-    ).then((res) => res.json())) as Platform[];
+    const platforms = (await fetch(`${pgrst_url}/platforms`).then((res) =>
+        res.json(),
+    )) as Platform[];
     return platforms.map((platform) => ({
         params: { slug: platform.slug },
         props: { platform },
@@ -28,13 +30,13 @@ const { platform } = Astro.props;
 
 const platformScores = (
     (await fetch(
-        `https://data.predictionmetrics.org/platform_scores?platform_slug=${platform.slug}`,
+        `${pgrst_url}/platform_scores?platform_slug=${platform.slug}`,
     ).then((res) => res.json())) as PlatformScore[]
 ).filter((score) => score.platform_slug == platform.slug);
 
-const featuredQuestions = (await fetch(
-    "https://data.predictionmetrics.org/questions",
-).then((res) => res.json())) as Question[];
+const featuredQuestions = (await fetch(`${pgrst_url}/questions`).then((res) =>
+    res.json(),
+)) as Question[];
 ---
 
 <Base title={platform.name}>

@@ -7,10 +7,11 @@ import Grade from "@atoms/grade.astro";
 import ScoreAbs from "@atoms/score-abs.astro";
 import type { Question } from "@types";
 
+const pgrst_url = "https://data.predictionmetrics.org" // import.meta.env.PGRST_URL;
+
 // Fetch all questions at build time
-const questions = (await fetch(
-    "https://data.predictionmetrics.org/questions",
-).then((res) => res.json())) as Question[];
+const questions = (await fetch(`${pgrst_url}/questions`).then(
+  (res) => res.json())) as Question[];
 
 // Default sort: volume descending
 questions.sort((a, b) => b.total_volume - a.total_volume);
