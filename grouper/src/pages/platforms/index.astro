@@ -1,0 +1,38 @@
+---
+import Base from "@layouts/base.astro";
+import ListingTable from "@components/listing-table.astro";
+import { getPlatforms, deletePlatform } from "@lib/api";
+
+const platforms = await getPlatforms();
+
+const headers = [
+    { key: "name", label: "Name" },
+    { key: "description", label: "Description" },
+];
+---
+
+<Base title="Platforms">
+    <div class="flex justify-between items-center p-4 m-2 border-b border-text">
+        <h2 class="text-3xl font-bold text-text">All Platforms</h2>
+        <a
+            href="/platforms/new"
+            class="px-4 py-2 bg-crust text-text font-medium rounded-lg flex items-center"
+        >
+            Add New Platform
+        </a>
+    </div>
+
+    <div class="">
+        <ListingTable
+            headers={headers}
+            items={platforms}
+            editUrlPrefix="/platforms"
+            deleteFunc="deletePlatform"
+        />
+    </div>
+</Base>
+
+<script>
+    import { deletePlatform } from "@lib/api";
+    window.deletePlatform = deletePlatform;
+</script>

@@ -1,0 +1,66 @@
+---
+const { headers, items, editUrlPrefix, deleteFunc } = Astro.props;
+---
+
+<div class="overflow-x-auto">
+    <table
+        class="min-w-full divide-y divide-subtext bg-crust rounded-lg shadow"
+    >
+        <thead>
+            <tr>
+                {
+                    headers.map((header) => (
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                            {header.label}
+                        </th>
+                    ))
+                }
+                <th
+                    class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                    >Actions</th
+                >
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-subtext">
+            {
+                items.map((item) => (
+                    <tr class="hover:bg-base-dark">
+                        {headers.map((header) => (
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                {item[header.key]}
+                            </td>
+                        ))}
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium actions">
+                            <a
+                                href={`${editUrlPrefix}/${item.id || item.slug}`}
+                                class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-blue/50 hover:bg-blue mr-2"
+                            >
+                                Edit
+                            </a>
+                            <button
+                                class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-red/50 hover:bg-red"
+                                data-id={item.id || item.slug}
+                                onclick={`deleteItem('${item.id || item.slug}')`}
+                            >
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                ))
+            }
+        </tbody>
+    </table>
+</div>
+
+<script define:vars={{ deleteFunc }} is:inline>
+    window.deleteItem = async (id) => {
+        if (confirm("Are you sure you want to delete this item?")) {
+            try {
+                await deleteFunc(id);
+                window.location.reload();
+            } catch (error) {
+                alert("Error deleting item: " + error.message);
+            }
+        }
+    };
+</script>
