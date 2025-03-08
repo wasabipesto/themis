@@ -4,9 +4,9 @@ export interface Platform {
   name: string;
   description: string;
   long_description: string;
-  wikipedia_url: string;
   icon_url: string;
   site_url: string;
+  wikipedia_url: string;
   color_primary: string;
   color_accent: string;
   total_markets: number;
@@ -22,8 +22,8 @@ export interface PlatformScore {
   category_name: string;
   num_markets: number;
   grade: string;
-  score_rel: number;
-  score_abs: number;
+  brier_score_rel: number;
+  brier_score_abs: number;
 }
 
 /**
@@ -36,7 +36,7 @@ export interface Category {
   description: string;
   parent_slug: string | null;
   is_parent: boolean;
-  icon_url: string;
+  icon: string;
   total_markets: number;
   total_traders: number;
   total_volume: number;
@@ -44,7 +44,7 @@ export interface Category {
 
 /** All data for a question (a group of markets). */
 export interface Question {
-  question_id: string;
+  id: number;
   title: string;
   slug: string;
   description: string;
@@ -52,48 +52,70 @@ export interface Question {
   category_name: string;
   parent_category_slug: string | null;
   parent_category_name: string | null;
-  tags: string[];
-  start_date: string;
-  end_date: string;
+  start_date_override: string | null;
+  end_date_override: string | null;
   total_traders: number;
   total_volume: number;
   total_duration: number;
   overall_grade: string;
-  overall_score_rel: number;
-  overall_score_abs: number;
-  markets: QMarketScore[];
+  overall_brier_score_rel: number;
+  overall_brier_score_abs: number;
+  markets: QMarketScore[] | null;
 }
 
 /** Score data for a market's performance within a question. */
-type QMarketScore = {
+export interface QMarketScore {
+  question_id: number;
   platform_slug: string;
   platform_name: string;
   market_id: string;
   market_link: string;
-  traders: number | null;
-  volume: number | null;
+  traders: number;
+  volume: number;
   duration: number;
   grade: string;
-  score_rel: number;
-  score_abs: number;
-};
+  brier_score_rel: number;
+  brier_score_abs: number;
+}
+
+/** Data for an individual market */
+export interface Market {
+  id: string;
+  title: string;
+  platform_slug: string;
+  platform_name: string;
+  description: string;
+  question_id: number | null;
+  question_invert: boolean;
+  question_dismissed: number;
+  url: string;
+  open_datetime: string;
+  close_datetime: string;
+  traders_count: number | null;
+  volume_usd: number | null;
+  duration_days: number;
+  category: string | null;
+  prob_at_midpoint: number;
+  prob_time_avg: number;
+  resolution: number;
+}
 
 /** Single point on a daily probability plot. */
 export interface DailyProbability {
-  question_id: string;
-  platform: string;
+  market_id: string;
+  platform_slug: string;
   date: string;
   prob: number;
 }
 
-/** Single point on a caliibration plot. */
+/** Single point on a calibration plot. */
 export interface CalibrationPoint {
-  platform: string;
+  platform_slug: string;
   x_start: number | null;
   x_center: number;
   x_end: number | null;
   y_start: number | null;
   y_center: number;
   y_end: number | null;
-  count: number;
+  count: number | null;
 }
