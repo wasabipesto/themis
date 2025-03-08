@@ -1,14 +1,22 @@
-const API_URL = "http://localhost:3000";
+// TODO: These don't work.
+const PGRST_URL = import.meta.env.PGRST_URL;
+const PGRST_APIKEY = import.meta.env.PGRST_APIKEY;
 
 export async function fetchFromAPI(endpoint, options = {}) {
-  const url = `${API_URL}/${endpoint}`;
-  const response = await fetch(url, {
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-    ...options,
-  });
+  const url = `${PGRST_URL}/${endpoint}`;
+  console.log(PGRST_APIKEY);
+
+  // Create a deep copy of options to avoid modifying the original
+  const fetchOptions = { ...options };
+
+  // Initialize headers properly
+  fetchOptions.headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${PGRST_APIKEY}`,
+    ...(options.headers || {}),
+  };
+
+  const response = await fetch(url, fetchOptions);
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
