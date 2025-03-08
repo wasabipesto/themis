@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@theme {
+    --font-display: "serif";
+
+    /* Catppuccin Frappé: https://catppuccin.com/palette */
+    /* https://github.com/catppuccin/catppuccin/blob/main/docs/style-guide.md */
+    --color-rosewater: rgb(242, 213, 207);
+    --color-flamingo: rgb(238, 190, 190);
+    --color-pink: rgb(244, 184, 228);
+    --color-mauve: rgb(202, 158, 230);
+    --color-red: rgb(231, 130, 132);
+    --color-maroon: rgb(234, 153, 156);
+    --color-peach: rgb(239, 159, 118);
+    --color-yellow: rgb(229, 200, 144);
+    --color-green: rgb(166, 209, 137);
+    --color-teal: rgb(129, 200, 190);
+    --color-sky: rgb(153, 209, 219);
+    --color-sapphire: rgb(133, 193, 220);
+    --color-blue: rgb(140, 170, 238);
+    --color-lavender: rgb(186, 187, 241);
+
+    --color-text: rgb(198, 208, 245);
+    --color-subtext: rgb(165, 173, 206);
+    --color-selection: rgb(148, 156, 187);
+
+    --color-base-light: rgb(204, 208, 218);
+    --color-base-dark: rgb(48, 52, 70);
+    --color-mantle: rgb(41, 44, 60);
+    --color-crust: rgb(35, 38, 52);
+}
+
+a:hover {
+    text-decoration: underline;
+}

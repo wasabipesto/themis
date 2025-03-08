@@ -60,9 +60,14 @@ db-curl *endpoint:
 build:
     npx astro build
 
-# Start the astro dev server
+# Start the site astro dev server
 [working-directory: 'site']
 dev:
+    npx astro dev
+
+# Start the grouper astro dev server
+[working-directory: 'grouper']
+group:
     npx astro dev
 
 # Build the site and deploy with rclone
