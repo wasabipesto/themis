@@ -1,4 +1,22 @@
 ---
+interface HeaderItem {
+    key: string;
+    label: string;
+}
+
+interface TableItem {
+    id?: string;
+    slug?: string;
+    [key: string]: any; // Allow for any additional properties
+}
+
+interface Props {
+    headers: HeaderItem[];
+    items: TableItem[];
+    editUrlPrefix: string;
+    deleteFunc: (id: string) => Promise<void>;
+}
+
 const { headers, items, editUrlPrefix, deleteFunc } = Astro.props;
 ---
 

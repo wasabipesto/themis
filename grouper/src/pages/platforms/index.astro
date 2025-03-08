@@ -27,12 +27,7 @@ const headers = [
             headers={headers}
             items={platforms}
             editUrlPrefix="/platforms"
-            deleteFunc="deletePlatform"
+            deleteFunc={deletePlatform}
         />
     </div>
 </Base>
-
-<script>
-    import { deletePlatform } from "@lib/api";
-    window.deletePlatform = deletePlatform;
-</script>
