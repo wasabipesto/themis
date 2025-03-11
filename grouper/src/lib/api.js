@@ -3,7 +3,6 @@ const PGRST_APIKEY = import.meta.env.PUBLIC_PGRST_APIKEY;
 
 export async function fetchFromAPI(endpoint, options = {}) {
   const url = `${PGRST_URL}/${endpoint}`;
-  console.log(PGRST_APIKEY);
 
   // Create a deep copy of options to avoid modifying the original
   const fetchOptions = { ...options };

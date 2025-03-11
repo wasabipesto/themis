@@ -13,11 +13,10 @@ interface TableItem {
 interface Props {
     headers: HeaderItem[];
     items: TableItem[];
-    editUrlPrefix: string;
-    deleteFunc: (id: string) => Promise<void>;
+    endpoint: string;
 }
 
-const { headers, items, editUrlPrefix, deleteFunc } = Astro.props;
+const { headers, items, endpoint } = Astro.props;
 ---
 
 <div class="overflow-x-auto">
@@ -50,15 +49,14 @@ const { headers, items, editUrlPrefix, deleteFunc } = Astro.props;
                         ))}
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium actions">
                             <a
-                                href={`${editUrlPrefix}/${item.id || item.slug}`}
+                                href={`${endpoint}/${item.id || item.slug}`}
                                 class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-blue/50 hover:bg-blue mr-2"
                             >
                                 Edit
                             </a>
                             <button
-                                class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-red/50 hover:bg-red"
+                                class="delete-button inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-red/50 hover:bg-red"
                                 data-id={item.id || item.slug}
-                                onclick={`deleteItem('${item.id || item.slug}')`}
                             >
                                 Delete
                             </button>
@@ -70,15 +68,22 @@ const { headers, items, editUrlPrefix, deleteFunc } = Astro.props;
     </table>
 </div>
 
-<script define:vars={{ deleteFunc }} is:inline>
-    window.deleteItem = async (id) => {
-        if (confirm("Are you sure you want to delete this item?")) {
-            try {
-                await deleteFunc(id); // TODO: This isn't working
-                window.location.reload();
-            } catch (error) {
-                alert("Error deleting item: " + error.message);
+<script>
+    import { deletePlatform } from "@lib/api";
+    const deleteButtons = document.querySelectorAll(".delete-button");
+
+    deleteButtons.forEach((button) => {
+        button.addEventListener("click", async () => {
+            const id = button.getAttribute("data-id");
+
+            if (id && confirm("Are you sure you want to delete this item?")) {
+                try {
+                    await deletePlatform(id);
+                    window.location.reload();
+                } catch (error) {
+                    alert("Error deleting item: " + error.message);
+                }
             }
-        }
-    };
+        });
+    });
 </script>
