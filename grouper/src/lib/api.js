@@ -1,6 +1,5 @@
-// TODO: These don't work.
-const PGRST_URL = import.meta.env.PGRST_URL;
-const PGRST_APIKEY = import.meta.env.PGRST_APIKEY;
+const PGRST_URL = import.meta.env.PUBLIC_PGRST_URL;
+const PGRST_APIKEY = import.meta.env.PUBLIC_PGRST_APIKEY;
 
 export async function fetchFromAPI(endpoint, options = {}) {
   const url = `${PGRST_URL}/${endpoint}`;
