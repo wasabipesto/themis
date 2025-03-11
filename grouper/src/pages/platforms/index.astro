@@ -1,9 +1,6 @@
 ---
 import Base from "@layouts/base.astro";
 import ListingTable from "@components/listing-table.astro";
-import { getPlatforms, deletePlatform } from "@lib/api";
-
-const platforms = await getPlatforms();
 
 const headers = [
     { key: "slug", label: "Slug" },
@@ -24,10 +21,6 @@ const headers = [
     </div>
 
     <div class="">
-        <ListingTable
-            headers={headers}
-            items={platforms}
-            endpoint="platforms"
-        />
+        <ListingTable headers={headers} endpoint="platforms" />
     </div>
 </Base>

@@ -1,27 +1,42 @@
 ---
-interface HeaderItem {
-    key: string;
-    label: string;
-}
+/**
+ * Listing Table Component
+ *
+ * A reusable table component that fetches and displays data from an API endpoint.
+ * Supports sorting, editing, and deleting items.
+ */
 
-interface TableItem {
-    id?: string;
-    slug?: string;
-    [key: string]: any; // Allow for any additional properties
+interface HeaderItem {
+    key: string; // Property name in the data object
+    label: string; // Display label for the table header
 }
 
 interface Props {
-    headers: HeaderItem[];
-    items: TableItem[];
-    endpoint: string;
+    headers: HeaderItem[]; // Table column definitions
+    endpoint: string; // API endpoint to fetch data from
 }
 
-const { headers, items, endpoint } = Astro.props;
+const { headers, endpoint } = Astro.props;
 ---
 
-<div class="overflow-x-auto">
+<div
+    class="overflow-x-auto min-w-240"
+    id="table-container"
+    data-endpoint={endpoint}
+    data-headers={JSON.stringify(headers)}
+>
+    <!-- Loading spinner -->
+    <div class="flex justify-center p-4 loading-indicator">
+        <div
+            class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue"
+        >
+        </div>
+    </div>
+
+    <!-- Data table (hidden until data loads) -->
     <table
-        class="min-w-full divide-y divide-subtext bg-crust rounded-lg shadow"
+        class="min-w-full divide-y divide-subtext bg-crust rounded-lg shadow hidden"
+        id="data-table"
     >
         <thead>
             <tr>
@@ -34,75 +49,159 @@ const { headers, items, endpoint } = Astro.props;
                 }
                 <th
                     class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
-                    >Actions</th
                 >
+                    Actions
+                </th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-subtext">
-            {
-                items.map((item) => (
-                    <tr class="hover:bg-base-dark">
-                        {headers.map((header) => (
-                            <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                {item[header.key]}
-                            </td>
-                        ))}
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium actions">
-                            <a
-                                href={`/${endpoint}/${item.id || item.slug}`}
-                                class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-blue/50 hover:bg-blue mr-2"
-                            >
-                                Edit
-                            </a>
-                            <button
-                                class="delete-button inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-red/50 hover:bg-red"
-                                data-endpoint={endpoint}
-                                data-id={item.id}
-                                data-slug={item.slug}
-                            >
-                                Delete
-                            </button>
-                        </td>
-                    </tr>
-                ))
-            }
+        <tbody class="divide-y divide-subtext" id="table-body">
+            <!-- Table rows will be loaded dynamically by JavaScript -->
         </tbody>
     </table>
+
+    <!-- Error message container (hidden by default) -->
+    <div id="error-message" class="text-red p-4 text-center hidden"></div>
 </div>
 
 <script>
     import { fetchFromAPI } from "@lib/api";
-    const deleteButtons = document.querySelectorAll(".delete-button");
 
-    deleteButtons.forEach((button) => {
-        button.addEventListener("click", async () => {
-            const endpoint = button.getAttribute("data-endpoint");
-            const id = button.getAttribute("data-id");
-            const slug = button.getAttribute("data-slug");
+    // DOM elements
+    const tableContainer = document.getElementById("table-container");
+    const dataTable = document.getElementById("data-table");
+    const tableBody = document.getElementById("table-body");
+    const errorMessage = document.getElementById("error-message");
+    const loadingIndicator = document.querySelector(".loading-indicator");
 
-            var attr = null;
-            if (id) {
-                attr = "id";
-            } else if (slug) {
-                attr = "slug";
-            } else {
-                alert("No item ID or slug found.");
+    // Configuration from attributes
+    const endpoint = tableContainer.getAttribute("data-endpoint");
+    const headers = JSON.parse(
+        tableContainer.getAttribute("data-headers") || "[]",
+    );
+
+    /**
+     * Fetches data from the API and populates the table
+     */
+    async function loadTableData() {
+        try {
+            const items = await fetchFromAPI(endpoint);
+
+            // Handle empty results
+            if (items.length === 0) {
+                loadingIndicator.classList.add("hidden");
+                errorMessage.textContent = "No items found.";
+                errorMessage.classList.remove("hidden");
+                return;
             }
-            const value = attr === "id" ? id : slug;
 
-            if (confirm("Are you sure you want to delete this item?")) {
-                try {
-                    await fetchFromAPI(`${endpoint}?${attr}=eq.${value}`, {
-                        method: "DELETE",
-                        headers: {
-                            Prefer: "return=representation",
-                        },
-                    });
-                    window.location.reload();
-                } catch (error) {
-                    alert("Error deleting item: " + error.message);
+            // Create table rows for each item
+            items.forEach((item) => {
+                const row = document.createElement("tr");
+                row.className = "hover:bg-base-dark";
+
+                // Create cells for each header
+                headers.forEach((header) => {
+                    const cell = document.createElement("td");
+                    cell.className = "px-6 py-4 whitespace-nowrap text-sm";
+                    cell.textContent = item[header.key] || "";
+                    row.appendChild(cell);
+                });
+
+                // Create actions cell with edit and delete buttons
+                const actionsCell = createActionsCell(item, endpoint);
+                row.appendChild(actionsCell);
+                tableBody.appendChild(row);
+            });
+
+            // Set up event handlers for delete buttons
+            setupDeleteButtons();
+
+            // Show the table and hide the loading indicator
+            loadingIndicator.classList.add("hidden");
+            dataTable.classList.remove("hidden");
+        } catch (error) {
+            // Handle and display errors
+            loadingIndicator.classList.add("hidden");
+            errorMessage.textContent = `Error loading data: ${error.message}`;
+            errorMessage.classList.remove("hidden");
+            console.error("Error loading table data:", error);
+        }
+    }
+
+    /**
+     * Creates the actions cell with edit and delete buttons
+     * @param {Object} item - The data item for the current row
+     * @param {string} endpoint - The API endpoint
+     * @returns {HTMLTableCellElement} The actions cell element
+     */
+    function createActionsCell(item: Object, endpoint: string) {
+        const actionsCell = document.createElement("td");
+        actionsCell.className =
+            "px-6 py-4 whitespace-nowrap text-sm font-medium actions";
+
+        // Edit button
+        const editLink = document.createElement("a");
+        editLink.href = `/${endpoint}/${item.id || item.slug}`;
+        editLink.className =
+            "inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-blue/50 hover:bg-blue mr-2";
+        editLink.textContent = "Edit";
+        actionsCell.appendChild(editLink);
+
+        // Delete button
+        const deleteButton = document.createElement("button");
+        deleteButton.className =
+            "delete-button inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-red/50 hover:bg-red";
+        deleteButton.dataset.endpoint = endpoint;
+        deleteButton.dataset.id = item.id || "";
+        deleteButton.dataset.slug = item.slug || "";
+        deleteButton.textContent = "Delete";
+        actionsCell.appendChild(deleteButton);
+
+        return actionsCell;
+    }
+
+    /**
+     * Sets up event listeners for all delete buttons in the table
+     */
+    function setupDeleteButtons() {
+        const deleteButtons = document.querySelectorAll(".delete-button");
+
+        deleteButtons.forEach((button) => {
+            button.addEventListener("click", async () => {
+                const endpoint = button.getAttribute("data-endpoint");
+                const id = button.getAttribute("data-id");
+                const slug = button.getAttribute("data-slug");
+
+                // Determine which identifier to use (id or slug)
+                let attr = null;
+                if (id) {
+                    attr = "id";
+                } else if (slug) {
+                    attr = "slug";
+                } else {
+                    alert("No item ID or slug found.");
+                    return;
                 }
-            }
+                const value = attr === "id" ? id : slug;
+
+                // Confirm deletion and process
+                if (confirm("Are you sure you want to delete this item?")) {
+                    try {
+                        await fetchFromAPI(`${endpoint}?${attr}=eq.${value}`, {
+                            method: "DELETE",
+                            headers: {
+                                Prefer: "return=representation",
+                            },
+                        });
+                        window.location.reload();
+                    } catch (error) {
+                        alert("Error deleting item: " + error.message);
+                    }
+                }
+            });
         });
-    });
+    }
+
+    // Initialize the table
+    await loadTableData();
 </script>
