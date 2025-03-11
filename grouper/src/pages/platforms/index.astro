@@ -6,6 +6,7 @@ import { getPlatforms, deletePlatform } from "@lib/api";
 const platforms = await getPlatforms();
 
 const headers = [
+    { key: "slug", label: "Slug" },
     { key: "name", label: "Name" },
     { key: "description", label: "Description" },
 ];
@@ -26,7 +27,7 @@ const headers = [
         <ListingTable
             headers={headers}
             items={platforms}
-            endpoint="/platforms"
+            endpoint="platforms"
         />
     </div>
 </Base>
