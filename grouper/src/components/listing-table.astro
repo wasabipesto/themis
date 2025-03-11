@@ -74,7 +74,7 @@ const { headers, items, editUrlPrefix, deleteFunc } = Astro.props;
     window.deleteItem = async (id) => {
         if (confirm("Are you sure you want to delete this item?")) {
             try {
-                await deleteFunc(id);
+                await deleteFunc(id); // TODO: This isn't working
                 window.location.reload();
             } catch (error) {
                 alert("Error deleting item: " + error.message);
