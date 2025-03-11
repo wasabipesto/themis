@@ -48,6 +48,7 @@ export async function createPlatform(data) {
   });
 }
 
+// TODO: Add on-conflict for updating?
 export async function updatePlatform(slug, data) {
   return fetchFromAPI(`platforms?slug=eq.${slug}`, {
     method: "PATCH",

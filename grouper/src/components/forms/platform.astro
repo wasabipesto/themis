@@ -59,7 +59,7 @@ const isEditing = Object.keys(platform).length > 0;
         <textarea
             id="long_description"
             name="long_description"
-            rows="5"
+            rows="10"
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
             >{platform.long_description || ""}</textarea
         >
@@ -70,7 +70,7 @@ const isEditing = Object.keys(platform).length > 0;
             >Icon URL</label
         >
         <input
-            type="url"
+            type="text"
             id="icon_url"
             name="icon_url"
             value={platform.icon_url || ""}

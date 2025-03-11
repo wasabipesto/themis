@@ -1,0 +1,26 @@
+---
+import Base from "@layouts/base.astro";
+import PlatformForm from "@components/forms/platform.astro";
+import { getPlatforms } from "@lib/api";
+
+export async function getStaticPaths() {
+    const platforms = await getPlatforms();
+
+    return platforms.map((platform) => ({
+        params: { slug: platform.slug },
+        props: { platform },
+    }));
+}
+
+const { platform } = Astro.props;
+---
+
+<Base title="Edit Platform">
+    <div class="p-4 m-2 border-b border-text">
+        <h2 class="text-3xl font-bold text-text">
+            Edit Platform: {platform.name}
+        </h2>
+    </div>
+
+    <PlatformForm platform={platform} />
+</Base>
