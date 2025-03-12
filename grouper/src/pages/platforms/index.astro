@@ -1,6 +1,6 @@
 ---
 import Base from "@layouts/base.astro";
-import ListingTable from "@components/listing-table.astro";
+import IndexTable from "@components/IndexTable.svelte";
 
 const headers = [
     { key: "slug", label: "Slug" },
@@ -13,7 +13,7 @@ const headers = [
     <div class="flex justify-between items-center p-4 m-2 border-b border-text">
         <h2 class="text-3xl font-bold text-text">All Platforms</h2>
         <a
-            href="/platforms/new"
+            href="/platforms/edit"
             class="px-4 py-2 bg-crust text-text font-medium rounded-lg flex items-center"
         >
             Add New Platform
@@ -21,6 +21,6 @@ const headers = [
     </div>
 
     <div class="">
-        <ListingTable headers={headers} endpoint="platforms" />
+        <IndexTable headers={headers} endpoint="platforms" client:load />
     </div>
 </Base>
