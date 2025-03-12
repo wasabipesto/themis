@@ -42,14 +42,14 @@ if (!question) {
     <table class="mt-2 table-auto text-sm w-full">
         <tbody>
             {
-                question.markets.map((market) => (
+                question.markets?.map((market) => (
                     <tr>
                         <td class="px-2 pt-1">{market.platform_name}</td>
                         <td class="px-2 pt-1">
                             <Grade grade={market.grade} />
                         </td>
                         <td class="px-2 pt-1 font-mono">
-                            <ScoreRel num={market.score_rel} />
+                            <ScoreRel num={market.brier_score_rel} />
                         </td>
                     </tr>
                 ))

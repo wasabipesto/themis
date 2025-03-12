@@ -2,7 +2,6 @@
 import Base from "@layouts/base.astro";
 import Traders from "@atoms/traders.astro";
 import Volume from "@atoms/volume.astro";
-import Duration from "@atoms/duration.astro";
 import Grade from "@atoms/grade.astro";
 import ScoreAbs from "@atoms/score-abs.astro";
 import type { Question } from "@types";
@@ -103,7 +102,7 @@ questions.sort((a, b) => b.total_volume - a.total_volume);
                             data-volume={question.total_volume}
                             data-duration={question.total_duration}
                             data-grade={question.overall_grade}
-                            data-score={question.overall_score_abs}
+                            data-score={question.overall_brier_score_abs}
                         >
                             <td class="py-3 px-4 pr-6">
                                 <a
@@ -137,7 +136,7 @@ questions.sort((a, b) => b.total_volume - a.total_volume);
                             </td>
                             <td class="py-3 px-4 text-center">
                                 <ScoreAbs
-                                    num={question.overall_score_abs}
+                                    num={question.overall_brier_score_abs}
                                     detailed={false}
                                 />
                             </td>

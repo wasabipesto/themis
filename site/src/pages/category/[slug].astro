@@ -12,6 +12,7 @@ const pgrst_url = "https://data.predictionmetrics.org"; // import.meta.env.PGRST
 
 // Generate routes for all items
 export async function getStaticPaths() {
+    const pgrst_url = "https://data.predictionmetrics.org"; // import.meta.env.PGRST_URL;
     const categories = (await fetch(`${pgrst_url}/categories`).then((res) =>
         res.json(),
     )) as Category[];

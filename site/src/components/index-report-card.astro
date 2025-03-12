@@ -48,12 +48,12 @@ const categoryData = categories.map((cat) => ({
         return {
             name: platform.name,
             grade: score?.grade || "-",
-            score: score?.score_rel || 0,
+            score: score?.brier_score_rel || 0,
         };
     }),
     overall: {
         grade: getScore(platforms[0].slug, "overall")?.grade || "-",
-        score: getScore(platforms[0].slug, "overall")?.score_rel || 0,
+        score: getScore(platforms[0].slug, "overall")?.brier_score_rel || 0,
     },
 }));
 ---

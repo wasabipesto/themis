@@ -7,7 +7,7 @@ const response = await fetch(`${pgrst_url}/calibration_points`);
 const points: CalibrationPoint[] = await response.json();
 
 // Generate a unique ID for each instance
-const uniqueId = `plot-${Math.random().toString(36).substr(2, 9)}`;
+const uniqueId = `plot-${Math.random().toString(36).substring(2, 9)}`;
 ---
 
 <div

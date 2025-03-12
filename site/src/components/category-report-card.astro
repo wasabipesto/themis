@@ -40,10 +40,10 @@ const scoreField = pivot === "platform" ? "platform_name" : "category_name";
                             <Grade grade={score.grade} />
                         </td>
                         <td class="px-2 py-1 text-center">
-                            <ScoreRel num={score.score_rel} />
+                            <ScoreRel num={score.brier_score_rel} />
                         </td>
                         <td class="px-2 py-1 text-center">
-                            <ScoreAbs num={score.score_abs} detailed={false} />
+                            <ScoreAbs num={score.brier_score_abs} detailed={false} />
                         </td>
                     </tr>
                 ))

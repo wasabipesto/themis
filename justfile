@@ -60,6 +60,11 @@ db-curl *endpoint:
 build:
     npx astro build
 
+# Check the astro site
+[working-directory: 'site']
+test-site:
+    npx astro check
+
 # Start the site astro dev server
 [working-directory: 'site']
 dev:
@@ -71,5 +76,5 @@ group:
     npx astro dev
 
 # Build the site and deploy with rclone
-deploy: build
+deploy: test-site build
     rclone sync site/dist $RCLONE_TARGET --progress
