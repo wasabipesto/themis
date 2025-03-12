@@ -149,8 +149,6 @@
                                     <td class="py-3 px-3">
                                         <a
                                             href={`/markets/view?id=${market.id}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
                                             class="text-blue hover:underline"
                                         >
                                             <svg

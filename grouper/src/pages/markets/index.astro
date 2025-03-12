@@ -1,0 +1,21 @@
+---
+import Base from "@layouts/base.astro";
+import IndexTable from "@components/IndexTable.svelte";
+
+const headers = [
+    { key: "id", label: "ID" },
+    { key: "platform_name", label: "Platform" },
+    { key: "title", label: "Title" },
+    { key: "volume_usd", label: "Volume" },
+];
+---
+
+<Base title="Markets">
+    <div class="flex justify-between items-center p-4 m-2 border-b border-text">
+        <h2 class="text-3xl font-bold text-text">Top Markets</h2>
+    </div>
+
+    <div class="">
+        <IndexTable headers={headers} endpoint="markets" client:load />
+    </div>
+</Base>

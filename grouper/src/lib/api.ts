@@ -27,7 +27,14 @@ export async function fetchFromAPI(endpoint: string, options = {}) {
 }
 
 export async function getItemsSorted(endpoint: string): Promise<any> {
-  return fetchFromAPI(`${endpoint}?order=slug.asc`);
+  let order;
+  if (endpoint == "markets") {
+    order = "volume_usd.desc";
+  } else {
+    order = "slug.asc";
+  }
+  const limit = 100;
+  return fetchFromAPI(`${endpoint}?order=${order}&limit=${limit}`);
 }
 
 export async function deleteItem(
@@ -143,6 +150,10 @@ export async function updateQuestion(data: Question): Promise<Question> {
 
 export async function getAssocMarkets(id: string): Promise<Market[]> {
   return fetchFromAPI(`markets?question_id=eq.${id}`);
+}
+
+export async function getMarket(id: string): Promise<Market> {
+  return fetchFromAPI(`markets?id=eq.${id}`).then((data) => data[0] || null);
 }
 
 export async function linkMarket(
