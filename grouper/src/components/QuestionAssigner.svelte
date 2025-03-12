@@ -148,7 +148,7 @@
                                 >
                                     <td class="py-3 px-3">
                                         <a
-                                            href={`/markets/view?id=${market.id}`}
+                                            href={`/markets/edit?id=${market.id}`}
                                             class="text-blue hover:underline"
                                         >
                                             <svg

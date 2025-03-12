@@ -3,11 +3,18 @@ import type { Category, Market, Platform, Question } from "@types";
 const PGRST_URL = import.meta.env.PUBLIC_PGRST_URL;
 const PGRST_APIKEY = import.meta.env.PUBLIC_PGRST_APIKEY;
 
-export async function fetchFromAPI(endpoint: string, options = {}) {
+interface FetchOptions extends RequestInit {
+  headers?: Record<string, string>;
+}
+
+export async function fetchFromAPI(
+  endpoint: string,
+  options: FetchOptions = {},
+) {
   const url = `${PGRST_URL}/${endpoint}`;
 
   // Create a deep copy of options to avoid modifying the original
-  const fetchOptions = { ...options };
+  const fetchOptions: FetchOptions = { ...options };
 
   // Initialize headers properly
   fetchOptions.headers = {
@@ -29,7 +36,7 @@ export async function fetchFromAPI(endpoint: string, options = {}) {
 export async function getItemsSorted(endpoint: string): Promise<any> {
   let order;
   if (endpoint == "markets") {
-    order = "volume_usd.desc";
+    order = "volume_usd.desc&volume_usd=not.is.null";
   } else {
     order = "slug.asc";
   }
