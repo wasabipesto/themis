@@ -1,0 +1,12 @@
+---
+import Base from "@layouts/base.astro";
+import QuestionEditor from "@components/QuestionEditor.svelte";
+---
+
+<Base title="Question Editor">
+    <div class="p-4 m-2 border-b border-text">
+        <h2 class="text-3xl font-bold text-text">Question Editor</h2>
+    </div>
+
+    <QuestionEditor client:load />
+</Base>

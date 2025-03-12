@@ -70,6 +70,10 @@ export async function updatePlatform(data: Platform): Promise<Platform> {
   });
 }
 
+export async function getCategories(): Promise<Category[]> {
+  return fetchFromAPI(`categories`);
+}
+
 export async function getCategory(slug: string): Promise<Category> {
   return fetchFromAPI(`categories?slug=eq.${slug}`).then(
     (data) => data[0] || null,
