@@ -1,4 +1,4 @@
-import type { Category, Platform, Question } from "@types";
+import type { Category, Market, Platform, Question } from "@types";
 
 const PGRST_URL = import.meta.env.PUBLIC_PGRST_URL;
 const PGRST_APIKEY = import.meta.env.PUBLIC_PGRST_APIKEY;
@@ -133,6 +133,21 @@ export async function createQuestion(data: Question): Promise<Question> {
 export async function updateQuestion(data: Question): Promise<Question> {
   await completeQuestion(data);
   return fetchFromAPI(`questions?id=eq.${data.id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+    headers: {
+      Prefer: "return=representation",
+    },
+  });
+}
+
+export async function getAssocMarkets(id: string): Promise<Market[]> {
+  return fetchFromAPI(`markets?question_id=eq.${id}`);
+}
+
+export async function unlinkMarket(data: Market): Promise<Market> {
+  data.question_id = null;
+  return fetchFromAPI(`markets?id=eq.${data.id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
     headers: {

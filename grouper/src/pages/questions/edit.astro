@@ -1,6 +1,7 @@
 ---
 import Base from "@layouts/base.astro";
 import QuestionEditor from "@components/QuestionEditor.svelte";
+import QuestionAssigner from "@components/QuestionAssigner.svelte";
 ---
 
 <Base title="Question Editor">
@@ -8,5 +9,8 @@ import QuestionEditor from "@components/QuestionEditor.svelte";
         <h2 class="text-3xl font-bold text-text">Question Editor</h2>
     </div>
 
-    <QuestionEditor client:load />
+    <div>
+        <QuestionEditor client:load />
+        <QuestionAssigner client:load />
+    </div>
 </Base>

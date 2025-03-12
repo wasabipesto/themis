@@ -21,15 +21,15 @@
             categories = await getItemsSorted("categories");
 
             const urlParams = new URLSearchParams(window.location.search);
-            const slug = urlParams.get("id");
+            const questionId = urlParams.get("id");
 
-            if (!slug) {
+            if (!questionId) {
                 isNew = true;
                 loading = false;
                 return;
             }
 
-            question = await getQuestion(slug);
+            question = await getQuestion(questionId);
             loading = false;
         } catch (err) {
             error = err.message || "Failed to load question or categories";
