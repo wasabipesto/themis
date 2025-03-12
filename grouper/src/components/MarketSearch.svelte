@@ -33,33 +33,23 @@
         // Load platforms for the dropdown
         try {
             platforms = await getItemsSorted("platforms");
+            await loadTableData();
         } catch (err) {
             console.error("Error loading platforms:", err);
         }
-
-        // Initial market loading
-        await loadTableData();
     });
 
     async function loadTableData(
-        query = "",
-        platform = "",
+        query = searchQuery,
+        platform = selectedPlatform,
         sort = selectedSort,
     ) {
         loading = true;
         try {
             // Base query parameters
             let params = `order=${sort}`;
-
-            // Append search query if it exists
-            if (query) {
-                params += `&title=ilike.*${query}*`;
-            }
-
-            // Append platform filter if selected
-            if (platform) {
-                params += `&platform_slug=eq.${platform}`;
-            }
+            if (query) params += `&title=ilike.*${query}*`;
+            if (platform) params += `&platform_slug=eq.${platform}`;
 
             items = await getMarkets(params);
             error = items.length === 0 ? "No items found." : null;
@@ -74,20 +64,6 @@
     function handleSearch() {
         loadTableData(searchQuery, selectedPlatform, selectedSort);
     }
-
-    function handleKeyDown(event) {
-        if (event.key === "Enter") {
-            handleSearch();
-        }
-    }
-
-    function handlePlatformChange() {
-        loadTableData(searchQuery, selectedPlatform, selectedSort);
-    }
-
-    function handleSortChange() {
-        loadTableData(searchQuery, selectedPlatform, selectedSort);
-    }
 </script>
 
 <div class="w-full mb-4 mx-auto">
@@ -97,7 +73,7 @@
             placeholder="Search markets..."
             class="w-full px-4 py-2 pl-4 bg-crust rounded-lg focus:outline-none focus:ring-1 focus:ring-lavender"
             bind:value={searchQuery}
-            on:keydown={handleKeyDown}
+            on:keydown={(e) => e.key === "Enter" && handleSearch()}
         />
         <button
             class="px-4 py-2 bg-blue hover:bg-blue/80 text-white rounded-md"
@@ -111,7 +87,7 @@
         <select
             class="w-1/2 px-4 py-2 bg-crust rounded-lg focus:outline-none focus:ring-1 focus:ring-lavender"
             bind:value={selectedPlatform}
-            on:change={handlePlatformChange}
+            on:change={handleSearch}
         >
             <option value="">All Platforms</option>
             {#each platforms as platform}
@@ -122,7 +98,7 @@
         <select
             class="w-1/2 px-4 py-2 bg-crust rounded-lg focus:outline-none focus:ring-1 focus:ring-lavender"
             bind:value={selectedSort}
-            on:change={handleSortChange}
+            on:change={handleSearch}
         >
             {#each sortOptions as option}
                 <option value={option.value}>{option.label}</option>
