@@ -1,16 +1,28 @@
 <script>
     import { onMount } from "svelte";
-    import { getMarkets } from "@lib/api";
+    import { getMarkets, getItemsSorted } from "@lib/api";
 
     // State
     let items = [];
+    let platforms = [];
     let loading = true;
     let error = null;
     let searchQuery = "";
+    let selectedPlatform = "";
 
-    onMount(loadTableData);
+    onMount(async () => {
+        // Load platforms for the dropdown
+        try {
+            platforms = await getItemsSorted("platforms");
+        } catch (err) {
+            console.error("Error loading platforms:", err);
+        }
 
-    async function loadTableData(query = "") {
+        // Initial market loading
+        await loadTableData();
+    });
+
+    async function loadTableData(query = "", platform = "") {
         loading = true;
         try {
             // Base query parameters
@@ -19,6 +31,11 @@
             // Append search query if it exists
             if (query) {
                 params += `&title=ilike.*${query}*`;
+            }
+
+            // Append platform filter if selected
+            if (platform) {
+                params += `&platform_slug=eq.${platform}`;
             }
 
             items = await getMarkets(params);
@@ -32,13 +49,17 @@
     }
 
     function handleSearch() {
-        loadTableData(searchQuery);
+        loadTableData(searchQuery, selectedPlatform);
     }
 
     function handleKeyDown(event) {
         if (event.key === "Enter") {
             handleSearch();
         }
+    }
+
+    function handlePlatformChange() {
+        loadTableData(searchQuery, selectedPlatform);
     }
 </script>
 
@@ -57,6 +78,19 @@
         >
             Search
         </button>
+    </div>
+
+    <div class="mt-2">
+        <select
+            class="w-full px-4 py-2 bg-crust rounded-lg focus:outline-none focus:ring-1 focus:ring-lavender"
+            bind:value={selectedPlatform}
+            on:change={handlePlatformChange}
+        >
+            <option value="">All Platforms</option>
+            {#each platforms as platform}
+                <option value={platform.slug}>{platform.name}</option>
+            {/each}
+        </select>
     </div>
 </div>
 
