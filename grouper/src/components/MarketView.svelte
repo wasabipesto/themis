@@ -71,14 +71,17 @@
         </div>
     {:else if market}
         <div class="bg-crust p-6 rounded-lg shadow-md mb-6">
-            <div class="flex justify-between items-start mb-4">
+            <div class="flex justify-between items-start mb-2">
                 <h1 class="text-2xl font-bold">{market.title}</h1>
+            </div>
+            <div class="flex justify-between items-start mb-2">
+                <h1 class="text-xs">{market.id}</h1>
             </div>
 
             <div class="mb-6">
                 {#if market.category}
                     <span
-                        class="text-sm bg-blue/20 text-text px-4 py-1 rounded-md mr-2 mb-2"
+                        class="text-sm bg-rosewater/20 text-text px-4 py-1 rounded-md mr-2 mb-2"
                     >
                         {market.category}
                     </span>
@@ -129,9 +132,6 @@
                     <h2 class="text-xl font-semibold mb-2">Market Details</h2>
                     <div class="bg-mantle p-4 rounded-md">
                         <dl>
-                            <dt class="text-text/70">ID</dt>
-                            <dd class="mb-2">{market.id}</dd>
-
                             <dt class="text-text/70">Open Date</dt>
                             <dd class="mb-2">
                                 {formatDate(market.open_datetime)}
@@ -141,6 +141,9 @@
                             <dd class="mb-2">
                                 {formatDate(market.close_datetime)}
                             </dd>
+
+                            <dt class="text-text/70">Probability (Average)</dt>
+                            <dd>{formatProbability(market.prob_time_avg)}</dd>
 
                             <dt class="text-text/70">Resolution</dt>
                             <dd class="mb-2">
@@ -175,13 +178,11 @@
                                 ${market.volume_usd?.toLocaleString() || "N/A"}
                             </dd>
 
-                            <dt class="text-text/70">Probability (Midpoint)</dt>
+                            <dt class="text-text/70">Duration (days)</dt>
                             <dd class="mb-2">
-                                {formatProbability(market.prob_at_midpoint)}
+                                {market.duration_days?.toLocaleString() ||
+                                    "N/A"}
                             </dd>
-
-                            <dt class="text-text/70">Probability (Average)</dt>
-                            <dd>{formatProbability(market.prob_time_avg)}</dd>
                         </dl>
                     </div>
                 </div>
