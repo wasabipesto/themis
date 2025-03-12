@@ -1,12 +1,14 @@
 <script>
     import { onMount } from "svelte";
-    import { getMarket, getQuestion } from "@lib/api";
+    import { getMarket, getQuestion, getMarketProbs } from "@lib/api";
+    import * as Plot from "@observablehq/plot";
 
     let market = null;
     let question = null;
     let loading = true;
     let error = null;
     let marketId = null;
+    let plotData = [];
 
     onMount(async () => {
         try {
@@ -27,12 +29,68 @@
                 question = await getQuestion(market.question_id);
             }
 
+            // Fetch market probability data for plotting
+            try {
+                plotData = await getMarketProbs(marketId);
+                renderPlot();
+            } catch (plotErr) {
+                console.error("Failed to load probability data:", plotErr);
+                // Continue showing the page even if plot fails
+            }
+
             loading = false;
         } catch (err) {
             error = err.message || "Failed to load market data";
             loading = false;
         }
     });
+
+    function renderPlot() {
+        // Make sure market is loaded and DOM is ready
+        if (!market || !plotData || plotData.length === 0) return;
+
+        // Use setTimeout to ensure DOM is ready
+        setTimeout(() => {
+            const plotElement = document.querySelector("#plot");
+            if (!plotElement) return;
+
+            try {
+                const plot = Plot.plot({
+                    width: plotElement.clientWidth || 600,
+                    height: 300,
+                    x: { type: "utc", label: "Date" },
+                    y: {
+                        domain: [0, 100],
+                        grid: true,
+                        percent: true,
+                        label: "Probability",
+                        format: (p) => `${(p * 100).toFixed(0)}%`,
+                    },
+                    marks: [
+                        Plot.line(plotData, {
+                            x: "date",
+                            y: "prob",
+                            curve: "step",
+                            tip: {
+                                fill: "black",
+                                textStyle: "color: white",
+                            },
+                        }),
+                        Plot.ruleY([0]),
+                    ],
+                });
+
+                // Clear any existing plots first
+                while (plotElement.firstChild) {
+                    plotElement.firstChild.remove();
+                }
+
+                plotElement.append(plot);
+            } catch (e) {
+                console.error("Error rendering plot:", e);
+            }
+        }, 0);
+    }
 
     function formatDate(dateString) {
         if (!dateString) return "N/A";
@@ -212,6 +270,20 @@
                     </div>
                 </div>
             {/if}
+        </div>
+
+        <div class="bg-crust p-6 rounded-lg shadow-md mb-4">
+            <h2 class="text-xl font-semibold mb-4">Probability History</h2>
+            <div id="plot" class="w-full h-[300px]"></div>
+        </div>
+
+        <div class="flex justify-end">
+            <a
+                href="/markets"
+                class="mt-4 px-4 py-2 bg-blue/50 text-text rounded-md hover:bg-blue transition-colors"
+            >
+                Back to Markets
+            </a>
         </div>
     {:else}
         <div class="bg-yellow/20 p-6 rounded-lg shadow-md text-center">

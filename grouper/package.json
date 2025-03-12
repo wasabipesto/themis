@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@astrojs/svelte": "^7.0.6",
+    "@observablehq/plot": "^0.6.17",
     "@tailwindcss/vite": "^4.0.12",
     "astro": "^5.4.2",
     "svelte": "^5.23.0",

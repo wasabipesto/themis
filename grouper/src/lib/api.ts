@@ -1,4 +1,10 @@
-import type { Category, Market, Platform, Question } from "@types";
+import type {
+  Category,
+  DailyProbability,
+  Market,
+  Platform,
+  Question,
+} from "@types";
 
 const PGRST_URL = import.meta.env.PUBLIC_PGRST_URL;
 const PGRST_APIKEY = import.meta.env.PUBLIC_PGRST_APIKEY;
@@ -160,6 +166,10 @@ export async function getAssocMarkets(id: string): Promise<Market[]> {
 
 export async function getMarket(id: string): Promise<Market> {
   return fetchFromAPI(`markets?id=eq.${id}`).then((data) => data[0] || null);
+}
+
+export async function getMarketProbs(id: string): Promise<DailyProbability[]> {
+  return fetchFromAPI(`daily_probabilities?market_id=eq.${id}`);
 }
 
 export async function linkMarket(
