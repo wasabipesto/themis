@@ -1,0 +1,27 @@
+---
+import Base from "@layouts/base.astro";
+import ListingTable from "@components/listing-table.astro";
+
+const headers = [
+    { key: "parent_slug", label: "Parent" },
+    { key: "slug", label: "Slug" },
+    { key: "name", label: "Name" },
+    { key: "total_markets", label: "Markets" },
+];
+---
+
+<Base title="Categories">
+    <div class="flex justify-between items-center p-4 m-2 border-b border-text">
+        <h2 class="text-3xl font-bold text-text">All Categories</h2>
+        <a
+            href="/categories/new"
+            class="px-4 py-2 bg-crust text-text font-medium rounded-lg flex items-center"
+        >
+            Add New Category
+        </a>
+    </div>
+
+    <div class="">
+        <ListingTable headers={headers} endpoint="categories" />
+    </div>
+</Base>

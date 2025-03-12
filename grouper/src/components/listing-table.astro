@@ -20,7 +20,7 @@ const { headers, endpoint } = Astro.props;
 ---
 
 <div
-    class="overflow-x-auto min-w-240"
+    class="overflow-x-auto"
     id="table-container"
     data-endpoint={endpoint}
     data-headers={JSON.stringify(headers)}
@@ -35,7 +35,7 @@ const { headers, endpoint } = Astro.props;
 
     <!-- Data table (hidden until data loads) -->
     <table
-        class="min-w-full divide-y divide-subtext bg-crust rounded-lg shadow hidden"
+        class="divide-y divide-subtext bg-crust rounded-lg shadow hidden"
         id="data-table"
     >
         <thead>

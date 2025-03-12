@@ -1,4 +1,4 @@
-import type { Platform } from "@types";
+import type { Category, Platform } from "@types";
 
 const PGRST_URL = import.meta.env.PUBLIC_PGRST_URL;
 const PGRST_APIKEY = import.meta.env.PUBLIC_PGRST_APIKEY;
@@ -67,18 +67,18 @@ export async function deletePlatform(slug: string) {
   });
 }
 
-export async function getCategories(params = {}) {
+export async function getCategories(params = {}): Promise<Category[]> {
   const queryParams = new URLSearchParams(params).toString();
   return fetchFromAPI(`categories?${queryParams}`);
 }
 
-export async function getCategory(slug) {
+export async function getCategory(slug: string): Promise<Category> {
   return fetchFromAPI(`categories?slug=eq.${slug}`).then(
     (data) => data[0] || null,
   );
 }
 
-export async function createCategory(data) {
+export async function createCategory(data: Category): Promise<Category> {
   return fetchFromAPI("categories", {
     method: "POST",
     body: JSON.stringify(data),
@@ -88,8 +88,8 @@ export async function createCategory(data) {
   });
 }
 
-export async function updateCategory(slug, data) {
-  return fetchFromAPI(`categories?slug=eq.${slug}`, {
+export async function updateCategory(data: Category): Promise<Category> {
+  return fetchFromAPI(`categories?slug=eq.${data.slug}`, {
     method: "PATCH",
     body: JSON.stringify(data),
     headers: {
@@ -98,7 +98,7 @@ export async function updateCategory(slug, data) {
   });
 }
 
-export async function deleteCategory(slug) {
+export async function deleteCategory(slug: string) {
   return fetchFromAPI(`categories?slug=eq.${slug}`, {
     method: "DELETE",
     headers: {

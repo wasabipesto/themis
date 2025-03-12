@@ -1,6 +1,6 @@
 ---
-const { platform = {} } = Astro.props;
-const isEditing = Object.keys(platform).length > 0;
+const { category = {} } = Astro.props;
+const isEditing = Object.keys(category).length > 0;
 ---
 
 <form
@@ -16,7 +16,7 @@ const isEditing = Object.keys(platform).length > 0;
             type="text"
             id="slug"
             name="slug"
-            value={platform.slug || ""}
+            value={category.slug || ""}
             required
             readonly={isEditing}
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
@@ -31,7 +31,7 @@ const isEditing = Object.keys(platform).length > 0;
             type="text"
             id="name"
             name="name"
-            value={platform.name || ""}
+            value={category.name || ""}
             required
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
         />
@@ -47,98 +47,48 @@ const isEditing = Object.keys(platform).length > 0;
             name="description"
             rows="3"
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
-            >{platform.description || ""}</textarea
+            >{category.description || ""}</textarea
         >
     </div>
 
     <div class="mb-4">
         <label
-            for="long_description"
-            class="block text-sm font-medium text-text mb-1"
-            >Long Description</label
-        >
-        <textarea
-            id="long_description"
-            name="long_description"
-            rows="10"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
-            >{platform.long_description || ""}</textarea
-        >
-    </div>
-
-    <div class="mb-4">
-        <label for="icon_url" class="block text-sm font-medium text-text mb-1"
-            >Icon URL</label
+            for="parent_slug"
+            class="block text-sm font-medium text-text mb-1">Parent Slug</label
         >
         <input
             type="text"
-            id="icon_url"
-            name="icon_url"
-            value={platform.icon_url || ""}
+            id="parent_slug"
+            name="parent_slug"
+            value={category.parent_slug || ""}
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
         />
     </div>
 
     <div class="mb-4">
-        <label for="site_url" class="block text-sm font-medium text-text mb-1"
-            >Site URL</label
-        >
-        <input
-            type="url"
-            id="site_url"
-            name="site_url"
-            value={platform.site_url || ""}
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
-        />
+        <label class="flex items-center">
+            <input
+                type="checkbox"
+                id="is_parent"
+                name="is_parent"
+                checked={category.is_parent || false}
+                class="h-4 w-4 text-blue focus:ring-blue border-gray-300 rounded"
+            />
+            <span class="ml-2 text-sm text-text">Is Parent Category</span>
+        </label>
     </div>
 
     <div class="mb-4">
-        <label
-            for="wikipedia_url"
-            class="block text-sm font-medium text-text mb-1"
-            >Wikipedia URL</label
+        <label for="icon" class="block text-sm font-medium text-text mb-1"
+            >Icon</label
         >
         <input
-            type="url"
-            id="wikipedia_url"
-            name="wikipedia_url"
-            value={platform.wikipedia_url || ""}
+            type="text"
+            id="icon"
+            name="icon"
+            value={category.icon || ""}
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
         />
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="mb-4">
-            <label
-                for="color_primary"
-                class="block text-sm font-medium text-text mb-1"
-                >Primary Color</label
-            >
-            <input
-                type="text"
-                id="color_primary"
-                name="color_primary"
-                value={platform.color_primary || ""}
-                placeholder="#RRGGBB"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
-            />
-        </div>
-
-        <div class="mb-4">
-            <label
-                for="color_accent"
-                class="block text-sm font-medium text-text mb-1"
-                >Accent Color</label
-            >
-            <input
-                type="text"
-                id="color_accent"
-                name="color_accent"
-                value={platform.color_accent || ""}
-                placeholder="#RRGGBB"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
-            />
-        </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -152,7 +102,7 @@ const isEditing = Object.keys(platform).length > 0;
                 type="number"
                 id="total_markets"
                 name="total_markets"
-                value={platform.total_markets || ""}
+                value={category.total_markets || ""}
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
             />
         </div>
@@ -167,7 +117,7 @@ const isEditing = Object.keys(platform).length > 0;
                 type="number"
                 id="total_traders"
                 name="total_traders"
-                value={platform.total_traders || ""}
+                value={category.total_traders || ""}
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
             />
         </div>
@@ -183,7 +133,7 @@ const isEditing = Object.keys(platform).length > 0;
                 id="total_volume"
                 name="total_volume"
                 step="0.01"
-                value={platform.total_volume || ""}
+                value={category.total_volume || ""}
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
             />
         </div>
@@ -199,7 +149,7 @@ const isEditing = Object.keys(platform).length > 0;
 
     <div class="flex justify-end space-x-4 mt-6">
         <a
-            href="/platforms"
+            href="/categories"
             class="px-4 py-2 bg-blue/50 text-text rounded-md hover:bg-blue transition-colors"
         >
             Cancel
@@ -209,14 +159,14 @@ const isEditing = Object.keys(platform).length > 0;
             id="submitBtn"
             class="px-4 py-2 bg-green/50 text-white rounded-md hover:bg-green transition-colors"
         >
-            {isEditing ? "Update" : "Create"} Platform
+            {isEditing ? "Update" : "Create"} Category
         </button>
     </div>
 </form>
 
 <script>
-    import type { Platform } from "@types";
-    import { createPlatform, updatePlatform } from "@lib/api";
+    import type { Category } from "@types";
+    import { createCategory, updateCategory } from "@lib/api";
 
     const form = document.getElementById("primaryForm");
     const isEditing = form.dataset.isEditing === "true";
@@ -236,36 +186,36 @@ const isEditing = Object.keys(platform).length > 0;
         try {
             // Get form data
             const formData = new FormData(form);
-            const platformData: Platform = Object.fromEntries(
+            const categoryData: Category = Object.fromEntries(
                 formData.entries(),
             );
 
             // Convert empty strings to null
-            Object.keys(platformData).forEach((key) => {
-                if (platformData[key] === "") {
-                    platformData[key] = null;
+            Object.keys(categoryData).forEach((key) => {
+                if (categoryData[key] === "") {
+                    categoryData[key] = null;
                 }
             });
 
-            // Create platform
+            // Create category
             if (isEditing) {
-                await updatePlatform(platformData);
+                await updateCategory(categoryData);
             } else {
-                await createPlatform(platformData);
+                await createCategory(categoryData);
             }
 
             // Redirect on success
-            window.location.href = "/platforms";
+            window.location.href = "/categories";
         } catch (error) {
             // Show error
             errorText.textContent =
                 error.message ||
-                "An unknown error occurred while creating the platform";
+                "An unknown error occurred while creating the category";
             errorDiv.classList.remove("hidden");
 
             // Reset button
             submitBtn.disabled = false;
-            submitBtn.innerText = "Create Platform";
+            submitBtn.innerText = "Create Category";
 
             // Scroll to error
             errorDiv.scrollIntoView({ behavior: "smooth" });
