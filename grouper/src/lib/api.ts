@@ -145,6 +145,19 @@ export async function getAssocMarkets(id: string): Promise<Market[]> {
   return fetchFromAPI(`markets?question_id=eq.${id}`);
 }
 
+export async function linkMarket(
+  marketId: string,
+  questionId: string,
+): Promise<Market> {
+  return fetchFromAPI(`markets?id=eq.${marketId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ question_id: questionId }),
+    headers: {
+      Prefer: "return=representation",
+    },
+  });
+}
+
 export async function unlinkMarket(data: Market): Promise<Market> {
   data.question_id = null;
   return fetchFromAPI(`markets?id=eq.${data.id}`, {

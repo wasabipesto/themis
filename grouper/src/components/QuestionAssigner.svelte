@@ -1,12 +1,21 @@
 <script>
     import { onMount } from "svelte";
-    import { getQuestion, unlinkMarket, getAssocMarkets } from "@lib/api";
+    import {
+        getQuestion,
+        unlinkMarket,
+        linkMarket,
+        getAssocMarkets,
+    } from "@lib/api";
 
     let question = {};
     let markets = [];
     let loading = true;
     let error = null;
     let questionId = null;
+    let newMarketId = "";
+    let linkError = null;
+    let linkSuccess = false;
+    let linkLoading = false;
 
     onMount(async () => {
         try {
@@ -44,6 +53,34 @@
         // Remove item from the list for instant UI update
         markets = markets.filter((m) => m.id !== market.id);
     }
+
+    async function handleLinkMarket() {
+        if (!newMarketId.trim()) {
+            linkError = "Please enter a market ID";
+            return;
+        }
+
+        linkError = null;
+        linkSuccess = false;
+        linkLoading = true;
+
+        try {
+            // Pass the market ID and question ID to the linkMarket function
+            await linkMarket(newMarketId.trim(), questionId);
+
+            // Fetch updated list of markets
+            markets = await getAssocMarkets(questionId);
+
+            // Clear the input and show success message
+            newMarketId = "";
+            linkSuccess = true;
+            setTimeout(() => (linkSuccess = false), 3000); // Clear success message after 3 seconds
+        } catch (err) {
+            linkError = err.message || "Failed to link market";
+        } finally {
+            linkLoading = false;
+        }
+    }
 </script>
 
 {#if questionId}
@@ -66,19 +103,23 @@
                 </a>
             </div>
         {:else}
+            <h2 class="text-2xl font-semibold mb-4">Linked Markets</h2>
+
             {#if markets.length === 0}
-                <div class="bg-blue/10 p-6 rounded-lg shadow-md text-center">
+                <div
+                    class="bg-blue/10 p-6 mb-6 rounded-lg shadow-md text-center"
+                >
                     <p class="text-text/70">
                         No markets assigned to this question.
                     </p>
                 </div>
             {:else}
-                <div class="bg-crust p-6 rounded-lg shadow-md">
+                <div class="bg-crust p-6 mb-6 rounded-lg shadow-md">
                     <table class="w-full">
                         <thead>
                             <tr class="border-b border-blue/20">
                                 <th class="text-left py-2 px-3 text-text/70"
-                                    >Market</th
+                                    >Link</th
                                 >
                                 <th class="text-left py-2 px-3 text-text/70"
                                     >Platform</th
@@ -101,12 +142,12 @@
                                 >
                                     <td class="py-3 px-3">
                                         <a
-                                            href={market.market_link}
+                                            href={market.url}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             class="text-blue hover:underline"
                                         >
-                                            {market.market_id}
+                                            {market.id}
                                         </a>
                                     </td>
                                     <td class="py-3 px-3"
@@ -135,14 +176,45 @@
                     </table>
                 </div>
             {/if}
+            <!-- Add market form -->
+            <div class="bg-crust p-6 rounded-lg shadow-md mb-6">
+                <h2 class="text-xl font-semibold mb-4">
+                    Link Market to Question
+                </h2>
+                <div class="flex flex-col md:flex-row gap-4">
+                    <div class="flex-grow">
+                        <input
+                            type="text"
+                            bind:value={newMarketId}
+                            placeholder="Enter Market ID"
+                            class="w-full px-4 py-2 rounded-md bg-mantle border border-blue/30 focus:border-blue focus:outline-none"
+                        />
+                    </div>
+                    <button
+                        on:click={handleLinkMarket}
+                        disabled={linkLoading}
+                        class="px-4 py-2 bg-blue/50 text-text rounded-md hover:bg-blue transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {#if linkLoading}
+                            <span
+                                class="inline-block w-4 h-4 border-2 border-text border-t-transparent rounded-full animate-spin mr-2"
+                            ></span>
+                            Linking...
+                        {:else}
+                            Link Market
+                        {/if}
+                    </button>
+                </div>
 
-            <div class="mt-6 flex justify-end">
-                <a
-                    href="/questions"
-                    class="px-4 py-2 bg-blue/50 text-text rounded-md hover:bg-blue transition-colors"
-                >
-                    Back to Questions
-                </a>
+                {#if linkError}
+                    <p class="text-red mt-2">{linkError}</p>
+                {/if}
+
+                {#if linkSuccess}
+                    <p class="text-green-400 mt-2">
+                        Market successfully linked!
+                    </p>
+                {/if}
             </div>
         {/if}
     </div>
