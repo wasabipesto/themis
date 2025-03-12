@@ -118,21 +118,27 @@
                     <table class="w-full">
                         <thead>
                             <tr class="border-b border-blue/20">
-                                <th class="text-left py-2 px-3 text-text/70"
-                                    >Link</th
-                                >
-                                <th class="text-left py-2 px-3 text-text/70"
-                                    >Platform</th
-                                >
-                                <th class="text-right py-2 px-3 text-text/70"
-                                    >Volume</th
-                                >
-                                <th class="text-right py-2 px-3 text-text/70"
-                                    >Traders</th
-                                >
-                                <th class="text-center py-2 px-3 text-text/70"
-                                    >Actions</th
-                                >
+                                <th class="text-left py-2 px-3 text-text/70">
+                                    Details
+                                </th>
+                                <th class="text-left py-2 px-3 text-text/70">
+                                    External
+                                </th>
+                                <th class="text-left py-2 px-3 text-text/70">
+                                    Platform
+                                </th>
+                                <th class="text-left py-2 px-3 text-text/70">
+                                    Title
+                                </th>
+                                <th class="text-right py-2 px-3 text-text/70">
+                                    Volume
+                                </th>
+                                <th class="text-right py-2 px-3 text-text/70">
+                                    Traders
+                                </th>
+                                <th class="text-center py-2 px-3 text-text/70">
+                                    Actions
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -142,17 +148,50 @@
                                 >
                                     <td class="py-3 px-3">
                                         <a
+                                            href={`/markets/view?id=${market.id}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="text-blue hover:underline"
+                                        >
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                viewBox="0 0 24 24"
+                                                height={20}
+                                                fill="currentColor"
+                                                class="ml-1"
+                                            >
+                                                <title>Link</title>
+                                                <path
+                                                    d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"
+                                                />
+                                            </svg>
+                                        </a>
+                                    </td>
+                                    <td class="py-3 px-3">
+                                        <a
                                             href={market.url}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             class="text-blue hover:underline"
                                         >
-                                            {market.id}
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                viewBox="0 0 24 24"
+                                                height={20}
+                                                fill="currentColor"
+                                                class="ml-1"
+                                            >
+                                                <title>Link</title>
+                                                <path
+                                                    d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"
+                                                />
+                                            </svg>
                                         </a>
                                     </td>
                                     <td class="py-3 px-3"
                                         >{market.platform_name}</td
                                     >
+                                    <td class="py-3 px-3">{market.title}</td>
                                     <td class="py-3 px-3 text-right"
                                         >${market.volume?.toLocaleString() ||
                                             "0"}</td

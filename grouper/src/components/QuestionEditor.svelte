@@ -87,7 +87,7 @@
 {:else}
     <form
         id="primaryForm"
-        class="max-w-2xl mx-auto bg-crust p-6 rounded-lg shadow-md"
+        class="mx-auto bg-crust p-6 rounded-lg shadow-md"
         on:submit={handleSubmit}
     >
         {#if !isNew}
