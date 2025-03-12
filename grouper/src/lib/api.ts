@@ -1,11 +1,10 @@
+import type { Platform } from "@types";
+
 const PGRST_URL = import.meta.env.PUBLIC_PGRST_URL;
 const PGRST_APIKEY = import.meta.env.PUBLIC_PGRST_APIKEY;
 
-export async function fetchFromAPI(endpoint, options = {}) {
+export async function fetchFromAPI(endpoint: string, options = {}) {
   const url = `${PGRST_URL}/${endpoint}`;
-  console.log(PGRST_URL);
-  console.log(endpoint);
-  console.log(url);
 
   // Create a deep copy of options to avoid modifying the original
   const fetchOptions = { ...options };
@@ -27,18 +26,18 @@ export async function fetchFromAPI(endpoint, options = {}) {
   return response.json();
 }
 
-export async function getPlatforms(params = {}) {
+export async function getPlatforms(params = {}): Promise<Platform[]> {
   const queryParams = new URLSearchParams(params).toString();
   return fetchFromAPI(`platforms?${queryParams}`);
 }
 
-export async function getPlatform(slug) {
+export async function getPlatform(slug: string): Promise<Platform> {
   return fetchFromAPI(`platforms?slug=eq.${slug}`).then(
     (data) => data[0] || null,
   );
 }
 
-export async function createPlatform(data) {
+export async function createPlatform(data: Platform): Promise<Platform> {
   return fetchFromAPI("platforms", {
     method: "POST",
     body: JSON.stringify(data),
@@ -48,18 +47,18 @@ export async function createPlatform(data) {
   });
 }
 
-// TODO: Add on-conflict for updating?
-export async function updatePlatform(slug, data) {
-  return fetchFromAPI(`platforms?slug=eq.${slug}`, {
+export async function updatePlatform(data: Platform): Promise<Platform> {
+  return fetchFromAPI(`platforms?slug=eq.${data.slug}`, {
     method: "PATCH",
     body: JSON.stringify(data),
     headers: {
       Prefer: "return=representation",
+      "On-Conflict-Update": "*",
     },
   });
 }
 
-export async function deletePlatform(slug) {
+export async function deletePlatform(slug: string) {
   return fetchFromAPI(`platforms?slug=eq.${slug}`, {
     method: "DELETE",
     headers: {

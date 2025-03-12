@@ -6,6 +6,7 @@ const isEditing = Object.keys(platform).length > 0;
 <form
     id="platformForm"
     class="max-w-2xl mx-auto bg-crust p-6 rounded-lg shadow-md"
+    data-is-editing={isEditing}
 >
     <div class="mb-4">
         <label for="slug" class="block text-sm font-medium text-text mb-1"
@@ -214,9 +215,12 @@ const isEditing = Object.keys(platform).length > 0;
 </form>
 
 <script>
-    import { createPlatform } from "@lib/api";
+    import type { Platform } from "@types";
+    import { createPlatform, updatePlatform } from "@lib/api";
 
     const form = document.getElementById("platformForm");
+    const isEditing = form.dataset.isEditing === "true";
+
     const errorDiv = document.getElementById("errorMessage");
     const errorText = document.getElementById("errorMessageText");
     const submitBtn = document.getElementById("submitBtn");
@@ -232,7 +236,9 @@ const isEditing = Object.keys(platform).length > 0;
         try {
             // Get form data
             const formData = new FormData(form);
-            const platformData = Object.fromEntries(formData.entries());
+            const platformData: Platform = Object.fromEntries(
+                formData.entries(),
+            );
 
             // Convert empty strings to null
             Object.keys(platformData).forEach((key) => {
@@ -242,7 +248,11 @@ const isEditing = Object.keys(platform).length > 0;
             });
 
             // Create platform
-            await createPlatform(platformData);
+            if (isEditing) {
+                await updatePlatform(platformData);
+            } else {
+                await createPlatform(platformData);
+            }
 
             // Redirect on success
             window.location.href = "/platforms";
