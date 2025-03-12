@@ -1,12 +1,6 @@
 ---
 import Base from "@layouts/base.astro";
-import IndexTable from "@components/IndexTable.svelte";
-
-const headers = [
-    { key: "platform_name", label: "Platform" },
-    { key: "title", label: "Title" },
-    { key: "volume_usd", label: "Volume" },
-];
+import MarketSearch from "@components/MarketSearch.svelte";
 ---
 
 <Base title="Markets">
@@ -15,6 +9,6 @@ const headers = [
     </div>
 
     <div class="">
-        <IndexTable headers={headers} endpoint="markets" client:load />
+        <MarketSearch client:load />
     </div>
 </Base>
