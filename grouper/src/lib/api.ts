@@ -1,4 +1,4 @@
-import type { Category, Platform } from "@types";
+import type { Category, Platform, Question } from "@types";
 
 const PGRST_URL = import.meta.env.PUBLIC_PGRST_URL;
 const PGRST_APIKEY = import.meta.env.PUBLIC_PGRST_APIKEY;
@@ -26,9 +26,21 @@ export async function fetchFromAPI(endpoint: string, options = {}) {
   return response.json();
 }
 
-export async function getPlatforms(params = {}): Promise<Platform[]> {
-  const queryParams = new URLSearchParams(params).toString();
-  return fetchFromAPI(`platforms?${queryParams}`);
+export async function getItemsSorted(endpoint: string): Promise<any> {
+  return fetchFromAPI(`${endpoint}?order=slug.asc`);
+}
+
+export async function deleteItem(
+  endpoint: string,
+  attr: "ID" | "slug",
+  value: string,
+): Promise<any> {
+  return fetchFromAPI(`${endpoint}?${attr}=eq.${value}`, {
+    method: "DELETE",
+    headers: {
+      Prefer: "return=representation",
+    },
+  });
 }
 
 export async function getPlatform(slug: string): Promise<Platform> {
@@ -58,20 +70,6 @@ export async function updatePlatform(data: Platform): Promise<Platform> {
   });
 }
 
-export async function deletePlatform(slug: string) {
-  return fetchFromAPI(`platforms?slug=eq.${slug}`, {
-    method: "DELETE",
-    headers: {
-      Prefer: "return=representation",
-    },
-  });
-}
-
-export async function getCategories(params = {}): Promise<Category[]> {
-  const queryParams = new URLSearchParams(params).toString();
-  return fetchFromAPI(`categories?${queryParams}`);
-}
-
 export async function getCategory(slug: string): Promise<Category> {
   return fetchFromAPI(`categories?slug=eq.${slug}`).then(
     (data) => data[0] || null,
@@ -98,25 +96,11 @@ export async function updateCategory(data: Category): Promise<Category> {
   });
 }
 
-export async function deleteCategory(slug: string) {
-  return fetchFromAPI(`categories?slug=eq.${slug}`, {
-    method: "DELETE",
-    headers: {
-      Prefer: "return=representation",
-    },
-  });
-}
-
-export async function getQuestions(params = {}) {
-  const queryParams = new URLSearchParams(params).toString();
-  return fetchFromAPI(`questions?${queryParams}`);
-}
-
-export async function getQuestion(id) {
+export async function getQuestion(id: string): Promise<Question> {
   return fetchFromAPI(`questions?id=eq.${id}`).then((data) => data[0] || null);
 }
 
-export async function createQuestion(data) {
+export async function createQuestion(data: Question): Promise<Question> {
   return fetchFromAPI("questions", {
     method: "POST",
     body: JSON.stringify(data),
@@ -126,19 +110,13 @@ export async function createQuestion(data) {
   });
 }
 
-export async function updateQuestion(id, data) {
+export async function updateQuestion(
+  id: string,
+  data: Question,
+): Promise<Question> {
   return fetchFromAPI(`questions?id=eq.${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
-    headers: {
-      Prefer: "return=representation",
-    },
-  });
-}
-
-export async function deleteQuestion(id) {
-  return fetchFromAPI(`questions?id=eq.${id}`, {
-    method: "DELETE",
     headers: {
       Prefer: "return=representation",
     },

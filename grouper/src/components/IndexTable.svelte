@@ -1,6 +1,6 @@
 <script>
     import { onMount } from "svelte";
-    import { fetchFromAPI } from "@lib/api";
+    import { getItemsSorted, deleteItem } from "@lib/api";
 
     // Props
     export let headers = [];
@@ -15,7 +15,7 @@
 
     async function loadTableData() {
         try {
-            items = await fetchFromAPI(endpoint);
+            items = await getItemsSorted(endpoint);
             error = items.length === 0 ? "No items found." : null;
         } catch (err) {
             error = `Error loading data: ${err.message}`;
@@ -39,10 +39,7 @@
 
         try {
             const { attr, value } = identifier;
-            await fetchFromAPI(`${endpoint}?${attr}=eq.${value}`, {
-                method: "DELETE",
-                headers: { Prefer: "return=representation" },
-            });
+            await deleteItem(endpoint, attr, value);
             // Remove item from the list for instant UI update
             items = items.filter((i) => i !== item);
         } catch (err) {
