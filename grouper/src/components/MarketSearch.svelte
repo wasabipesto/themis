@@ -2,7 +2,7 @@
     import { onMount } from "svelte";
     import { getMarkets, getItemsSorted } from "@lib/api";
 
-    // State
+    // Initial state
     let items = [];
     let platforms = [];
     let loading = true;
@@ -30,6 +30,12 @@
     ];
 
     onMount(async () => {
+        // Get initial values from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        searchQuery = urlParams.get("q") || "";
+        selectedPlatform = urlParams.get("platform") || "";
+        selectedSort = urlParams.get("sort") || "volume_usd.desc.nullslast";
+
         // Load platforms for the dropdown
         try {
             platforms = await getItemsSorted("platforms");
@@ -45,6 +51,10 @@
         sort = selectedSort,
     ) {
         loading = true;
+
+        // Update URL with current search parameters
+        updateUrl(query, platform, sort);
+
         try {
             // Base query parameters
             let params = `order=${sort}`;
@@ -59,6 +69,23 @@
         } finally {
             loading = false;
         }
+    }
+
+    function updateUrl(query, platform, sort) {
+        const url = new URL(window.location.href);
+
+        // Update or remove search params based on values
+        if (query) url.searchParams.set("q", query);
+        else url.searchParams.delete("q");
+
+        if (platform) url.searchParams.set("platform", platform);
+        else url.searchParams.delete("platform");
+
+        if (sort) url.searchParams.set("sort", sort);
+        else url.searchParams.delete("sort");
+
+        // Update the URL without refreshing the page
+        window.history.pushState({}, "", url);
     }
 
     function handleSearch() {
