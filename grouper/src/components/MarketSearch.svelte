@@ -18,7 +18,7 @@
         { value: "open_datetime.desc", label: "Newest (by open)" },
         { value: "open_datetime.asc", label: "Oldest (by open)" },
         { value: "close_datetime.asc", label: "Newest (by close)" },
-        { value: "close_datetime.desc", label: "Newest (by close)" },
+        { value: "close_datetime.desc", label: "Oldest (by close)" },
         { value: "traders_count.desc.nullslast", label: "Most traders" },
         { value: "traders_count.asc.nullslast", label: "Least traders" },
         { value: "volume_usd.desc.nullslast", label: "Highest volume" },
@@ -90,7 +90,7 @@
     }
 </script>
 
-<div class="mb-4">
+<div class="w-full mb-4 mx-auto">
     <div class="flex gap-2 my-2">
         <input
             type="text"
@@ -131,7 +131,7 @@
     </div>
 </div>
 
-<div class="overflow-x-auto">
+<div class="w-6xl mx-auto">
     {#if loading}
         <div class="flex justify-center p-4">
             <div
@@ -141,7 +141,9 @@
     {:else if error}
         <div class="text-red p-4 text-center">{error}</div>
     {:else}
-        <table class="divide-y divide-subtext bg-crust rounded-lg shadow">
+        <table
+            class="w-full divide-y divide-subtext bg-crust rounded-lg shadow"
+        >
             <thead>
                 <tr>
                     <th
@@ -164,15 +166,13 @@
             <tbody class="divide-y divide-subtext">
                 {#each items as item}
                     <tr class="hover:bg-base-dark">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <td class="px-6 py-4 text-sm">
                             {item.platform_name}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <td class="px-6 py-4 text-sm">
                             {item.title}
                         </td>
-                        <td
-                            class="px-6 py-4 whitespace-nowrap text-sm font-medium actions"
-                        >
+                        <td class="px-6 py-4 text-sm font-medium actions">
                             <a
                                 href={`/markets/edit?id=${item.id}`}
                                 class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-blue/50 hover:bg-blue mr-2"
