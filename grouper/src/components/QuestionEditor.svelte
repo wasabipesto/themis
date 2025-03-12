@@ -2,12 +2,13 @@
     import { onMount } from "svelte";
     import {
         getQuestion,
-        getCategories,
+        getItemsSorted,
         createQuestion,
         updateQuestion,
     } from "@lib/api";
 
     let question = {};
+    let categories = [];
     let loading = true;
     let error = null;
     let isNew = false;
@@ -16,8 +17,11 @@
 
     onMount(async () => {
         try {
+            // Load categories first
+            categories = await getItemsSorted("categories");
+
             const urlParams = new URLSearchParams(window.location.search);
-            const slug = urlParams.get("slug");
+            const slug = urlParams.get("id");
 
             if (!slug) {
                 isNew = true;
@@ -28,7 +32,7 @@
             question = await getQuestion(slug);
             loading = false;
         } catch (err) {
-            error = err.message || "Failed to load question";
+            error = err.message || "Failed to load question or categories";
             loading = false;
         }
     });
@@ -86,6 +90,22 @@
         class="max-w-2xl mx-auto bg-crust p-6 rounded-lg shadow-md"
         on:submit={handleSubmit}
     >
+        {#if !isNew}
+            <div class="mb-4">
+                <label for="id" class="block text-sm font-medium text-text mb-1"
+                    >Question ID</label
+                >
+                <input
+                    type="text"
+                    id="id"
+                    name="id"
+                    value={question.id || ""}
+                    readonly
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm cursor-not-allowed"
+                />
+            </div>
+        {/if}
+
         <div class="mb-4">
             <label for="title" class="block text-sm font-medium text-text mb-1"
                 >Title</label
@@ -134,13 +154,21 @@
                 for="category_slug"
                 class="block text-sm font-medium text-text mb-1">Category</label
             >
-            <input
-                type="text"
+            <select
                 id="category_slug"
                 name="category_slug"
-                value={question.category_slug || ""}
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
-            />
+            >
+                <option value=""></option>
+                {#each categories as category}
+                    <option
+                        value={category.slug}
+                        selected={question.category_slug === category.slug}
+                    >
+                        {category.name}
+                    </option>
+                {/each}
+            </select>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

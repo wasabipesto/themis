@@ -70,10 +70,6 @@ export async function updatePlatform(data: Platform): Promise<Platform> {
   });
 }
 
-export async function getCategories(): Promise<Category[]> {
-  return fetchFromAPI(`categories`);
-}
-
 export async function getCategory(slug: string): Promise<Category> {
   return fetchFromAPI(`categories?slug=eq.${slug}`).then(
     (data) => data[0] || null,
@@ -104,7 +100,27 @@ export async function getQuestion(id: string): Promise<Question> {
   return fetchFromAPI(`questions?id=eq.${id}`).then((data) => data[0] || null);
 }
 
+async function completeQuestion(question: Question): Promise<Question> {
+  const category = await getCategory(question.category_slug);
+  if (category) {
+    // Set category_name based on category_slug
+    question.category_name = category.name;
+
+    // If category is a child (has a parent_slug), set parent_category information
+    if (category.parent_slug) {
+      const parentCategory = await getCategory(category.parent_slug);
+      if (parentCategory) {
+        question.parent_category_slug = parentCategory.slug;
+        question.parent_category_name = parentCategory.name;
+      }
+    }
+  }
+
+  return question;
+}
+
 export async function createQuestion(data: Question): Promise<Question> {
+  await completeQuestion(data);
   return fetchFromAPI("questions", {
     method: "POST",
     body: JSON.stringify(data),
@@ -114,11 +130,9 @@ export async function createQuestion(data: Question): Promise<Question> {
   });
 }
 
-export async function updateQuestion(
-  id: string,
-  data: Question,
-): Promise<Question> {
-  return fetchFromAPI(`questions?id=eq.${id}`, {
+export async function updateQuestion(data: Question): Promise<Question> {
+  await completeQuestion(data);
+  return fetchFromAPI(`questions?id=eq.${data.id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
     headers: {
