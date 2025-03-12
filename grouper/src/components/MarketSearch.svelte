@@ -6,14 +6,22 @@
     let items = [];
     let loading = true;
     let error = null;
+    let searchQuery = "";
 
     onMount(loadTableData);
 
-    async function loadTableData() {
+    async function loadTableData(query = "") {
+        loading = true;
         try {
-            items = await getMarkets(
-                "order=volume_usd.desc.nullslast&platform_slug=eq.manifold",
-            );
+            // Base query parameters
+            let params = "order=volume_usd.desc.nullslast";
+
+            // Append search query if it exists
+            if (query) {
+                params += `&title=ilike.*${query}*`;
+            }
+
+            items = await getMarkets(params);
             error = items.length === 0 ? "No items found." : null;
         } catch (err) {
             error = `Error loading data: ${err.message}`;
@@ -22,7 +30,35 @@
             loading = false;
         }
     }
+
+    function handleSearch() {
+        loadTableData(searchQuery);
+    }
+
+    function handleKeyDown(event) {
+        if (event.key === "Enter") {
+            handleSearch();
+        }
+    }
 </script>
+
+<div class="mb-4">
+    <div class="flex gap-2 my-2">
+        <input
+            type="text"
+            placeholder="Search markets..."
+            class="w-full px-4 py-2 pl-4 bg-crust rounded-lg focus:outline-none focus:ring-1 focus:ring-lavender"
+            bind:value={searchQuery}
+            on:keydown={handleKeyDown}
+        />
+        <button
+            class="px-4 py-2 bg-blue hover:bg-blue/80 text-white rounded-md"
+            on:click={handleSearch}
+        >
+            Search
+        </button>
+    </div>
+</div>
 
 <div class="overflow-x-auto">
     {#if loading}
