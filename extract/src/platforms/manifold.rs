@@ -66,6 +66,8 @@ pub enum ManifoldOutcomeType {
     PseudoNumeric,
     /// Newer numeric type, uses pre-defined bins and functions like multiple choice.
     Number,
+    /// Newest numeric type, like a re-skinned multiple choice market.
+    MultiNumeric,
     /// Pseudo-numeric market that does not resolve. Irrelevant.
     Stonk,
     /// Basic post with awards for comments.
@@ -313,6 +315,7 @@ pub fn standardize(input: &ManifoldData) -> Result<Option<Vec<MarketAndProbs>>> 
         ManifoldOutcomeType::MultipleChoice => Ok(None),
         ManifoldOutcomeType::PseudoNumeric => Ok(None),
         ManifoldOutcomeType::Number => Ok(None),
+        ManifoldOutcomeType::MultiNumeric => Ok(None),
         // The remaining types are not actual markets - skip them
         ManifoldOutcomeType::Stonk => Ok(None),
         ManifoldOutcomeType::BountiedQuestion => Ok(None),
