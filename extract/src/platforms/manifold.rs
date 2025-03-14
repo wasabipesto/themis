@@ -6,6 +6,7 @@ use anyhow::{anyhow, Result};
 use chrono::serde::{ts_milliseconds, ts_milliseconds_option};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
+use serde_json::Value;
 use std::collections::HashMap;
 
 use super::{helpers, MarketAndProbs, ProbSegment, StandardMarket};
@@ -92,7 +93,24 @@ pub enum ManifoldToken {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ManifoldAnswer {
+    /// The ID of this specific answer.
     pub id: String,
+    /// The index of the answer on the market UI.
+    pub index: usize,
+    /// The time this answer was added.
+    #[serde(with = "ts_milliseconds")]
+    pub created_time: DateTime<Utc>,
+    /// The text of the answer.
+    pub text: String,
+    /// 'Other', the answer that represents all other answers, including answers added in the future.
+    pub is_other: Option<bool>,
+    /// If resolved, the latest resolution time.
+    /// This is usually in ts_milliseconds, but occasionally an ISO 8601 string.
+    /// WHY?????????????
+    #[serde(default)]
+    pub resolution_time: Option<Value>,
+    /// If resolved to multiple, the proportion awarded to this answer.
+    pub resolution_probability: Option<f32>,
 }
 
 /// Values returned from the `/market` endpoint.
@@ -250,6 +268,8 @@ pub struct ManifoldBet {
 /// Note: This is not a 1:1 conversion because some inputs contain multiple
 /// discrete markets, and each of those have their own histories.
 pub fn standardize(input: &ManifoldData) -> Result<Option<Vec<MarketAndProbs>>> {
+    let platform_slug = "manifold".to_string();
+
     // Skip markets that have not resolved
     if !input.full_market.is_resolved {
         return Ok(None);
@@ -259,13 +279,15 @@ pub fn standardize(input: &ManifoldData) -> Result<Option<Vec<MarketAndProbs>>> 
         return Ok(None);
     }
 
+    // Reference full market response
+    let market = &input.full_market;
+
     // Convert based on market type
-    match input.full_market.outcome_type {
+    match market.outcome_type {
         // Typical single binary market
         ManifoldOutcomeType::Binary => {
             // Get market ID. Construct from platform slug and ID within platform.
-            let platform_slug = "manifold".to_string();
-            let market_id = format!("{}:{}", platform_slug, input.full_market.id);
+            let market_id = format!("{}:{}", platform_slug, market.id);
 
             // Get probability segments. If there are none then skip.
             let probs = build_prob_segments(&input.bets);
@@ -288,20 +310,20 @@ pub fn standardize(input: &ManifoldData) -> Result<Option<Vec<MarketAndProbs>>> 
             // Build standard market item.
             let market = StandardMarket {
                 id: market_id,
-                title: input.full_market.question.clone(),
+                title: market.question.clone(),
                 platform_slug,
                 platform_name: "Manifold".to_string(),
-                description: input.full_market.text_description.clone(), // TODO: Get links
-                url: get_url(&input.full_market),
+                description: market.text_description.clone(), // TODO: Get links
+                url: market.url.to_owned(),
                 open_datetime: start,
                 close_datetime: end,
                 traders_count: Some(get_traders_count(&input.bets)),
-                volume_usd: Some(get_volume_usd(&input.full_market.volume)),
+                volume_usd: Some(get_volume_usd(&market.volume)),
                 duration_days: helpers::get_market_duration(start, end)?,
-                category: get_category(&input.full_market.group_slugs),
+                category: get_category(&market.group_slugs),
                 prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
                 prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)?,
-                resolution: match get_resolution_value(&input.full_market)? {
+                resolution: match get_resolution_value_binary(market)? {
                     Some(res) => res,
                     None => return Ok(None),
                 },
@@ -311,8 +333,113 @@ pub fn standardize(input: &ManifoldData) -> Result<Option<Vec<MarketAndProbs>>> 
                 daily_probabilities,
             }]))
         }
-        // Not yet implemented
-        ManifoldOutcomeType::MultipleChoice => Ok(None),
+        // Multiple choice markets
+        ManifoldOutcomeType::MultipleChoice => match market.should_answers_sum_to_one {
+            Some(true) => {
+                // Market has many potential outcomes but prices are automatically arbitraged
+                // in order to keep everything summed to 100%.
+
+                // Get market ID. Construct from platform slug and ID within platform.
+                let market_id = format!("{}:{}", platform_slug, market.id);
+
+                // Make sure answers are present
+                let answers = market.answers.to_owned().ok_or(anyhow!(
+                    "Multiple choice market does not have answers: {:?}",
+                    market
+                ))?;
+
+                // Either one resolution is picked (most common), or multiple are picked and their
+                // winnings are split proportionally.
+                let resolved_answer = match &market.resolution {
+                    Some(resolution) => {
+                        if resolution == "CHOOSE_MULTIPLE" || resolution == "MKT" {
+                            // This is currently not implemented. I'm not exactly sure how we would do this.
+                            return Ok(None);
+                        } else {
+                            answers
+                                .iter()
+                                .find(|answer| &answer.id == resolution)
+                                .ok_or(anyhow!(
+                                "Market {}: No answer found matching the resolution ID {}: {:?}",
+                                market.id,
+                                resolution,
+                                answers
+                            ))?
+                                .to_owned()
+                        }
+                    }
+                    None => return Err(anyhow!("Market lacks resolution value: {:?}", market)),
+                };
+
+                // Since we only allow markets where one answer is selected and only refer to the
+                // winning answer, the resolution will always be YES.
+                let resolution = 1.0;
+
+                // Append the tracked outcome to the market title so we know which side we're tracking.
+                let title = format!("{} | {}", market.question, resolved_answer.text);
+
+                // Filter bets for the resolved answer
+                let bets: Vec<ManifoldBet> = input
+                    .bets
+                    .iter()
+                    .filter(|bet| bet.answer_id.as_ref() == Some(&resolved_answer.id))
+                    .cloned()
+                    .collect();
+
+                // Get probability segments. If there are none then skip.
+                let probs = build_prob_segments(&bets);
+                if probs.is_empty() {
+                    return Ok(None);
+                }
+
+                // Validate probability segments and collate into daily prob segments.
+                if let Err(e) = helpers::validate_prob_segments(&probs) {
+                    log::error!(
+                        "Error validating probability segments. ID: {market_id} Error: {e}"
+                    );
+                    return Ok(None);
+                }
+                let daily_probabilities =
+                    helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)?;
+
+                // We only consider the market to be open while there are actual probabilities.
+                let start = probs.first().unwrap().start;
+                let end = probs.last().unwrap().end;
+
+                // Build standard market item.
+                let market = StandardMarket {
+                    id: market_id,
+                    title,
+                    platform_slug,
+                    platform_name: "Manifold".to_string(),
+                    description: market.text_description.clone(), // TODO: Get links
+                    url: market.url.to_owned(),
+                    open_datetime: start,
+                    close_datetime: end,
+                    traders_count: Some(get_traders_count(&input.bets)),
+                    volume_usd: Some(get_volume_usd(&market.volume)),
+                    duration_days: helpers::get_market_duration(start, end)?,
+                    category: get_category(&market.group_slugs),
+                    prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
+                    prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)?,
+                    resolution,
+                };
+                Ok(Some(vec![MarketAndProbs {
+                    market,
+                    daily_probabilities,
+                }]))
+            }
+            Some(false) => {
+                // Collection of independent markets grouped in the user interface.
+                // We will treat each one as an independent binary market.
+                Ok(None)
+            }
+            None => Err(anyhow!(
+                "Market is multiple choice but should_answers_sum_to_one is not present: {:?}",
+                market
+            )),
+        },
+        // Various ways of implementing numeric markets
         ManifoldOutcomeType::PseudoNumeric => Ok(None),
         ManifoldOutcomeType::Number => Ok(None),
         ManifoldOutcomeType::MultiNumeric => Ok(None),
@@ -363,13 +490,6 @@ pub fn build_prob_segments(raw_history: &[ManifoldBet]) -> Vec<ProbSegment> {
     segments
 }
 
-fn get_url(market: &ManifoldMarket) -> String {
-    format!(
-        "https://manifold.markets/{}/{}",
-        market.creator_username, market.slug
-    )
-}
-
 fn get_traders_count(bets: &[ManifoldBet]) -> u32 {
     bets.iter()
         .map(|bet| bet.user_id.clone())
@@ -381,9 +501,9 @@ fn get_volume_usd(volume: &f32) -> f32 {
     volume / MANIFOLD_EXCHANGE_RATE
 }
 
-/// Checks and returns the resolution probability.
+/// Checks and returns the resolution probability for typical binary markets.
 /// Resolution values can be 1, 0, or in-between for binary markets.
-fn get_resolution_value(market: &ManifoldMarket) -> Result<Option<f32>> {
+fn get_resolution_value_binary(market: &ManifoldMarket) -> Result<Option<f32>> {
     match &market.resolution {
         Some(resolution) => match resolution.as_str() {
             "YES" => Ok(Some(1.0)),
