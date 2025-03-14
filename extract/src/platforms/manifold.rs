@@ -104,6 +104,8 @@ pub struct ManifoldAnswer {
     pub text: String,
     /// 'Other', the answer that represents all other answers, including answers added in the future.
     pub is_other: Option<bool>,
+    /// How the option resolved
+    pub resolution: Option<String>,
     /// If resolved, the latest resolution time.
     /// This is usually in ts_milliseconds, but occasionally an ISO 8601 string.
     /// WHY?????????????
@@ -309,7 +311,7 @@ pub fn standardize(input: &ManifoldData) -> Result<Option<Vec<MarketAndProbs>>> 
 
             // Build standard market item.
             let market = StandardMarket {
-                id: market_id,
+                id: market_id.to_owned(),
                 title: market.question.clone(),
                 platform_slug,
                 platform_name: "Manifold".to_string(),
@@ -323,9 +325,17 @@ pub fn standardize(input: &ManifoldData) -> Result<Option<Vec<MarketAndProbs>>> 
                 category: get_category(&market.group_slugs),
                 prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
                 prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)?,
-                resolution: match get_resolution_value_binary(market)? {
-                    Some(res) => res,
-                    None => return Ok(None),
+                resolution: match get_resolution_value_binary(
+                    &market.resolution,
+                    &market.resolution_probability,
+                    true,
+                ) {
+                    Ok(Some(res)) => res,
+                    Ok(None) => return Ok(None),
+                    Err(e) => {
+                        log::error!("Market {market_id} failed to get resolution value: {e}");
+                        return Ok(None);
+                    }
                 },
             };
             Ok(Some(vec![MarketAndProbs {
@@ -360,8 +370,7 @@ pub fn standardize(input: &ManifoldData) -> Result<Option<Vec<MarketAndProbs>>> 
                                 .iter()
                                 .find(|answer| &answer.id == resolution)
                                 .ok_or(anyhow!(
-                                "Market {}: No answer found matching the resolution ID {}: {:?}",
-                                market.id,
+                                "Market {market_id}: No answer found matching the resolution ID {}: {:?}",
                                 resolution,
                                 answers
                             ))?
@@ -416,7 +425,7 @@ pub fn standardize(input: &ManifoldData) -> Result<Option<Vec<MarketAndProbs>>> 
                     url: market.url.to_owned(),
                     open_datetime: start,
                     close_datetime: end,
-                    traders_count: Some(get_traders_count(&input.bets)),
+                    traders_count: Some(get_traders_count(&bets)),
                     volume_usd: Some(get_volume_usd(&market.volume)),
                     duration_days: helpers::get_market_duration(start, end)?,
                     category: get_category(&market.group_slugs),
@@ -432,7 +441,87 @@ pub fn standardize(input: &ManifoldData) -> Result<Option<Vec<MarketAndProbs>>> 
             Some(false) => {
                 // Collection of independent markets grouped in the user interface.
                 // We will treat each one as an independent binary market.
-                Ok(None)
+
+                // Make sure answers are present
+                let answers = market.answers.to_owned().ok_or(anyhow!(
+                    "Multiple choice market does not have answers: {:?}",
+                    market
+                ))?;
+
+                let mut result = Vec::new();
+                for answer in answers {
+                    // Get market ID. Construct from platform slug, market ID within platform, and answer ID within market.
+                    let market_id = format!("{}:{}:{}", &platform_slug, market.id, answer.id);
+
+                    // Determine the
+                    let resolution = match get_resolution_value_binary(
+                        &answer.resolution,
+                        &answer.resolution_probability,
+                        false,
+                    ) {
+                        Ok(Some(res)) => res,
+                        Ok(None) => return Ok(None),
+                        Err(e) => {
+                            log::error!("Market {market_id} failed to get resolution value: {e}",);
+                            return Ok(None);
+                        }
+                    };
+
+                    // Append the tracked outcome to the market title so we know which side we're tracking.
+                    let title = format!("{} | {}", market.question, answer.text);
+
+                    // Filter bets for the resolved answer
+                    let bets: Vec<ManifoldBet> = input
+                        .bets
+                        .iter()
+                        .filter(|bet| bet.answer_id.as_ref() == Some(&answer.id))
+                        .cloned()
+                        .collect();
+
+                    // Get probability segments. If there are none then skip.
+                    let probs = build_prob_segments(&bets);
+                    if probs.is_empty() {
+                        return Ok(None);
+                    }
+
+                    // Validate probability segments and collate into daily prob segments.
+                    if let Err(e) = helpers::validate_prob_segments(&probs) {
+                        log::error!(
+                            "Error validating probability segments. ID: {market_id} Error: {e}"
+                        );
+                        return Ok(None);
+                    }
+                    let daily_probabilities =
+                        helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)?;
+
+                    // We only consider the market to be open while there are actual probabilities.
+                    let start = probs.first().unwrap().start;
+                    let end = probs.last().unwrap().end;
+
+                    // Build standard market item.
+                    let market = StandardMarket {
+                        id: market_id,
+                        title,
+                        platform_slug: platform_slug.to_owned(),
+                        platform_name: "Manifold".to_string(),
+                        description: market.text_description.clone(), // TODO: Get links
+                        url: market.url.to_owned(),
+                        open_datetime: start,
+                        close_datetime: end,
+                        traders_count: Some(get_traders_count(&bets)),
+                        volume_usd: Some(get_volume_usd(&market.volume)), // TODO: Filter volume by answer
+                        duration_days: helpers::get_market_duration(start, end)?,
+                        category: get_category(&market.group_slugs),
+                        prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
+                        prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)?,
+                        resolution,
+                    };
+                    result.push(MarketAndProbs {
+                        market,
+                        daily_probabilities,
+                    });
+                }
+                Ok(Some(result))
             }
             None => Err(anyhow!(
                 "Market is multiple choice but should_answers_sum_to_one is not present: {:?}",
@@ -503,12 +592,18 @@ fn get_volume_usd(volume: &f32) -> f32 {
 
 /// Checks and returns the resolution probability for typical binary markets.
 /// Resolution values can be 1, 0, or in-between for binary markets.
-fn get_resolution_value_binary(market: &ManifoldMarket) -> Result<Option<f32>> {
-    match &market.resolution {
-        Some(resolution) => match resolution.as_str() {
+/// If fail_on_missing is set false, then don't error on missing resolution values.
+/// That may happen for e.g. multiple-choice markets where some items are not resolved.
+fn get_resolution_value_binary(
+    resolution: &Option<String>,
+    resolution_probability: &Option<f32>,
+    fail_on_missing: bool,
+) -> Result<Option<f32>> {
+    match &resolution {
+        Some(res) => match res.as_str() {
             "YES" => Ok(Some(1.0)),
             "NO" => Ok(Some(0.0)),
-            "MKT" => match market.resolution_probability {
+            "MKT" => match resolution_probability {
                 None => {
                     // Sometimes they return MKT but don't specify a probability.
                     // Currently this is the case on 4 markets:
@@ -516,20 +611,17 @@ fn get_resolution_value_binary(market: &ManifoldMarket) -> Result<Option<f32>> {
                     //  - MWzNRuVifNR8NB9WVoeC
                     //  - V288UeQ98h4j3KPbceiJ
                     //  - ooiNbYz6Adqcv7eUfLPa
-                    log::error!(
-                        "Market {} resolved MKT with no resolution probability.",
-                        market.id
-                    );
-                    Ok(None)
+                    Err(anyhow!("Resolution is MKT but probability is missing.",))
                 }
-                Some(res_prob) => Ok(Some(res_prob)),
+                Some(res_prob) => Ok(Some(res_prob.to_owned())),
             },
-            _ => Err(anyhow!(
-                "Market resolution value is not one of YES/NO/MKT/CANCEL: {:?}",
-                market
-            )),
+            "CANCEL" => Ok(None),
+            _ => Err(anyhow!("Resolution value is not one of YES/NO/MKT/CANCEL",)),
         },
-        None => Err(anyhow!("Market lacks resolution value: {:?}", market)),
+        None => match fail_on_missing {
+            true => Err(anyhow!("Resolution value is missing.")),
+            false => Ok(None),
+        },
     }
 }
 
