@@ -1,14 +1,19 @@
-<script>
+<script lang="ts">
+  import type { Question, Market, DailyProbability } from "@types";
     import { onMount } from "svelte";
-    import { getMarket, getQuestion, getMarketProbs } from "@lib/api";
+    import { getMarket, getQuestion, getMarketProbs, linkMarket } from "@lib/api";
     import * as Plot from "@observablehq/plot";
 
-    let market = null;
-    let question = null;
+    let market: Market | null = null;
+    let question: Question | null = null;
     let loading = true;
-    let error = null;
-    let marketId = null;
-    let plotData = [];
+    let error: string | null = null;
+    let marketId: string | null = null;
+    let plotData: DailyProbability[] = [];
+
+    let questionIdInput: number | null = null;
+    let linkError: string | null = null;
+    let linkingInProgress = false;
 
     onMount(async () => {
         try {
@@ -26,7 +31,7 @@
 
             // Fetch question data
             if (market.question_id) {
-                question = await getQuestion(market.question_id);
+                question = await getQuestion(market.question_id.toString());
             }
 
             // Fetch market probability data for plotting
@@ -39,11 +44,36 @@
             }
 
             loading = false;
-        } catch (err) {
-            error = err.message || "Failed to load market data";
+        } catch (err: unknown) {
+            error =
+                err instanceof Error
+                    ? err.message
+                    : "Failed to load market data";
             loading = false;
         }
     });
+
+    async function handleLinkQuestion() {
+            if (!marketId || !questionIdInput) {
+                linkError = "Please enter a valid Question ID";
+                return;
+            }
+
+            linkingInProgress = true;
+            linkError = null;
+
+            try {
+                await linkMarket(marketId, questionIdInput);
+                // Redirect on success
+                //window.location.href = `/questions/edit?id=${questionIdInput}`;
+                question = await getQuestion(questionIdInput.toString());
+            } catch (err) {
+                linkError = err instanceof Error
+                    ? err.message
+                    : "Failed to link market to question";
+                linkingInProgress = false;
+            }
+        }
 
     function renderPlot() {
         // Make sure market is loaded and DOM is ready
@@ -64,7 +94,6 @@
                         grid: true,
                         percent: true,
                         label: "Probability",
-                        format: (p) => `${(p * 100).toFixed(0)}%`,
                     },
                     marks: [
                         Plot.line(plotData, {
@@ -73,7 +102,6 @@
                             curve: "step",
                             tip: {
                                 fill: "black",
-                                textStyle: "color: white",
                             },
                         }),
                         Plot.ruleY([0]),
@@ -92,7 +120,7 @@
         }, 0);
     }
 
-    function formatDate(dateString) {
+    function formatDate(dateString: string) {
         if (!dateString) return "N/A";
         return new Date(dateString).toLocaleDateString("en-US", {
             year: "numeric",
@@ -103,7 +131,7 @@
         });
     }
 
-    function formatProbability(prob) {
+    function formatProbability(prob: number) {
         if (prob === null || prob === undefined) return "N/A";
         return `${(prob * 100).toFixed(1)}%`;
     }
@@ -144,14 +172,14 @@
                         {market.category}
                     </span>
                 {/if}
-                {#if market.volume_usd > 1000}
+                {#if market.volume_usd && market.volume_usd > 1000}
                     <span
                         class="text-sm bg-green/20 text-text px-4 py-1 rounded-md mr-2 mb-2"
                     >
                         High Volume
                     </span>
                 {/if}
-                {#if market.volume_usd > 100}
+                {#if market.traders_count && market.traders_count > 100}
                     <span
                         class="text-sm bg-green/20 text-text px-4 py-1 rounded-md mr-2 mb-2"
                     >
@@ -234,8 +262,7 @@
                             <dt class="text-text/70">Volume (USD)</dt>
                             <dd class="mb-2">
                                 ${market.volume_usd
-                                    ?.toFixed(2)
-                                    .toLocaleString() || "N/A"}
+                                    ?.toLocaleString() || "N/A"}
                             </dd>
 
                             <dt class="text-text/70">Duration (days)</dt>
@@ -247,11 +274,12 @@
                     </div>
                 </div>
             </div>
+        </div>
 
-            {#if question}
-                <div>
-                    <h2 class="text-xl font-semibold mb-2">Question Link</h2>
-                    <div class="bg-mantle p-4 rounded-md">
+            <div class="bg-crust p-6 rounded-lg shadow-md mb-6">
+                <h2 class="text-xl font-semibold mb-2">Question Link</h2>
+                <div class="p-2">
+                    {#if question}
                         <p>
                             This market is linked to question:
                             <a
@@ -261,16 +289,30 @@
                                 {question.title}
                             </a>
                         </p>
-                        {#if market.question_invert}
-                            <p class="mt-2 text-yellow">
-                                Note: This market is inverted relative to the
-                                question.
-                            </p>
-                        {/if}
-                    </div>
+                    {:else}
+                        <div class="flex flex-col space-y-2">
+                            <div class="flex space-x-2">
+                                <input
+                                    type="text"
+                                    bind:value={questionIdInput}
+                                    placeholder="Enter Question ID"
+                                    class="px-3 py-2 rounded-md bg-mantle border border-blue/30 focus:border-blue focus:outline-none flex-grow"
+                                />
+                                <button
+                                    on:click={handleLinkQuestion}
+                                    class="px-4 py-2 bg-blue text-crust rounded-md hover:bg-blue/80 transition-colors"
+                                    disabled={linkingInProgress}
+                                >
+                                    {linkingInProgress ? 'Linking...' : 'Link'}
+                                </button>
+                            </div>
+                            {#if linkError}
+                                <p class="text-red text-sm">{linkError}</p>
+                            {/if}
+                        </div>
+                    {/if}
                 </div>
-            {/if}
-        </div>
+            </div>
 
         <div class="bg-crust p-6 rounded-lg shadow-md mb-4">
             <h2 class="text-xl font-semibold mb-4">Probability History</h2>
