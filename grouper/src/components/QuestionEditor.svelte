@@ -6,8 +6,9 @@
         getItemsSorted,
         createQuestion,
         updateQuestion,
-        unlinkMarket,
         linkMarket,
+        unlinkMarket,
+        invertMarketLink,
         getAssocMarkets,
         getMarketProbs,
     } from "@lib/api";
@@ -61,7 +62,13 @@
             plotData = [];
             for (const market of markets) {
                 try {
-                    const marketProbs = await getMarketProbs(market.id);
+                    var marketProbs = await getMarketProbs(market.id);
+                    if (market.question_invert) {
+                        marketProbs = marketProbs.map((p) => ({
+                            ...p,
+                            prob: 1 - p.prob,
+                        }));
+                    }
                     plotData.push(...marketProbs);
                 } catch (error) {
                     console.error(
@@ -124,20 +131,6 @@
         formLoading = false;
     }
 
-    async function handleRemoveMarket(market: Market) {
-        if (
-            !confirm(
-                "Are you sure you want to remove this market from the question?",
-            )
-        ) {
-            return;
-        }
-
-        await unlinkMarket(market);
-        // Remove item from the list for instant UI update
-        markets = markets.filter((m) => m.id !== market.id);
-    }
-
     async function handleLinkMarket() {
         if (!newMarketId.trim()) {
             linkError = "Please enter a market ID";
@@ -173,6 +166,26 @@
         }
     }
 
+    async function handleRemoveMarket(market: Market) {
+        if (
+            !confirm(
+                "Are you sure you want to remove this market from the question?",
+            )
+        ) {
+            return;
+        }
+
+        await unlinkMarket(market);
+        // Remove item from the list for instant UI update
+        markets = markets.filter((m) => m.id !== market.id);
+    }
+
+    async function handleInvertMarketLink(market: Market) {
+        await invertMarketLink(market.id, !market.question_invert);
+        // Edit the item in the list for instant UI update
+        market.question_invert = !market.question_invert;
+    }
+
     function renderPlot() {
         // Make sure items are loaded and DOM is ready
         if (!question || !markets || !plotData || plotData.length === 0) return;
@@ -186,7 +199,7 @@
                 const plot = Plot.plot({
                     width: plotElement.clientWidth || 600,
                     height: 300,
-                    x: { type: "utc", label: "Date" },
+                    x: { type: "utc" },
                     y: {
                         domain: [0, 100],
                         grid: true,
@@ -539,9 +552,25 @@
                                     <td class="py-3 px-3">{market.title}</td>
                                     <td class="py-3 px-3 text-center">
                                         {#if market.question_invert}
-                                            Y
+                                            <button
+                                                on:click={() =>
+                                                    handleInvertMarketLink(
+                                                        market,
+                                                    )}
+                                                class="px-3 py-1 bg-lavender/50 text-text rounded-md hover:bg-lavender transition-colors"
+                                            >
+                                                Yes
+                                            </button>
                                         {:else}
-                                            N
+                                            <button
+                                                on:click={() =>
+                                                    handleInvertMarketLink(
+                                                        market,
+                                                    )}
+                                                class="px-3 py-1 bg-blue/50 text-text rounded-md hover:bg-blue transition-colors"
+                                            >
+                                                No
+                                            </button>
                                         {/if}
                                     </td>
                                     <td class="py-3 px-3 text-right">
