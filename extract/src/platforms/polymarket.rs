@@ -16,12 +16,15 @@ pub struct PolymarketData {
     pub id: String,
     /// Timestamp the market was downloaded from the API.
     pub last_updated: DateTime<Utc>,
-    // Values returned from the `/markets` endpoint.
+    // Values returned from the `/markets` endpoint of the CLOB API.
     pub market: PolymarketMarket,
     /// The token that we got the price history for.
     pub prices_history_token: String,
     /// Values returned from the `/prices-history` endpoint.
     pub prices_history: Vec<PolymarketPricePoint>,
+    /// Values returned from the `/markets` endpoint of the Gamma API.
+    /// Gamma API is not always up to date and may not have the requested market.
+    pub market_gamma: Option<PolymarketGammaMarket>,
 }
 
 /// Data on each token part of the market.
@@ -42,7 +45,7 @@ pub struct PolymarketToken {
     pub winner: bool,
 }
 
-/// Values returned from the `/market` endpoint.
+/// Values returned from the CLOB API `/market` endpoint.
 /// https://docs.polymarket.com/#markets
 #[derive(Debug, Clone, Deserialize)]
 pub struct PolymarketMarket {
@@ -55,9 +58,10 @@ pub struct PolymarketMarket {
     pub question: String,
     /// Full text description with line breaks (\n\n).
     pub description: String,
-    /// The URL slug for this market in the form https://polymarket.com/event/{slug}
-    /// This pattern does not always seem to work - need to establish why.
+    /// The slug for the market.
     pub market_slug: String,
+    /// The URL slug for the overall event.
+    pub event_slug: Option<String>,
     /// List of tags applied to this market.
     pub tags: Option<Vec<String>>,
     /// The image associated with the market.
@@ -96,7 +100,7 @@ pub struct PolymarketMarket {
 }
 
 /// Values returned from the `/prices-history` endpoint.
-/// Undocumented API endpoint.
+/// https://docs.polymarket.com/#timeseries-data
 #[derive(Debug, Clone, Deserialize)]
 pub struct PolymarketPricePoint {
     /// Timestamp of provided probability point.
@@ -104,6 +108,17 @@ pub struct PolymarketPricePoint {
     pub t: DateTime<Utc>,
     /// Probability at the given timestamp.
     pub p: f32,
+}
+
+/// Values returned from the Gamma API `/markets` endpoint.
+/// https://docs.polymarket.com/#markets-2
+/// This endpoint has been unstable so we only use it when necessary.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PolymarketGammaMarket {
+    /// The total traded volume for this market.
+    #[serde(default)] // Default to 0 volume
+    pub volume_num: f32,
 }
 
 /// Convert data pulled from the API into a standardized market item.
@@ -196,6 +211,12 @@ pub fn standardize(input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>
         _ => format!("{market_title} | {}", tracked_token.outcome),
     };
 
+    // Build the URL from the event slug if existing, otherwise use the market slug.
+    let url = match &input.market.event_slug {
+        Some(event_slug) => format!("https://polymarket.com/event/{}", event_slug),
+        None => format!("https://polymarket.com/event/{}", input.market.market_slug),
+    };
+
     // Build standard market item.
     let market = StandardMarket {
         id: market_id,
@@ -203,11 +224,11 @@ pub fn standardize(input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>
         platform_slug,
         platform_name: "Polymarket".to_string(),
         description: input.market.description.clone(),
-        url: format!("https://polymarket.com/event/{}", input.market.market_slug),
+        url,
         open_datetime: start,
         close_datetime: end,
-        traders_count: None, // TODO: Polymarket has never exposed this easily but should be doable
-        volume_usd: None, // TODO: Used to be in /markets, not sure where to find now (maybe /search?)
+        traders_count: None,
+        volume_usd: input.market_gamma.as_ref().map(|item| item.volume_num),
         duration_days: helpers::get_market_duration(start, end)?,
         category: get_category(&input.market.tags),
         prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,

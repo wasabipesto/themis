@@ -15,7 +15,8 @@ use super::{IndexItem, Platform};
 use crate::util::{display_progress, get_reqwest_client_ratelimited, send_request};
 
 const POLYMARKET_CLOB_API_BASE: &str = "https://clob.polymarket.com";
-const POLYMARKET_RATELIMIT: usize = 15;
+const POLYMARKET_GAMMA_API_BASE: &str = "https://gamma-api.polymarket.com";
+const POLYMARKET_RATELIMIT: usize = 20;
 const POLYMARKET_RATELIMIT_MS: u64 = 1000;
 
 /// Format of data saved to JSON
@@ -26,6 +27,7 @@ pub struct PolymarketItem {
     market: Value,
     prices_history_token: String,
     prices_history: Vec<Value>,
+    market_gamma: Option<Value>,
 }
 
 /// Get Polymarket's CLOB ID, which is not a top-level item.
@@ -101,6 +103,24 @@ async fn get_prices_history(
     Ok((prices_history_token, prices_history))
 }
 
+/// Download information from the Gamma API.
+async fn get_market_gamma(client: &ClientWithMiddleware, market: &Value) -> Result<Option<Value>> {
+    let api_url = POLYMARKET_GAMMA_API_BASE.to_owned() + "/markets";
+    let market_slug = market
+        .get("market_slug")
+        .context("Expected 'market_slug' field in market.")?;
+    let response = send_request(client.get(&api_url).query(&[("slug", &market_slug)]))
+        .await?
+        .as_array()
+        .context("Failed to interpret Gamma API response as array.")?
+        .first()
+        .cloned();
+    if response.is_none() {
+        debug!("Polymarket {market_slug} Gamma API response was empty.")
+    }
+    Ok(response)
+}
+
 /// Downloads everything to build a market item.
 async fn get_data_and_build_item(
     client: &ClientWithMiddleware,
@@ -113,6 +133,8 @@ async fn get_data_and_build_item(
         .data
         .clone();
     let (prices_history_token, prices_history) = get_prices_history(client, &market).await?;
+    let market_gamma = get_market_gamma(client, &market).await?;
+
     // return the row ready for writing
     Ok(PolymarketItem {
         id: market_id.to_owned(),
@@ -120,6 +142,7 @@ async fn get_data_and_build_item(
         market: market.clone(),
         prices_history_token,
         prices_history,
+        market_gamma,
     })
 }
 
