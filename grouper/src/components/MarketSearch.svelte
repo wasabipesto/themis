@@ -190,7 +190,7 @@
                         <td class="px-6 py-4 text-sm">
                             {item.title}
                         </td>
-                        <td class="px-6 py-4 text-sm font-medium actions">
+                        <td class="px-6 py-4 w-50 text-sm font-medium actions">
                             <a
                                 href={`/markets/edit?id=${item.id}`}
                                 class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-blue/50 hover:bg-blue mr-2"
