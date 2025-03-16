@@ -160,7 +160,7 @@ export async function updateQuestion(data: Question): Promise<Question> {
   });
 }
 
-export async function getAssocMarkets(id: string): Promise<Market[]> {
+export async function getAssocMarkets(id: number): Promise<Market[]> {
   return fetchFromAPI(`markets?question_id=eq.${id}`);
 }
 
@@ -174,7 +174,7 @@ export async function getMarketProbs(id: string): Promise<DailyProbability[]> {
 
 export async function linkMarket(
   marketId: string,
-  questionId: string,
+  questionId: number,
 ): Promise<Market> {
   return fetchFromAPI(`markets?id=eq.${marketId}`, {
     method: "PATCH",

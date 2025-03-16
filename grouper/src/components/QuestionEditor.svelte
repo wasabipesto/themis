@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Category, Question, Market } from "@types";
+    import type { Category, Question, Market, DailyProbability } from "@types";
     import { onMount } from "svelte";
     import {
         getQuestion,
@@ -9,7 +9,9 @@
         unlinkMarket,
         linkMarket,
         getAssocMarkets,
+        getMarketProbs,
     } from "@lib/api";
+    import * as Plot from "@observablehq/plot";
 
     // Question editor state
     let question: Question | null = null;
@@ -22,12 +24,15 @@
 
     // Market assigner state
     let markets: Market[] = [];
-    let questionId: string;
+    let questionId: string | null = null;
     let newMarketId = "";
     let linkError: string | null = null;
     let linkSuccess = false;
     let linkLoading = false;
     let marketsLoading = false;
+
+    // Chart state
+    let plotData: DailyProbability[] = [];
 
     onMount(async () => {
         try {
@@ -35,24 +40,37 @@
             categories = await getItemsSorted("categories");
 
             const urlParams = new URLSearchParams(window.location.search);
-            const questionIdParam = urlParams.get("id");
+            questionId = urlParams.get("id");
 
-            if (!questionIdParam) {
+            if (!questionId) {
                 isNew = true;
                 question = {} as Question;
                 loading = false;
                 return;
             }
 
-            questionId = questionIdParam;
-
             // Load question data
             question = await getQuestion(questionId);
 
             // Load markets associated with this question
             marketsLoading = true;
-            markets = await getAssocMarkets(questionId);
+            markets = await getAssocMarkets(question.id);
             marketsLoading = false;
+
+            // Fetch market probability data for plotting
+            plotData = [];
+            for (const market of markets) {
+                try {
+                    const marketProbs = await getMarketProbs(market.id);
+                    plotData.push(...marketProbs);
+                } catch (error) {
+                    console.error(
+                        `Failed to fetch data for market ${market.id}:`,
+                        error,
+                    );
+                }
+            }
+            renderPlot();
 
             loading = false;
         } catch (err: unknown) {
@@ -131,22 +149,76 @@
         linkLoading = true;
 
         try {
+            // Check if question exists before accessing its properties
+            if (!question || !question.id) {
+                throw new Error("Question not found or question ID is missing");
+            }
+
             // Pass the market ID and question ID to the linkMarket function
-            await linkMarket(newMarketId.trim(), questionId);
+            await linkMarket(newMarketId.trim(), question.id);
 
             // Fetch updated list of markets
-            markets = await getAssocMarkets(questionId);
+            markets = await getAssocMarkets(question.id);
 
             // Clear the input and show success message
             newMarketId = "";
             linkSuccess = true;
-            setTimeout(() => (linkSuccess = false), 3000); // Clear success message after 3 seconds
+            // Clear success message after 3 seconds
+            setTimeout(() => (linkSuccess = false), 3000);
         } catch (err: unknown) {
             linkError =
                 err instanceof Error ? err.message : "Failed to link market";
         } finally {
             linkLoading = false;
         }
+    }
+
+    function renderPlot() {
+        // Make sure items are loaded and DOM is ready
+        if (!question || !markets || !plotData || plotData.length === 0) return;
+
+        // Use setTimeout to ensure DOM is ready
+        setTimeout(() => {
+            const plotElement = document.querySelector("#plot");
+            if (!plotElement) return;
+
+            try {
+                const plot = Plot.plot({
+                    width: plotElement.clientWidth || 600,
+                    height: 300,
+                    x: { type: "utc", label: "Date" },
+                    y: {
+                        domain: [0, 100],
+                        grid: true,
+                        percent: true,
+                        label: "Probability",
+                    },
+                    marks: [
+                        Plot.line(plotData, {
+                            x: "date",
+                            y: "prob",
+                            stroke: "platform_slug",
+                            curve: "step",
+                            tip: {
+                                fill: "black",
+                            },
+                        }),
+                        Plot.ruleY([0]),
+                        Plot.ruleX([question?.start_date_override]),
+                        Plot.ruleX([question?.end_date_override]),
+                    ],
+                });
+
+                // Clear any existing plots first
+                while (plotElement.firstChild) {
+                    plotElement.firstChild.remove();
+                }
+
+                plotElement.append(plot);
+            } catch (e) {
+                console.error("Error rendering plot:", e);
+            }
+        }, 0);
     }
 </script>
 
@@ -504,6 +576,13 @@
                             {/each}
                         </tbody>
                     </table>
+                </div>
+
+                <div class="bg-crust p-6 mb-6 rounded-lg shadow-md">
+                    <h2 class="text-xl font-semibold mb-4">
+                        Market Probabilities
+                    </h2>
+                    <div id="plot"></div>
                 </div>
             {/if}
 
