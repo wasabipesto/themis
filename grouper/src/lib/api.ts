@@ -161,7 +161,7 @@ export async function updateQuestion(data: Question): Promise<Question> {
 }
 
 export async function getAssocMarkets(id: number): Promise<Market[]> {
-  return fetchFromAPI(`markets?question_id=eq.${id}`);
+  return fetchFromAPI(`markets?question_id=eq.${id}&order=platform_slug.asc`);
 }
 
 export async function getMarket(id: string): Promise<Market> {
@@ -190,6 +190,19 @@ export async function unlinkMarket(data: Market): Promise<Market> {
   return fetchFromAPI(`markets?id=eq.${data.id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
+    headers: {
+      Prefer: "return=representation",
+    },
+  });
+}
+
+export async function invertMarketLink(
+  marketId: string,
+  invert: boolean,
+): Promise<Market> {
+  return fetchFromAPI(`markets?id=eq.${marketId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ question_invert: invert }),
     headers: {
       Prefer: "return=representation",
     },
