@@ -133,7 +133,7 @@ async function completeQuestion(question: Question): Promise<Question> {
   return question;
 }
 
-export async function getMarkets(params: string): Promise<Question[]> {
+export async function getMarkets(params: string): Promise<Market[]> {
   const limit = 100;
   return fetchFromAPI(`markets?limit=${limit}&${params}`);
 }

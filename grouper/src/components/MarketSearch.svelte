@@ -1,12 +1,13 @@
-<script>
+<script lang="ts">
+  import type { Market, Platform } from "@types";
     import { onMount } from "svelte";
     import { getMarkets, getItemsSorted, dismissMarket } from "@lib/api";
 
     // Initial state
-    let items = [];
-    let platforms = [];
+    let markets: Market[] = [];
+    let platforms: Platform[] = [];
     let loading = true;
-    let error = null;
+    let error: string | null = null;
     let searchQuery = "";
     let selectedPlatform = "";
     let selectedSort = "volume_usd.desc.nullslast";
@@ -62,17 +63,19 @@
             if (query) params += `&or=(id.ilike.*${query}*,title.ilike.*${query}*,url.ilike.*${query}*,description.ilike.*${query}*)`;
             if (platform) params += `&platform_slug=eq.${platform}`;
 
-            items = await getMarkets(params);
-            error = items.length === 0 ? "No items found." : null;
-        } catch (err) {
-            error = `Error loading data: ${err.message}`;
-            console.error("Error loading table data:", err);
-        } finally {
+            markets = await getMarkets(params);
+            error = markets.length === 0 ? "No items found." : null;
+        } catch (err: unknown) {
+            error =
+                err instanceof Error
+                    ? err.message
+                    : "Error loading table data.";
             loading = false;
         }
+        loading = false;
     }
 
-    function updateUrl(query, platform, sort) {
+    function updateUrl(query: string, platform: string, sort: string) {
         const url = new URL(window.location.href);
 
         // Update or remove search params based on values
@@ -93,17 +96,19 @@
         loadTableData(searchQuery, selectedPlatform, selectedSort);
     }
 
-        async function handleDismiss(marketId, level) {
+        async function handleDismiss(marketId: string, level: number) {
             try {
                 await dismissMarket(marketId, level);
                 // Optimistically remove the item from the list
-                items = items.filter(item => item.id !== marketId);
-                if (items.length === 0) {
+                markets = markets.filter(item => item.id !== marketId);
+                if (markets.length === 0) {
                     error = "No items found.";
                 }
-            } catch (err) {
-                alert(`Error dismissing market: ${err.message}`);
-                console.error("Error dismissing market:", err);
+            } catch (err: unknown) {
+                error =
+                    err instanceof Error
+                        ? err.message
+                        : "Error dismissing market";
             }
         }
 </script>
@@ -177,28 +182,66 @@
                     <th
                         class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
                     >
+                        Stats
+                    </th>
+                    <th
+                        class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                    >
                         Actions
                     </th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-subtext">
-                {#each items as item}
+                {#each markets as market}
                     <tr class="hover:bg-base-dark">
                         <td class="px-6 py-4 text-sm">
-                            {item.platform_name}
+                            {market.platform_name}
                         </td>
                         <td class="px-6 py-4 text-sm">
-                            {item.title}
+                            {market.title}
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            ${market.volume_usd?.toLocaleString() ||
+                                "N/A"}
+                            <br />
+                            {market.traders_count?.toLocaleString() ||
+                                "N/A"}
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                height={16}
+                                fill="currentColor"
+                                class="inline"
+                            >
+                                <title>People</title>
+                                <path
+                                    d="M16 17V19H2V17S2 13 9 13 16 17 16 17M12.5 7.5A3.5 3.5 0 1 0 9 11A3.5 3.5 0 0 0 12.5 7.5M15.94 13A5.32 5.32 0 0 1 18 17V19H22V17S22 13.37 15.94 13M15 4A3.39 3.39 0 0 0 13.07 4.59A5 5 0 0 1 13.07 10.41A3.39 3.39 0 0 0 15 11A3.5 3.5 0 0 0 15 4Z"
+                                />
+                            </svg>
+                        {market.duration_days?.toLocaleString() ||
+                            "N/A"}
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            height={16}
+                            fill="currentColor"
+                            class="inline"
+                        >
+                            <title>Days</title>
+                            <path d="M19,19H5V8H19M16,1V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3H18V1" />
+                        </svg>
+                        <br />
+                        {market.close_datetime.split('T')[0]}
                         </td>
                         <td class="px-6 py-4 w-50 text-sm font-medium actions">
                             <a
-                                href={`/markets/edit?id=${item.id}`}
+                                href={`/markets/edit?id=${market.id}`}
                                 class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-blue/50 hover:bg-blue mr-2"
                             >
                                 View
                             </a>
                             <button
-                                on:click={() => handleDismiss(item.id, 1)}
+                                on:click={() => handleDismiss(market.id, 1)}
                                 class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-red/50 hover:bg-red"
                             >
                                 Dismiss
