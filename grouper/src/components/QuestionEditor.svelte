@@ -113,20 +113,24 @@
                 }
             }
 
-            if (question && !isNew) {
+            if (!isNew) {
+                // Submit the new data
                 await updateQuestion(questionData);
-            } else {
-                const newQuestion = await createQuestion(questionData);
-                // If this is a new question, update the questionId for the market assigner
-                if (newQuestion && newQuestion.id) {
-                    questionId = newQuestion.id.toString();
-                    isNew = false;
+                // Refresh question data
+                if (questionId) {
+                    question = await getQuestion(questionId);
                 }
-            }
-
-            // Refresh question data
-            if (questionId) {
-                question = await getQuestion(questionId);
+            } else {
+                // For new questions: submit new data
+                const newQuestion = await createQuestion(questionData);
+                console.log(newQuestion);
+                // If this is a new question, redirect to the edit page
+                if (newQuestion && newQuestion.id) {
+                    window.location.href = `?id=${newQuestion.id}`;
+                    return;
+                } else {
+                  errorMessage = "An unknown error occurred";
+                }
             }
         } catch (err: unknown) {
             errorMessage =

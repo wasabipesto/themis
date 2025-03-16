@@ -146,7 +146,7 @@ export async function createQuestion(data: Question): Promise<Question> {
     headers: {
       Prefer: "return=representation",
     },
-  });
+  }).then((data) => data[0] || null);
 }
 
 export async function updateQuestion(data: Question): Promise<Question> {
@@ -157,7 +157,7 @@ export async function updateQuestion(data: Question): Promise<Question> {
     headers: {
       Prefer: "return=representation",
     },
-  });
+  }).then((data) => data[0] || null);
 }
 
 export async function getAssocMarkets(id: number): Promise<Market[]> {
