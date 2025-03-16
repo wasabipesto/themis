@@ -58,26 +58,7 @@
             markets = await getAssocMarkets(question.id);
             marketsLoading = false;
 
-            // Fetch market probability data for plotting
-            plotData = [];
-            for (const market of markets) {
-                try {
-                    var marketProbs = await getMarketProbs(market.id);
-                    if (market.question_invert) {
-                        marketProbs = marketProbs.map((p) => ({
-                            ...p,
-                            prob: 1 - p.prob,
-                        }));
-                    }
-                    plotData.push(...marketProbs);
-                } catch (error) {
-                    console.error(
-                        `Failed to fetch data for market ${market.id}:`,
-                        error,
-                    );
-                }
-            }
-            renderPlot();
+            await loadMarketProbabilities();
 
             loading = false;
         } catch (err: unknown) {
@@ -88,6 +69,31 @@
             loading = false;
         }
     });
+
+    async function loadMarketProbabilities() {
+        if (!question || !markets) return;
+
+        // Fetch market probability data for plotting
+        plotData = [];
+        for (const market of markets) {
+            try {
+                var marketProbs = await getMarketProbs(market.id);
+                if (market.question_invert) {
+                    marketProbs = marketProbs.map((p) => ({
+                        ...p,
+                        prob: 1 - p.prob,
+                    }));
+                }
+                plotData.push(...marketProbs);
+            } catch (error) {
+                console.error(
+                    `Failed to fetch data for market ${market.id}:`,
+                    error,
+                );
+            }
+        }
+        renderPlot();
+    }
 
     async function handleSubmit(event: SubmitEvent) {
         event.preventDefault();
@@ -153,6 +159,9 @@
             // Fetch updated list of markets
             markets = await getAssocMarkets(question.id);
 
+            // Reload market probability data
+            await loadMarketProbabilities();
+
             // Clear the input and show success message
             newMarketId = "";
             linkSuccess = true;
@@ -175,15 +184,44 @@
             return;
         }
 
-        await unlinkMarket(market);
-        // Remove item from the list for instant UI update
-        markets = markets.filter((m) => m.id !== market.id);
+        try {
+            await unlinkMarket(market);
+            // Remove item from the list for instant UI update
+            markets = markets.filter((m) => m.id !== market.id);
+
+            // Reload market probability data
+            await loadMarketProbabilities();
+        } catch (err: unknown) {
+            alert(
+                err instanceof Error
+                    ? `Failed to remove market: ${err.message}`
+                    : "Failed to remove market due to an unknown error",
+            );
+        }
     }
 
     async function handleInvertMarketLink(market: Market) {
-        await invertMarketLink(market.id, !market.question_invert);
-        // Edit the item in the list for instant UI update
-        market.question_invert = !market.question_invert;
+        try {
+            // Call API to invert the market link
+            await invertMarketLink(market.id, !market.question_invert);
+
+            // Update the market in our local array
+            markets = markets.map((m) => {
+                if (m.id === market.id) {
+                    return { ...m, question_invert: !m.question_invert };
+                }
+                return m;
+            });
+
+            // Reload market probability data and rerender the chart
+            await loadMarketProbabilities();
+        } catch (err: unknown) {
+            alert(
+                err instanceof Error
+                    ? `Failed to invert market link: ${err.message}`
+                    : "Failed to invert market link due to an unknown error",
+            );
+        }
     }
 
     function renderPlot() {
