@@ -235,7 +235,7 @@ pub struct ManifoldBet {
     /// This can be negative if the user is selling their held shares.
     pub amount: f32,
     /// The total amount the user was willing to spend on the limit order.
-    /// This may be less than `amount` if the entire order wasn't filled.
+    /// This may be more than `amount` if the entire order wasn't filled.
     pub order_amount: Option<f32>,
     /// The number of shares that the user has received from this order.
     /// They may get some from the AMM and some from matching orders.
@@ -315,12 +315,12 @@ pub fn standardize(input: &ManifoldData) -> Result<Option<Vec<MarketAndProbs>>> 
                 title: market.question.clone(),
                 platform_slug,
                 platform_name: "Manifold".to_string(),
-                description: market.text_description.clone(), // TODO: Get links
+                description: market.text_description.clone(),
                 url: market.url.to_owned(),
                 open_datetime: start,
                 close_datetime: end,
                 traders_count: Some(get_traders_count(&input.bets)),
-                volume_usd: Some(get_volume_usd(&market.volume)),
+                volume_usd: Some(market.volume / MANIFOLD_EXCHANGE_RATE),
                 duration_days: helpers::get_market_duration(start, end)?,
                 category: get_category(&market.group_slugs),
                 prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
@@ -421,12 +421,12 @@ pub fn standardize(input: &ManifoldData) -> Result<Option<Vec<MarketAndProbs>>> 
                     title,
                     platform_slug,
                     platform_name: "Manifold".to_string(),
-                    description: market.text_description.clone(), // TODO: Get links
+                    description: market.text_description.clone(),
                     url: market.url.to_owned(),
                     open_datetime: start,
                     close_datetime: end,
                     traders_count: Some(get_traders_count(&bets)),
-                    volume_usd: Some(get_volume_usd(&market.volume)),
+                    volume_usd: Some(market.volume / MANIFOLD_EXCHANGE_RATE),
                     duration_days: helpers::get_market_duration(start, end)?,
                     category: get_category(&market.group_slugs),
                     prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
@@ -498,18 +498,22 @@ pub fn standardize(input: &ManifoldData) -> Result<Option<Vec<MarketAndProbs>>> 
                     let start = probs.first().unwrap().start;
                     let end = probs.last().unwrap().end;
 
+                    // The market volume counts bets for all answers, so we need to calculate based
+                    // on the ones for this answer.
+                    let volume_usd = get_volume_from_bets(&bets);
+
                     // Build standard market item.
                     let market = StandardMarket {
                         id: market_id,
                         title,
                         platform_slug: platform_slug.to_owned(),
                         platform_name: "Manifold".to_string(),
-                        description: market.text_description.clone(), // TODO: Get links
+                        description: market.text_description.clone(),
                         url: market.url.to_owned(),
                         open_datetime: start,
                         close_datetime: end,
                         traders_count: Some(get_traders_count(&bets)),
-                        volume_usd: Some(get_volume_usd(&market.volume)), // TODO: Filter volume by answer
+                        volume_usd: Some(volume_usd),
                         duration_days: helpers::get_market_duration(start, end)?,
                         category: get_category(&market.group_slugs),
                         prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
@@ -579,6 +583,7 @@ pub fn build_prob_segments(raw_history: &[ManifoldBet]) -> Vec<ProbSegment> {
     segments
 }
 
+/// Get the number of unique traders from the bet log.
 fn get_traders_count(bets: &[ManifoldBet]) -> u32 {
     bets.iter()
         .map(|bet| bet.user_id.clone())
@@ -586,8 +591,9 @@ fn get_traders_count(bets: &[ManifoldBet]) -> u32 {
         .len() as u32
 }
 
-fn get_volume_usd(volume: &f32) -> f32 {
-    volume / MANIFOLD_EXCHANGE_RATE
+/// Get the total trade volume from the bet log.
+fn get_volume_from_bets(bets: &[ManifoldBet]) -> f32 {
+    bets.iter().map(|bet| bet.amount.abs()).sum()
 }
 
 /// Checks and returns the resolution probability for typical binary markets.
