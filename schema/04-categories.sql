@@ -1,5 +1,5 @@
 -- ==========================================
--- DATA FOR CATEGORIES TABLE
+-- SAMPLE DATA FOR CATEGORIES TABLE
 -- ==========================================
 INSERT INTO
     categories (
@@ -66,4 +66,20 @@ VALUES
         TRUE,
         'mdi-chip',
         'Monitoring innovations beyond AI, including renewable energy, biotechnology, quantum computing, and emerging tech trends reshaping industries and daily life.'
+    ),
+    (
+        'US Politics',
+        'us-politics',
+        'politics',
+        FALSE,
+        'mdi-death-star-variant',
+        'Politics specifically within the United States.'
+    ),
+    (
+        'Football',
+        'football',
+        'sports',
+        FALSE,
+        'mdi-football',
+        'Foobaw!'
     );

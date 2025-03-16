@@ -390,7 +390,7 @@
                     >Start Date Override</label
                 >
                 <input
-                    type="datetime-local"
+                    type="date"
                     id="start_date_override"
                     name="start_date_override"
                     value={question?.start_date_override || ""}
@@ -405,7 +405,7 @@
                     >End Date Override</label
                 >
                 <input
-                    type="datetime-local"
+                    type="date"
                     id="end_date_override"
                     name="end_date_override"
                     value={question?.end_date_override || ""}
