@@ -1,6 +1,6 @@
 <script>
     import { onMount } from "svelte";
-    import { getMarkets, getItemsSorted } from "@lib/api";
+    import { getMarkets, getItemsSorted, dismissMarket } from "@lib/api";
 
     // Initial state
     let items = [];
@@ -92,6 +92,20 @@
     function handleSearch() {
         loadTableData(searchQuery, selectedPlatform, selectedSort);
     }
+
+        async function handleDismiss(marketId, level) {
+            try {
+                await dismissMarket(marketId, level);
+                // Optimistically remove the item from the list
+                items = items.filter(item => item.id !== marketId);
+                if (items.length === 0) {
+                    error = "No items found.";
+                }
+            } catch (err) {
+                alert(`Error dismissing market: ${err.message}`);
+                console.error("Error dismissing market:", err);
+            }
+        }
 </script>
 
 <div class="w-full mb-4 mx-auto">
@@ -183,6 +197,12 @@
                             >
                                 View
                             </a>
+                            <button
+                                on:click={() => handleDismiss(item.id, 1)}
+                                class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-red/50 hover:bg-red"
+                            >
+                                Dismiss
+                            </button>
                         </td>
                     </tr>
                 {/each}

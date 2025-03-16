@@ -168,6 +168,19 @@ export async function getMarket(id: string): Promise<Market> {
   return fetchFromAPI(`markets?id=eq.${id}`).then((data) => data[0] || null);
 }
 
+export async function dismissMarket(
+  id: string,
+  level: number
+): Promise<Market> {
+  return fetchFromAPI(`markets?id=eq.${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ question_dismissed: level }),
+    headers: {
+      Prefer: "return=representation",
+    },
+  }).then((data) => data[0] || null);
+}
+
 export async function getMarketProbs(id: string): Promise<DailyProbability[]> {
   return fetchFromAPI(`daily_probabilities?market_id=eq.${id}&order=date.asc`);
 }
