@@ -241,13 +241,19 @@
                         <br />
                         {market.close_datetime.split('T')[0]}
                         </td>
-                        <td class="px-6 py-4 w-50 text-sm font-medium actions">
+                        <td class="px-6 py-4 w-60 text-sm font-medium actions">
                             <a
                                 href={`/markets/edit?id=${market.id}`}
-                                class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-blue/50 hover:bg-blue mr-2"
+                                class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-blue/50 hover:bg-blue"
                             >
                                 View
                             </a>
+                            <button
+                              on:click={() => navigator.clipboard.writeText(market.id)}
+                              class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-teal/50 hover:bg-teal"
+                            >
+                              ID
+                            </button>
                             <button
                                 on:click={() => handleDismiss(market.id, 1)}
                                 class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-red/50 hover:bg-red"
