@@ -138,6 +138,7 @@
                     ? err.message
                     : "An unknown error occurred";
         }
+        renderPlot()
         formLoading = false;
     }
 
