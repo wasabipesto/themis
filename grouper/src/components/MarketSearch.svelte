@@ -58,7 +58,7 @@
         try {
             // Base query parameters
             let params = `order=${sort}`;
-            if (query) params += `&title=ilike.*${query}*`;
+            if (query) params += `&or=(id.ilike.*${query}*,title.ilike.*${query}*,url.ilike.*${query}*,description.ilike.*${query}*)`;
             if (platform) params += `&platform_slug=eq.${platform}`;
 
             items = await getMarkets(params);
