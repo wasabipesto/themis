@@ -1,4 +1,5 @@
-<script>
+<script lang="ts">
+    import type { Category, Question } from "@types";
     import { onMount } from "svelte";
     import {
         getQuestion,
@@ -7,10 +8,10 @@
         updateQuestion,
     } from "@lib/api";
 
-    let question = {};
-    let categories = [];
+    let question: Question | null = null;
+    let categories: Category[] = [];
     let loading = true;
-    let error = null;
+    let error: string | null = null;
     let isNew = false;
     let errorMessage = "";
     let formLoading = false;
@@ -25,43 +26,52 @@
 
             if (!questionId) {
                 isNew = true;
+                question = {} as Question;
                 loading = false;
                 return;
             }
 
             question = await getQuestion(questionId);
             loading = false;
-        } catch (err) {
-            error = err.message || "Failed to load question or categories";
+        } catch (err: unknown) {
+            error =
+                err instanceof Error
+                    ? err.message
+                    : "Failed to load question or categories";
             loading = false;
         }
     });
 
-    async function handleSubmit(event) {
+    async function handleSubmit(event: SubmitEvent) {
         event.preventDefault();
         formLoading = true;
         errorMessage = "";
 
         try {
-            const form = event.target;
+            const form = event.target as HTMLFormElement;
             const formData = new FormData(form);
-            const questionData = Object.fromEntries(formData.entries());
+            const questionData = Object.fromEntries(
+                formData.entries(),
+            ) as unknown as Question;
 
-            Object.keys(questionData).forEach((key) => {
-                if (questionData[key] === "") {
-                    questionData[key] = null;
+            for (const key in questionData) {
+                if (questionData[key as keyof Question] === "") {
+                    (questionData as any)[key] = null;
                 }
-            });
+            }
 
-            if (Object.keys(question).length > 0 && !isNew) {
+            if (question && !isNew) {
                 await updateQuestion(questionData);
             } else {
                 await createQuestion(questionData);
             }
 
             //window.location.href = "/questions";
-        } catch (error) {
-            errorMessage = error.message || "An unknown error occurred";
+        } catch (err: unknown) {
+            errorMessage =
+                err instanceof Error
+                    ? err.message
+                    : "An unknown error occurred";
         }
         formLoading = false;
     }
@@ -99,7 +109,7 @@
                     type="text"
                     id="id"
                     name="id"
-                    value={question.id || ""}
+                    value={question?.id || ""}
                     readonly
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm cursor-not-allowed"
                 />
@@ -114,7 +124,7 @@
                 type="text"
                 id="title"
                 name="title"
-                value={question.title || ""}
+                value={question?.title || ""}
                 required
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
             />
@@ -128,7 +138,7 @@
                 type="text"
                 id="slug"
                 name="slug"
-                value={question.slug || ""}
+                value={question?.slug || ""}
                 required
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
             />
@@ -145,7 +155,7 @@
                 name="description"
                 rows="3"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
-                >{question.description || ""}</textarea
+                >{question?.description || ""}</textarea
             >
         </div>
 
@@ -163,7 +173,7 @@
                 {#each categories as category}
                     <option
                         value={category.slug}
-                        selected={question.category_slug === category.slug}
+                        selected={question?.category_slug === category.slug}
                     >
                         {category.name}
                     </option>
@@ -182,7 +192,7 @@
                     type="datetime-local"
                     id="start_date_override"
                     name="start_date_override"
-                    value={question.start_date_override || ""}
+                    value={question?.start_date_override || ""}
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
                 />
             </div>
@@ -197,7 +207,7 @@
                     type="datetime-local"
                     id="end_date_override"
                     name="end_date_override"
-                    value={question.end_date_override || ""}
+                    value={question?.end_date_override || ""}
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
                 />
             </div>
@@ -214,7 +224,7 @@
                     type="number"
                     id="total_traders"
                     name="total_traders"
-                    value={question.total_traders || ""}
+                    value={question?.total_traders || ""}
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
                 />
             </div>
@@ -230,7 +240,7 @@
                     id="total_volume"
                     name="total_volume"
                     step="0.01"
-                    value={question.total_volume || ""}
+                    value={question?.total_volume || ""}
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
                 />
             </div>
@@ -245,7 +255,7 @@
                     type="number"
                     id="total_duration"
                     name="total_duration"
-                    value={question.total_duration || ""}
+                    value={question?.total_duration || ""}
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
                 />
             </div>
@@ -274,7 +284,7 @@
             >
                 {formLoading
                     ? "Saving..."
-                    : Object.keys(question).length > 0 && !isNew
+                    : question && Object.keys(question).length > 0 && !isNew
                       ? "Update"
                       : "Create"} Question
             </button>
