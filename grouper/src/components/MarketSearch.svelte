@@ -58,6 +58,7 @@
         try {
             // Base query parameters
             let params = `order=${sort}`;
+            params += "&question_id=is.null&question_dismissed=eq.0";
             if (query) params += `&or=(id.ilike.*${query}*,title.ilike.*${query}*,url.ilike.*${query}*,description.ilike.*${query}*)`;
             if (platform) params += `&platform_slug=eq.${platform}`;
 
