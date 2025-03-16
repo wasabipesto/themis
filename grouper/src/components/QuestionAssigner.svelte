@@ -1,46 +1,43 @@
-<script>
+<script lang="ts">
+    import type { Market } from "@types";
     import { onMount } from "svelte";
-    import {
-        getQuestion,
-        unlinkMarket,
-        linkMarket,
-        getAssocMarkets,
-    } from "@lib/api";
+    import { unlinkMarket, linkMarket, getAssocMarkets } from "@lib/api";
 
-    let question = {};
-    let markets = [];
+    let markets: Market[] = [];
     let loading = true;
-    let error = null;
-    let questionId = null;
+    let error: string | null = null;
+    let questionId: string = "";
     let newMarketId = "";
-    let linkError = null;
+    let linkError: string | null = null;
     let linkSuccess = false;
     let linkLoading = false;
 
     onMount(async () => {
         try {
             const urlParams = new URLSearchParams(window.location.search);
-            questionId = urlParams.get("id");
+            const questionIdGet = urlParams.get("id");
 
-            if (!questionId) {
+            if (!questionIdGet) {
                 loading = false;
                 return;
+            } else {
+                questionId = questionIdGet;
             }
-
-            // Fetch question data
-            question = await getQuestion(questionId);
 
             // Fetch markets associated with this question
             markets = await getAssocMarkets(questionId);
 
             loading = false;
-        } catch (err) {
-            error = err.message || "Failed to load question or markets";
+        } catch (err: unknown) {
+            error =
+                err instanceof Error
+                    ? err.message
+                    : "Failed to load question or markets";
             loading = false;
         }
     });
 
-    async function handleRemoveMarket(market) {
+    async function handleRemoveMarket(market: Market) {
         if (
             !confirm(
                 "Are you sure you want to remove this market from the question?",
@@ -75,8 +72,9 @@
             newMarketId = "";
             linkSuccess = true;
             setTimeout(() => (linkSuccess = false), 3000); // Clear success message after 3 seconds
-        } catch (err) {
-            linkError = err.message || "Failed to link market";
+        } catch (err: unknown) {
+            linkError =
+                err instanceof Error ? err.message : "Failed to link market";
         } finally {
             linkLoading = false;
         }
@@ -119,10 +117,10 @@
                         <thead>
                             <tr class="border-b border-blue/20">
                                 <th class="text-left py-2 px-3 text-text/70">
-                                    Details
+                                    Int.
                                 </th>
                                 <th class="text-left py-2 px-3 text-text/70">
-                                    External
+                                    Ext.
                                 </th>
                                 <th class="text-left py-2 px-3 text-text/70">
                                     Platform
@@ -130,11 +128,11 @@
                                 <th class="text-left py-2 px-3 text-text/70">
                                     Title
                                 </th>
-                                <th class="text-right py-2 px-3 text-text/70">
-                                    Volume
+                                <th class="text-center py-2 px-3 text-text/70">
+                                    Invert
                                 </th>
                                 <th class="text-right py-2 px-3 text-text/70">
-                                    Traders
+                                    Stats
                                 </th>
                                 <th class="text-center py-2 px-3 text-text/70">
                                     Actions
@@ -144,7 +142,7 @@
                         <tbody>
                             {#each markets as market}
                                 <tr
-                                    class="border-b border-blue/10 hover:bg-blue/5"
+                                    class="border-b border-blue/10 hover:bg-blue/5 text-sm"
                                 >
                                     <td class="py-3 px-3">
                                         <a
@@ -190,14 +188,32 @@
                                         >{market.platform_name}</td
                                     >
                                     <td class="py-3 px-3">{market.title}</td>
-                                    <td class="py-3 px-3 text-right"
-                                        >${market.volume?.toLocaleString() ||
-                                            "0"}</td
-                                    >
-                                    <td class="py-3 px-3 text-right"
-                                        >{market.traders?.toLocaleString() ||
-                                            "0"}</td
-                                    >
+                                    <td class="py-3 px-3 text-center">
+                                        {#if market.question_invert}
+                                            Y
+                                        {:else}
+                                            N
+                                        {/if}
+                                    </td>
+                                    <td class="py-3 px-3 text-right">
+                                        ${market.volume_usd?.toLocaleString() ||
+                                            "N/A"}
+                                        <br />
+                                        {market.traders_count?.toLocaleString() ||
+                                            "N/A"}
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 24 24"
+                                            height={16}
+                                            fill="currentColor"
+                                            class="inline"
+                                        >
+                                            <title>People</title>
+                                            <path
+                                                d="M16 17V19H2V17S2 13 9 13 16 17 16 17M12.5 7.5A3.5 3.5 0 1 0 9 11A3.5 3.5 0 0 0 12.5 7.5M15.94 13A5.32 5.32 0 0 1 18 17V19H22V17S22 13.37 15.94 13M15 4A3.39 3.39 0 0 0 13.07 4.59A5 5 0 0 1 13.07 10.41A3.39 3.39 0 0 0 15 11A3.5 3.5 0 0 0 15 4Z"
+                                            />
+                                        </svg>
+                                    </td>
                                     <td class="py-3 px-3 text-center">
                                         <button
                                             on:click={() =>
@@ -213,6 +229,7 @@
                     </table>
                 </div>
             {/if}
+
             <!-- Add market form -->
             <div class="bg-crust p-6 rounded-lg shadow-md mb-6">
                 <h2 class="text-xl font-semibold mb-4">

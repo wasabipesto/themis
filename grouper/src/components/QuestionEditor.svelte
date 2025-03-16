@@ -59,11 +59,11 @@
                 await createQuestion(questionData);
             }
 
-            window.location.href = "/questions";
+            //window.location.href = "/questions";
         } catch (error) {
             errorMessage = error.message || "An unknown error occurred";
-            formLoading = false;
         }
+        formLoading = false;
     }
 </script>
 
