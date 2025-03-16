@@ -9,6 +9,7 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/check": "^0.9.4",
     "@astrojs/svelte": "^7.0.6",
     "@observablehq/plot": "^0.6.17",
     "@tailwindcss/vite": "^4.0.12",
