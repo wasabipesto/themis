@@ -119,9 +119,8 @@
         name="description"
         rows="3"
         class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
+        >{platform.description || ""}</textarea
       >
-        {platform.description || ""}
-      </textarea>
     </div>
 
     <div class="mb-4">
@@ -136,9 +135,8 @@
         name="long_description"
         rows="10"
         class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
+        >{platform.long_description || ""}</textarea
       >
-        {platform.long_description || ""}
-      </textarea>
     </div>
 
     <div class="mb-4">
