@@ -252,7 +252,9 @@
 
               <dt class="text-text/70">Volume (USD)</dt>
               <dd class="mb-2">
-                ${market.volume_usd?.toLocaleString() || "N/A"}
+                ${market.volume_usd
+                  ? Math.round(market.volume_usd).toLocaleString()
+                  : "N/A"}
               </dd>
 
               <dt class="text-text/70">Duration (days)</dt>

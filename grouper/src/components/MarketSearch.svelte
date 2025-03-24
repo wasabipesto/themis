@@ -205,7 +205,9 @@
               {/if}
             </td>
             <td class="px-6 py-4 w-50 text-sm">
-              ${market.volume_usd?.toLocaleString() || "N/A"}
+              ${market.volume_usd
+                ? Math.round(market.volume_usd).toLocaleString()
+                : "N/A"}
               <br />
               {market.traders_count?.toLocaleString() || "N/A"}
               <svg
