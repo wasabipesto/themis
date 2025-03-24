@@ -198,7 +198,7 @@
                 <span class="px-2 rounded-md bg-green/20">Resolved YES</span>
               {:else if market.resolution == 0.0}
                 <span class="px-2 rounded-md bg-red/20">Resolved NO</span>
-              {:else if market.resolution == 0.0}
+              {:else}
                 <span class="px-2 rounded-md bg-teal/20"
                   >Resolved {market.resolution}</span
                 >

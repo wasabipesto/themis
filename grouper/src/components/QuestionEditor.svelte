@@ -514,12 +514,10 @@
           <table class="w-full">
             <thead>
               <tr class="border-b border-blue/20">
-                <th class="text-left py-2 px-3 text-text/70"> Int. </th>
-                <th class="text-left py-2 px-3 text-text/70"> Ext. </th>
+                <th class="text-left py-2 px-3 text-text/70"> Links </th>
                 <th class="text-left py-2 px-3 text-text/70"> Platform </th>
                 <th class="text-left py-2 px-3 text-text/70"> Title </th>
-                <th class="text-center py-2 px-3 text-text/70"> Invert </th>
-                <th class="text-right py-2 px-3 text-text/70"> Stats </th>
+                <th class="text-right py-2 px-3 text-text/70 w-25"> Stats </th>
                 <th class="text-center py-2 px-3 text-text/70"> Actions </th>
               </tr>
             </thead>
@@ -527,62 +525,36 @@
               {#each markets as market}
                 <tr class="border-b border-blue/10 hover:bg-blue/5 text-sm">
                   <td class="py-3 px-3">
-                    <a
-                      href={`/markets/edit?id=${market.id}`}
-                      class="text-blue hover:underline"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        height={20}
-                        fill="currentColor"
-                        class="ml-1"
+                    <a href={`/markets/edit?id=${market.id}`} target="_blank">
+                      <div
+                        class="px-3 py-1 m-0.5 bg-blue/50 text-text rounded-md hover:bg-blue transition-colors"
                       >
-                        <title>Link</title>
-                        <path
-                          d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"
-                        />
-                      </svg>
-                    </a>
-                  </td>
-                  <td class="py-3 px-3">
+                        Internal
+                      </div></a
+                    >
                     <a
                       href={market.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      class="text-blue hover:underline"
                     >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        height={20}
-                        fill="currentColor"
-                        class="ml-1"
+                      <div
+                        class="px-3 py-1 m-0.5 bg-blue/50 text-text rounded-md hover:bg-blue transition-colors"
                       >
-                        <title>Link</title>
-                        <path
-                          d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"
-                        />
-                      </svg>
+                        External
+                      </div>
                     </a>
                   </td>
                   <td class="py-3 px-3">{market.platform_name}</td>
-                  <td class="py-3 px-3">{market.title}</td>
-                  <td class="py-3 px-3 text-center">
-                    {#if market.question_invert}
-                      <button
-                        on:click={() => handleInvertMarketLink(market)}
-                        class="px-3 py-1 bg-lavender/50 text-text rounded-md hover:bg-lavender transition-colors"
-                      >
-                        Yes
-                      </button>
+                  <td class="py-3 px-3">
+                    {market.title}
+                    {#if market.resolution == 1.0}
+                      <span class="px-2 rounded-md bg-green/20"> YES </span>
+                    {:else if market.resolution == 0.0}
+                      <span class="px-2 rounded-md bg-red/20"> NO </span>
                     {:else}
-                      <button
-                        on:click={() => handleInvertMarketLink(market)}
-                        class="px-3 py-1 bg-blue/50 text-text rounded-md hover:bg-blue transition-colors"
-                      >
-                        No
-                      </button>
+                      <span class="px-2 rounded-md bg-teal/20">
+                        {market.resolution.toFixed(2)}
+                      </span>
                     {/if}
                   </td>
                   <td class="py-3 px-3 text-right">
@@ -605,9 +577,24 @@
                     </svg>
                   </td>
                   <td class="py-3 px-3 text-center">
+                    {#if market.question_invert}
+                      <button
+                        on:click={() => handleInvertMarketLink(market)}
+                        class="px-3 py-1 m-0.5 bg-lavender/50 text-text rounded-md hover:bg-lavender transition-colors"
+                      >
+                        Inverted
+                      </button>
+                    {:else}
+                      <button
+                        on:click={() => handleInvertMarketLink(market)}
+                        class="px-3 py-1 m-0.5 bg-blue/50 text-text rounded-md hover:bg-blue transition-colors"
+                      >
+                        Straight
+                      </button>
+                    {/if}
                     <button
                       on:click={() => handleRemoveMarket(market)}
-                      class="px-3 py-1 bg-red/50 text-text rounded-md hover:bg-red transition-colors"
+                      class="px-3 py-1 m-0.5 bg-red/50 text-text rounded-md hover:bg-red transition-colors"
                     >
                       Remove
                     </button>
