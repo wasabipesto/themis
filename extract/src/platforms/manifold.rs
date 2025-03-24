@@ -69,6 +69,8 @@ pub enum ManifoldOutcomeType {
     Number,
     /// Newest numeric type, like a re-skinned multiple choice market.
     MultiNumeric,
+    /// Date type, also like a re-skinned multiple choice market.
+    Date,
     /// Pseudo-numeric market that does not resolve. Irrelevant.
     Stonk,
     /// Basic post with awards for comments.
@@ -533,9 +535,11 @@ pub fn standardize(input: &ManifoldData) -> Result<Option<Vec<MarketAndProbs>>> 
             )),
         },
         // Various ways of implementing numeric markets
+        // Not urgent to implement but would like to have for the future
         ManifoldOutcomeType::PseudoNumeric => Ok(None),
         ManifoldOutcomeType::Number => Ok(None),
         ManifoldOutcomeType::MultiNumeric => Ok(None),
+        ManifoldOutcomeType::Date => Ok(None),
         // The remaining types are not actual markets - skip them
         ManifoldOutcomeType::Stonk => Ok(None),
         ManifoldOutcomeType::BountiedQuestion => Ok(None),
