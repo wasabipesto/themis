@@ -156,13 +156,21 @@
   {:else if market}
     <div class="bg-crust p-6 rounded-lg shadow-md mb-6">
       <div class="flex justify-between items-start mb-2">
-        <h1 class="text-2xl font-bold">{market.title}</h1>
+        <h1 class="text-2xl font-bold">
+          {market.title}
+        </h1>
       </div>
       <div class="flex justify-between items-start mb-2">
         <h1 class="text-xs">{market.id}</h1>
       </div>
 
       <div class="mb-6">
+        <button
+          on:click={() => navigator.clipboard.writeText(market?.id || "")}
+          class="inline-flex items-center px-3 py-1 mr-2 mb-2 text-sm rounded-md text-white bg-teal/50 hover:bg-teal"
+        >
+          Copy ID
+        </button>
         {#if market.category}
           <span
             class="text-sm bg-rosewater/20 text-text px-4 py-1 rounded-md mr-2 mb-2"
