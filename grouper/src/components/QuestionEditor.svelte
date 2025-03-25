@@ -45,7 +45,17 @@
 
       if (!questionId) {
         isNew = true;
-        question = {} as Question;
+
+        // Check if there's cloned question data in localStorage
+        const clonedQuestionData = localStorage.getItem("clonedQuestion");
+        if (clonedQuestionData) {
+          question = JSON.parse(clonedQuestionData);
+          // Clear the data after using it
+          localStorage.removeItem("clonedQuestion");
+        } else {
+          question = {} as Question;
+        }
+
         loading = false;
         return;
       }
@@ -480,6 +490,33 @@
       >
         Cancel
       </a>
+      {#if !isNew}
+        <button
+          type="button"
+          on:click={() => {
+            // Create a new URL without the ID parameter
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.delete("id");
+            // Copy the current question data to localStorage
+            localStorage.setItem(
+              "clonedQuestion",
+              JSON.stringify({
+                title: question?.title,
+                slug: question?.slug,
+                description: question?.description,
+                category_slug: question?.category_slug,
+                start_date_override: question?.start_date_override,
+                end_date_override: question?.end_date_override,
+              }),
+            );
+            // Navigate to the create form
+            window.location.href = newUrl.toString();
+          }}
+          class="px-4 py-2 bg-blue/50 text-white rounded-md hover:bg-blue transition-colors"
+        >
+          Clone Question
+        </button>
+      {/if}
       <button
         type="submit"
         disabled={formLoading}
