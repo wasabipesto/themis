@@ -12,6 +12,8 @@ use std::time::Duration;
 
 use themis_extract::platforms::{MarketAndProbs, Platform};
 
+/// Collect this many markets before uploading to database.
+/// Not a firm limit, can be exceeded if the last line has multiple markets.
 const BATCH_SIZE: usize = 10000;
 
 #[derive(Parser, Debug)]
@@ -38,6 +40,13 @@ struct Args {
     offline: bool,
 }
 
+/// Parameters that we need in order to upload items to the database.
+struct PostgrestParams {
+    postgrest_host: String,
+    postgrest_port: String,
+    postgrest_api_key: String,
+}
+
 fn main() -> Result<()> {
     // Get command line args
     let args = Args::parse();
@@ -56,13 +65,21 @@ fn main() -> Result<()> {
 
     // Get environment variables
     dotenv().ok();
-    let postgrest_host =
-        env::var("PGRST_HOST").expect("Required environment variable PGRST_HOST not set.");
-    let postgrest_port =
-        env::var("PGRST_PORT").expect("Required environment variable PGRST_PORT not set.");
-    let postgrest_api_base = format!("http://{postgrest_host}:{postgrest_port}");
-    let postgrest_api_key =
-        env::var("PGRST_APIKEY").expect("Required environment variable PGRST_APIKEY not set.");
+    let postgrest_params = match args.offline {
+        false => PostgrestParams {
+            postgrest_host: env::var("PGRST_HOST")
+                .expect("Required environment variable PGRST_HOST not set."),
+            postgrest_port: env::var("PGRST_PORT")
+                .expect("Required environment variable PGRST_PORT not set."),
+            postgrest_api_key: env::var("PGRST_APIKEY")
+                .expect("Required environment variable PGRST_APIKEY not set."),
+        },
+        true => PostgrestParams {
+            postgrest_host: env::var("PGRST_HOST").unwrap_or_default(),
+            postgrest_port: env::var("PGRST_PORT").unwrap_or_default(),
+            postgrest_api_key: env::var("PGRST_APIKEY").unwrap_or_default(),
+        },
+    };
 
     // If the user requested a specific platform, format it into a list
     // Otherwise, return the default platform list
@@ -113,12 +130,7 @@ fn main() -> Result<()> {
 
                     // When we reach batch size, upload and clear the batch
                     if market_batch.len() >= BATCH_SIZE {
-                        upload_batch(
-                            &client,
-                            &postgrest_api_base,
-                            &postgrest_api_key,
-                            &market_batch,
-                        )?;
+                        upload_batch(&client, &postgrest_params, &market_batch)?;
                         num_uploaded += market_batch.len();
                         market_batch.clear();
                     }
@@ -127,12 +139,7 @@ fn main() -> Result<()> {
         }
         // Upload any remaining items in the final batch
         if !market_batch.is_empty() && !args.offline {
-            upload_batch(
-                &client,
-                &postgrest_api_base,
-                &postgrest_api_key,
-                &market_batch,
-            )?;
+            upload_batch(&client, &postgrest_params, &market_batch)?;
             num_uploaded += market_batch.len();
         }
         info!("{platform}: {num_input} items in file, {num_skipped} skipped, {num_processed} processed ({num_multiple} multiple), {num_uploaded} uploaded.");
@@ -146,16 +153,17 @@ fn main() -> Result<()> {
 ///   https://docs.postgrest.org/en/latest/references/api/tables_views.html#prefer-resolution
 fn upload_batch(
     client: &Client,
-    postgrest_api_base: &str,
-    postgrest_api_key: &str,
+    params: &PostgrestParams,
     market_batch: &[MarketAndProbs],
 ) -> Result<()> {
+    // Set base url
+    let postgrest_api_base = format!("http://{}:{}", params.postgrest_host, params.postgrest_port);
     // Upload markets batch
     debug!("Uploading batch of {} markets", market_batch.len());
     let markets: Vec<_> = market_batch.iter().map(|m| &m.market).collect();
     let market_response = client
         .post(format!("{}/markets", postgrest_api_base))
-        .bearer_auth(postgrest_api_key)
+        .bearer_auth(&params.postgrest_api_key)
         .header("Prefer", "resolution=merge-duplicates")
         .header("On-Conflict-Update", "*")
         .json(&markets)
@@ -181,7 +189,7 @@ fn upload_batch(
     debug!("Uploading batch of {} probabilities", all_probs.len());
     let probs_response = client
         .post(format!("{}/daily_probabilities", postgrest_api_base))
-        .bearer_auth(postgrest_api_key)
+        .bearer_auth(&params.postgrest_api_key)
         .header("Prefer", "resolution=merge-duplicates")
         .header("On-Conflict-Update", "*")
         .json(&all_probs)
