@@ -15,10 +15,10 @@ pub struct MetaculusData {
     pub id: String,
     /// Timestamp the market was downloaded from the API.
     pub last_updated: DateTime<Utc>,
-    // Values returned from the `/questions` endpoint.
+    // Values returned from the `/posts` endpoint.
     // Ignoring this because everything is also in `extended_data`.
     // pub post: MetaculusQuestionBasic,
-    /// Values returned from the `/questions/{id}` endpoint.
+    /// Values returned from the `/posts/{id}/` endpoint.
     pub details: MetaculusInfo,
 }
 
@@ -72,87 +72,134 @@ pub struct MetaculusAggregationSeries {
     pub unweighted: MetaculusAggregationTypes,
 }
 
-/// What kind of market this is.
-#[derive(Debug, Clone, Copy, Deserialize)]
+/// Possible question types from the
+#[derive(Debug, Clone, Deserialize)]
+#[serde(tag = "type")]
 #[serde(rename_all = "snake_case")]
-pub enum MetaculusType {
-    /// Typical binary market.
-    Binary,
-    Numeric,
-    Date,
-    MultipleChoice,
-    Conditional,
-    GroupOfMarkets,
+pub enum MetaculusQuestion {
+    Binary {
+        /// Question description.
+        /// Can be multiple lines, separated with "\n\n".
+        description: String,
+        /// Question resolution criteria.
+        /// Can be multiple lines, separated with "\n\n".
+        resolution_criteria: String,
+        /// Question fine print.
+        /// Can be multiple lines, separated with "\n\n".
+        fine_print: String,
+        /// If resolved, the value of the resolution.
+        resolution: Option<MetaculusResolution>,
+        /// A list of community aggregation points for this question.
+        /// We will use this for our probability history.
+        aggregations: MetaculusAggregationSeries,
+    },
+    Numeric {
+        /// Question description.
+        /// Can be multiple lines, separated with "\n\n".
+        description: String,
+        /// Question resolution criteria.
+        /// Can be multiple lines, separated with "\n\n".
+        resolution_criteria: String,
+        /// Question fine print.
+        /// Can be multiple lines, separated with "\n\n".
+        fine_print: String,
+        /// If resolved, the value of the resolution.
+        resolution: Option<String>,
+        /// A list of community aggregation points for this question.
+        /// We will use this for our probability history.
+        aggregations: MetaculusAggregationSeries,
+    },
+    Date {
+        /// Question description.
+        /// Can be multiple lines, separated with "\n\n".
+        description: String,
+        /// Question resolution criteria.
+        /// Can be multiple lines, separated with "\n\n".
+        resolution_criteria: String,
+        /// Question fine print.
+        /// Can be multiple lines, separated with "\n\n".
+        fine_print: String,
+        /// If resolved, the value of the resolution.
+        /// For date markets: this can still be "ambiguous".
+        resolution: Option<String>,
+        /// A list of community aggregation points for this question.
+        /// We will use this for our probability history.
+        aggregations: MetaculusAggregationSeries,
+    },
+    MultipleChoice {
+        /// Question description.
+        /// Can be multiple lines, separated with "\n\n".
+        description: String,
+        /// Question resolution criteria.
+        /// Can be multiple lines, separated with "\n\n".
+        resolution_criteria: String,
+        /// Question fine print.
+        /// Can be multiple lines, separated with "\n\n".
+        fine_print: String,
+        /// If resolved, the value of the resolution.
+        resolution: Option<String>,
+        /// A list of community aggregation points for this question.
+        /// We will use this for our probability history.
+        aggregations: MetaculusAggregationSeries,
+    },
+    Conditional {
+        /// Question description.
+        /// Can be multiple lines, separated with "\n\n".
+        description: String,
+        /// Question resolution criteria.
+        /// Can be multiple lines, separated with "\n\n".
+        resolution_criteria: String,
+        /// Question fine print.
+        /// Can be multiple lines, separated with "\n\n".
+        fine_print: String,
+        /// If resolved, the value of the resolution.
+        resolution: Option<MetaculusResolution>,
+        /// A list of community aggregation points for this question.
+        /// We will use this for our probability history.
+        aggregations: MetaculusAggregationSeries,
+    },
 }
 
-/// Info on each tag applied to the question.
+/// A group of questions.
 #[derive(Debug, Clone, Deserialize)]
-pub struct MetaculusTag {
-    /// The tag's ID.
-    pub id: u32,
-    /// The tag's name.
-    pub name: String,
-    /// The tag's URL slug.
-    pub slug: String,
-}
-
-/// Some additional information.
-/// This object has a lot of redundant information.
-#[derive(Debug, Clone, Deserialize)]
-pub struct MetaculusQuestion {
-    /// Question description.
-    /// Can be multiple lines, separated with "\n\n".
-    pub description: String,
-    /// Question resolution criteria.
-    /// Can be multiple lines, separated with "\n\n".
-    pub resolution_criteria: String,
-    /// Question fine print.
-    /// Can be multiple lines, separated with "\n\n".
-    pub fine_print: String,
-    /// What type of question this is.
-    #[serde(rename = "type")]
-    pub market_type: MetaculusType,
-
-    /// If resolved, the value of the resolution.
-    pub resolution: Option<MetaculusResolution>,
-
-    /// How much this question is weighted (for competitions?)
-    /// Always between 0 and 1 so far.
-    pub question_weight: f32,
-    /// Whether bots are included in aggregates.
-    /// Only true around 80% of the time.
-    pub include_bots_in_aggregates: bool,
-
-    /// A list of community aggregation points for this question.
-    /// We will use this for our probability history.
-    pub aggregations: MetaculusAggregationSeries,
-
-    /// Tags applied to this question.
-    /// Unsure if we should use this or projects for categorization.
-    #[serde(default)] // default to empty vec
-    pub tag: Vec<MetaculusTag>,
+pub struct MetaculusGroupOfQuestions {
+    pub questions: Vec<MetaculusQuestion>,
 }
 
 /// Info on each project associated with the question.
 #[derive(Debug, Clone, Deserialize)]
-pub struct MetaculusProjects {
+pub struct MetaculusProject {
     /// The project's ID.
     pub id: u32,
     /// The project's name.
     pub name: String,
 }
 
-/// Info on each project associated with the question.
+/// Info on each project, tag, or category applied to the question.
+/// These items have additional attributes but I'm grouping them up.
 #[derive(Debug, Clone, Deserialize)]
-pub struct MetaculusProjectSeries {
-    /// TODO: Unknown.
-    pub default_project: MetaculusProjects,
-    /// TODO: Unknown.
-    #[serde(default)] // default to empty vec
-    pub question_series: Vec<MetaculusProjects>,
-    /// TODO: Unknown.
-    #[serde(default)] // default to empty vec
-    pub site_main: Vec<MetaculusProjects>,
+pub struct MetaculusGroup {
+    /// The item's name.
+    pub name: String,
+    /// The item's URL slug.
+    pub slug: Option<String>,
+}
+
+/// Info on the projects, tags, and categories applied to the question.
+/// Used for deriving overall category.
+#[derive(Debug, Clone, Deserialize)]
+pub struct MetaculusGroups {
+    pub default_project: MetaculusGroup,
+    #[serde(default)]
+    pub question_series: Vec<MetaculusGroup>,
+    #[serde(default)]
+    pub site_main: Vec<MetaculusGroup>,
+    #[serde(default)]
+    pub tournament: Vec<MetaculusGroup>,
+    #[serde(default)]
+    pub category: Vec<MetaculusGroup>,
+    #[serde(default)]
+    pub tags: Vec<MetaculusGroup>,
 }
 
 /// What stage of the market life-cycle this is in.
@@ -195,15 +242,18 @@ pub struct MetaculusInfo {
     pub id: u32,
     /// Question text, also used as title.
     pub title: String,
+    /// Shortened version of the question title.
+    pub short_title: String,
     /// The URL slug for this question.
-    /// Can optionally be added to the end of the URL.
+    /// Can optionally be added to the end of the URL (see ID above).
     pub slug: String,
 
-    /// More information about the question.
-    /// This object has a lot of redundant information.
-    pub question: MetaculusQuestion,
-    /// Some data about the projects associated with the question.
-    pub projects: MetaculusProjectSeries,
+    /// Information about the specific question.
+    pub question: Option<MetaculusQuestion>,
+    /// Information about a group of questions. Only for GroupOfMarkets type.
+    pub group_of_questions: Option<MetaculusGroupOfQuestions>,
+    /// Info on the projects, tags, and categories applied to the question.
+    pub projects: MetaculusGroups,
 
     /// The question trading status.
     pub status: MetaculusStatus,
@@ -231,7 +281,7 @@ pub struct MetaculusInfo {
     /// If open, the moment the question was opened for trading.
     pub open_time: Option<DateTime<Utc>>,
     /// Moment of most recent edit to the question.
-    pub edited_at: DateTime<Utc>,
+    pub edited_at: Option<DateTime<Utc>>,
     /// If closed, the most recent close time.
     pub actual_close_time: Option<DateTime<Utc>>,
     /// If resolved, the resolution time.
@@ -249,9 +299,14 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
     }
 
     // Convert based on market type
-    match input.details.question.market_type {
-        // Currently only binary markets exist
-        MetaculusType::Binary => {
+    match &input.details.question {
+        Some(MetaculusQuestion::Binary {
+            description,
+            resolution_criteria,
+            fine_print,
+            resolution,
+            aggregations,
+        }) => {
             // Get market ID. Construct from platform slug and ID within platform.
             let platform_slug = "metaculus".to_string();
             let market_id = format!("{}:{}", platform_slug, input.details.id);
@@ -259,7 +314,7 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
             // Get probability segments. If there are none then skip.
             // Using recency_weighted (community prediction) here, may change in the future.
             let probs = build_prob_segments(
-                &input.details.question.aggregations.recency_weighted.history,
+                &aggregations.recency_weighted.history,
                 &input.details.actual_close_time,
             )
             .with_context(|| format!("Error building probability segments. ID: {market_id}"))?;
@@ -287,9 +342,9 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
                 platform_name: "Metaculus".to_string(),
                 description: format!(
                     "{}\n\n{}\n\n{}",
-                    input.details.question.description.clone(),
-                    input.details.question.resolution_criteria.clone(),
-                    input.details.question.fine_print.clone(),
+                    description.clone(),
+                    resolution_criteria.clone(),
+                    fine_print.clone(),
                 ),
                 url: format!("https://www.metaculus.com/questions/{}", input.details.id),
                 open_datetime: start,
@@ -300,7 +355,7 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
                 category: None, // TODO
                 prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
                 prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)?,
-                resolution: match input.details.question.resolution {
+                resolution: match resolution {
                     Some(MetaculusResolution::Yes) => 1.0,
                     Some(MetaculusResolution::No) => 0.0,
                     Some(MetaculusResolution::Ambiguous) => return Ok(None),
@@ -317,11 +372,36 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
             }]))
         }
         // TODO: Implement other types
-        MetaculusType::Numeric => Ok(None),
-        MetaculusType::Date => Ok(None),
-        MetaculusType::MultipleChoice => Ok(None),
-        MetaculusType::Conditional => Ok(None),
-        MetaculusType::GroupOfMarkets => Ok(None),
+        Some(MetaculusQuestion::Numeric {
+            description: _,
+            resolution_criteria: _,
+            fine_print: _,
+            resolution: _,
+            aggregations: _,
+        }) => Ok(None),
+        Some(MetaculusQuestion::Date {
+            description: _,
+            resolution_criteria: _,
+            fine_print: _,
+            resolution: _,
+            aggregations: _,
+        }) => Ok(None),
+        Some(MetaculusQuestion::MultipleChoice {
+            description: _,
+            resolution_criteria: _,
+            fine_print: _,
+            resolution: _,
+            aggregations: _,
+        }) => Ok(None),
+        Some(MetaculusQuestion::Conditional {
+            description: _,
+            resolution_criteria: _,
+            fine_print: _,
+            resolution: _,
+            aggregations: _,
+        }) => Ok(None),
+        // TODO: Implement group of questions.
+        None => Ok(None),
     }
 }
 
