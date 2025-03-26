@@ -81,21 +81,32 @@ fn main() -> Result<()> {
     for platform in platforms {
         info!("{platform}: Loading data from disk.");
         let lines = platform.load_data(&args.directory)?;
+        let num_input = lines.len();
         if args.schema_only {
             info!(
                 "{platform}: Data loaded. All {} items deserialized correctly.",
-                lines.len()
+                num_input
             );
             continue;
         }
 
-        info!(
-            "{platform}: Data loaded. Extracting {} items...",
-            lines.len()
-        );
+        let mut num_skipped: usize = 0;
+        let mut num_processed: usize = 0;
+        let mut num_multiple: usize = 0;
+        let mut num_uploaded: usize = 0;
+
+        info!("{platform}: Data loaded. Extracting {} items...", num_input);
         let mut market_batch: Vec<MarketAndProbs> = Vec::with_capacity(BATCH_SIZE);
         for line in lines {
             let standardized_markets = platform.standardize(line)?;
+            match standardized_markets.len() {
+                0 => num_skipped += 1,
+                1 => num_processed += 1,
+                _ => {
+                    num_processed += 1;
+                    num_multiple += 1;
+                }
+            }
             if !args.offline {
                 for market_data in standardized_markets {
                     market_batch.push(market_data);
@@ -108,6 +119,7 @@ fn main() -> Result<()> {
                             &postgrest_api_key,
                             &market_batch,
                         )?;
+                        num_uploaded += market_batch.len();
                         market_batch.clear();
                     }
                 }
@@ -121,8 +133,9 @@ fn main() -> Result<()> {
                 &postgrest_api_key,
                 &market_batch,
             )?;
+            num_uploaded += market_batch.len();
         }
-        info!("{platform}: All items processed.");
+        info!("{platform}: {num_input} items in file, {num_skipped} skipped, {num_processed} processed ({num_multiple} multiple), {num_uploaded} uploaded.");
     }
 
     Ok(())
