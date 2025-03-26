@@ -21,6 +21,10 @@ struct Args {
     #[arg(short, long, default_value = "../cache")]
     output_dir: PathBuf,
 
+    /// Only save the first n items
+    #[arg(short, long)]
+    first: Option<usize>,
+
     /// Reset the index before resuming cache downloads to catch new items
     #[arg(long)]
     reset_index: bool,
@@ -76,7 +80,12 @@ async fn main() {
                 let output_dir = output_dir.clone();
                 async move {
                     platform
-                        .download(&output_dir, &args.reset_index, &args.reset_cache)
+                        .download(
+                            &output_dir,
+                            &args.reset_index,
+                            &args.reset_cache,
+                            &args.first,
+                        )
                         .await;
                 }
             })

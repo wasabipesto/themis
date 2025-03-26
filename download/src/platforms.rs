@@ -2,7 +2,7 @@
 
 use chrono::{DateTime, Utc};
 use clap::ValueEnum;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_jsonlines::write_json_lines;
@@ -60,10 +60,17 @@ pub trait PlatformHandler {
         output_dir: &Path,
         reset_index: &bool,
         reset_cache: &bool,
+        first: &Option<usize>,
     ) -> impl std::future::Future<Output = ()> + Send;
 }
 impl PlatformHandler for Platform {
-    async fn download(&self, output_dir: &Path, reset_index: &bool, reset_cache: &bool) {
+    async fn download(
+        &self,
+        output_dir: &Path,
+        reset_index: &bool,
+        reset_cache: &bool,
+        first: &Option<usize>,
+    ) {
         // build file paths
         let index_file_path = output_dir.join(format!("{self}-index.jsonl").to_lowercase());
         let data_file_path = output_dir.join(format!("{self}-data.jsonl").to_lowercase());
@@ -144,11 +151,18 @@ impl PlatformHandler for Platform {
 
         // get the IDs in index file that aren't in data file
         debug!("{self}: Getting IDs to download.");
-        let ids_to_download: Vec<String> = index_map
+        let mut ids_to_download: Vec<String> = index_map
             .keys()
             .filter(|id| !data_ids.contains(*id))
             .cloned()
             .collect();
+        if let Some(n) = first {
+            info!(
+                "{self}: Identified {} items to download, only taking the first {n}.",
+                ids_to_download.len()
+            );
+            ids_to_download.truncate(n.to_owned());
+        }
         let num_to_download = ids_to_download.len();
 
         // check if anything needs to be downloaded
@@ -194,11 +208,11 @@ impl PlatformHandler for Platform {
                 } else {
                     0.0
                 };
-                info!(
+                warn!(
                     "{self}: {} out of {} items downloaded ({:.1}%)",
                     num_downloaded, num_to_download, percentage
                 );
-                info!("Re-run the download program to retry the failed items.")
+                warn!("Re-run the download program to retry the failed items.")
             }
         }
     }
