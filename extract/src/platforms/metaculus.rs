@@ -17,14 +17,13 @@ pub struct MetaculusData {
     pub last_updated: DateTime<Utc>,
     // Values returned from the `/questions` endpoint.
     // Ignoring this because everything is also in `extended_data`.
-    // pub question: MetaculusQuestionBasic,
+    // pub post: MetaculusQuestionBasic,
     /// Values returned from the `/questions/{id}` endpoint.
-    pub extended_data: MetaculusInfo,
+    pub details: MetaculusInfo,
 }
 
 /// A point within the aggregation history.
 /// Aggregation methods are internal, we don't get detailed data.
-/// TODO: Look into ForecastDataCSV in the future
 #[derive(Debug, Clone, Deserialize)]
 pub struct MetaculusAggregationHistoryPoint {
     /// Start time of history bucket.
@@ -75,12 +74,15 @@ pub struct MetaculusAggregationSeries {
 
 /// What kind of market this is.
 #[derive(Debug, Clone, Copy, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum MetaculusType {
-    /// Typical binary market. Predictions are single points or distributions.
+    /// Typical binary market.
     Binary,
-    /// Potential future market type. Currently unused.
-    Continuous,
+    Numeric,
+    Date,
+    MultipleChoice,
+    Conditional,
+    GroupOfMarkets,
 }
 
 /// Info on each tag applied to the question.
@@ -154,11 +156,14 @@ pub struct MetaculusProjectSeries {
 }
 
 /// What stage of the market life-cycle this is in.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum MetaculusStatus {
-    Approved,
+    Draft,
     Pending,
+    Approved,
+    Rejected,
+    Upcoming,
     Open,
     Closed,
     /// Resolved is the status used after everything is complete.
@@ -238,34 +243,24 @@ pub struct MetaculusInfo {
 /// Returns None if the market was invalid in an expected way.
 /// Otherwise, returns a list of markets with probabilities.
 pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>> {
-    // Only process resolved markets
-    match input.extended_data.status {
-        MetaculusStatus::Resolved => {}
-        _ => return Ok(None),
-    }
     // Skip markets that have not resolved
-    if !input.extended_data.resolved {
+    if !input.details.resolved || input.details.status != MetaculusStatus::Resolved {
         return Ok(None);
     }
 
     // Convert based on market type
-    match input.extended_data.question.market_type {
+    match input.details.question.market_type {
         // Currently only binary markets exist
         MetaculusType::Binary => {
             // Get market ID. Construct from platform slug and ID within platform.
             let platform_slug = "metaculus".to_string();
-            let market_id = format!("{}:{}", platform_slug, input.extended_data.id);
+            let market_id = format!("{}:{}", platform_slug, input.details.id);
 
             // Get probability segments. If there are none then skip.
             // Using recency_weighted (community prediction) here, may change in the future.
             let probs = build_prob_segments(
-                &input
-                    .extended_data
-                    .question
-                    .aggregations
-                    .recency_weighted
-                    .history,
-                &input.extended_data.actual_close_time,
+                &input.details.question.aggregations.recency_weighted.history,
+                &input.details.actual_close_time,
             )
             .with_context(|| format!("Error building probability segments. ID: {market_id}"))?;
             if probs.is_empty() {
@@ -287,28 +282,25 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
             // Build standard market item.
             let market = StandardMarket {
                 id: market_id.clone(),
-                title: input.extended_data.title.clone(),
+                title: input.details.title.clone(),
                 platform_slug,
                 platform_name: "Metaculus".to_string(),
                 description: format!(
                     "{}\n\n{}\n\n{}",
-                    input.extended_data.question.description.clone(),
-                    input.extended_data.question.resolution_criteria.clone(),
-                    input.extended_data.question.fine_print.clone(),
+                    input.details.question.description.clone(),
+                    input.details.question.resolution_criteria.clone(),
+                    input.details.question.fine_print.clone(),
                 ),
-                url: format!(
-                    "https://www.metaculus.com/questions/{}",
-                    input.extended_data.id
-                ),
+                url: format!("https://www.metaculus.com/questions/{}", input.details.id),
                 open_datetime: start,
                 close_datetime: end,
-                traders_count: Some(input.extended_data.nr_forecasters),
+                traders_count: Some(input.details.nr_forecasters),
                 volume_usd: None, // Not available in API
                 duration_days: helpers::get_market_duration(start, end)?,
                 category: None, // TODO
                 prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
                 prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)?,
-                resolution: match input.extended_data.question.resolution {
+                resolution: match input.details.question.resolution {
                     Some(MetaculusResolution::Yes) => 1.0,
                     Some(MetaculusResolution::No) => 0.0,
                     Some(MetaculusResolution::Ambiguous) => return Ok(None),
@@ -324,10 +316,12 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
                 daily_probabilities,
             }]))
         }
-        MetaculusType::Continuous => {
-            log::error!("Metaculus `continuous` type detected. We don't have enough information on that type to properly standardize it. Market ID: {}", input.extended_data.id);
-            Ok(None)
-        }
+        // TODO: Implement other types
+        MetaculusType::Numeric => Ok(None),
+        MetaculusType::Date => Ok(None),
+        MetaculusType::MultipleChoice => Ok(None),
+        MetaculusType::Conditional => Ok(None),
+        MetaculusType::GroupOfMarkets => Ok(None),
     }
 }
 

@@ -14,7 +14,7 @@ use std::time::Instant;
 use super::{IndexItem, Platform};
 use crate::util::{display_progress, get_id, get_reqwest_client_ratelimited, send_request};
 
-const METACULUS_API_BASE: &str = "https://www.metaculus.com/api2";
+const METACULUS_API_BASE: &str = "https://www.metaculus.com/api";
 const METACULUS_RATELIMIT: usize = 15;
 const METACULUS_RATELIMIT_MS: u64 = 60_000;
 
@@ -23,15 +23,15 @@ const METACULUS_RATELIMIT_MS: u64 = 60_000;
 pub struct MetaculusItem {
     id: String,
     last_updated: DateTime<Utc>,
-    question: Value,
-    extended_data: Value,
+    post: Value,
+    details: Value,
 }
 
-/// Download extended data from the `/questions/{id}` endpoint.
+/// Download extended data from the `/posts/{id}/` endpoint.
 /// Detect errors and warn but don't stop processing.
 async fn get_extended_data(client: &ClientWithMiddleware, id: &str) -> Result<Value> {
     trace!("Getting Metaculus extended data for Question {id}");
-    let api_url = METACULUS_API_BASE.to_owned() + "/questions/" + id + "/";
+    let api_url = METACULUS_API_BASE.to_owned() + "/posts/" + id + "/";
 
     // submit the request
     send_request(client.get(&api_url)).await.or_else(|err| {
@@ -47,7 +47,7 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
     let platform = Platform::Metaculus;
 
     // get client
-    let api_url = METACULUS_API_BASE.to_owned() + "/questions/";
+    let api_url = METACULUS_API_BASE.to_owned() + "/posts/";
     let client = get_reqwest_client_ratelimited(METACULUS_RATELIMIT, METACULUS_RATELIMIT_MS);
 
     // loop through questions endpoint until all are downloaded
@@ -58,9 +58,24 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
         // submit the request
         let response = send_request(
             client
+                // Options: https://www.metaculus.com/api/
                 .get(&api_url)
                 .query(&[("limit", limit)])
-                .query(&[("offset", offset)]),
+                .query(&[("offset", offset)])
+                // Required. Currently we only need resolved but I'd like to expand this.
+                .query(&[("statuses", "resolved")])
+                // Required. Wish there was an "all" option so we don't miss new types.
+                .query(&[("forecast_type", "binary")])
+                .query(&[("forecast_type", "numeric")])
+                .query(&[("forecast_type", "date")])
+                .query(&[("forecast_type", "multiple_choice")])
+                .query(&[("forecast_type", "conditional")])
+                .query(&[("forecast_type", "group_of_questions")])
+                // Whether or not to return community predictions.
+                // Even if true, does not return all series! Get those in step 2.
+                .query(&[("with_cp", false)])
+                // How to order the results.
+                .query(&[("order_by", "published_at")]),
         )
         .await?;
 
@@ -129,18 +144,18 @@ pub async fn download_data(
     // could paralleize this but the rate limit is so low that it doesn't have any benefit
     for id in ids_to_download.iter() {
         // download extended data
-        let extended_data = get_extended_data(&client, id).await?;
+        let details = get_extended_data(&client, id).await?;
 
         // append row to data json file
         let line = json!(MetaculusItem {
             id: id.clone(),
             last_updated: Utc::now(),
-            question: index
+            post: index
                 .get(id)
                 .ok_or_else(|| anyhow!("Cache missing key!"))?
                 .data
                 .clone(),
-            extended_data,
+            details,
         });
         append_json_lines(data_file_path, [line])?;
         trace!("Successfully appended 1 item to file.");
