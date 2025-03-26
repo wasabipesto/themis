@@ -77,6 +77,7 @@ pub struct MetaculusAggregationSeries {
 #[serde(tag = "type")]
 #[serde(rename_all = "snake_case")]
 pub enum MetaculusQuestion {
+    /// Standard binary (Yes/No) market type.
     Binary {
         /// Question description.
         /// Can be multiple lines, separated with "\n\n".
@@ -87,76 +88,51 @@ pub enum MetaculusQuestion {
         /// Question fine print.
         /// Can be multiple lines, separated with "\n\n".
         fine_print: String,
-        /// If resolved, the value of the resolution.
-        resolution: Option<MetaculusResolution>,
         /// A list of community aggregation points for this question.
         /// We will use this for our probability history.
         aggregations: MetaculusAggregationSeries,
+        /// If resolved, the value of the resolution.
+        resolution: Option<MetaculusResolution>,
     },
+    /// Resolves to a number in a specified range.
     Numeric {
-        /// Question description.
-        /// Can be multiple lines, separated with "\n\n".
+        /// Typical attributes.
         description: String,
-        /// Question resolution criteria.
-        /// Can be multiple lines, separated with "\n\n".
         resolution_criteria: String,
-        /// Question fine print.
-        /// Can be multiple lines, separated with "\n\n".
         fine_print: String,
-        /// If resolved, the value of the resolution.
-        resolution: Option<String>,
-        /// A list of community aggregation points for this question.
-        /// We will use this for our probability history.
         aggregations: MetaculusAggregationSeries,
+        /// Can be a number (stringified), TODO for others
+        resolution: Option<String>,
     },
+    /// Resolves to a date in a specified range(?).
     Date {
-        /// Question description.
-        /// Can be multiple lines, separated with "\n\n".
+        /// Typical attributes.
         description: String,
-        /// Question resolution criteria.
-        /// Can be multiple lines, separated with "\n\n".
         resolution_criteria: String,
-        /// Question fine print.
-        /// Can be multiple lines, separated with "\n\n".
         fine_print: String,
-        /// If resolved, the value of the resolution.
-        /// For date markets: this can still be "ambiguous".
-        resolution: Option<String>,
-        /// A list of community aggregation points for this question.
-        /// We will use this for our probability history.
         aggregations: MetaculusAggregationSeries,
+        /// This is the resolved DateTime or "ambiguous"
+        resolution: Option<String>,
     },
+    /// Resolves to one of the specified options.
     MultipleChoice {
-        /// Question description.
-        /// Can be multiple lines, separated with "\n\n".
+        /// Typical attributes.
         description: String,
-        /// Question resolution criteria.
-        /// Can be multiple lines, separated with "\n\n".
         resolution_criteria: String,
-        /// Question fine print.
-        /// Can be multiple lines, separated with "\n\n".
         fine_print: String,
-        /// If resolved, the value of the resolution.
+        aggregations: MetaculusAggregationSeries,
+        /// TODO
         resolution: Option<String>,
-        /// A list of community aggregation points for this question.
-        /// We will use this for our probability history.
-        aggregations: MetaculusAggregationSeries,
     },
+    /// TODO
     Conditional {
-        /// Question description.
-        /// Can be multiple lines, separated with "\n\n".
+        /// Typical attributes.
         description: String,
-        /// Question resolution criteria.
-        /// Can be multiple lines, separated with "\n\n".
         resolution_criteria: String,
-        /// Question fine print.
-        /// Can be multiple lines, separated with "\n\n".
         fine_print: String,
-        /// If resolved, the value of the resolution.
-        resolution: Option<MetaculusResolution>,
-        /// A list of community aggregation points for this question.
-        /// We will use this for our probability history.
         aggregations: MetaculusAggregationSeries,
+        /// TODO
+        resolution: Option<String>,
     },
 }
 
@@ -298,6 +274,9 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
         return Ok(None);
     }
 
+    // Standard market information.
+    let platform_slug = "metaculus".to_string();
+
     // Convert based on market type
     match &input.details.question {
         Some(MetaculusQuestion::Binary {
@@ -308,7 +287,6 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
             aggregations,
         }) => {
             // Get market ID. Construct from platform slug and ID within platform.
-            let platform_slug = "metaculus".to_string();
             let market_id = format!("{}:{}", platform_slug, input.details.id);
 
             // Get probability segments. If there are none then skip.
@@ -350,7 +328,7 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
                 open_datetime: start,
                 close_datetime: end,
                 traders_count: Some(input.details.nr_forecasters),
-                volume_usd: None, // Not available in API
+                volume_usd: None, // Metaculus does not use volume.
                 duration_days: helpers::get_market_duration(start, end)?,
                 category: None, // TODO
                 prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
