@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::collections::HashMap;
 
-use super::helpers;
+use super::{helpers, MarketError, MarketResult};
 use super::{MarketAndProbs, ProbSegment, StandardMarket};
 
 /// This is the container format we used to save items to disk earlier.
@@ -186,17 +186,14 @@ pub struct KalshiHistoryItem {
     pub taker_side: YesNoBlank,
 }
 
-/// Convert data pulled from the API into a standardized market item.
-/// Returns Error if there were any actual problems with the processing.
-/// Returns None if the market was invalid in an expected way.
-/// Otherwise, returns a list of markets with probabilities.
+/// Convert data pulled from the API into a standardized market item or an error.
 /// Note: This is not a 1:1 conversion because some inputs contain multiple
 /// discrete markets, and each of those have their own histories.
-pub fn standardize(input: &KalshiData) -> Result<Option<Vec<MarketAndProbs>>> {
+pub fn standardize(input: &KalshiData) -> MarketResult<Vec<MarketAndProbs>> {
     // Only process finalized markets
     match input.market.status {
         KalshiMarketStatus::Finalized => {}
-        _ => return Ok(None),
+        _ => return Err(MarketError::MarketStillActive),
     }
 
     // Convert based on market type
@@ -210,16 +207,16 @@ pub fn standardize(input: &KalshiData) -> Result<Option<Vec<MarketAndProbs>>> {
             // Get probability segments. If there are none then skip.
             let probs = build_prob_segments(&input.history, &input.market.close_time);
             if probs.is_empty() {
-                return Ok(None);
+                return Err(MarketError::NoMarketTrades);
             }
 
             // Validate probability segments and collate into daily prob segments.
             if let Err(e) = helpers::validate_prob_segments(&probs) {
-                log::error!("Error validating probability segments. ID: {market_id} Error: {e}");
-                return Ok(None);
+                return Err(MarketError::InvalidMarketTrades(e.to_string()));
             }
             let daily_probabilities =
-                helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)?;
+                helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)
+                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?;
 
             // We only consider the market to be open while there are actual probabilities.
             let start = probs.first().unwrap().start;
@@ -236,25 +233,29 @@ pub fn standardize(input: &KalshiData) -> Result<Option<Vec<MarketAndProbs>>> {
                     input.market.rules_primary.clone(),
                     input.market.rules_secondary.clone(),
                 ),
-                url: get_url(&input.market.ticker)?,
+                url: get_url(&input.market.ticker)
+                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
                 open_datetime: start,
                 close_datetime: end,
                 traders_count: None, // Not available in API
                 volume_usd: Some(input.market.volume),
-                duration_days: helpers::get_market_duration(start, end)?,
+                duration_days: helpers::get_market_duration(start, end)
+                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
                 category: get_category(&input.market),
-                prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
-                prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)?,
+                prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)
+                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
+                prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)
+                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
                 resolution: match input.market.result {
                     YesNoBlank::Yes => 1.0,
                     YesNoBlank::No => 0.0,
-                    YesNoBlank::Blank => return Ok(None),
+                    YesNoBlank::Blank => return Err(MarketError::MarketCancelled),
                 },
             };
-            Ok(Some(vec![MarketAndProbs {
+            Ok(vec![MarketAndProbs {
                 market,
                 daily_probabilities,
-            }]))
+            }])
         }
     }
 }

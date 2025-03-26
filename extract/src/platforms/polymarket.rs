@@ -1,13 +1,12 @@
 //! Tools to download and process markets from the Polymarket API.
 //! Polymarket API docs: https://docs.polymarket.com/#clob-api
 
-use anyhow::{anyhow, Result};
 use chrono::serde::ts_seconds;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::collections::HashMap;
 
-use super::{helpers, MarketAndProbs, ProbSegment, StandardMarket};
+use super::{helpers, MarketAndProbs, MarketError, MarketResult, ProbSegment, StandardMarket};
 
 /// This is the container format we used to save items to disk earlier.
 #[derive(Debug, Clone, Deserialize)]
@@ -121,16 +120,13 @@ pub struct PolymarketGammaMarket {
     pub volume_num: f32,
 }
 
-/// Convert data pulled from the API into a standardized market item.
-/// Returns Error if there were any actual problems with the processing.
-/// Returns None if the market was invalid in an expected way.
-/// Otherwise, returns a list of markets with probabilities.
+/// Convert data pulled from the API into a standardized market item or an error.
 /// Note: This is not a 1:1 conversion because some inputs contain multiple
 /// discrete markets, and each of those have their own histories.
-pub fn standardize(input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>> {
+pub fn standardize(input: &PolymarketData) -> MarketResult<Vec<MarketAndProbs>> {
     // Only process closed markets
     if !input.market.closed {
-        return Ok(None);
+        return Err(MarketError::MarketStillActive);
     }
 
     // Get market ID. Construct from platform slug and ID within platform.
@@ -140,15 +136,15 @@ pub fn standardize(input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>
     // Get probability segments. If there are none then skip.
     let probs = build_prob_segments(&input.prices_history);
     if probs.is_empty() {
-        return Ok(None);
+        return Err(MarketError::NoMarketTrades);
     }
 
     // Validate probability segments and collate into daily prob segments.
     if let Err(e) = helpers::validate_prob_segments(&probs) {
-        log::error!("Error validating probability segments. ID: {market_id} Error: {e}");
-        return Ok(None);
+        return Err(MarketError::InvalidMarketTrades(e.to_string()));
     }
-    let daily_probabilities = helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)?;
+    let daily_probabilities = helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)
+        .map_err(|e| MarketError::ProcessingError(e.to_string()))?;
 
     // We only consider the market to be open while there are actual probabilities.
     let start = probs.first().unwrap().start;
@@ -157,9 +153,9 @@ pub fn standardize(input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>
     // Sanity check for number of tokens (should always be 2).
     let num_tokens = input.market.tokens.len();
     if num_tokens != 2 {
-        return Err(anyhow!(
+        return Err(MarketError::DataInvalid(format!(
             "Expected 2 tokens, found {num_tokens} tokens! ID: {market_id}"
-        ));
+        )));
     }
 
     // Get the token that we tracked in order to determine which outcome resolution to pick.
@@ -170,16 +166,19 @@ pub fn standardize(input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>
         .find(|t| t.token_id == input.prices_history_token)
         .cloned()
         .ok_or_else(|| {
-            anyhow!(
+            MarketError::DataInvalid(format!(
                 "Tracked price history token ID {} not found in market ID: {market_id}",
                 input.prices_history_token
-            )
+            ))
         })?;
 
     // Check number of winners. For one winner, check the token status. For two winners = 50/50.
     let num_winners = input.market.tokens.iter().filter(|t| t.winner).count();
     let resolution = match num_winners {
-        0 => return Ok(None), // Market not yet finalized
+        0 => {
+            // Market not yet finalized
+            return Err(MarketError::MarketStillActive);
+        }
         1 => {
             // Normal case, check if our token won
             if tracked_token.winner {
@@ -188,20 +187,24 @@ pub fn standardize(input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>
                 0.0
             }
         }
-        2 => 0.5, // Two winners, prizes were split 50/50
+        2 => {
+            // Two winners, prizes were split 50/50
+            0.5
+        }
         _ => {
             // More than two winners (not possible)
-            log::error!(
-                "Expected 1 or 2 winning tokens, found {num_winners} winning tokens! ID: {market_id}"
-            );
-            return Ok(None);
+            return Err(MarketError::DataInvalid(format!(
+                "Expected 1 or 2 winning tokens, found {num_winners} winning tokens!"
+            )));
         }
     };
 
     // Sanity check for token prices (should always sum to 1).
     let sum_prices: f32 = input.market.tokens.iter().map(|t| t.price).sum();
     if !(0.99..1.01).contains(&sum_prices) {
-        log::debug!("Expected token prices to sum to 1.0, found they summed to {sum_prices}! ID: {market_id}");
+        return Err(MarketError::DataInvalid(format!(
+            "Expected token prices to sum to 1.0, found they summed to {sum_prices}!"
+        )));
     }
 
     // Append the tracked outcome to the market title so we know which side we're tracking.
@@ -229,16 +232,19 @@ pub fn standardize(input: &PolymarketData) -> Result<Option<Vec<MarketAndProbs>>
         close_datetime: end,
         traders_count: None,
         volume_usd: input.market_gamma.as_ref().map(|item| item.volume_num),
-        duration_days: helpers::get_market_duration(start, end)?,
+        duration_days: helpers::get_market_duration(start, end)
+            .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
         category: get_category(&input.market.tags),
-        prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
-        prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)?,
+        prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)
+            .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
+        prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)
+            .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
         resolution,
     };
-    Ok(Some(vec![MarketAndProbs {
+    Ok(vec![MarketAndProbs {
         market,
         daily_probabilities,
-    }]))
+    }])
 }
 
 /// Converts Polymarket price points into standard probability segments.

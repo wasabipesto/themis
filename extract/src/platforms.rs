@@ -4,6 +4,7 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use clap::ValueEnum;
 use serde::Serialize;
+use serde_json::Error as SerdeError;
 use std::fmt;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -14,6 +15,48 @@ pub mod kalshi;
 pub mod manifold;
 pub mod metaculus;
 pub mod polymarket;
+
+/// Standardization Errors
+#[derive(Debug)]
+pub enum MarketError {
+    NotAMarket,
+    MarketStillActive,
+    MarketCancelled,
+    MarketTypeNotImplemented(String),
+    NoMarketTrades,
+    InvalidMarketTrades(String),
+    DeserializationError(SerdeError),
+    DataInvalid(String),
+    ProcessingError(String),
+}
+pub type MarketResult<T> = Result<T, MarketError>;
+impl std::error::Error for MarketError {}
+impl fmt::Display for MarketError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MarketError::NotAMarket => write!(f, "Item is not a market."),
+            MarketError::MarketStillActive => write!(f, "Market is still active."),
+            MarketError::MarketCancelled => write!(f, "Market has been cancelled."),
+            MarketError::MarketTypeNotImplemented(market_type) => {
+                write!(f, "Market type not implemented: {}", market_type)
+            }
+            MarketError::NoMarketTrades => write!(f, "Market has no trades."),
+            MarketError::InvalidMarketTrades(msg) => {
+                write!(f, "Error processing market trades: {}", msg)
+            }
+            MarketError::DeserializationError(e) => write!(f, "Failed to deserialize item: {}", e),
+            MarketError::DataInvalid(msg) => {
+                write!(f, "Platform data invalid: {}", msg)
+            }
+            MarketError::ProcessingError(msg) => write!(f, "Error processing market data: {}", msg),
+        }
+    }
+}
+impl From<SerdeError> for MarketError {
+    fn from(error: SerdeError) -> Self {
+        MarketError::DeserializationError(error)
+    }
+}
 
 /// Supported platforms.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, ValueEnum)]
@@ -167,16 +210,38 @@ impl Platform {
 
     /// Call each platform's standardize function.
     pub fn standardize(&self, input_unsorted: PlatformData) -> Result<Vec<MarketAndProbs>> {
-        let rovm = match input_unsorted {
-            PlatformData::Kalshi(input) => kalshi::standardize(&input)?,
-            PlatformData::Manifold(input) => manifold::standardize(&input)?,
-            PlatformData::Metaculus(input) => metaculus::standardize(&input)?,
-            PlatformData::Polymarket(input) => polymarket::standardize(&input)?,
+        // Call each platform's standardize function
+        let result = match input_unsorted {
+            PlatformData::Kalshi(input) => kalshi::standardize(&input),
+            PlatformData::Manifold(input) => manifold::standardize(&input),
+            PlatformData::Metaculus(input) => metaculus::standardize(&input),
+            PlatformData::Polymarket(input) => polymarket::standardize(&input),
         };
-        // Convert None into empty vec
-        match rovm {
-            Some(market_vec) => Ok(market_vec),
-            None => Ok(Vec::new()),
+
+        // Handle errors based on category
+        match result {
+            Ok(items) => Ok(items),
+            Err(err) => {
+                // Categorize errors by severity
+                match &err {
+                    // Expected/informational errors - just trace log
+                    MarketError::NotAMarket
+                    | MarketError::MarketStillActive
+                    | MarketError::MarketCancelled
+                    | MarketError::NoMarketTrades
+                    | MarketError::MarketTypeNotImplemented(_) => {
+                        log::trace!("{self}: {err}");
+                    }
+
+                    // Actual problems that should be fixed - log as errors
+                    _ => {
+                        log::error!("{self}: {err}");
+                    }
+                }
+
+                // Return empty vector for all error cases
+                Ok(vec![])
+            }
         }
     }
 }

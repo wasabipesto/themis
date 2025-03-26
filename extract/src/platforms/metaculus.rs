@@ -3,10 +3,9 @@
 
 use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Utc};
-use log::error;
 use serde::Deserialize;
 
-use super::{helpers, MarketAndProbs, ProbSegment, StandardMarket};
+use super::{helpers, MarketAndProbs, MarketError, MarketResult, ProbSegment, StandardMarket};
 
 /// This is the container format we used to save items to disk earlier.
 #[derive(Debug, Clone, Deserialize)]
@@ -266,14 +265,13 @@ pub struct MetaculusInfo {
     pub resolution_set_time: Option<DateTime<Utc>>,
 }
 
-/// Convert data pulled from the API into a standardized market item.
-/// Returns Error if there were any actual problems with the processing.
-/// Returns None if the market was invalid in an expected way.
-/// Otherwise, returns a list of markets with probabilities.
-pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>> {
+/// Convert data pulled from the API into a standardized market item or an error.
+/// Note: This is not a 1:1 conversion because some inputs contain multiple
+/// discrete markets, and each of those have their own histories.
+pub fn standardize(input: &MetaculusData) -> MarketResult<Vec<MarketAndProbs>> {
     // Skip markets that have not resolved
     if !input.details.resolved || input.details.status != MetaculusStatus::Resolved {
-        return Ok(None);
+        return Err(MarketError::MarketStillActive);
     }
 
     // Standard platform information.
@@ -299,18 +297,19 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
                 0,
                 &input.details.actual_close_time,
             )
-            .with_context(|| format!("Error building probability segments. ID: {market_id}"))?;
+            .with_context(|| format!("Error building probability segments. ID: {market_id}"))
+            .map_err(|e| MarketError::ProcessingError(e.to_string()))?;
             if probs.is_empty() {
-                return Ok(None);
+                return Err(MarketError::NoMarketTrades);
             }
 
             // Validate probability segments and collate into daily prob segments.
             if let Err(e) = helpers::validate_prob_segments(&probs) {
-                log::error!("Error validating probability segments. ID: {market_id} Error: {e}");
-                return Ok(None);
+                return Err(MarketError::InvalidMarketTrades(e.to_string()));
             }
             let daily_probabilities =
-                helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)?;
+                helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)
+                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?;
 
             // We only consider the market to be open while there are actual probabilities.
             let start = probs.first().unwrap().start;
@@ -320,11 +319,12 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
             let resolution = match resolution {
                 Some(MetaculusResolution::Yes) => 1.0,
                 Some(MetaculusResolution::No) => 0.0,
-                Some(MetaculusResolution::Ambiguous) => return Ok(None),
-                Some(MetaculusResolution::Annulled) => return Ok(None),
+                Some(MetaculusResolution::Ambiguous) => return Err(MarketError::MarketCancelled),
+                Some(MetaculusResolution::Annulled) => return Err(MarketError::MarketCancelled),
                 None => {
-                    error!("Resolved market {market_id} had no resolution value.");
-                    return Ok(None);
+                    return Err(MarketError::DataInvalid(
+                        "Market is resolved but missing resolution value.".to_string(),
+                    ))
                 }
             };
 
@@ -345,16 +345,19 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
                 close_datetime: end,
                 traders_count: Some(input.details.nr_forecasters),
                 volume_usd: None, // Metaculus does not use volume.
-                duration_days: helpers::get_market_duration(start, end)?,
+                duration_days: helpers::get_market_duration(start, end)
+                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
                 category: None, // TODO
-                prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
-                prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)?,
+                prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)
+                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
+                prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)
+                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
                 resolution,
             };
-            Ok(Some(vec![MarketAndProbs {
+            Ok(vec![MarketAndProbs {
                 market,
                 daily_probabilities,
-            }]))
+            }])
         }
         // TODO: Implement other types
         Some(MetaculusQuestion::Numeric {
@@ -363,14 +366,18 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
             fine_print: _,
             aggregations: _,
             resolution: _,
-        }) => Ok(None),
+        }) => Err(MarketError::MarketTypeNotImplemented(
+            "Metaculus::Numeric".to_string(),
+        )),
         Some(MetaculusQuestion::Date {
             description: _,
             resolution_criteria: _,
             fine_print: _,
             aggregations: _,
             resolution: _,
-        }) => Ok(None),
+        }) => Err(MarketError::MarketTypeNotImplemented(
+            "Metaculus::Date".to_string(),
+        )),
         Some(MetaculusQuestion::MultipleChoice {
             description,
             resolution_criteria,
@@ -389,12 +396,16 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
             // Get the resolution value.
             let resolved_option = match resolution {
                 Some(res) => res,
-                None => return Err(anyhow!("Multiple choice question lacks resolution value")),
+                None => {
+                    return Err(MarketError::DataInvalid(
+                        "Multiple choice question lacks resolution value".to_string(),
+                    ))
+                }
             };
 
             // Skip if resolution is annulled.
             if resolved_option == "annulled" {
-                return Ok(None);
+                return Err(MarketError::MarketCancelled);
             }
 
             // Append the tracked outcome to the market title so we know which side we're tracking.
@@ -405,7 +416,10 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
                 .iter()
                 .position(|option| option == resolved_option)
                 .ok_or_else(|| {
-                    anyhow!("Multiple choice resolution {resolved_option} not found in options.")
+                    MarketError::DataInvalid(
+                        "Multiple choice resolution {resolved_option} not found in options."
+                            .to_string(),
+                    )
                 })?;
 
             // Get probability segments. If there are none then skip.
@@ -416,18 +430,18 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
                 index,
                 &input.details.actual_close_time,
             )
-            .with_context(|| format!("Error building probability segments. ID: {market_id}"))?;
+            .map_err(|e| MarketError::ProcessingError(e.to_string()))?;
             if probs.is_empty() {
-                return Ok(None);
+                return Err(MarketError::NoMarketTrades);
             }
 
             // Validate probability segments and collate into daily prob segments.
             if let Err(e) = helpers::validate_prob_segments(&probs) {
-                log::error!("Error validating probability segments. ID: {market_id} Error: {e}");
-                return Ok(None);
+                return Err(MarketError::InvalidMarketTrades(e.to_string()));
             }
             let daily_probabilities =
-                helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)?;
+                helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)
+                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?;
 
             // We only consider the market to be open while there are actual probabilities.
             let start = probs.first().unwrap().start;
@@ -450,16 +464,19 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
                 close_datetime: end,
                 traders_count: Some(input.details.nr_forecasters),
                 volume_usd: None, // Metaculus does not use volume.
-                duration_days: helpers::get_market_duration(start, end)?,
+                duration_days: helpers::get_market_duration(start, end)
+                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
                 category: None, // TODO
-                prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
-                prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)?,
+                prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)
+                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
+                prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)
+                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
                 resolution: resolution_value,
             };
-            Ok(Some(vec![MarketAndProbs {
+            Ok(vec![MarketAndProbs {
                 market,
                 daily_probabilities,
-            }]))
+            }])
         }
         Some(MetaculusQuestion::Conditional {
             description: _,
@@ -467,9 +484,12 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
             fine_print: _,
             resolution: _,
             aggregations: _,
-        }) => Ok(None),
-        // TODO: Implement group of questions.
-        None => Ok(None),
+        }) => Err(MarketError::MarketTypeNotImplemented(
+            "Metaculus::Conditional".to_string(),
+        )),
+        None => Err(MarketError::MarketTypeNotImplemented(
+            "Metaculus::GroupOfQuestions".to_string(),
+        )),
     }
 }
 

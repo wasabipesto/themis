@@ -3,7 +3,7 @@
 use super::{DailyProbability, ProbSegment};
 use anyhow::{Context, Result};
 use chrono::{DateTime, Duration, TimeZone, Utc};
-use log::{debug, error};
+use log::{debug, error, warn};
 
 /// Gets the number of calendar days covered (in UTC) by start and end,
 /// NOT the number of days from the start time to the end time.
@@ -121,7 +121,7 @@ pub fn get_daily_probabilities(
     platform_slug: &str,
 ) -> Result<Vec<DailyProbability>> {
     if probs.is_empty() {
-        debug!("No probability segments provided for daily probability calculation");
+        warn!("No probability segments provided for daily probability calculation");
         return Ok(vec![]);
     }
 
