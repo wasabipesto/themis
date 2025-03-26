@@ -149,15 +149,16 @@ impl PlatformHandler for Platform {
             .filter(|id| !data_ids.contains(*id))
             .cloned()
             .collect();
+        let num_to_download = ids_to_download.len();
 
-        // check if anything needs ot be downloaded
-        if ids_to_download.is_empty() {
+        // check if anything needs to be downloaded
+        if num_to_download == 0 {
             info!("{self}: All {} items already downloaded.", data_ids.len());
         } else {
             info!(
                 "{self}: Starting data download: {} downloaded, {} pending",
                 data_ids.len(),
-                ids_to_download.len()
+                num_to_download
             );
             if let Err(err) = match self {
                 Platform::Kalshi => {
@@ -176,7 +177,29 @@ impl PlatformHandler for Platform {
                 error!("{self}: Error downloading data: {}", err);
                 panic!();
             }
-            info!("{self}: All {} items downloaded", ids_to_download.len());
+            debug!("{self}: Main download task complete.");
+
+            // confirm how many we actually got
+            debug!("{self}: Checking data on disk.");
+            let downloaded_ids = load_data_ids(&data_file_path).unwrap();
+            let num_downloaded = ids_to_download
+                .iter()
+                .filter(|id| downloaded_ids.contains(*id))
+                .count();
+            if num_downloaded == num_to_download {
+                info!("{self}: All {} items downloaded", num_to_download);
+            } else {
+                let percentage = if num_to_download > 0 {
+                    (num_downloaded as f64 / num_to_download as f64) * 100.0
+                } else {
+                    0.0
+                };
+                info!(
+                    "{self}: {} out of {} items downloaded ({:.1}%)",
+                    num_downloaded, num_to_download, percentage
+                );
+                info!("Re-run the download program to retry the failed items.")
+            }
         }
     }
 }
