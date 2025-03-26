@@ -101,7 +101,7 @@ pub enum MetaculusQuestion {
         resolution_criteria: String,
         fine_print: String,
         aggregations: MetaculusAggregationSeries,
-        /// Can be a number (stringified), TODO for others
+        /// Can be a number (stringified) or "annulled"
         resolution: Option<String>,
     },
     /// Resolves to a date in a specified range(?).
@@ -123,7 +123,7 @@ pub enum MetaculusQuestion {
         aggregations: MetaculusAggregationSeries,
         /// Possible resolution options.
         options: Vec<String>,
-        /// The resolved option. Must be one of `options` (TODO: test that)
+        /// The resolved option. Must be one of `options` or "annulled"
         resolution: Option<String>,
     },
     /// TODO

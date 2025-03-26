@@ -149,6 +149,8 @@ just db-curl "daily_probabilities?select=count"
 
 You should see a few sample markets and data points, with total counts for each.
 
+The extract tool is designed to be safe to run multiple times. It will only overwrite items in the market table, and it will update items if they already exist. You can even run it while the download is in-progress to extract what's available.
+
 ## Step 4. Creating and processing groups
 
 TODO: Incomplete.
