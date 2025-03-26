@@ -4,7 +4,6 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use clap::ValueEnum;
 use serde::Serialize;
-use serde_json::Error as SerdeError;
 use std::fmt;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -19,42 +18,39 @@ pub mod polymarket;
 /// Standardization Errors
 #[derive(Debug)]
 pub enum MarketError {
-    NotAMarket,
-    MarketStillActive,
-    MarketCancelled,
-    MarketTypeNotImplemented(String),
-    NoMarketTrades,
-    InvalidMarketTrades(String),
-    DeserializationError(SerdeError),
-    DataInvalid(String),
-    ProcessingError(String),
+    NotAMarket(String),
+    MarketNotResolved(String),
+    MarketCancelled(String),
+    NoMarketTrades(String),
+    InvalidMarketTrades(String, String),
+    DataInvalid(String, String),
+    ProcessingError(String, String),
+    MarketTypeNotImplemented(String, String),
 }
 pub type MarketResult<T> = Result<T, MarketError>;
 impl std::error::Error for MarketError {}
 impl fmt::Display for MarketError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            MarketError::NotAMarket => write!(f, "Item is not a market."),
-            MarketError::MarketStillActive => write!(f, "Market is still active."),
-            MarketError::MarketCancelled => write!(f, "Market has been cancelled."),
-            MarketError::MarketTypeNotImplemented(market_type) => {
-                write!(f, "Market type not implemented: {}", market_type)
+            MarketError::NotAMarket(id) => write!(f, "{}: Item is not a market.", id),
+            MarketError::MarketNotResolved(id) => write!(f, "{}: Market is not resolved.", id),
+            MarketError::MarketCancelled(id) => {
+                write!(f, "{}: Market has been cancelled.", id)
             }
-            MarketError::NoMarketTrades => write!(f, "Market has no trades."),
-            MarketError::InvalidMarketTrades(msg) => {
-                write!(f, "Error processing market trades: {}", msg)
+            MarketError::NoMarketTrades(id) => write!(f, "Market has no trades (ID: {}).", id),
+            MarketError::InvalidMarketTrades(id, msg) => {
+                write!(f, "{}: Error processing market trades: {}", id, msg)
             }
-            MarketError::DeserializationError(e) => write!(f, "Failed to deserialize item: {}", e),
-            MarketError::DataInvalid(msg) => {
-                write!(f, "Platform data invalid: {}", msg)
+            MarketError::DataInvalid(id, msg) => {
+                write!(f, "{}: Platform data invalid: {}", id, msg)
             }
-            MarketError::ProcessingError(msg) => write!(f, "Error processing market data: {}", msg),
+            MarketError::ProcessingError(id, msg) => {
+                write!(f, "{}: Error processing market data: {}", id, msg)
+            }
+            MarketError::MarketTypeNotImplemented(id, market_type) => {
+                write!(f, "{}: Market type not implemented: {}", id, market_type)
+            }
         }
-    }
-}
-impl From<SerdeError> for MarketError {
-    fn from(error: SerdeError) -> Self {
-        MarketError::DeserializationError(error)
     }
 }
 
@@ -225,17 +221,17 @@ impl Platform {
                 // Categorize errors by severity
                 match &err {
                     // Expected/informational errors - just trace log
-                    MarketError::NotAMarket
-                    | MarketError::MarketStillActive
-                    | MarketError::MarketCancelled
-                    | MarketError::NoMarketTrades
-                    | MarketError::MarketTypeNotImplemented(_) => {
-                        log::trace!("{self}: {err}");
+                    MarketError::NotAMarket(_)
+                    | MarketError::MarketNotResolved(_)
+                    | MarketError::MarketCancelled(_)
+                    | MarketError::NoMarketTrades(_)
+                    | MarketError::MarketTypeNotImplemented(_, _) => {
+                        log::trace!("{err}");
                     }
 
                     // Actual problems that should be fixed - log as errors
                     _ => {
-                        log::error!("{self}: {err}");
+                        log::error!("{err}");
                     }
                 }
 

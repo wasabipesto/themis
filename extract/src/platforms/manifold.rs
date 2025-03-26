@@ -269,15 +269,17 @@ pub struct ManifoldBet {
 /// Note: This is not a 1:1 conversion because some inputs contain multiple
 /// discrete markets, and each of those have their own histories.
 pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
+    // Get market ID. Construct from platform slug and ID within platform.
     let platform_slug = "manifold".to_string();
+    let market_id = format!("{}:{}", platform_slug, input.full_market.id);
 
     // Skip markets that have not resolved
     if !input.full_market.is_resolved {
-        return Err(MarketError::MarketStillActive);
+        return Err(MarketError::MarketNotResolved(market_id));
     }
     // Skip markets that were canceled
     if input.full_market.resolution == Some("CANCEL".to_string()) {
-        return Err(MarketError::MarketCancelled);
+        return Err(MarketError::MarketCancelled(market_id.to_owned()));
     }
 
     // Reference full market response
@@ -287,22 +289,23 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
     match market.outcome_type {
         // Typical single binary market
         ManifoldOutcomeType::Binary => {
-            // Get market ID. Construct from platform slug and ID within platform.
-            let market_id = format!("{}:{}", platform_slug, market.id);
-
             // Get probability segments. If there are none then skip.
             let probs = build_prob_segments(&input.bets);
             if probs.is_empty() {
-                return Err(MarketError::NoMarketTrades);
+                return Err(MarketError::NoMarketTrades(market_id.to_owned()));
             }
 
             // Validate probability segments and collate into daily prob segments.
             if let Err(e) = helpers::validate_prob_segments(&probs) {
-                return Err(MarketError::InvalidMarketTrades(e.to_string()));
+                return Err(MarketError::InvalidMarketTrades(
+                    market_id.to_owned(),
+                    e.to_string(),
+                ));
             }
             let daily_probabilities =
-                helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)
-                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?;
+                helpers::get_daily_probabilities(&probs, &market_id, &platform_slug).map_err(
+                    |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
+                )?;
 
             // We only consider the market to be open while there are actual probabilities.
             let start = probs.first().unwrap().start;
@@ -320,24 +323,28 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                 close_datetime: end,
                 traders_count: Some(get_traders_count(&input.bets)),
                 volume_usd: Some(market.volume / MANIFOLD_EXCHANGE_RATE),
-                duration_days: helpers::get_market_duration(start, end)
-                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
+                duration_days: helpers::get_market_duration(start, end).map_err(|e| {
+                    MarketError::ProcessingError(market_id.to_owned(), e.to_string())
+                })?,
                 category: get_category(&market.group_slugs),
-                prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)
-                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
-                prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)
-                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
+                prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end).map_err(
+                    |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
+                )?,
+                prob_time_avg: helpers::get_prob_time_avg(&probs, start, end).map_err(|e| {
+                    MarketError::ProcessingError(market_id.to_owned(), e.to_string())
+                })?,
                 resolution: match get_resolution_value_binary(
                     &market.resolution,
                     &market.resolution_probability,
                     true,
                 ) {
                     Ok(Some(res)) => res,
-                    Ok(None) => return Err(MarketError::MarketCancelled),
+                    Ok(None) => return Err(MarketError::MarketCancelled(market_id.to_owned())),
                     Err(e) => {
-                        return Err(MarketError::ProcessingError(format!(
-                            "Failed to get resolution value: {e}"
-                        )));
+                        return Err(MarketError::ProcessingError(
+                            market_id.to_owned(),
+                            e.to_string(),
+                        ));
                     }
                 },
             };
@@ -352,11 +359,9 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                 // Market has many potential outcomes but prices are automatically arbitraged
                 // in order to keep everything summed to 100%.
 
-                // Get market ID. Construct from platform slug and ID within platform.
-                let market_id = format!("{}:{}", platform_slug, market.id);
-
                 // Make sure answers are present
                 let answers = market.answers.to_owned().ok_or(MarketError::DataInvalid(
+                    market_id.to_owned(),
                     "Multiple choice market does not have answers.".to_string(),
                 ))?;
 
@@ -367,19 +372,21 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                         if resolution == "CHOOSE_MULTIPLE" || resolution == "MKT" {
                             // This is currently not implemented. I'm not exactly sure how we would do this.
                             return Err(MarketError::MarketTypeNotImplemented(
+                                market_id.to_owned(),
                                 "Manifold::MultipleChoice::ResolvedToMultiple".to_string(),
                             ));
                         } else {
                             answers
                                 .iter()
                                 .find(|answer| &answer.id == resolution)
-                                .ok_or(MarketError::DataInvalid(
+                                .ok_or(MarketError::DataInvalid(market_id.to_owned(),
                                 "Market {market_id}: No answer found matching the resolution ID".to_string()))?
                                 .to_owned()
                         }
                     }
                     None => {
                         return Err(MarketError::DataInvalid(
+                            market_id.to_owned(),
                             "Market lacks resolution value.".to_string(),
                         ))
                     }
@@ -403,16 +410,20 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                 // Get probability segments. If there are none then skip.
                 let probs = build_prob_segments(&bets);
                 if probs.is_empty() {
-                    return Err(MarketError::NoMarketTrades);
+                    return Err(MarketError::NoMarketTrades(market_id.to_owned()));
                 }
 
                 // Validate probability segments and collate into daily prob segments.
                 if let Err(e) = helpers::validate_prob_segments(&probs) {
-                    return Err(MarketError::InvalidMarketTrades(e.to_string()));
+                    return Err(MarketError::InvalidMarketTrades(
+                        market_id.to_owned(),
+                        e.to_string(),
+                    ));
                 }
                 let daily_probabilities =
-                    helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)
-                        .map_err(|e| MarketError::ProcessingError(e.to_string()))?;
+                    helpers::get_daily_probabilities(&probs, &market_id, &platform_slug).map_err(
+                        |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
+                    )?;
 
                 // We only consider the market to be open while there are actual probabilities.
                 let start = probs.first().unwrap().start;
@@ -420,7 +431,7 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
 
                 // Build standard market item.
                 let market = StandardMarket {
-                    id: market_id,
+                    id: market_id.to_owned(),
                     title,
                     platform_slug,
                     platform_name: "Manifold".to_string(),
@@ -430,13 +441,16 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                     close_datetime: end,
                     traders_count: Some(get_traders_count(&bets)),
                     volume_usd: Some(market.volume / MANIFOLD_EXCHANGE_RATE),
-                    duration_days: helpers::get_market_duration(start, end)
-                        .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
+                    duration_days: helpers::get_market_duration(start, end).map_err(|e| {
+                        MarketError::ProcessingError(market_id.to_owned(), e.to_string())
+                    })?,
                     category: get_category(&market.group_slugs),
-                    prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)
-                        .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
-                    prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)
-                        .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
+                    prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end).map_err(
+                        |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
+                    )?,
+                    prob_time_avg: helpers::get_prob_time_avg(&probs, start, end).map_err(|e| {
+                        MarketError::ProcessingError(market_id.to_owned(), e.to_string())
+                    })?,
                     resolution,
                 };
                 Ok(vec![MarketAndProbs {
@@ -450,12 +464,13 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
 
                 // Make sure answers are present
                 let answers = market.answers.to_owned().ok_or(MarketError::DataInvalid(
+                    market_id.to_owned(),
                     "Multiple choice market does not have answers".to_string(),
                 ))?;
 
                 let mut result = Vec::new();
                 for answer in answers {
-                    // Get market ID. Construct from platform slug, market ID within platform, and answer ID within market.
+                    // Override market ID. Construct from platform slug, market ID within platform, and answer ID within market.
                     let market_id = format!("{}:{}:{}", &platform_slug, market.id, answer.id);
 
                     // Determine the resolution
@@ -465,11 +480,12 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                         false,
                     ) {
                         Ok(Some(res)) => res,
-                        Ok(None) => return Err(MarketError::MarketCancelled),
+                        Ok(None) => return Err(MarketError::MarketCancelled(market_id.to_owned())),
                         Err(e) => {
-                            return Err(MarketError::ProcessingError(format!(
-                                "Failed to get resolution value: {e}"
-                            )));
+                            return Err(MarketError::ProcessingError(
+                                market_id.to_owned(),
+                                e.to_string(),
+                            ));
                         }
                     };
 
@@ -487,16 +503,21 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                     // Get probability segments. If there are none then skip.
                     let probs = build_prob_segments(&bets);
                     if probs.is_empty() {
-                        return Err(MarketError::NoMarketTrades);
+                        return Err(MarketError::NoMarketTrades(market_id.to_owned()));
                     }
 
                     // Validate probability segments and collate into daily prob segments.
                     if let Err(e) = helpers::validate_prob_segments(&probs) {
-                        return Err(MarketError::InvalidMarketTrades(e.to_string()));
+                        return Err(MarketError::InvalidMarketTrades(
+                            market_id.to_owned(),
+                            e.to_string(),
+                        ));
                     }
                     let daily_probabilities =
                         helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)
-                            .map_err(|e| MarketError::ProcessingError(e.to_string()))?;
+                            .map_err(|e| {
+                                MarketError::ProcessingError(market_id.to_owned(), e.to_string())
+                            })?;
 
                     // We only consider the market to be open while there are actual probabilities.
                     let start = probs.first().unwrap().start;
@@ -508,7 +529,7 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
 
                     // Build standard market item.
                     let market = StandardMarket {
-                        id: market_id,
+                        id: market_id.to_owned(),
                         title,
                         platform_slug: platform_slug.to_owned(),
                         platform_name: "Manifold".to_string(),
@@ -518,13 +539,17 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                         close_datetime: end,
                         traders_count: Some(get_traders_count(&bets)),
                         volume_usd: Some(volume_usd),
-                        duration_days: helpers::get_market_duration(start, end)
-                            .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
+                        duration_days: helpers::get_market_duration(start, end).map_err(|e| {
+                            MarketError::ProcessingError(market_id.to_owned(), e.to_string())
+                        })?,
                         category: get_category(&market.group_slugs),
                         prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)
-                            .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
-                        prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)
-                            .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
+                            .map_err(|e| {
+                                MarketError::ProcessingError(market_id.to_owned(), e.to_string())
+                            })?,
+                        prob_time_avg: helpers::get_prob_time_avg(&probs, start, end).map_err(
+                            |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
+                        )?,
                         resolution,
                     };
                     result.push(MarketAndProbs {
@@ -535,6 +560,7 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                 Ok(result)
             }
             None => Err(MarketError::DataInvalid(
+                market_id.to_owned(),
                 "Market is multiple choice but should_answers_sum_to_one is not present."
                     .to_string(),
             )),
@@ -542,22 +568,26 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
         // Various ways of implementing numeric markets
         // Not urgent to implement but would like to have for the future
         ManifoldOutcomeType::PseudoNumeric => Err(MarketError::MarketTypeNotImplemented(
+            market_id.to_owned(),
             "Manifold::PseudoNumeric".to_string(),
         )),
         ManifoldOutcomeType::Number => Err(MarketError::MarketTypeNotImplemented(
+            market_id.to_owned(),
             "Manifold::Number".to_string(),
         )),
         ManifoldOutcomeType::MultiNumeric => Err(MarketError::MarketTypeNotImplemented(
+            market_id.to_owned(),
             "Manifold::MultiNumeric".to_string(),
         )),
         ManifoldOutcomeType::Date => Err(MarketError::MarketTypeNotImplemented(
+            market_id.to_owned(),
             "Manifold::Date".to_string(),
         )),
         // The remaining types are not actual markets - skip them
-        ManifoldOutcomeType::Stonk => Err(MarketError::NotAMarket),
-        ManifoldOutcomeType::BountiedQuestion => Err(MarketError::NotAMarket),
-        ManifoldOutcomeType::QuadraticFunding => Err(MarketError::NotAMarket),
-        ManifoldOutcomeType::Poll => Err(MarketError::NotAMarket),
+        ManifoldOutcomeType::Stonk => Err(MarketError::NotAMarket(market_id.to_owned())),
+        ManifoldOutcomeType::BountiedQuestion => Err(MarketError::NotAMarket(market_id.to_owned())),
+        ManifoldOutcomeType::QuadraticFunding => Err(MarketError::NotAMarket(market_id.to_owned())),
+        ManifoldOutcomeType::Poll => Err(MarketError::NotAMarket(market_id.to_owned())),
     }
 }
 

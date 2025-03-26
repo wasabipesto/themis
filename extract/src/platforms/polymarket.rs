@@ -124,27 +124,27 @@ pub struct PolymarketGammaMarket {
 /// Note: This is not a 1:1 conversion because some inputs contain multiple
 /// discrete markets, and each of those have their own histories.
 pub fn standardize(input: &PolymarketData) -> MarketResult<Vec<MarketAndProbs>> {
-    // Only process closed markets
-    if !input.market.closed {
-        return Err(MarketError::MarketStillActive);
-    }
-
     // Get market ID. Construct from platform slug and ID within platform.
     let platform_slug = "polymarket".to_string();
     let market_id = format!("{}:{}", platform_slug, input.market.question_id);
 
+    // Only process closed markets
+    if !input.market.closed {
+        return Err(MarketError::MarketNotResolved(market_id.to_owned()));
+    }
+
     // Get probability segments. If there are none then skip.
     let probs = build_prob_segments(&input.prices_history);
     if probs.is_empty() {
-        return Err(MarketError::NoMarketTrades);
+        return Err(MarketError::NoMarketTrades(market_id.to_owned()));
     }
 
     // Validate probability segments and collate into daily prob segments.
     if let Err(e) = helpers::validate_prob_segments(&probs) {
-        return Err(MarketError::InvalidMarketTrades(e.to_string()));
+        return Err(MarketError::InvalidMarketTrades(market_id, e.to_string()));
     }
     let daily_probabilities = helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)
-        .map_err(|e| MarketError::ProcessingError(e.to_string()))?;
+        .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?;
 
     // We only consider the market to be open while there are actual probabilities.
     let start = probs.first().unwrap().start;
@@ -153,9 +153,10 @@ pub fn standardize(input: &PolymarketData) -> MarketResult<Vec<MarketAndProbs>> 
     // Sanity check for number of tokens (should always be 2).
     let num_tokens = input.market.tokens.len();
     if num_tokens != 2 {
-        return Err(MarketError::DataInvalid(format!(
-            "Expected 2 tokens, found {num_tokens} tokens! ID: {market_id}"
-        )));
+        return Err(MarketError::DataInvalid(
+            market_id.to_owned(),
+            "Invalid number of tokens (expected 2).".to_string(),
+        ));
     }
 
     // Get the token that we tracked in order to determine which outcome resolution to pick.
@@ -166,10 +167,10 @@ pub fn standardize(input: &PolymarketData) -> MarketResult<Vec<MarketAndProbs>> 
         .find(|t| t.token_id == input.prices_history_token)
         .cloned()
         .ok_or_else(|| {
-            MarketError::DataInvalid(format!(
-                "Tracked price history token ID {} not found in market ID: {market_id}",
-                input.prices_history_token
-            ))
+            MarketError::DataInvalid(
+                market_id.to_owned(),
+                "Tracked price history token not found in market".to_string(),
+            )
         })?;
 
     // Check number of winners. For one winner, check the token status. For two winners = 50/50.
@@ -177,7 +178,7 @@ pub fn standardize(input: &PolymarketData) -> MarketResult<Vec<MarketAndProbs>> 
     let resolution = match num_winners {
         0 => {
             // Market not yet finalized
-            return Err(MarketError::MarketStillActive);
+            return Err(MarketError::MarketNotResolved(market_id.to_owned()));
         }
         1 => {
             // Normal case, check if our token won
@@ -193,18 +194,20 @@ pub fn standardize(input: &PolymarketData) -> MarketResult<Vec<MarketAndProbs>> 
         }
         _ => {
             // More than two winners (not possible)
-            return Err(MarketError::DataInvalid(format!(
-                "Expected 1 or 2 winning tokens, found {num_winners} winning tokens!"
-            )));
+            return Err(MarketError::DataInvalid(
+                market_id.to_owned(),
+                "Invalid number of winning tokens (expected 1 or 2)".to_string(),
+            ));
         }
     };
 
     // Sanity check for token prices (should always sum to 1).
     let sum_prices: f32 = input.market.tokens.iter().map(|t| t.price).sum();
     if !(0.99..1.01).contains(&sum_prices) {
-        return Err(MarketError::DataInvalid(format!(
-            "Expected token prices to sum to 1.0, found they summed to {sum_prices}!"
-        )));
+        return Err(MarketError::DataInvalid(
+            market_id.to_owned(),
+            "Invalid token price sum (expected 1)".to_string(),
+        ));
     }
 
     // Append the tracked outcome to the market title so we know which side we're tracking.
@@ -222,7 +225,7 @@ pub fn standardize(input: &PolymarketData) -> MarketResult<Vec<MarketAndProbs>> 
 
     // Build standard market item.
     let market = StandardMarket {
-        id: market_id,
+        id: market_id.to_owned(),
         title,
         platform_slug,
         platform_name: "Polymarket".to_string(),
@@ -233,12 +236,12 @@ pub fn standardize(input: &PolymarketData) -> MarketResult<Vec<MarketAndProbs>> 
         traders_count: None,
         volume_usd: input.market_gamma.as_ref().map(|item| item.volume_num),
         duration_days: helpers::get_market_duration(start, end)
-            .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
+            .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?,
         category: get_category(&input.market.tags),
         prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)
-            .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
+            .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?,
         prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)
-            .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
+            .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?,
         resolution,
     };
     Ok(vec![MarketAndProbs {

@@ -190,33 +190,34 @@ pub struct KalshiHistoryItem {
 /// Note: This is not a 1:1 conversion because some inputs contain multiple
 /// discrete markets, and each of those have their own histories.
 pub fn standardize(input: &KalshiData) -> MarketResult<Vec<MarketAndProbs>> {
+    // Get market ID. Construct from platform slug and ID within platform.
+    let platform_slug = "kalshi".to_string();
+    let market_id = format!("{}:{}", platform_slug, input.market.ticker);
+
     // Only process finalized markets
     match input.market.status {
         KalshiMarketStatus::Finalized => {}
-        _ => return Err(MarketError::MarketStillActive),
+        _ => return Err(MarketError::MarketNotResolved(market_id)),
     }
 
     // Convert based on market type
     match input.market.market_type {
         // Currently only binary markets exist
         KalshiMarketType::Binary => {
-            // Get market ID. Construct from platform slug and ID within platform.
-            let platform_slug = "kalshi".to_string();
-            let market_id = format!("{}:{}", platform_slug, input.market.ticker);
-
             // Get probability segments. If there are none then skip.
             let probs = build_prob_segments(&input.history, &input.market.close_time);
             if probs.is_empty() {
-                return Err(MarketError::NoMarketTrades);
+                return Err(MarketError::NoMarketTrades(market_id));
             }
 
             // Validate probability segments and collate into daily prob segments.
             if let Err(e) = helpers::validate_prob_segments(&probs) {
-                return Err(MarketError::InvalidMarketTrades(e.to_string()));
+                return Err(MarketError::InvalidMarketTrades(market_id, e.to_string()));
             }
             let daily_probabilities =
-                helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)
-                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?;
+                helpers::get_daily_probabilities(&probs, &market_id, &platform_slug).map_err(
+                    |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
+                )?;
 
             // We only consider the market to be open while there are actual probabilities.
             let start = probs.first().unwrap().start;
@@ -224,7 +225,7 @@ pub fn standardize(input: &KalshiData) -> MarketResult<Vec<MarketAndProbs>> {
 
             // Build standard market item.
             let market = StandardMarket {
-                id: market_id,
+                id: market_id.to_owned(),
                 title: input.market.title.clone(),
                 platform_slug,
                 platform_name: "Kalshi".to_string(),
@@ -233,23 +234,27 @@ pub fn standardize(input: &KalshiData) -> MarketResult<Vec<MarketAndProbs>> {
                     input.market.rules_primary.clone(),
                     input.market.rules_secondary.clone(),
                 ),
-                url: get_url(&input.market.ticker)
-                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
+                url: get_url(&input.market.ticker).map_err(|e| {
+                    MarketError::ProcessingError(market_id.to_owned(), e.to_string())
+                })?,
                 open_datetime: start,
                 close_datetime: end,
                 traders_count: None, // Not available in API
                 volume_usd: Some(input.market.volume),
-                duration_days: helpers::get_market_duration(start, end)
-                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
+                duration_days: helpers::get_market_duration(start, end).map_err(|e| {
+                    MarketError::ProcessingError(market_id.to_owned(), e.to_string())
+                })?,
                 category: get_category(&input.market),
-                prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)
-                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
-                prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)
-                    .map_err(|e| MarketError::ProcessingError(e.to_string()))?,
+                prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end).map_err(
+                    |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
+                )?,
+                prob_time_avg: helpers::get_prob_time_avg(&probs, start, end).map_err(|e| {
+                    MarketError::ProcessingError(market_id.to_owned(), e.to_string())
+                })?,
                 resolution: match input.market.result {
                     YesNoBlank::Yes => 1.0,
                     YesNoBlank::No => 0.0,
-                    YesNoBlank::Blank => return Err(MarketError::MarketCancelled),
+                    YesNoBlank::Blank => return Err(MarketError::MarketCancelled(market_id)),
                 },
             };
             Ok(vec![MarketAndProbs {
