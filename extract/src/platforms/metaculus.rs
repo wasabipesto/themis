@@ -121,7 +121,9 @@ pub enum MetaculusQuestion {
         resolution_criteria: String,
         fine_print: String,
         aggregations: MetaculusAggregationSeries,
-        /// TODO
+        /// Possible resolution options.
+        options: Vec<String>,
+        /// The resolved option. Must be one of `options` (TODO: test that)
         resolution: Option<String>,
     },
     /// TODO
@@ -274,7 +276,7 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
         return Ok(None);
     }
 
-    // Standard market information.
+    // Standard platform information.
     let platform_slug = "metaculus".to_string();
 
     // Convert based on market type
@@ -283,16 +285,18 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
             description,
             resolution_criteria,
             fine_print,
-            resolution,
             aggregations,
+            resolution,
         }) => {
             // Get market ID. Construct from platform slug and ID within platform.
             let market_id = format!("{}:{}", platform_slug, input.details.id);
 
             // Get probability segments. If there are none then skip.
             // Using recency_weighted (community prediction) here, may change in the future.
+            // Since this is binary, get the first (and only) prob in the set.
             let probs = build_prob_segments(
                 &aggregations.recency_weighted.history,
+                0,
                 &input.details.actual_close_time,
             )
             .with_context(|| format!("Error building probability segments. ID: {market_id}"))?;
@@ -311,6 +315,18 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
             // We only consider the market to be open while there are actual probabilities.
             let start = probs.first().unwrap().start;
             let end = probs.last().unwrap().end;
+
+            // Get resolution value.
+            let resolution = match resolution {
+                Some(MetaculusResolution::Yes) => 1.0,
+                Some(MetaculusResolution::No) => 0.0,
+                Some(MetaculusResolution::Ambiguous) => return Ok(None),
+                Some(MetaculusResolution::Annulled) => return Ok(None),
+                None => {
+                    error!("Resolved market {market_id} had no resolution value.");
+                    return Ok(None);
+                }
+            };
 
             // Build standard market item.
             let market = StandardMarket {
@@ -333,16 +349,7 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
                 category: None, // TODO
                 prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
                 prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)?,
-                resolution: match resolution {
-                    Some(MetaculusResolution::Yes) => 1.0,
-                    Some(MetaculusResolution::No) => 0.0,
-                    Some(MetaculusResolution::Ambiguous) => return Ok(None),
-                    Some(MetaculusResolution::Annulled) => return Ok(None),
-                    None => {
-                        error!("Resolved market {market_id} had no resolution value.");
-                        return Ok(None);
-                    }
-                },
+                resolution,
             };
             Ok(Some(vec![MarketAndProbs {
                 market,
@@ -354,23 +361,106 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
             description: _,
             resolution_criteria: _,
             fine_print: _,
-            resolution: _,
             aggregations: _,
+            resolution: _,
         }) => Ok(None),
         Some(MetaculusQuestion::Date {
             description: _,
             resolution_criteria: _,
             fine_print: _,
-            resolution: _,
             aggregations: _,
+            resolution: _,
         }) => Ok(None),
         Some(MetaculusQuestion::MultipleChoice {
-            description: _,
-            resolution_criteria: _,
-            fine_print: _,
-            resolution: _,
-            aggregations: _,
-        }) => Ok(None),
+            description,
+            resolution_criteria,
+            fine_print,
+            aggregations,
+            options,
+            resolution,
+        }) => {
+            // Get market ID. Construct from platform slug and ID within platform.
+            let market_id = format!("{}:{}", platform_slug, input.details.id);
+
+            // Since we only allow markets where one answer is selected and only refer to the
+            // winning answer, the resolution will always be YES.
+            let resolution_value = 1.0;
+
+            // Get the resolution value.
+            let resolved_option = match resolution {
+                Some(res) => res,
+                None => return Err(anyhow!("Multiple choice question lacks resolution value")),
+            };
+
+            // Skip if resolution is annulled.
+            if resolved_option == "annulled" {
+                return Ok(None);
+            }
+
+            // Append the tracked outcome to the market title so we know which side we're tracking.
+            let title = format!("{} | {}", input.details.title, resolved_option);
+
+            // Get index of resolved option for prob lookup.
+            let index = options
+                .iter()
+                .position(|option| option == resolved_option)
+                .ok_or_else(|| {
+                    anyhow!("Multiple choice resolution {resolved_option} not found in options.")
+                })?;
+
+            // Get probability segments. If there are none then skip.
+            // Using recency_weighted (community prediction) here, may change in the future.
+            // Since this is multiple choice, we need to use the index of the resolved option.
+            let probs = build_prob_segments(
+                &aggregations.recency_weighted.history,
+                index,
+                &input.details.actual_close_time,
+            )
+            .with_context(|| format!("Error building probability segments. ID: {market_id}"))?;
+            if probs.is_empty() {
+                return Ok(None);
+            }
+
+            // Validate probability segments and collate into daily prob segments.
+            if let Err(e) = helpers::validate_prob_segments(&probs) {
+                log::error!("Error validating probability segments. ID: {market_id} Error: {e}");
+                return Ok(None);
+            }
+            let daily_probabilities =
+                helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)?;
+
+            // We only consider the market to be open while there are actual probabilities.
+            let start = probs.first().unwrap().start;
+            let end = probs.last().unwrap().end;
+
+            // Build standard market item.
+            let market = StandardMarket {
+                id: market_id.clone(),
+                title,
+                platform_slug,
+                platform_name: "Metaculus".to_string(),
+                description: format!(
+                    "{}\n\n{}\n\n{}",
+                    description.clone(),
+                    resolution_criteria.clone(),
+                    fine_print.clone(),
+                ),
+                url: format!("https://www.metaculus.com/questions/{}", input.details.id),
+                open_datetime: start,
+                close_datetime: end,
+                traders_count: Some(input.details.nr_forecasters),
+                volume_usd: None, // Metaculus does not use volume.
+                duration_days: helpers::get_market_duration(start, end)?,
+                category: None, // TODO
+                prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)?,
+                prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)?,
+                resolution: resolution_value,
+            };
+            Ok(Some(vec![MarketAndProbs {
+                market,
+                daily_probabilities,
+            }]))
+        }
         Some(MetaculusQuestion::Conditional {
             description: _,
             resolution_criteria: _,
@@ -386,6 +476,7 @@ pub fn standardize(input: &MetaculusData) -> Result<Option<Vec<MarketAndProbs>>>
 /// Converts Metaculus aggregated history points into standard probability segments.
 pub fn build_prob_segments(
     raw_history: &[MetaculusAggregationHistoryPoint],
+    index: usize,
     actual_close_time: &Option<DateTime<Utc>>,
 ) -> Result<Vec<ProbSegment>> {
     // Sort the history by time.
@@ -434,15 +525,18 @@ pub fn build_prob_segments(
         }
 
         // Get the means list and check it. We'll use the first listed probability.
-        // There is (so far) only ever one per aggregation but there could be more in the future.
+        // For binary markets there is only ever one per aggregation.
+        // For multiple-choice there is one per option, indexed the same as the options.
         let means = item.means.unwrap_or_default();
-        let prob = match means.first() {
-            None => return Err(anyhow!("Aggregation series has no mean.")),
+        let prob = match means.get(index) {
+            None => {
+                return Err(anyhow!(
+                    "Could not get index {index} in means list {:?}.",
+                    means
+                ))
+            }
             Some(prob) => prob.to_owned(),
         };
-        if means.len() > 1 {
-            log::warn!("Aggregation series has multiple means. Using the first one.");
-        }
 
         segments.push(ProbSegment { start, end, prob });
     }
