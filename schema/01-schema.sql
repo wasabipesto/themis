@@ -20,13 +20,10 @@ CREATE TABLE categories (
     slug TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT,
-    parent_slug TEXT,
-    is_parent BOOLEAN DEFAULT false NOT NULL,
     icon TEXT,
     total_markets INTEGER,
     total_traders INTEGER,
-    total_volume DECIMAL,
-    FOREIGN KEY (parent_slug) REFERENCES categories (slug)
+    total_volume DECIMAL
 );
 
 CREATE TABLE questions (

@@ -15,7 +15,7 @@ interface FetchOptions extends RequestInit {
 
 export async function fetchFromAPI(
   endpoint: string,
-  options: FetchOptions = {}
+  options: FetchOptions = {},
 ) {
   const url = `${PGRST_URL}/${endpoint}`;
 
@@ -47,7 +47,7 @@ export async function getItemsSorted(endpoint: string): Promise<any> {
 export async function deleteItem(
   endpoint: string,
   attr: "ID" | "slug",
-  value: string
+  value: string,
 ): Promise<any> {
   return fetchFromAPI(`${endpoint}?${attr}=eq.${value}`, {
     method: "DELETE",
@@ -59,7 +59,7 @@ export async function deleteItem(
 
 export async function getPlatform(slug: string): Promise<Platform> {
   return fetchFromAPI(`platforms?slug=eq.${slug}`).then(
-    (data) => data[0] || null
+    (data) => data[0] || null,
   );
 }
 
@@ -86,7 +86,7 @@ export async function updatePlatform(data: Platform): Promise<Platform> {
 
 export async function getCategory(slug: string): Promise<Category> {
   return fetchFromAPI(`categories?slug=eq.${slug}`).then(
-    (data) => data[0] || null
+    (data) => data[0] || null,
   );
 }
 
@@ -119,15 +119,6 @@ async function completeQuestion(question: Question): Promise<Question> {
   if (category) {
     // Set category_name based on category_slug
     question.category_name = category.name;
-
-    // If category is a child (has a parent_slug), set parent_category information
-    if (category.parent_slug) {
-      const parentCategory = await getCategory(category.parent_slug);
-      if (parentCategory) {
-        question.parent_category_slug = parentCategory.slug;
-        question.parent_category_name = parentCategory.name;
-      }
-    }
   }
 
   return question;
@@ -170,7 +161,7 @@ export async function getMarket(id: string): Promise<Market> {
 
 export async function dismissMarket(
   id: string,
-  level: number
+  level: number,
 ): Promise<Market> {
   return fetchFromAPI(`markets?id=eq.${id}`, {
     method: "PATCH",
@@ -187,7 +178,7 @@ export async function getMarketProbs(id: string): Promise<DailyProbability[]> {
 
 export async function linkMarket(
   marketId: string,
-  questionId: number
+  questionId: number,
 ): Promise<Market> {
   return fetchFromAPI(`markets?id=eq.${marketId}`, {
     method: "PATCH",
@@ -211,7 +202,7 @@ export async function unlinkMarket(data: Market): Promise<Market> {
 
 export async function invertMarketLink(
   marketId: string,
-  invert: boolean
+  invert: boolean,
 ): Promise<Market> {
   return fetchFromAPI(`markets?id=eq.${marketId}`, {
     method: "PATCH",

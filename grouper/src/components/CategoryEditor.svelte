@@ -122,35 +122,8 @@
         name="description"
         rows="3"
         class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
+        >{category.description || ""}</textarea
       >
-        {category.description || ""}
-      </textarea>
-    </div>
-
-    <div class="mb-4">
-      <label for="parent_slug" class="block text-sm font-medium text-text mb-1">
-        Parent Slug
-      </label>
-      <input
-        type="text"
-        id="parent_slug"
-        name="parent_slug"
-        value={category.parent_slug || ""}
-        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
-      />
-    </div>
-
-    <div class="mb-4">
-      <label class="flex items-center">
-        <input
-          type="checkbox"
-          id="is_parent"
-          name="is_parent"
-          checked={category.is_parent || false}
-          class="h-4 w-4 text-blue focus:ring-blue border-gray-300 rounded"
-        />
-        <span class="ml-2 text-sm text-text">Is Parent Category</span>
-      </label>
     </div>
 
     <div class="mb-4">

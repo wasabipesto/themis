@@ -13,7 +13,6 @@ const pgrst_url = "https://data.predictionmetrics.org"; // import.meta.env.PGRST
 const categories = (await fetch(`${pgrst_url}/categories`).then((res) =>
     res.json(),
 )) as Category[];
-const parentCategories = categories.filter((cat) => cat.is_parent);
 
 const platformScores = (await fetch(`${pgrst_url}/platform_scores`).then(
     (res) => res.json(),
@@ -26,7 +25,7 @@ const platformScores = (await fetch(`${pgrst_url}/platform_scores`).then(
     </div>
 
     {
-        parentCategories.map((category) => (
+        categories.map((category) => (
             <div class="px-4 m-2">
                 <div class="flex space-x-8 pb-2 border-b-2 flex-col sm:flex-row">
                     <h2 class="font-bold text-2xl">
@@ -51,24 +50,6 @@ const platformScores = (await fetch(`${pgrst_url}/platform_scores`).then(
                 <div class="grid grid-cols-1 md:grid-cols-2">
                     <div class="m-2">
                         <p class="my-2">{category.description}</p>
-                        <div class="my-2">
-                            <p class="mb-2">Subcategories:</p>
-                            <div class="flex flex-wrap gap-2">
-                                {categories
-                                    .filter(
-                                        (sub) =>
-                                            sub.parent_slug === category.slug,
-                                    )
-                                    .map((sub) => (
-                                        <a
-                                            href={`/category/${sub.slug}`}
-                                            class="inline-block px-3 py-1 bg-lavender text-crust hover:bg-lavender/90 text-sm rounded-full transition-colors duration-200"
-                                        >
-                                            {sub.name}
-                                        </a>
-                                    ))}
-                            </div>
-                        </div>
                     </div>
                     <CategoryReportCard
                         scores={platformScores.filter(

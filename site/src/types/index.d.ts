@@ -34,8 +34,6 @@ export interface Category {
   slug: string;
   name: string;
   description: string;
-  parent_slug: string | null;
-  is_parent: boolean;
   icon: string;
   total_markets: number;
   total_traders: number;
