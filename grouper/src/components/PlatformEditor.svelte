@@ -97,7 +97,10 @@
     </div>
 
     <div class="mb-4">
-      <label for="name" class="block text-sm font-medium text-text mb-1">
+      <label
+        for="name"
+        class="min-w-200 block text-sm font-medium text-text mb-1"
+      >
         Name
       </label>
       <input

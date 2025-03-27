@@ -325,7 +325,10 @@
     {/if}
 
     <div class="mb-4">
-      <label for="title" class="block text-sm font-medium text-text mb-1">
+      <label
+        for="title"
+        class="min-w-200 block text-sm font-medium text-text mb-1"
+      >
         Title
       </label>
       <input
