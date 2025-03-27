@@ -46,6 +46,31 @@
     }
   });
 
+  function buildSearchQuery(userQuery: string) {
+    // If the query is empty, return a default or empty query
+    const cleanQuery = userQuery.trim();
+    if (!cleanQuery) {
+      return "";
+    }
+
+    // Split query into words, filtering out empty strings
+    const words = cleanQuery.split(/\s+/).filter((word) => word.length > 0);
+
+    // For each field, create a condition that ANDs all the words
+    const fields = ["id", "title", "url", "description"];
+
+    const fieldConditions = fields.map((field) => {
+      // For each word, create a condition that the field contains that word
+      const wordConditions = words.map((word) => `${field}.ilike.*${word}*`);
+
+      // Join the word conditions with AND
+      return `${wordConditions.join(",")}`;
+    });
+
+    // Join field conditions with OR
+    return `&or=(${fieldConditions.join(",")})`;
+  }
+
   async function loadTableData(
     query = searchQuery,
     platform = selectedPlatform,
@@ -61,8 +86,7 @@
       let params = `order=${sort}`;
       params +=
         "&question_id=is.null&question_dismissed=eq.0&duration_days=gte.4";
-      if (query)
-        params += `&or=(id.ilike.*${query}*,title.ilike.*${query}*,url.ilike.*${query}*,description.ilike.*${query}*)`;
+      if (query) params += buildSearchQuery(query);
       if (platform) params += `&platform_slug=eq.${platform}`;
 
       markets = await getMarkets(params);
