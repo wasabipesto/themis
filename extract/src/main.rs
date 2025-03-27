@@ -6,11 +6,12 @@ use clap::Parser;
 use dotenvy::dotenv;
 use log::{debug, info};
 use reqwest::blocking::Client;
+use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use themis_extract::platforms::{MarketAndProbs, Platform};
+use themis_extract::platforms::{MarketAndProbs, MarketError, Platform};
 
 /// Collect this many markets before uploading to database.
 /// Not a firm limit, can be exceeded if the last line has multiple markets.
@@ -111,11 +112,54 @@ fn main() -> Result<()> {
         let mut num_processed: usize = 0;
         let mut num_multiple: usize = 0;
         let mut num_uploaded: usize = 0;
+        let mut error_counts: HashMap<String, usize> = HashMap::new();
 
         info!("{platform}: Data loaded. Extracting {} items...", num_input);
         let mut market_batch: Vec<MarketAndProbs> = Vec::with_capacity(BATCH_SIZE);
         for line in lines {
-            let standardized_markets = platform.standardize(line)?;
+            let standardize_result = platform.standardize(line);
+            let standardized_markets = match standardize_result {
+                Ok(items) => items,
+                Err(err) => {
+                    // Track error counts by error type
+                    let error_type = match &err {
+                        MarketError::NotAMarket(_) => "Not Market",
+                        MarketError::MarketNotResolved(_) => "Not Resolved",
+                        MarketError::MarketCancelled(_) => "Cancelled",
+                        MarketError::NoMarketTrades(_) => "No Trades",
+                        MarketError::MarketTypeNotImplemented(_, _) => {
+                            "Market Type Not Implemented"
+                        }
+                        MarketError::InvalidMarketTrades(_, _) => "*Invalid Trades",
+                        MarketError::DataInvalid(_, _) => "*Invalid Data",
+                        MarketError::ProcessingError(_, _) => "*Processing Error",
+                    };
+
+                    *error_counts.entry(error_type.to_string()).or_insert(0) += 1;
+
+                    // Report errors by severity
+                    match &err {
+                        // Expected/informational errors
+                        MarketError::NotAMarket(_)
+                        | MarketError::MarketNotResolved(_)
+                        | MarketError::MarketCancelled(_)
+                        | MarketError::NoMarketTrades(_)
+                        | MarketError::MarketTypeNotImplemented(_, _) => {
+                            log::trace!("{err}");
+                        }
+
+                        // Actual errors that should be fixed
+                        MarketError::InvalidMarketTrades(_, _)
+                        | MarketError::DataInvalid(_, _)
+                        | MarketError::ProcessingError(_, _) => {
+                            log::error!("{err}");
+                        }
+                    }
+
+                    // Return empty vector for all error cases
+                    Vec::with_capacity(0)
+                }
+            };
             match standardized_markets.len() {
                 0 => num_skipped += 1,
                 1 => num_processed += 1,
@@ -142,7 +186,23 @@ fn main() -> Result<()> {
             upload_batch(&client, &postgrest_params, &market_batch)?;
             num_uploaded += market_batch.len();
         }
-        info!("{platform}: {num_input} items in file, {num_skipped} skipped, {num_processed} processed ({num_multiple} multiple), {num_uploaded} uploaded.");
+
+        // Report summary statistics
+        info!("{platform} extraction summary:");
+        info!("  Items in file: {num_input}");
+        info!("  Skipped: {num_skipped}");
+        info!("  Processed: {num_processed} ({num_multiple} groups)");
+        info!("  Uploaded: {num_uploaded}");
+
+        // Report error counts
+        if !error_counts.is_empty() {
+            let mut sorted_errors: Vec<(&String, &usize)> = error_counts.iter().collect();
+            sorted_errors.sort_by(|a, b| a.0.cmp(b.0));
+            info!("{platform} error counts by type:");
+            for (error_type, count) in sorted_errors {
+                info!("  {error_type}: {count}");
+            }
+        }
     }
 
     Ok(())

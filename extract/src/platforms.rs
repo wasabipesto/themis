@@ -205,39 +205,12 @@ impl Platform {
     }
 
     /// Call each platform's standardize function.
-    pub fn standardize(&self, input_unsorted: PlatformData) -> Result<Vec<MarketAndProbs>> {
-        // Call each platform's standardize function
-        let result = match input_unsorted {
+    pub fn standardize(&self, input_unsorted: PlatformData) -> MarketResult<Vec<MarketAndProbs>> {
+        match input_unsorted {
             PlatformData::Kalshi(input) => kalshi::standardize(&input),
             PlatformData::Manifold(input) => manifold::standardize(&input),
             PlatformData::Metaculus(input) => metaculus::standardize(&input),
             PlatformData::Polymarket(input) => polymarket::standardize(&input),
-        };
-
-        // Handle errors based on category
-        match result {
-            Ok(items) => Ok(items),
-            Err(err) => {
-                // Categorize errors by severity
-                match &err {
-                    // Expected/informational errors - just trace log
-                    MarketError::NotAMarket(_)
-                    | MarketError::MarketNotResolved(_)
-                    | MarketError::MarketCancelled(_)
-                    | MarketError::NoMarketTrades(_)
-                    | MarketError::MarketTypeNotImplemented(_, _) => {
-                        log::trace!("{err}");
-                    }
-
-                    // Actual problems that should be fixed - log as errors
-                    _ => {
-                        log::error!("{err}");
-                    }
-                }
-
-                // Return empty vector for all error cases
-                Ok(vec![])
-            }
         }
     }
 }
