@@ -223,10 +223,18 @@ pub fn standardize(input: &KalshiData) -> MarketResult<Vec<MarketAndProbs>> {
             let start = probs.first().unwrap().start;
             let end = probs.last().unwrap().end;
 
+            // Build the recorded title from the market title and subtitle.
+            // The subtitle usually includes the split or other details.
+            let title = if input.market.subtitle.is_empty() {
+                input.market.title.to_owned()
+            } else {
+                format!("{} | {}", input.market.title, input.market.subtitle)
+            };
+
             // Build standard market item.
             let market = StandardMarket {
                 id: market_id.to_owned(),
-                title: input.market.title.clone(),
+                title,
                 platform_slug,
                 platform_name: "Kalshi".to_string(),
                 description: format!(
