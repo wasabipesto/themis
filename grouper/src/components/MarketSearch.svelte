@@ -56,18 +56,19 @@
     // Split query into words, filtering out empty strings
     const words = cleanQuery.split(/\s+/).filter((word) => word.length > 0);
 
-    // For each field, create a condition that ANDs all the words
+    // For each field, create a condition that each field contains ALL the words
     const fields = ["id", "title", "url", "description"];
 
+    // Create conditions for each field where all words must match
     const fieldConditions = fields.map((field) => {
       // For each word, create a condition that the field contains that word
-      const wordConditions = words.map((word) => `${field}.ilike.*${word}*`);
+      const wordConditions = words.map((word) => `${field}.ilike.%${word}%`);
 
-      // Join the word conditions with AND
-      return `${wordConditions.join(",")}`;
+      // Join the word conditions with AND to require all words in this field
+      return `and(${wordConditions.join(",")})`;
     });
 
-    // Join field conditions with OR
+    // Join field conditions with OR (any field can contain all words)
     return `&or=(${fieldConditions.join(",")})`;
   }
 
