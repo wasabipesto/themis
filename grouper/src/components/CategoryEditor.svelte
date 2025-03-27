@@ -97,7 +97,10 @@
     </div>
 
     <div class="mb-4">
-      <label for="name" class="block text-sm font-medium text-text mb-1">
+      <label
+        for="name"
+        class="min-w-200 block text-sm font-medium text-text mb-1"
+      >
         Name
       </label>
       <input
@@ -161,51 +164,6 @@
         value={category.icon || ""}
         class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
       />
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="mb-4">
-        <label
-          for="total_markets"
-          class="block text-sm font-medium text-text mb-1">Total Markets</label
-        >
-        <input
-          type="number"
-          id="total_markets"
-          name="total_markets"
-          value={category.total_markets || ""}
-          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
-        />
-      </div>
-
-      <div class="mb-4">
-        <label
-          for="total_traders"
-          class="block text-sm font-medium text-text mb-1">Total Traders</label
-        >
-        <input
-          type="number"
-          id="total_traders"
-          name="total_traders"
-          value={category.total_traders || ""}
-          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
-        />
-      </div>
-
-      <div class="mb-4">
-        <label
-          for="total_volume"
-          class="block text-sm font-medium text-text mb-1">Total Volume</label
-        >
-        <input
-          type="number"
-          id="total_volume"
-          name="total_volume"
-          step="0.01"
-          value={category.total_volume || ""}
-          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
-        />
-      </div>
     </div>
 
     {#if errorMessage}
