@@ -143,7 +143,7 @@ pub fn standardize(input: &PolymarketData) -> MarketResult<Vec<MarketAndProbs>> 
     if let Err(e) = helpers::validate_prob_segments(&probs) {
         return Err(MarketError::InvalidMarketTrades(market_id, e.to_string()));
     }
-    let daily_probabilities = helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)
+    let daily_probabilities = helpers::get_daily_probabilities(&probs, &market_id)
         .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?;
 
     // We only consider the market to be open while there are actual probabilities.
@@ -227,17 +227,16 @@ pub fn standardize(input: &PolymarketData) -> MarketResult<Vec<MarketAndProbs>> 
     let market = StandardMarket {
         id: market_id.to_owned(),
         title,
-        platform_slug,
-        platform_name: "Polymarket".to_string(),
-        description: input.market.description.clone(),
         url,
+        description: input.market.description.clone(),
+        platform_slug,
+        category_slug: get_category(&input.market.tags),
         open_datetime: start,
         close_datetime: end,
         traders_count: None,
         volume_usd: input.market_gamma.as_ref().map(|item| item.volume_num),
         duration_days: helpers::get_market_duration(start, end)
             .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?,
-        category: get_category(&input.market.tags),
         prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)
             .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?,
         prob_time_avg: helpers::get_prob_time_avg(&probs, start, end)
@@ -291,25 +290,25 @@ pub fn build_prob_segments(raw_history: &[PolymarketPricePoint]) -> Vec<ProbSegm
 /// Manual mapping of tags to our standard categories.
 fn get_category(tags: &Option<Vec<String>>) -> Option<String> {
     const CATEGORIES: [(&str, &str); 17] = [
-        ("AI", "AI"),
-        ("Business", "Economics"),
-        ("CBB", "Sports"),
-        ("Coronavirus", "Science"),
-        ("Crypto", "Crypto"),
-        ("EPL", "Sports"),
-        //("Games", "Sports"),
-        //("Mentions", "Culture"),
-        ("NBA", "Sports"),
-        ("NFL", "Sports"),
-        ("NFTs", "Crypto"),
-        ("Politics", "Politics"),
-        ("Pop Culture", "Culture"),
-        ("Science", "Science"),
-        ("Soccer", "Sports"),
-        ("Sports", "Sports"),
-        ("Trump", "Politics"),
-        ("Trump Presidency", "Politics"),
-        ("USA Election", "Politics"),
+        ("AI", "ai"),
+        ("Business", "economics"),
+        ("CBB", "sports"),
+        ("Coronavirus", "science"),
+        ("Crypto", "economics"),
+        ("EPL", "sports"),
+        //("Games", "sports"),
+        //("Mentions", "culture"),
+        ("NBA", "sports"),
+        ("NFL", "sports"),
+        ("NFTs", "economics"),
+        ("Politics", "politics"),
+        ("Pop Culture", "culture"),
+        ("Science", "science"),
+        ("Soccer", "sports"),
+        ("Sports", "sports"),
+        ("Trump", "politics"),
+        ("Trump Presidency", "politics"),
+        ("USA Election", "politics"),
     ];
 
     let category_map: HashMap<&str, &str> = CATEGORIES.iter().cloned().collect();

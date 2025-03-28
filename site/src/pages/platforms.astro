@@ -7,17 +7,21 @@ import Traders from "@atoms/traders.astro";
 import Volume from "@atoms/volume.astro";
 import Markets from "@atoms/num-markets.astro";
 import Base from "@layouts/base.astro";
-import type { Platform, PlatformScore } from "@types";
+import type { PlatformDetails, PlatformScoreDetails, QuestionDetails } from "@types";
 
 const pgrst_url = "https://data.predictionmetrics.org"; // import.meta.env.PGRST_URL;
 
-const platforms = (await fetch(`${pgrst_url}/platforms`).then((res) =>
+const platforms = (await fetch(`${pgrst_url}/platform_details`).then((res) =>
     res.json(),
-)) as Platform[];
+)) as PlatformDetails[];
 
-const platformScores = (await fetch(`${pgrst_url}/platform_scores`).then(
+const platformScores = (await fetch(`${pgrst_url}/platform_scores_details`).then(
     (res) => res.json(),
-)) as PlatformScore[];
+)) as PlatformScoreDetails[];
+
+const sampleQuestion = (await fetch(`${pgrst_url}/platform_scores_details`).then(
+    (res) => res.json(),
+)) as QuestionDetails;
 ---
 
 <Base title="Categories">
@@ -69,12 +73,12 @@ const platformScores = (await fetch(`${pgrst_url}/platform_scores`).then(
                     />
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                    <QuestionCard />
-                    <QuestionCard />
-                    <QuestionCard />
-                    <QuestionCard />
-                    <QuestionCard />
-                    <QuestionCard />
+                    <QuestionCard question={sampleQuestion} />
+                    <QuestionCard question={sampleQuestion} />
+                    <QuestionCard question={sampleQuestion} />
+                    <QuestionCard question={sampleQuestion} />
+                    <QuestionCard question={sampleQuestion} />
+                    <QuestionCard question={sampleQuestion} />
                 </div>
                 <SeeMoreLink
                     link={`/questions?platform=${platform.slug}`}

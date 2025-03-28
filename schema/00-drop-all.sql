@@ -2,18 +2,22 @@
 -- DROP ALL TABLES
 -- ** THIS WILL DESTROY ALL DATA **
 -- ==========================================
-DROP TABLE IF EXISTS calibration_points;
+DROP TABLE IF EXISTS calibration_points CASCADE;
 
-DROP TABLE IF EXISTS daily_probabilities;
+DROP TABLE IF EXISTS daily_probabilities CASCADE;
 
-DROP TABLE IF EXISTS market_scores;
+DROP TABLE IF EXISTS market_scores CASCADE;
 
-DROP TABLE IF EXISTS platform_scores;
+DROP TABLE IF EXISTS platform_scores CASCADE;
 
-DROP TABLE IF EXISTS markets;
+DROP TABLE IF EXISTS market_questions CASCADE;
 
-DROP TABLE IF EXISTS questions;
+DROP TABLE IF EXISTS market_dismissals CASCADE;
 
-DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS markets CASCADE;
 
-DROP TABLE IF EXISTS platforms;
+DROP TABLE IF EXISTS questions CASCADE;
+
+DROP TABLE IF EXISTS categories CASCADE;
+
+DROP TABLE IF EXISTS platforms CASCADE;

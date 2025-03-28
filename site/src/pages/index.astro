@@ -5,21 +5,21 @@ import QuestionCard from "@components/question-card.astro";
 import SeeMoreLink from "@components/see-more-link.astro";
 import PlatformCard from "@components/platform-card.astro";
 import CalibrationChart from "@components/calibration-chart.astro";
-import type { Platform, PlatformScore, Question } from "@types";
+import type { PlatformDetails, PlatformScoreDetails, QuestionDetails } from "@types";
 
 const pgrst_url = "https://data.predictionmetrics.org"; // import.meta.env.PGRST_URL;
 
-const platforms = (await fetch(`${pgrst_url}/platforms`).then((res) =>
+const platforms = (await fetch(`${pgrst_url}/platform_details`).then((res) =>
     res.json(),
-)) as Platform[];
+)) as PlatformDetails[];
 
-const featuredQuestions = (await fetch(`${pgrst_url}/questions`).then((res) =>
+const featuredQuestions = (await fetch(`${pgrst_url}/question_details`).then((res) =>
     res.json(),
-)) as Question[];
+)) as QuestionDetails[];
 
-const platformScores = (await fetch(`${pgrst_url}/platform_scores`).then(
+const platformScores = (await fetch(`${pgrst_url}/platform_scores_details`).then(
     (res) => res.json(),
-)) as PlatformScore[];
+)) as PlatformScoreDetails[];
 ---
 
 <Base title="Home">

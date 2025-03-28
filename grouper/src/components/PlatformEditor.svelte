@@ -1,10 +1,22 @@
-<script>
+<script lang="ts">
   import { onMount } from "svelte";
   import { getPlatform, createPlatform, updatePlatform } from "@lib/api";
+  import type { Platform } from "@types";
 
-  let platform = {};
+  // Initialize with required properties to satisfy TypeScript
+  let platform: Platform = {
+    slug: "",
+    name: "",
+    description: "",
+    long_description: "",
+    icon_url: "",
+    site_url: "",
+    wikipedia_url: "",
+    color_primary: "",
+    color_accent: "",
+  };
   let loading = true;
-  let error = null;
+  let error: string | null = null;
   let isNew = false;
   let errorMessage = "";
   let formLoading = false;
@@ -22,27 +34,29 @@
 
       platform = await getPlatform(slug);
       loading = false;
-    } catch (err) {
-      error = err.message || "Failed to load platform";
+    } catch (err: unknown) {
+      error = err instanceof Error ? err.message : "Failed to load platform";
       loading = false;
     }
   });
 
-  async function handleSubmit(event) {
+  async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     formLoading = true;
     errorMessage = "";
 
     try {
-      const form = event.target;
+      const form = event.target as HTMLFormElement;
       const formData = new FormData(form);
-      const platformData = Object.fromEntries(formData.entries());
+      const platformData = Object.fromEntries(
+        formData.entries(),
+      ) as unknown as Platform;
 
-      Object.keys(platformData).forEach((key) => {
-        if (platformData[key] === "") {
-          platformData[key] = null;
+      for (const key in platformData) {
+        if (platformData[key as keyof Platform] === "") {
+          (platformData as any)[key] = null;
         }
-      });
+      }
 
       if (Object.keys(platform).length > 0 && !isNew) {
         await updatePlatform(platformData);
@@ -51,9 +65,9 @@
       }
 
       window.location.href = "/platforms";
-    } catch (error) {
-      errorMessage = error.message || "An unknown error occurred";
-      formLoading = false;
+    } catch (err: unknown) {
+      errorMessage =
+        err instanceof Error ? err.message : "An unknown error occurred";
     }
   }
 </script>

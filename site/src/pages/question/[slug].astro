@@ -8,7 +8,7 @@ import Grade from "@atoms/grade.astro";
 import ScoreRel from "@atoms/score-rel.astro";
 import ScoreAbs from "@atoms/score-abs.astro";
 import LinkOut from "@icons/link-out.svg";
-import type { DailyProbability, Question } from "@types";
+import type { DailyProbabilityDetails, QuestionDetails } from "@types";
 
 const pgrst_url = "https://data.predictionmetrics.org"; // import.meta.env.PGRST_URL;
 
@@ -17,7 +17,7 @@ export async function getStaticPaths() {
     const pgrst_url = "https://data.predictionmetrics.org"; // import.meta.env.PGRST_URL;
     const questions = (await fetch(`${pgrst_url}/questions`).then((res) =>
         res.json(),
-    )) as Question[];
+    )) as QuestionDetails[];
     return questions.map((question) => ({
         params: { slug: question.slug },
         props: { question },
@@ -27,7 +27,7 @@ const { question } = Astro.props;
 
 const dailyProbabilityPoints = (await fetch(
     `${pgrst_url}/daily_probabilities?question_id=${question.id}`,
-).then((res) => res.json())) as DailyProbability[];
+).then((res) => res.json())) as DailyProbabilityDetails[];
 ---
 
 <Base title="Market">
@@ -42,14 +42,6 @@ const dailyProbabilityPoints = (await fetch(
                         class="text-lavender"
                     >
                         {question.category_name}
-                    </a>
-                </li>
-                <li>
-                    <a
-                        href={`/category/${question.parent_category_slug}`}
-                        class="text-lavender"
-                    >
-                        {question.parent_category_name}
                     </a>
                 </li>
             </ul>
@@ -83,11 +75,11 @@ const dailyProbabilityPoints = (await fetch(
             </thead>
             <tbody>
                 {
-                    question.markets?.map((market) => (
+                    question.market_scores?.map((market_score) => (
                         <tr>
-                            <td class="px-4 py-2">{market.platform_name}</td>
+                            <td class="px-4 py-2">{market_score.platform_name}</td>
                             <td class="px-6 py-2">
-                                <a href={market.market_link}>
+                                <a href={market_score.market_url}>
                                     <LinkOut
                                         height={18}
                                         fill="currentColor"
@@ -96,23 +88,23 @@ const dailyProbabilityPoints = (await fetch(
                                 </a>
                             </td>
                             <td class="px-4 py-2">
-                                <Traders num={market.traders} />
+                                <Traders num={market_score.traders_count} />
                             </td>
                             <td class="px-4 py-2">
-                                <Volume num={market.volume} />
+                                <Volume num={market_score.volume_usd} />
                             </td>
                             <td class="px-4 py-2">
-                                <Duration num={market.duration} />
+                                <Duration num={market_score.duration_days} />
                             </td>
                             <td class="px-4 py-2">
-                                <Grade grade={market.grade} />
+                                <Grade grade={market_score.grade} />
                             </td>
                             <td class="px-4 py-2">
-                                <ScoreRel num={market.brier_score_rel} />
+                                <ScoreRel num={market_score.brier_score_rel} />
                             </td>
                             <td class="px-4 py-2">
                                 <ScoreAbs
-                                    num={market.brier_score_abs}
+                                    num={market_score.brier_score_abs}
                                     detailed={false}
                                 />
                             </td>

@@ -1,10 +1,17 @@
-<script>
+<script lang="ts">
   import { onMount } from "svelte";
   import { getCategory, createCategory, updateCategory } from "@lib/api";
+  import type { Category } from "@types";
 
-  let category = {};
+  // Initialize with required properties to satisfy TypeScript
+  let category: Category = {
+    slug: "",
+    name: "",
+    description: "",
+    icon: "",
+  };
   let loading = true;
-  let error = null;
+  let error: string | null = null;
   let isNew = false;
   let errorMessage = "";
   let formLoading = false;
@@ -22,27 +29,30 @@
 
       category = await getCategory(slug);
       loading = false;
-    } catch (err) {
-      error = err.message || "Failed to load category";
+    } catch (err: unknown) {
+      error = err instanceof Error ? err.message : "Failed to load category";
       loading = false;
     }
   });
 
-  async function handleSubmit(event) {
+  async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     formLoading = true;
     errorMessage = "";
 
     try {
-      const form = event.target;
+      const form = event.target as HTMLFormElement;
       const formData = new FormData(form);
-      const categoryData = Object.fromEntries(formData.entries());
+      // Use type assertion to tell TypeScript this will be a valid Category
+      const categoryData = Object.fromEntries(
+        formData.entries(),
+      ) as unknown as Category;
 
-      Object.keys(categoryData).forEach((key) => {
-        if (categoryData[key] === "") {
-          categoryData[key] = null;
+      for (const key in categoryData) {
+        if (categoryData[key as keyof Category] === "") {
+          (categoryData as any)[key] = null;
         }
-      });
+      }
 
       if (Object.keys(category).length > 0 && !isNew) {
         await updateCategory(categoryData);
@@ -51,8 +61,10 @@
       }
 
       window.location.href = "/categories";
-    } catch (error) {
-      errorMessage = error.message || "An unknown error occurred";
+    } catch (err: unknown) {
+      errorMessage =
+        err instanceof Error ? err.message : "An unknown error occurred";
+    } finally {
       formLoading = false;
     }
   }

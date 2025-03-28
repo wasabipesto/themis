@@ -23,7 +23,7 @@ Install any other dependencies:
 - For running tasks I have provided a `justfile`, which requires `just` to run. You can install that by following the instructions [here](https://just.systems/man/en/packages.html). The `justfile` is very simple, and you can just run the commands by hand if you don't want to install it.
 - The script for site deployment uses `rclone` and thus can be deployed to any target supported by that utility. You can install rclone by following the instructions [here](https://rclone.org/install/), or deploy the site some other way.
 - Some other optional utilities:
-  - There are a few Python scripts I use for development in the `scripts` folder. If you want to use these, ensure you have a recent version of Python installed.
+  - There are a few Python scripts I use for development in the `scripts` folder. If you want to use these, ensure you have `uv` [installed](https://docs.astral.sh/uv/getting-started/installation/).
   - When testing API responses I use `jq` for filtering and general formatting. You can get that [here](https://jqlang.org/download/).
   - A couple scripts for debugging are written with `rust-script`. Installation instructions are [here](https://rust-script.org/#installation).
 
@@ -92,9 +92,11 @@ just db-schema # extract the current schema and output to stdout
 Import the schema, roles, and some basic data by running the following SQL files:
 
 ```bash
-just db-run-sql 01-schema.sql
-just db-run-sql 02-postgrest.sql
-just db-run-sql 03-platforms.sql
+just db-run-sql schema/01-schema.sql
+just db-run-sql schema/02-views.sql
+just db-run-sql schema/03-postgrest.sql
+just db-run-sql schema/04-platforms.sql
+just db-run-sql schema/05-categories.sql
 ```
 
 Reload PostgREST for it to see the new schema:
@@ -198,6 +200,50 @@ just extract
 ```
 
 After the data is downloaded, you can add groups and edit data in the database as before. Then, build the site again and see the results.
+
+### Wiping the Markets Table
+
+Eventually you may want to wipe the markets table in the database, either because you are changing the database schema or because you want to start fresh. In order to do this without losing data you will need to first export your questions and market-question links. I've provided a script to do this:
+
+```bash
+# back up your database, just in case
+just db-backup
+
+# export the questions and market links
+uv run scripts/migrate_mq.py --mode export
+
+# drop all tables
+just db-run-sql 00-drop-all.sql
+# or wipe the data folder
+just db-down
+sudo rm -r postgres_data
+just db-up
+
+# load the schema
+just db-run-sql schema/01-schema.sql
+just db-run-sql schema/02-views.sql
+just db-run-sql schema/03-postgrest.sql
+just db-run-sql schema/04-platforms.sql
+just db-run-sql schema/05-categories.sql
+
+# reload the schema cache
+docker kill -s SIGUSR1 postgrest
+
+# import markets
+just extract
+
+# import the questions and market links
+uv run scripts/migrate_mq.py --mode import
+
+# check everything is in place
+just db-curl "market_details?limit=10&question_slug=not.is.null"
+```
+
+Note that this is not necessary if you want to edit table views. To reload the database view schema, just run:
+
+```bash
+just db-run-sql schema/02-views.sql
+```
 
 # I just want the data
 

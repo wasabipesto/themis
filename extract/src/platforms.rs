@@ -75,16 +75,15 @@ pub struct MarketAndProbs {
 pub struct StandardMarket {
     pub id: String,
     pub title: String,
-    pub platform_slug: String,
-    pub platform_name: String,
-    pub description: String,
     pub url: String,
+    pub description: String,
+    pub platform_slug: String,
+    pub category_slug: Option<String>,
     pub open_datetime: DateTime<Utc>,
     pub close_datetime: DateTime<Utc>,
     pub traders_count: Option<u32>,
     pub volume_usd: Option<f32>,
     pub duration_days: u32,
-    pub category: Option<String>,
     pub prob_at_midpoint: f32,
     pub prob_time_avg: f32,
     pub resolution: f32,
@@ -94,7 +93,6 @@ pub struct StandardMarket {
 #[derive(Debug, Serialize, Clone)]
 pub struct DailyProbability {
     pub market_id: String,
-    pub platform_slug: String,
     pub date: DateTime<Utc>,
     pub prob: f32,
 }

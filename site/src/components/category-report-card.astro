@@ -3,10 +3,10 @@ import Markets from "@atoms/num-markets.astro";
 import Grade from "@atoms/grade.astro";
 import ScoreRel from "@atoms/score-rel.astro";
 import ScoreAbs from "@atoms/score-abs.astro";
-import type { PlatformScore } from "@types";
+import type { PlatformScoreDetails } from "@types";
 
 interface Props {
-    scores: PlatformScore[];
+    scores: PlatformScoreDetails[];
     pivot: "platform" | "category";
 }
 const { scores, pivot } = Astro.props;

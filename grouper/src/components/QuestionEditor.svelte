@@ -1,22 +1,28 @@
 <script lang="ts">
-  import type { Category, Question, Market, DailyProbability } from "@types";
+  import type {
+    Question,
+    CategoryDetails,
+    DailyProbabilityDetails,
+    MarketDetails,
+    QuestionDetails,
+  } from "@types";
   import { onMount } from "svelte";
   import {
     getQuestion,
-    getItemsSorted,
     createQuestion,
     updateQuestion,
     linkMarket,
     unlinkMarket,
     invertMarketLink,
-    getAssocMarkets,
+    getMarketsByQuestion,
     getMarketProbs,
+    getCategories,
   } from "@lib/api";
   import * as Plot from "@observablehq/plot";
 
   // Question editor state
-  let question: Question | null = null;
-  let categories: Category[] = [];
+  let question: QuestionDetails | null = null;
+  let categories: CategoryDetails[] = [];
   let loading = true;
   let error: string | null = null;
   let isNew = false;
@@ -24,7 +30,7 @@
   let formLoading = false;
 
   // Market assigner state
-  let markets: Market[] = [];
+  let markets: MarketDetails[] = [];
   let questionId: string | null = null;
   let newMarketId = "";
   let linkError: string | null = null;
@@ -33,12 +39,12 @@
   let marketsLoading = false;
 
   // Chart state
-  let plotData: DailyProbability[] = [];
+  let plotData: DailyProbabilityDetails[] = [];
 
   onMount(async () => {
     try {
       // Load categories first
-      categories = await getItemsSorted("categories");
+      categories = await getCategories();
 
       const urlParams = new URLSearchParams(window.location.search);
       questionId = urlParams.get("id");
@@ -53,7 +59,7 @@
           // Clear the data after using it
           localStorage.removeItem("clonedQuestion");
         } else {
-          question = {} as Question;
+          question = {} as QuestionDetails;
         }
 
         loading = false;
@@ -65,7 +71,7 @@
 
       // Load markets associated with this question
       marketsLoading = true;
-      markets = await getAssocMarkets(question.id);
+      markets = await getMarketsByQuestion(question.id);
       marketsLoading = false;
 
       await loadMarketProbabilities();
@@ -167,7 +173,7 @@
       await linkMarket(newMarketId.trim(), question.id);
 
       // Fetch updated list of markets
-      markets = await getAssocMarkets(question.id);
+      markets = await getMarketsByQuestion(question.id);
 
       // Reload market probability data
       await loadMarketProbabilities();
@@ -184,7 +190,7 @@
     }
   }
 
-  async function handleRemoveMarket(market: Market) {
+  async function handleRemoveMarket(market: MarketDetails) {
     if (
       !confirm("Are you sure you want to remove this market from the question?")
     ) {
@@ -192,7 +198,7 @@
     }
 
     try {
-      await unlinkMarket(market);
+      await unlinkMarket(market.id);
       // Remove item from the list for instant UI update
       markets = markets.filter((m) => m.id !== market.id);
 
@@ -207,7 +213,7 @@
     }
   }
 
-  async function handleInvertMarketLink(market: Market) {
+  async function handleInvertMarketLink(market: MarketDetails) {
     try {
       // Call API to invert the market link
       await invertMarketLink(market.id, !market.question_invert);
@@ -255,7 +261,7 @@
             Plot.line(plotData, {
               x: "date",
               y: "prob",
-              stroke: "platform_slug",
+              stroke: "platform_name",
               curve: "step",
               tip: {
                 fill: "black",
@@ -305,24 +311,8 @@
     on:submit={handleSubmit}
   >
     <h2 class="text-2xl font-semibold mb-4">
-      {isNew ? "Create" : "Edit"} Question
+      {isNew ? "Create Question" : `Edit Question #${question?.id || ""}`}
     </h2>
-
-    {#if !isNew}
-      <div class="mb-4">
-        <label for="id" class="block text-sm font-medium text-text mb-1">
-          Question ID
-        </label>
-        <input
-          type="text"
-          id="id"
-          name="id"
-          value={question?.id || ""}
-          readonly
-          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm cursor-not-allowed"
-        />
-      </div>
-    {/if}
 
     <div class="mb-4">
       <label

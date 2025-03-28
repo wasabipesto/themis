@@ -1,9 +1,14 @@
 import type {
   Category,
-  DailyProbability,
-  Market,
+  CategoryDetails,
+  DailyProbabilityDetails,
+  MarketDetails,
   Platform,
+  PlatformDetails,
   Question,
+  QuestionDetails,
+  MarketQuestionLink,
+  MarketDismissStatus,
 } from "@types";
 
 const PGRST_URL = import.meta.env.PUBLIC_PGRST_URL;
@@ -39,11 +44,6 @@ export async function fetchFromAPI(
   return response.json();
 }
 
-export async function getItemsSorted(endpoint: string): Promise<any> {
-  const limit = 100;
-  return fetchFromAPI(`${endpoint}?order=slug.asc&limit=${limit}`);
-}
-
 export async function deleteItem(
   endpoint: string,
   attr: "ID" | "slug",
@@ -57,8 +57,20 @@ export async function deleteItem(
   });
 }
 
-export async function getPlatform(slug: string): Promise<Platform> {
-  return fetchFromAPI(`platforms?slug=eq.${slug}`).then(
+export async function getPlatformsLite(): Promise<Platform[]> {
+  const limit = 100;
+  const order = "slug.asc";
+  return fetchFromAPI(`platforms?limit=${limit}&order=${order}`);
+}
+
+export async function getPlatformsDetailed(): Promise<PlatformDetails[]> {
+  const limit = 100;
+  const order = "slug.asc";
+  return fetchFromAPI(`platform_details?limit=${limit}&order=${order}`);
+}
+
+export async function getPlatform(slug: string): Promise<PlatformDetails> {
+  return fetchFromAPI(`platform_details?slug=eq.${slug}`).then(
     (data) => data[0] || null,
   );
 }
@@ -84,8 +96,14 @@ export async function updatePlatform(data: Platform): Promise<Platform> {
   });
 }
 
-export async function getCategory(slug: string): Promise<Category> {
-  return fetchFromAPI(`categories?slug=eq.${slug}`).then(
+export async function getCategories(): Promise<CategoryDetails[]> {
+  const limit = 100;
+  const order = "slug.asc";
+  return fetchFromAPI(`category_details?limit=${limit}&order=${order}`);
+}
+
+export async function getCategory(slug: string): Promise<CategoryDetails> {
+  return fetchFromAPI(`category_details?slug=eq.${slug}`).then(
     (data) => data[0] || null,
   );
 }
@@ -110,27 +128,19 @@ export async function updateCategory(data: Category): Promise<Category> {
   });
 }
 
-export async function getQuestion(id: string): Promise<Question> {
-  return fetchFromAPI(`questions?id=eq.${id}`).then((data) => data[0] || null);
-}
-
-async function completeQuestion(question: Question): Promise<Question> {
-  const category = await getCategory(question.category_slug);
-  if (category) {
-    // Set category_name based on category_slug
-    question.category_name = category.name;
-  }
-
-  return question;
-}
-
-export async function getMarkets(params: string): Promise<Market[]> {
+export async function getQuestions(): Promise<QuestionDetails[]> {
   const limit = 100;
-  return fetchFromAPI(`markets?limit=${limit}&${params}`);
+  const order = "slug.asc";
+  return fetchFromAPI(`question_details?limit=${limit}&order=${order}`);
+}
+
+export async function getQuestion(id: string): Promise<QuestionDetails> {
+  return fetchFromAPI(`question_details?id=eq.${id}`).then(
+    (data) => data[0] || null,
+  );
 }
 
 export async function createQuestion(data: Question): Promise<Question> {
-  await completeQuestion(data);
   return fetchFromAPI("questions", {
     method: "POST",
     body: JSON.stringify(data),
@@ -141,7 +151,6 @@ export async function createQuestion(data: Question): Promise<Question> {
 }
 
 export async function updateQuestion(data: Question): Promise<Question> {
-  await completeQuestion(data);
   return fetchFromAPI(`questions?id=eq.${data.id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
@@ -151,64 +160,81 @@ export async function updateQuestion(data: Question): Promise<Question> {
   }).then((data) => data[0] || null);
 }
 
-export async function getAssocMarkets(id: number): Promise<Market[]> {
-  return fetchFromAPI(`markets?question_id=eq.${id}&order=platform_slug.asc`);
+export async function getMarkets(params: string): Promise<MarketDetails[]> {
+  const limit = 100;
+  return fetchFromAPI(`market_details?limit=${limit}&${params}`);
 }
 
-export async function getMarket(id: string): Promise<Market> {
-  return fetchFromAPI(`markets?id=eq.${id}`).then((data) => data[0] || null);
+export async function getMarketsByQuestion(
+  questionId: number,
+): Promise<MarketDetails[]> {
+  const order = "platform_slug.asc";
+  return fetchFromAPI(
+    `market_details?question_id=eq.${questionId}&order=${order}`,
+  );
+}
+
+export async function getMarket(id: string): Promise<MarketDetails> {
+  return fetchFromAPI(`market_details?id=eq.${id}`).then(
+    (data) => data[0] || null,
+  );
 }
 
 export async function dismissMarket(
-  id: string,
-  level: number,
-): Promise<Market> {
-  return fetchFromAPI(`markets?id=eq.${id}`, {
-    method: "PATCH",
-    body: JSON.stringify({ question_dismissed: level }),
+  marketId: string,
+  status: number,
+): Promise<MarketDismissStatus> {
+  return fetchFromAPI(`market_dismissals?id=eq.${marketId}`, {
+    method: "POST",
+    body: JSON.stringify({ market_id: marketId, dismissed_status: status }),
     headers: {
       Prefer: "return=representation",
     },
   }).then((data) => data[0] || null);
 }
 
-export async function getMarketProbs(id: string): Promise<DailyProbability[]> {
-  return fetchFromAPI(`daily_probabilities?market_id=eq.${id}&order=date.asc`);
+export async function getMarketProbs(
+  marketId: string,
+): Promise<DailyProbabilityDetails[]> {
+  const order = "date.asc";
+  return fetchFromAPI(
+    `daily_probability_details?market_id=eq.${marketId}&order=${order}`,
+  );
 }
 
 export async function linkMarket(
   marketId: string,
   questionId: number,
-): Promise<Market> {
-  return fetchFromAPI(`markets?id=eq.${marketId}`, {
-    method: "PATCH",
-    body: JSON.stringify({ question_id: questionId }),
+): Promise<MarketQuestionLink> {
+  return fetchFromAPI(`market_questions?market_id=eq.${marketId}`, {
+    method: "POST",
+    body: JSON.stringify({ market_id: marketId, question_id: questionId }),
     headers: {
       Prefer: "return=representation",
     },
-  });
+  }).then((data) => data[0] || null);
 }
 
-export async function unlinkMarket(data: Market): Promise<Market> {
-  data.question_id = null;
-  return fetchFromAPI(`markets?id=eq.${data.id}`, {
-    method: "PATCH",
-    body: JSON.stringify(data),
+export async function unlinkMarket(
+  marketId: string,
+): Promise<MarketQuestionLink> {
+  return fetchFromAPI(`market_questions?market_id=eq.${marketId}`, {
+    method: "DELETE",
     headers: {
       Prefer: "return=representation",
     },
-  });
+  }).then((data) => data[0] || null);
 }
 
 export async function invertMarketLink(
   marketId: string,
   invert: boolean,
-): Promise<Market> {
-  return fetchFromAPI(`markets?id=eq.${marketId}`, {
+): Promise<MarketQuestionLink> {
+  return fetchFromAPI(`market_questions?market_id=eq.${marketId}`, {
     method: "PATCH",
     body: JSON.stringify({ question_invert: invert }),
     headers: {
       Prefer: "return=representation",
     },
-  });
+  }).then((data) => data[0] || null);
 }

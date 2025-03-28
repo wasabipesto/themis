@@ -1,10 +1,10 @@
 <script lang="ts">
-  import type { Market, Platform } from "@types";
+  import type { MarketDetails, Platform } from "@types";
   import { onMount } from "svelte";
-  import { getMarkets, getItemsSorted, dismissMarket } from "@lib/api";
+  import { getMarkets, dismissMarket, getPlatformsLite } from "@lib/api";
 
   // Initial state
-  let markets: Market[] = [];
+  let markets: MarketDetails[] = [];
   let platforms: Platform[] = [];
   let loading = true;
   let error: string | null = null;
@@ -39,7 +39,7 @@
 
     // Load platforms for the dropdown
     try {
-      platforms = await getItemsSorted("platforms");
+      platforms = await getPlatformsLite();
       await loadTableData();
     } catch (err) {
       console.error("Error loading platforms:", err);

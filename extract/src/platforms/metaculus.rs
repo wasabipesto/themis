@@ -308,10 +308,8 @@ pub fn standardize(input: &MetaculusData) -> MarketResult<Vec<MarketAndProbs>> {
                     e.to_string(),
                 ));
             }
-            let daily_probabilities =
-                helpers::get_daily_probabilities(&probs, &market_id, &platform_slug).map_err(
-                    |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
-                )?;
+            let daily_probabilities = helpers::get_daily_probabilities(&probs, &market_id)
+                .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?;
 
             // We only consider the market to be open while there are actual probabilities.
             let start = probs.first().unwrap().start;
@@ -339,15 +337,15 @@ pub fn standardize(input: &MetaculusData) -> MarketResult<Vec<MarketAndProbs>> {
             let market = StandardMarket {
                 id: market_id.clone(),
                 title: input.details.title.clone(),
-                platform_slug,
-                platform_name: "Metaculus".to_string(),
+                url: format!("https://www.metaculus.com/questions/{}", input.details.id),
                 description: format!(
                     "{}\n\n{}\n\n{}",
                     description.clone(),
                     resolution_criteria.clone(),
                     fine_print.clone(),
                 ),
-                url: format!("https://www.metaculus.com/questions/{}", input.details.id),
+                platform_slug,
+                category_slug: None, // TODO
                 open_datetime: start,
                 close_datetime: end,
                 traders_count: Some(input.details.nr_forecasters),
@@ -355,7 +353,6 @@ pub fn standardize(input: &MetaculusData) -> MarketResult<Vec<MarketAndProbs>> {
                 duration_days: helpers::get_market_duration(start, end).map_err(|e| {
                     MarketError::ProcessingError(market_id.to_owned(), e.to_string())
                 })?,
-                category: None, // TODO
                 prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end).map_err(
                     |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
                 )?,
@@ -456,10 +453,8 @@ pub fn standardize(input: &MetaculusData) -> MarketResult<Vec<MarketAndProbs>> {
                     e.to_string(),
                 ));
             }
-            let daily_probabilities =
-                helpers::get_daily_probabilities(&probs, &market_id, &platform_slug).map_err(
-                    |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
-                )?;
+            let daily_probabilities = helpers::get_daily_probabilities(&probs, &market_id)
+                .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?;
 
             // We only consider the market to be open while there are actual probabilities.
             let start = probs.first().unwrap().start;
@@ -469,15 +464,15 @@ pub fn standardize(input: &MetaculusData) -> MarketResult<Vec<MarketAndProbs>> {
             let market = StandardMarket {
                 id: market_id.clone(),
                 title,
-                platform_slug,
-                platform_name: "Metaculus".to_string(),
+                url: format!("https://www.metaculus.com/questions/{}", input.details.id),
                 description: format!(
                     "{}\n\n{}\n\n{}",
                     description.clone(),
                     resolution_criteria.clone(),
                     fine_print.clone(),
                 ),
-                url: format!("https://www.metaculus.com/questions/{}", input.details.id),
+                platform_slug,
+                category_slug: None, // TODO
                 open_datetime: start,
                 close_datetime: end,
                 traders_count: Some(input.details.nr_forecasters),
@@ -485,7 +480,6 @@ pub fn standardize(input: &MetaculusData) -> MarketResult<Vec<MarketAndProbs>> {
                 duration_days: helpers::get_market_duration(start, end).map_err(|e| {
                     MarketError::ProcessingError(market_id.to_owned(), e.to_string())
                 })?,
-                category: None, // TODO
                 prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end).map_err(
                     |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
                 )?,

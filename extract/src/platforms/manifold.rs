@@ -131,7 +131,7 @@ pub struct ManifoldMarket {
     pub text_description: String,
     /// Canonical public URL to the market page.
     pub url: String,
-    /// Public URL to the AI-generated or user-uploaded hero image.
+    /// Public URL to the ai-generated or user-uploaded hero image.
     pub cover_image_url: Option<String>,
     /// The URL slug for this market.
     /// You should probably be using the pre-build URL instead.
@@ -302,10 +302,8 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                     e.to_string(),
                 ));
             }
-            let daily_probabilities =
-                helpers::get_daily_probabilities(&probs, &market_id, &platform_slug).map_err(
-                    |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
-                )?;
+            let daily_probabilities = helpers::get_daily_probabilities(&probs, &market_id)
+                .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?;
 
             // We only consider the market to be open while there are actual probabilities.
             let start = probs.first().unwrap().start;
@@ -315,10 +313,10 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
             let market = StandardMarket {
                 id: market_id.to_owned(),
                 title: market.question.clone(),
-                platform_slug,
-                platform_name: "Manifold".to_string(),
-                description: market.text_description.clone(),
                 url: market.url.to_owned(),
+                description: market.text_description.clone(),
+                platform_slug,
+                category_slug: get_category(&market.group_slugs),
                 open_datetime: start,
                 close_datetime: end,
                 traders_count: Some(get_traders_count(&input.bets)),
@@ -326,7 +324,6 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                 duration_days: helpers::get_market_duration(start, end).map_err(|e| {
                     MarketError::ProcessingError(market_id.to_owned(), e.to_string())
                 })?,
-                category: get_category(&market.group_slugs),
                 prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end).map_err(
                     |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
                 )?,
@@ -420,10 +417,10 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                         e.to_string(),
                     ));
                 }
-                let daily_probabilities =
-                    helpers::get_daily_probabilities(&probs, &market_id, &platform_slug).map_err(
-                        |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
-                    )?;
+                let daily_probabilities = helpers::get_daily_probabilities(&probs, &market_id)
+                    .map_err(|e| {
+                        MarketError::ProcessingError(market_id.to_owned(), e.to_string())
+                    })?;
 
                 // We only consider the market to be open while there are actual probabilities.
                 let start = probs.first().unwrap().start;
@@ -433,10 +430,10 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                 let market = StandardMarket {
                     id: market_id.to_owned(),
                     title,
-                    platform_slug,
-                    platform_name: "Manifold".to_string(),
-                    description: market.text_description.clone(),
                     url: market.url.to_owned(),
+                    description: market.text_description.clone(),
+                    platform_slug,
+                    category_slug: get_category(&market.group_slugs),
                     open_datetime: start,
                     close_datetime: end,
                     traders_count: Some(get_traders_count(&bets)),
@@ -444,7 +441,6 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                     duration_days: helpers::get_market_duration(start, end).map_err(|e| {
                         MarketError::ProcessingError(market_id.to_owned(), e.to_string())
                     })?,
-                    category: get_category(&market.group_slugs),
                     prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end).map_err(
                         |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
                     )?,
@@ -513,11 +509,10 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                             e.to_string(),
                         ));
                     }
-                    let daily_probabilities =
-                        helpers::get_daily_probabilities(&probs, &market_id, &platform_slug)
-                            .map_err(|e| {
-                                MarketError::ProcessingError(market_id.to_owned(), e.to_string())
-                            })?;
+                    let daily_probabilities = helpers::get_daily_probabilities(&probs, &market_id)
+                        .map_err(|e| {
+                            MarketError::ProcessingError(market_id.to_owned(), e.to_string())
+                        })?;
 
                     // We only consider the market to be open while there are actual probabilities.
                     let start = probs.first().unwrap().start;
@@ -531,10 +526,10 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                     let market = StandardMarket {
                         id: market_id.to_owned(),
                         title,
-                        platform_slug: platform_slug.to_owned(),
-                        platform_name: "Manifold".to_string(),
-                        description: market.text_description.clone(),
                         url: market.url.to_owned(),
+                        description: market.text_description.clone(),
+                        platform_slug: platform_slug.to_owned(),
+                        category_slug: get_category(&market.group_slugs),
                         open_datetime: start,
                         close_datetime: end,
                         traders_count: Some(get_traders_count(&bets)),
@@ -542,7 +537,6 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                         duration_days: helpers::get_market_duration(start, end).map_err(|e| {
                             MarketError::ProcessingError(market_id.to_owned(), e.to_string())
                         })?,
-                        category: get_category(&market.group_slugs),
                         prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end)
                             .map_err(|e| {
                                 MarketError::ProcessingError(market_id.to_owned(), e.to_string())
@@ -681,64 +675,64 @@ fn get_resolution_value_binary(
 /// Manual mapping of group slugs to our standard categories.
 fn get_category(tags: &[String]) -> Option<String> {
     const CATEGORIES: [(&str, &str); 58] = [
-        ("118th-congress", "Politics"),
-        ("2024-us-presidential-election", "Politics"),
-        ("ai", "AI"),
-        ("ai-alignment", "AI"),
-        ("ai-safety", "AI"),
-        ("arabisraeli-conflict", "Politics"),
-        ("apple", "Technology"),
-        ("baseball", "Sports"),
-        ("basketball", "Sports"),
-        ("biotech", "Science"),
-        ("bitcoin", "Crypto"),
-        ("celebrities", "Culture"),
-        ("chatgpt", "AI"),
-        ("chess", "Sports"),
-        ("climate", "Climate"),
-        ("crypto-speculation", "Crypto"),
-        ("culture-default", "Culture"),
-        ("donald-trump", "Politics"),
-        ("economics-default", "Economics"),
-        ("f1", "Sports"),
-        ("finance", "Economics"),
-        ("football", "Sports"),
-        ("formula-1", "Sports"),
-        ("gaming", "Culture"),
-        ("gpt4-speculation", "AI"),
-        ("internet", "Technology"),
-        ("israelhamas-conflict-2023", "Politics"),
-        ("israeli-politics", "Politics"),
-        ("medicine", "Science"),
-        ("movies", "Culture"),
-        ("music-f213cbf1eab5", "Culture"),
-        ("nfl", "Sports"),
-        ("nuclear", "Science"),
-        ("nuclear-risk", "Politics"),
-        ("openai", "AI"),
-        ("openai-9e1c42b2bb1e", "AI"),
-        ("openai-crisis", "AI"),
-        ("physics", "Science"),
-        ("politics-default", "Politics"),
-        ("programming", "Technology"),
-        ("science-default", "Science"),
-        ("soccer", "Sports"),
-        ("space", "Science"),
-        ("speaker-of-the-house-election", "Politics"),
-        ("sports-default", "Sports"),
-        ("startups", "Economics"),
-        ("stocks", "Economics"),
-        ("technical-ai-timelines", "AI"),
-        ("technology-default", "Technology"),
-        ("tennis", "Sports"),
-        ("time-person-of-the-year", "Culture"),
-        ("tv", "Culture"),
-        ("uk-politics", "Politics"),
-        ("ukraine", "Politics"),
-        ("ukrainerussia-war", "Politics"),
-        ("us-politics", "Politics"),
-        ("wars", "Politics"),
-        ("world-default", "Politics"),
+        ("118th-congress", "politics"),
+        ("2024-us-presidential-election", "politics"),
+        ("ai", "ai"),
+        ("ai-alignment", "ai"),
+        ("ai-safety", "ai"),
+        ("arabisraeli-conflict", "politics"),
+        ("apple", "ai"),
+        ("baseball", "sports"),
+        ("basketball", "sports"),
+        ("biotech", "science"),
+        ("bitcoin", "economics"),
+        ("celebrities", "culture"),
+        ("chatgpt", "ai"),
+        ("chess", "sports"),
+        ("climate", "science"),
+        ("crypto-speculation", "economics"),
+        ("culture-default", "culture"),
+        ("donald-trump", "politics"),
+        ("economics-default", "economics"),
+        ("f1", "sports"),
+        ("finance", "economics"),
+        ("football", "sports"),
+        ("formula-1", "sports"),
+        ("gaming", "culture"),
+        ("gpt4-speculation", "ai"),
+        ("internet", "technology"),
+        ("israelhamas-conflict-2023", "politics"),
+        ("israeli-politics", "politics"),
+        ("medicine", "science"),
+        ("movies", "culture"),
+        ("music-f213cbf1eab5", "culture"),
+        ("nfl", "sports"),
+        ("nuclear", "science"),
+        ("nuclear-risk", "politics"),
+        ("openai", "ai"),
+        ("openai-9e1c42b2bb1e", "ai"),
+        ("openai-crisis", "ai"),
+        ("physics", "science"),
+        ("politics-default", "politics"),
+        ("programming", "technology"),
+        ("science-default", "science"),
+        ("soccer", "sports"),
+        ("space", "science"),
+        ("speaker-of-the-house-election", "politics"),
+        ("sports-default", "sports"),
+        ("startups", "economics"),
+        ("stocks", "economics"),
+        ("technical-ai-timelines", "ai"),
+        ("technology-default", "technology"),
+        ("tennis", "sports"),
+        ("time-person-of-the-year", "culture"),
+        ("tv", "culture"),
+        ("uk-politics", "politics"),
+        ("ukraine", "politics"),
+        ("ukrainerussia-war", "politics"),
+        ("us-politics", "politics"),
+        ("wars", "politics"),
+        ("world-default", "politics"),
     ];
 
     let category_map: HashMap<&str, &str> = CATEGORIES.iter().cloned().collect();

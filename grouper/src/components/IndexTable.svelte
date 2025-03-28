@@ -1,6 +1,12 @@
 <script>
   import { onMount } from "svelte";
-  import { getItemsSorted, deleteItem } from "@lib/api";
+  import {
+    getMarkets,
+    getCategories,
+    getPlatformsLite,
+    getQuestions,
+    deleteItem,
+  } from "@lib/api";
 
   // Props
   export let headers = [];
@@ -15,7 +21,17 @@
 
   async function loadTableData() {
     try {
-      items = await getItemsSorted(endpoint);
+      if (endpoint === "markets") {
+        items = await getMarkets();
+      } else if (endpoint === "categories") {
+        items = await getCategories();
+      } else if (endpoint === "platforms") {
+        items = await getPlatformsLite();
+      } else if (endpoint === "questions") {
+        items = await getQuestions();
+      } else {
+        error = "Invalid endpoint";
+      }
       error = items.length === 0 ? "No items found." : null;
     } catch (err) {
       error = `Error loading data: ${err.message}`;

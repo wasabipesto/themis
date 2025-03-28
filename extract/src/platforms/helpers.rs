@@ -118,7 +118,6 @@ fn dt_set_hour(dt: DateTime<Utc>, hour: u32) -> Result<DateTime<Utc>> {
 pub fn get_daily_probabilities(
     probs: &[ProbSegment],
     market_id: &str,
-    platform_slug: &str,
 ) -> Result<Vec<DailyProbability>> {
     if probs.is_empty() {
         warn!("No probability segments provided for daily probability calculation");
@@ -145,7 +144,6 @@ pub fn get_daily_probabilities(
 
         daily_probs.push(DailyProbability {
             market_id: market_id.to_owned(),
-            platform_slug: platform_slug.to_owned(),
             date: day_midpoint,
             prob,
         });
@@ -456,13 +454,13 @@ mod tests {
                 prob: 0.8,
             },
         ];
-        let daily_probs = get_daily_probabilities(&probs, "", "").unwrap();
+        let daily_probs = get_daily_probabilities(&probs, "").unwrap();
         assert_eq!(daily_probs.len(), 2);
         assert_eq!(daily_probs[0].prob, 0.7); // Average for first day
 
         // Empty input
         let empty_probs: Vec<ProbSegment> = vec![];
-        assert!(get_daily_probabilities(&empty_probs, "", "")
+        assert!(get_daily_probabilities(&empty_probs, "")
             .unwrap()
             .is_empty());
     }
@@ -536,7 +534,7 @@ mod tests {
         let duration = get_market_duration(start, far_future).unwrap();
         assert!(duration > 365000);
 
-        let daily_probs = get_daily_probabilities(&long_prob, "", "").unwrap();
+        let daily_probs = get_daily_probabilities(&long_prob, "").unwrap();
         assert!(daily_probs.len() > 365000);
         assert_eq!(daily_probs.first().unwrap().prob, 0.5);
         assert_eq!(daily_probs.last().unwrap().prob, 0.5);

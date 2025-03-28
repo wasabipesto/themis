@@ -214,10 +214,8 @@ pub fn standardize(input: &KalshiData) -> MarketResult<Vec<MarketAndProbs>> {
             if let Err(e) = helpers::validate_prob_segments(&probs) {
                 return Err(MarketError::InvalidMarketTrades(market_id, e.to_string()));
             }
-            let daily_probabilities =
-                helpers::get_daily_probabilities(&probs, &market_id, &platform_slug).map_err(
-                    |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
-                )?;
+            let daily_probabilities = helpers::get_daily_probabilities(&probs, &market_id)
+                .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?;
 
             // We only consider the market to be open while there are actual probabilities.
             let start = probs.first().unwrap().start;
@@ -235,16 +233,16 @@ pub fn standardize(input: &KalshiData) -> MarketResult<Vec<MarketAndProbs>> {
             let market = StandardMarket {
                 id: market_id.to_owned(),
                 title,
-                platform_slug,
-                platform_name: "Kalshi".to_string(),
+                url: get_url(&input.market.ticker).map_err(|e| {
+                    MarketError::ProcessingError(market_id.to_owned(), e.to_string())
+                })?,
                 description: format!(
                     "{}\n\n{}",
                     input.market.rules_primary.clone(),
                     input.market.rules_secondary.clone(),
                 ),
-                url: get_url(&input.market.ticker).map_err(|e| {
-                    MarketError::ProcessingError(market_id.to_owned(), e.to_string())
-                })?,
+                platform_slug,
+                category_slug: get_category(&input.market),
                 open_datetime: start,
                 close_datetime: end,
                 traders_count: None, // Not available in API
@@ -252,7 +250,6 @@ pub fn standardize(input: &KalshiData) -> MarketResult<Vec<MarketAndProbs>> {
                 duration_days: helpers::get_market_duration(start, end).map_err(|e| {
                     MarketError::ProcessingError(market_id.to_owned(), e.to_string())
                 })?,
-                category: get_category(&input.market),
                 prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end).map_err(
                     |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
                 )?,

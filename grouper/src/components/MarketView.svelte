@@ -1,15 +1,19 @@
 <script lang="ts">
-  import type { Question, Market, DailyProbability } from "@types";
+  import type {
+    Question,
+    MarketDetails,
+    DailyProbabilityDetails,
+  } from "@types";
   import { onMount } from "svelte";
   import { getMarket, getQuestion, getMarketProbs, linkMarket } from "@lib/api";
   import * as Plot from "@observablehq/plot";
 
-  let market: Market | null = null;
+  let market: MarketDetails | null = null;
   let question: Question | null = null;
   let loading = true;
   let error: string | null = null;
   let marketId: string | null = null;
-  let plotData: DailyProbability[] = [];
+  let plotData: DailyProbabilityDetails[] = [];
 
   let questionIdInput: number | null = null;
   let linkError: string | null = null;
@@ -171,11 +175,11 @@
         >
           Copy ID
         </button>
-        {#if market.category}
+        {#if market.category_name}
           <span
             class="text-sm bg-rosewater/20 text-text px-4 py-1 rounded-md mr-2 mb-2"
           >
-            {market.category}
+            {market.category_name}
           </span>
         {/if}
         {#if market.volume_usd && market.volume_usd > 1000}
