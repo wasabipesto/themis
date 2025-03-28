@@ -10,15 +10,15 @@ import type { CategoryDetails, PlatformScoreDetails, QuestionDetails } from "@ty
 
 const pgrst_url = "https://data.predictionmetrics.org"; // import.meta.env.PGRST_URL;
 
-const categories = (await fetch(`${pgrst_url}/categories`).then((res) =>
+const categories = (await fetch(`${pgrst_url}/category_details`).then((res) =>
     res.json(),
 )) as CategoryDetails[];
 
-const platformScores = (await fetch(`${pgrst_url}/platform_scores`).then(
+const platformScores = (await fetch(`${pgrst_url}/platform_scores_details`).then(
     (res) => res.json(),
 )) as PlatformScoreDetails[];
 
-const sampleQuestion = (await fetch(`${pgrst_url}/platform_scores_details`).then(
+const sampleQuestion = (await fetch(`${pgrst_url}/question_details`).then(
     (res) => res.json(),
 )) as QuestionDetails;
 ---
