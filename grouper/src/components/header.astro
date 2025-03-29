@@ -1,7 +1,8 @@
-<nav class="bg-crust text-text px-4 py-2 drop-shadow-lg">
-    <div
-        class="container mx-auto flex flex-col sm:flex-row justify-between items-left"
-    >
+<nav class="bg-crust text-text px-4 py-2 drop-shadow-lg relative" id="main-nav">
+    <!-- Progress bar overlay that starts with width 0 and grows during refresh -->
+    <div id="progress-bar" class="absolute left-0 top-0 h-full bg-mauve/50 w-0 transition-width duration-100 ease-linear"></div>
+
+    <div class="container mx-auto flex flex-col sm:flex-row justify-between items-left relative z-10">
         <a href="/" class="text-lg font-bold">Themis Admin Utilities</a>
         <ul
             class="flex flex-wrap items-center gap-4 mt-2 text-sm sm:text-base sm:mt-0"
@@ -33,12 +34,50 @@
 
     document.getElementById('refresh-button')?.addEventListener('click', async (e) => {
         e.preventDefault();
+
+        const progressBar = document.getElementById('progress-bar');
+        if (!progressBar) return;
+
         try {
+            // Reset progress bar
+            progressBar.style.width = '0%';
+
+            // Start progress animation (30 steps over 3 seconds)
+            let progress = 0;
+            const totalSteps = 30;
+            const intervalTime = 3000 / totalSteps;
+
+            const progressInterval = setInterval(() => {
+                progress += 100 / totalSteps;
+                if (progress > 95) {
+                    progress = 95; // Cap at 95% until completion
+                }
+                progressBar.style.width = `${progress}%`;
+            }, intervalTime);
+
+            // Perform the refresh
             await refreshViewsQuick();
-            window.location.reload();
+
+            // Complete the progress bar
+            clearInterval(progressInterval);
+            progressBar.style.width = '100%';
+
+            // Slight delay before reload to show completion
+            setTimeout(() => {
+                window.location.reload();
+            }, 200);
+
         } catch (error) {
+            // Reset progress bar on error
+            progressBar.style.width = '0%';
             console.error('Error refreshing views:', error);
             alert('Error refreshing views. See console for details.');
         }
     });
 </script>
+
+<style>
+    .transition-width {
+        transition-property: width;
+    }
+</style>
