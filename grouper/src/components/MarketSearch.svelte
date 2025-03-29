@@ -121,14 +121,22 @@
   }
 
   async function handleDismiss(marketId: string, level: number) {
+    // Store the original markets state to restore in case of error
+    const originalMarkets = [...markets];
+
     try {
-      await dismissMarket(marketId, level);
-      // Optimistically remove the item from the list
+      // Optimistically update the UI first
       markets = markets.filter((item) => item.id !== marketId);
       if (markets.length === 0) {
         error = "No items found.";
       }
+
+      // Then perform the actual API call
+      await dismissMarket(marketId, level);
+      // If successful, we don't need to do anything else since UI is already updated
     } catch (err: unknown) {
+      // If the API call fails, revert to the original state
+      markets = originalMarkets;
       error = err instanceof Error ? err.message : "Error dismissing market";
     }
   }
