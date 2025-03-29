@@ -108,7 +108,7 @@
         {#each items as item}
           <tr class="hover:bg-base-dark">
             {#each headers as header}
-              <td class="px-6 py-4 whitespace-nowrap text-sm">
+              <td class="px-6 py-4 text-sm">
                 {item[header.key] || ""}
               </td>
             {/each}
