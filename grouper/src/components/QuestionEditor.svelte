@@ -314,6 +314,8 @@
       {isNew ? "Create Question" : `Edit Question #${question?.id || ""}`}
     </h2>
 
+    <input type="text" id="id" name="id" value={question?.id || ""} hidden />
+
     <div class="mb-4">
       <label
         for="title"
