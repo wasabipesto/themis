@@ -216,6 +216,7 @@ export async function dismissMarket(
     method: "POST",
     body: JSON.stringify({ market_id: marketId, dismissed_status: status }),
   });
+  await refreshViewsQuick();
   return await getMarket(marketId);
 }
 
