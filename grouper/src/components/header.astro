@@ -10,7 +10,7 @@
                 <a href="/">Dashboard</a>
             </li>
             <li>
-                <a href="/platforms">Platforms</a>
+                <a href="/markets">Markets</a>
             </li>
             <li>
                 <a href="/questions">Questions</a>
@@ -19,8 +19,26 @@
                 <a href="/categories">Categories</a>
             </li>
             <li>
-                <a href="/markets">Markets</a>
+                <a href="/platforms">Platforms</a>
+            </li>
+            <li>
+                <a href="#" class="cursor-pointer" id="refresh-button">Refresh</a>
             </li>
         </ul>
     </div>
 </nav>
+
+<script>
+    import { refreshViewsQuick } from "@lib/api.ts";
+
+    document.getElementById('refresh-button')?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+            await refreshViewsQuick();
+            window.location.reload();
+        } catch (error) {
+            console.error('Error refreshing views:', error);
+            alert('Error refreshing views. See console for details.');
+        }
+    });
+</script>
