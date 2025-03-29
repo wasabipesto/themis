@@ -126,10 +126,8 @@
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+      month: "2-digit",
+      day: "2-digit",
     });
   }
 
@@ -162,47 +160,28 @@
       <div class="flex justify-between items-start mb-2">
         <h1 class="text-2xl font-bold">
           {market.title}
+          {#if market.resolution == 1.0}
+            <span class="px-2 rounded-md bg-green/20"> YES </span>
+          {:else if market.resolution == 0.0}
+            <span class="px-2 rounded-md bg-red/20"> NO </span>
+          {:else}
+            <span class="px-2 rounded-md bg-teal/20">
+              {market.resolution.toFixed(2)}
+            </span>
+          {/if}
         </h1>
       </div>
       <div class="flex justify-between items-start mb-2">
         <h1 class="text-xs">{market.id}</h1>
       </div>
 
-      <div class="mb-6">
+      <div class="mb-0">
         <button
           on:click={() => navigator.clipboard.writeText(market?.id || "")}
           class="inline-flex items-center px-3 py-1 mr-2 mb-2 text-sm rounded-md text-white bg-teal/50 hover:bg-teal"
         >
           Copy ID
         </button>
-        {#if market.category_name}
-          <span
-            class="text-sm bg-rosewater/20 text-text px-4 py-1 rounded-md mr-2 mb-2"
-          >
-            {market.category_name}
-          </span>
-        {/if}
-        {#if market.volume_usd && market.volume_usd > 1000}
-          <span
-            class="text-sm bg-green/20 text-text px-4 py-1 rounded-md mr-2 mb-2"
-          >
-            High Volume
-          </span>
-        {/if}
-        {#if market.traders_count && market.traders_count > 100}
-          <span
-            class="text-sm bg-green/20 text-text px-4 py-1 rounded-md mr-2 mb-2"
-          >
-            High Traders
-          </span>
-        {/if}
-        {#if market.duration_days > 100}
-          <span
-            class="text-sm bg-green/20 text-text px-4 py-1 rounded-md mr-2 mb-2"
-          >
-            High Duration
-          </span>
-        {/if}
         <span
           class="text-sm bg-blue/20 text-text px-4 py-1 rounded-md mr-2 mb-2"
         >
@@ -213,68 +192,42 @@
       </div>
 
       <div class="mb-6">
+        {#if market.category_name}
+          <span
+            class="text-sm bg-blue/20 text-text px-4 py-1 rounded-md mr-2 mb-2"
+          >
+            {market.category_name}
+          </span>
+        {/if}
+        {#if market.volume_usd}
+          <span
+            class="text-sm bg-blue/20 text-text px-4 py-1 rounded-md mr-2 mb-2"
+          >
+            ${market.volume_usd
+              ? Math.round(market.volume_usd).toLocaleString()
+              : "N/A"} Volume
+          </span>
+        {/if}
+        {#if market.traders_count}
+          <span
+            class="text-sm bg-blue/20 text-text px-4 py-1 rounded-md mr-2 mb-2"
+          >
+            {market.traders_count?.toLocaleString() || "N/A"}
+          </span>
+        {/if}
+        <span
+          class="text-sm bg-blue/20 text-text px-4 py-1 rounded-md mr-2 mb-2"
+        >
+          {formatDate(market.open_datetime)} to {formatDate(
+            market.close_datetime,
+          )} ({market.duration_days}d)
+        </span>
+      </div>
+
+      <div class="mb-0">
         <h2 class="text-xl font-semibold mb-2">Description</h2>
         <div class="bg-mantle p-4 rounded-md">
           <p class="whitespace-pre-line">{market.description}</p>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <div>
-          <h2 class="text-xl font-semibold mb-2">Market Details</h2>
-          <div class="bg-mantle p-4 rounded-md">
-            <dl>
-              <dt class="text-text/70">Open Date</dt>
-              <dd class="mb-2">
-                {formatDate(market.open_datetime)}
-              </dd>
-
-              <dt class="text-text/70">Close Date</dt>
-              <dd class="mb-2">
-                {formatDate(market.close_datetime)}
-              </dd>
-
-              <dt class="text-text/70">Probability (Average)</dt>
-              <dd>{formatProbability(market.prob_time_avg)}</dd>
-
-              <dt class="text-text/70">Resolution</dt>
-              <dd class="mb-2">
-                {#if market.resolution === null || market.resolution === undefined}
-                  Unresolved
-                {:else if market.resolution === 1}
-                  Yes (1)
-                {:else if market.resolution === 0}
-                  No (0)
-                {:else}
-                  Prob ({market.resolution})
-                {/if}
-              </dd>
-            </dl>
-          </div>
-        </div>
-
-        <div>
-          <h2 class="text-xl font-semibold mb-2">Market Statistics</h2>
-          <div class="bg-mantle p-4 rounded-md">
-            <dl>
-              <dt class="text-text/70">Traders</dt>
-              <dd class="mb-2">
-                {market.traders_count?.toLocaleString() || "N/A"}
-              </dd>
-
-              <dt class="text-text/70">Volume (USD)</dt>
-              <dd class="mb-2">
-                ${market.volume_usd
-                  ? Math.round(market.volume_usd).toLocaleString()
-                  : "N/A"}
-              </dd>
-
-              <dt class="text-text/70">Duration (days)</dt>
-              <dd class="mb-2">
-                {market.duration_days?.toLocaleString() || "N/A"}
-              </dd>
-            </dl>
-          </div>
         </div>
       </div>
     </div>
