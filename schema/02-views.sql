@@ -154,8 +154,8 @@ FROM
     markets m
     JOIN platforms p ON m.platform_slug = p.slug
     LEFT JOIN market_questions mq ON m.id = mq.market_id
-    LEFT JOIN market_dismissals md ON m.id = md.market_id
     LEFT JOIN questions q ON mq.question_id = q.id
+    LEFT JOIN market_dismissals md ON m.id = md.market_id
     LEFT JOIN categories c ON m.category_slug = c.slug;
 CREATE UNIQUE INDEX market_details_id_idx ON market_details (id);
 
