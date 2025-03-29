@@ -151,7 +151,7 @@ export async function updateCategory(data: Category): Promise<Category> {
 }
 
 export async function getQuestions(): Promise<QuestionDetails[]> {
-  const limit = 100;
+  const limit = 1000;
   const order = "slug.asc";
   return fetchFromAPI(`question_details?limit=${limit}&order=${order}`);
 }
