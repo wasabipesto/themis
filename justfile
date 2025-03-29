@@ -60,10 +60,16 @@ db-curl *endpoint:
     -X GET "${PGRST_URL}/{{endpoint}}" \
     -H "Authorization: Bearer ${PGRST_APIKEY}" | jq
 
-# Get DB items from an endpoint
+# Refresh all database views
 db-refresh-views *endpoint:
     curl -sf \
     -X POST "${PGRST_URL}/rpc/refresh_all_materialized_views" \
+    -H "Authorization: Bearer ${PGRST_APIKEY}" | jq
+
+# Refresh the quick database views
+db-refresh-quick *endpoint:
+    curl -sf \
+    -X POST "${PGRST_URL}/rpc/refresh_quick_materialized_views" \
     -H "Authorization: Bearer ${PGRST_APIKEY}" | jq
 
 # Start the main site dev server

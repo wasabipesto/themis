@@ -191,22 +191,35 @@ FROM
 CREATE UNIQUE INDEX question_details_id_idx ON question_details (id);
 
 -- === REFRESH ALL VIEWS ===
--- === TO RUN: SELECT refresh_all_materialized_views();
 CREATE OR REPLACE FUNCTION refresh_all_materialized_views()
 RETURNS VOID AS $$
 BEGIN
     -- Refresh views in order of dependencies (lowest level first)
-    REFRESH MATERIALIZED VIEW CONCURRENTLY platform_details;
-    REFRESH MATERIALIZED VIEW CONCURRENTLY category_details;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY platform_details; -- 2 SECONDS
+    REFRESH MATERIALIZED VIEW CONCURRENTLY category_details; -- INSTANT
     REFRESH MATERIALIZED VIEW CONCURRENTLY market_scores_details;
     REFRESH MATERIALIZED VIEW CONCURRENTLY platform_scores_details;
-    REFRESH MATERIALIZED VIEW CONCURRENTLY daily_probability_details;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY daily_probability_details; -- >30 SECONDS
     -- These depend on other materialized views
-    REFRESH MATERIALIZED VIEW CONCURRENTLY question_details;
-    REFRESH MATERIALIZED VIEW CONCURRENTLY market_details;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY question_details; -- INSTANT
+    REFRESH MATERIALIZED VIEW CONCURRENTLY market_details; -- 3 SECONDS
 END;
 $$ LANGUAGE plpgsql;
 
 -- ONLY ALLOW ADMINS TO INVOKE REFRESH
 REVOKE EXECUTE ON FUNCTION refresh_all_materialized_views() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION refresh_all_materialized_views() TO admin;
+
+-- === REFRESH JUST THE QUICKEST VIEWS FOR DEVELOPMENT LOOP ===
+CREATE OR REPLACE FUNCTION refresh_quick_materialized_views()
+RETURNS VOID AS $$
+BEGIN
+    REFRESH MATERIALIZED VIEW CONCURRENTLY category_details; -- INSTANT
+    REFRESH MATERIALIZED VIEW CONCURRENTLY question_details; -- INSTANT
+    REFRESH MATERIALIZED VIEW CONCURRENTLY market_details; -- 3 SECONDS
+END;
+$$ LANGUAGE plpgsql;
+
+-- ONLY ALLOW ADMINS TO INVOKE REFRESH
+REVOKE EXECUTE ON FUNCTION refresh_quick_materialized_views() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION refresh_quick_materialized_views() TO admin;

@@ -18,12 +18,13 @@ import requests
 from tqdm import tqdm
 
 
-def test_endpoint(url, num_requests=100, headers=None, verify=True):
+def test_endpoint(url, method="GET", num_requests=100, headers=None, verify=True):
     """
     Test an endpoint's response time.
 
     Args:
         url (str): The URL to test
+        method (str): HTTP method to use (default: GET)
         num_requests (int): Number of requests to make
         headers (dict): Optional HTTP headers to include
         verify (bool): Whether to verify SSL certificates
@@ -37,9 +38,9 @@ def test_endpoint(url, num_requests=100, headers=None, verify=True):
     for _ in tqdm(range(num_requests), desc="Testing endpoint"):
         start_time = time.time()
         try:
-            response = requests.get(url, headers=headers, timeout=30, verify=verify)
-            if response.status_code != 200:
-                print(f"Warning: Request returned status code {response.status_code}")
+            response = requests.request(method, url, headers=headers, timeout=30, verify=verify)
+            if not response.ok:
+                print(f"Warning: Request returned status code {response.status_code} {response.content}")
         except Exception as e:
             print(f"Error during request: {e}")
             continue
@@ -99,6 +100,7 @@ def main():
     parser = argparse.ArgumentParser(description='Test endpoint response time')
     parser.add_argument('url', help='URL to test')
     parser.add_argument('-n', '--num-requests', type=int, default=1000, help='Number of requests to make (default: 100)')
+    parser.add_argument('--method', default='GET', help='HTTP method to use (default: GET)')
     parser.add_argument('--header', action='append', help='Headers in format "Key: Value"')
     parser.add_argument('--no-verify', action='store_true', help='Disable SSL certificate verification')
     parser.add_argument('--plot', action='store_true', help='Plot response time histogram')
@@ -106,7 +108,7 @@ def main():
 
     args = parser.parse_args()
 
-    # Process headers if provided
+    print(f"Testing {args.method} endpoint {args.num_requests} times: {args.url}")
     headers = {}
     if args.header:
         for header in args.header:
@@ -115,11 +117,9 @@ def main():
                 headers[key.strip()] = value.strip()
             except ValueError:
                 print(f"Invalid header format: {header}, expected 'Key: Value'")
+        print(f"Headers: {headers}")
 
-    print(f"Testing endpoint: {args.url}")
-    print(f"Number of requests: {args.num_requests}")
-
-    response_times = test_endpoint(args.url, args.num_requests, headers, not args.no_verify)
+    response_times = test_endpoint(args.url, args.method, args.num_requests, headers, not args.no_verify)
 
     results = analyze_results(response_times)
 
