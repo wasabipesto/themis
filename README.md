@@ -256,9 +256,9 @@ The production database is publicly readable via PostgREST here:
 For example, to get items from various tables:
 
 ```bash
-curl -sf https://data.predictionmetrics.org/platforms
-curl -sf https://data.predictionmetrics.org/questions
-curl -sf https://data.predictionmetrics.org/markets
+curl -sf https://data.predictionmetrics.org/question_details?limit=100
+curl -sf https://data.predictionmetrics.org/market_details?limit=100
+curl -sf https://data.predictionmetrics.org/daily_probability_details?limit=100
 ```
 
 You can find PostgREST documentation here:
