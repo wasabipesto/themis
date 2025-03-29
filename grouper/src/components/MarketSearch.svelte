@@ -62,7 +62,7 @@
     // Create conditions for each field where all words must match
     const fieldConditions = fields.map((field) => {
       // For each word, create a condition that the field contains that word
-      const wordConditions = words.map((word) => `${field}.ilike.%${word}%`);
+      const wordConditions = words.map((word) => `${field}.ilike.*${word}*`);
 
       // Join the word conditions with AND to require all words in this field
       return `and(${wordConditions.join(",")})`;
