@@ -1,7 +1,8 @@
 const OLLAMA_URL = import.meta.env.PUBLIC_OLLAMA_URL;
 const OLLAMA_MODEL = import.meta.env.PUBLIC_OLLAMA_MODEL;
 
-import { getCategories } from "@lib/api";
+import { getCategories, getQuestions } from "@lib/api";
+import type { MarketDetails } from "@types";
 
 export async function queryOllama(prompt: string): Promise<string> {
   try {
@@ -56,4 +57,20 @@ export async function llmGetCategory(input: string): Promise<string | null> {
 
   // If no category slug is found in the response
   return null;
+}
+
+export async function llmSlugify(market: MarketDetails): Promise<string> {
+  // Get market category
+  const category =
+    market.category_slug || (await llmGetCategory(market.title)) || null;
+  const questionParam = category ? `question_name=eq.${market.title}` : null;
+
+  // Get live slugs for comparison
+  const questions = await getQuestions(questionParam, 10, "volume_usd.asc");
+  const questionSlugs = questions.map((q) => q.slug);
+
+  const response = await queryOllama(
+    `Generate a slug from the provided text similar to the given examples. Examples: ${questionSlugs.join(", ")}. Text input: ${market.title}`,
+  );
+  return response;
 }

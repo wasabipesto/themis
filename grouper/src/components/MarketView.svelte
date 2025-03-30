@@ -33,7 +33,7 @@
     linkMarketNoRefresh,
     refreshViewsQuick,
   } from "@lib/api";
-  import { llmGetKeywords, llmGetCategory } from "@lib/ai";
+  import { llmGetKeywords, llmGetCategory, llmSlugify } from "@lib/ai";
 
   // Market view
   let marketId: string | null = null;
@@ -251,7 +251,7 @@
       // Create a new Question object
       const newQuestion: NewQuestion = {
         title: firstMarket.title,
-        slug: slugify(firstMarket.title),
+        slug: await llmSlugify(firstMarket),
         description: "",
         category_slug:
           firstMarket.category_slug ||
