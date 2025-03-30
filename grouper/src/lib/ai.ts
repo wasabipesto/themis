@@ -63,14 +63,16 @@ export async function llmSlugify(market: MarketDetails): Promise<string> {
   // Get market category
   const category =
     market.category_slug || (await llmGetCategory(market.title)) || null;
-  const questionParam = category ? `question_name=eq.${market.title}` : null;
+  const questionParam = category
+    ? `category_slug=eq.${market.category_slug}`
+    : null;
 
   // Get live slugs for comparison
-  const questions = await getQuestions(questionParam, 10, "volume_usd.asc");
+  const questions = await getQuestions(questionParam, 20, "total_volume.asc");
   const questionSlugs = questions.map((q) => q.slug);
 
   const response = await queryOllama(
-    `Generate a slug from the provided text similar to the given examples. Examples: ${questionSlugs.join(", ")}. Text input: ${market.title}`,
+    `Generate a slug from the provided text similar to the given examples. Do not include any other text. Examples: ${questionSlugs.join(", ")}. Text input: ${market.title}`,
   );
   return response;
 }
