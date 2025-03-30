@@ -123,13 +123,16 @@
       const results = await getMarkets(params);
       platformResults.set(platformSlug, {
         loading: false,
-        error: results.length === 0 ? "No items found." : null,
+        error: results.length === 0 ? `${platformSlug}: No items found.` : null,
         markets: results,
       });
     } catch (err: unknown) {
       platformResults.set(platformSlug, {
         loading: false,
-        error: err instanceof Error ? err.message : "Error loading table data.",
+        error:
+          err instanceof Error
+            ? err.message
+            : `${platformSlug}: Error loading table data.`,
         markets: [],
       });
     }
