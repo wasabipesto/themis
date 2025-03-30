@@ -8,6 +8,8 @@
     LoadingSpinner,
     ErrorMessage,
     MarketTable,
+    updateUrl,
+    assembleParamString,
   } from "./market-search";
 
   // Initial state
@@ -35,32 +37,6 @@
     }
   });
 
-  function buildSearchQuery(userQuery: string) {
-    // If the query is empty, return a default or empty query
-    const cleanQuery = userQuery.trim();
-    if (!cleanQuery) {
-      return "";
-    }
-
-    // Split query into words, filtering out empty strings
-    const words = cleanQuery.split(/\s+/).filter((word) => word.length > 0);
-
-    // For each field, create a condition that each field contains ALL the words
-    const fields = ["id", "title", "url", "description"];
-
-    // Create conditions for each field where all words must match
-    const fieldConditions = fields.map((field) => {
-      // For each word, create a condition that the field contains that word
-      const wordConditions = words.map((word) => `${field}.ilike.*${word}*`);
-
-      // Join the word conditions with AND to require all words in this field
-      return `and(${wordConditions.join(",")})`;
-    });
-
-    // Join field conditions with OR (any field can contain all words)
-    return `&or=(${fieldConditions.join(",")})`;
-  }
-
   async function loadTableData(
     query = searchQuery,
     platform = selectedPlatform,
@@ -71,14 +47,10 @@
     // Update URL with current search parameters
     updateUrl(query, platform, sort);
 
-    try {
-      // Base query parameters
-      let params = `order=${sort}`;
-      params +=
-        "&question_id=is.null&question_dismissed=eq.0&duration_days=gte.4";
-      if (query) params += buildSearchQuery(query);
-      if (platform) params += `&platform_slug=eq.${platform}`;
+    // Base query parameters
+    let params = assembleParamString(query, platform, sort);
 
+    try {
       markets = await getMarkets(params);
       error = markets.length === 0 ? "No items found." : null;
     } catch (err: unknown) {
@@ -86,23 +58,6 @@
     } finally {
       loading = false;
     }
-  }
-
-  function updateUrl(query: string, platform: string, sort: string) {
-    const url = new URL(window.location.href);
-
-    // Update or remove search params based on values
-    if (query) url.searchParams.set("q", query);
-    else url.searchParams.delete("q");
-
-    if (platform) url.searchParams.set("platform", platform);
-    else url.searchParams.delete("platform");
-
-    if (sort) url.searchParams.set("sort", sort);
-    else url.searchParams.delete("sort");
-
-    // Update the URL without refreshing the page
-    window.history.pushState({}, "", url);
   }
 
   function handleSearch() {
