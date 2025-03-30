@@ -153,13 +153,37 @@ You should see a few sample markets and data points, with total counts for each.
 
 The extract tool is designed to be safe to run multiple times. It will only overwrite items in the market table, and it will update items if they already exist. You can even run it while the download is in-progress to extract what's available.
 
-## Step 4. Creating and processing groups
+## Step 4. Creating and processing question groups
 
-TODO: Incomplete.
+The heart of the site are "questions", which are small groups assembled from markets that are equivalent.
+
+Ideally every platform would predict every important event with the same method and resolve with the same criteria, but they don't. Some platforms are legally unable, some have differing market mechanisms, and some just don't like predicting certain things. Our goal is to find a few markets from different platforms that are similar enough to be comparable and link them together under a "question" and do this as many times as possible.
+
+Right now this is done manually in order to ensure that linked markets are actually similar enough to be comparable. For my purposes, two markets are similar enough if the differences in their resolution criteria would affect their probabilities by 1% or less. For instance, two markets with a duration over 6 months with close dates differing by 1 day are usually still similar enough to compare equitably. This requires a fair amount of human judgment, though I am experimenting with ways to automate it.
+
+In the meantime, I have made a secondary Astro site with the tools you will need to search and view markets, link markets into groups, edit the question groups, and edit most other items in the database. To run it in the basic mode, run:
+
+```bash
+just group
+```
+
+This will launch the site in Astro's dev mode, which will be enough for anything you need to do. The site can also be compiled statically and served in the same way as the main site, but I recommend against doing this since it will have your database admin credentials baked in.
+
+For now I am intentionally not documenting specific features of the admin tools since they are not user-facing and I am constantly changing them to suit my needs better. The method I have found that works best for me is:
+
+- Sort all markets by volume, number of traders, or duration. Find one that seems interesting.
+- Find markets from other platforms that have equivalent or nearly-equivalent resolution criteria.
+- Sort those markets by volume, number of traders, or duration to find the one "authoritative" market per platform.
+- Create a question group with a representative title and slug consistent with your conventions.
+- Add all selected markets to the question by copying in their IDs.
+- Check that the probabilities overlap and set start/end date overrides if necessary.
+- Check that the resolutions match and invert questions if necessary.
+- While you have those searches open, look for other possible question groups in the same topic.
+- Once you have exhausted the markets in that topic, return to the top-level search and find another topic.
 
 ## Step 5. Generating site
 
-The site is static and designed to be deployed behind any standard web server such as `nginx`. It could also be deployed to GitHub Pages, Cloudflare Pages, or an AWS S3 bucket.
+The site is static and designed to be deployed behind any standard web server such as `nginx`. It could also be deployed to GitHub Pages, an AWS S3 bucket, or any other static site host.
 
 You can view a preview of the site or build it like so:
 
@@ -180,6 +204,8 @@ Then, you can deploy the site at any time with this command:
 ```bash
 just deploy # build and deploy site to rclone target
 ```
+
+Note: If you're just developing on the site you don't actually need to use the download and extract tools. You can build the site against my public database that the main site builds from by changing the `PGRST_URL` variable in the `.env` environment file to `https://data.predictionmetrics.org`.
 
 ## Step 6. Downloading new markets
 
