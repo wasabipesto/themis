@@ -149,10 +149,15 @@ export async function updateCategory(data: Category): Promise<CategoryDetails> {
   return await getCategory(data.slug);
 }
 
-export async function getQuestions(): Promise<QuestionDetails[]> {
-  const limit = 1000;
-  const order = "slug.asc";
-  return fetchFromAPI(`question_details?limit=${limit}&order=${order}`);
+export async function getQuestions(
+  params: string | null,
+  limit = 100,
+  order = "slug.asc",
+): Promise<QuestionDetails[]> {
+  const extraParams = params ? `&${params}` : "";
+  return fetchFromAPI(
+    `question_details?limit=${limit}&order=${order}${extraParams}`,
+  );
 }
 
 export async function getQuestion(id: string): Promise<QuestionDetails> {
