@@ -7,8 +7,6 @@ import type {
   PlatformDetails,
   Question,
   QuestionDetails,
-  MarketQuestionLink,
-  MarketDismissStatus,
 } from "@types";
 
 const PGRST_URL = import.meta.env.PUBLIC_PGRST_URL;
