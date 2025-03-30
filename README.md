@@ -278,6 +278,7 @@ These grants have been used for furthering development but have not influenced t
 This project has been featured in the following publications:
 
 - [Leveraging Log Probabilities in Language Models to Forecast Future Events](https://arxiv.org/abs/2501.04880v1)
+- [Tangle News: Lessons from the election you could bet on](https://www.readtangle.com/otherposts/lessons-from-the-election-you-could-bet-on/)
 - [Forecasting Newsletter: June 2024](https://forecasting.substack.com/p/forecasting-newsletter-june-2024)
 
 I use prediction markets, mainly Manifold and Metaculus, as a personal exercise in calibration. This project grew out of an effort to see how useful they can be as information-gathering tools.
