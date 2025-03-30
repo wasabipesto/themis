@@ -32,6 +32,7 @@
     linkMarketNoRefresh,
     refreshViewsQuick,
   } from "@lib/api";
+  import { llmGetKeywords, llmGetCategory } from "@lib/ai";
 
   // Market view
   let marketId: string | null = null;
@@ -50,6 +51,7 @@
   let otherPlatforms: HardcodedPlatform[] = [];
   let searchQuery = "";
   let searchLoading = true;
+  let keywordsLoading = false;
 
   // Separate results for each platform
   let platformResults: Map<
@@ -179,6 +181,26 @@
     loadAllPlatformData(searchQuery);
   }
 
+  async function generateKeywords() {
+    if (!market?.title) return;
+
+    keywordsLoading = true;
+    try {
+      const keywords = await llmGetKeywords(market.title);
+      searchQuery = keywords;
+      // After setting keywords, trigger the search
+      handleSearch();
+    } catch (err) {
+      console.error("Error generating keywords:", err);
+      alert(
+        "Failed to generate keywords: " +
+          (err instanceof Error ? err.message : String(err)),
+      );
+    } finally {
+      keywordsLoading = false;
+    }
+  }
+
   // Functions for staging markets
   function toggleStageMarket(market: MarketDetails) {
     // Check if the market is already staged
@@ -230,7 +252,10 @@
         title: firstMarket.title,
         slug: slugify(firstMarket.title),
         description: "",
-        category_slug: firstMarket.category_slug || "politics", // TODO
+        category_slug:
+          firstMarket.category_slug ||
+          (await llmGetCategory(firstMarket.title)) ||
+          "politics",
         start_date_override: null,
         end_date_override: null,
       };
@@ -285,8 +310,21 @@
 
     <!-- Search Sidebar -->
     <div class="max-w-4xl mx-auto w-full">
-      <div class="mb-4">
-        <SearchBar bind:searchQuery onSearch={handleSearch} />
+      <div class="mb-4 flex items-center gap-2">
+        <div class="flex-grow">
+          <SearchBar bind:searchQuery onSearch={handleSearch} />
+        </div>
+        <button
+          on:click={generateKeywords}
+          class="px-4 py-2 bg-blue hover:bg-blue/80 text-white rounded-md"
+          disabled={keywordsLoading}
+        >
+          {#if keywordsLoading}
+            <LoadingSpinner />
+          {:else}
+            Keywords
+          {/if}
+        </button>
       </div>
 
       {#if searchLoading}
