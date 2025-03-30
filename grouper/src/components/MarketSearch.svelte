@@ -2,6 +2,13 @@
   import type { MarketDetails, Platform } from "@types";
   import { onMount } from "svelte";
   import { getMarkets, dismissMarket, getPlatformsLite } from "@lib/api";
+  import {
+    SearchBar,
+    FilterControls,
+    LoadingSpinner,
+    ErrorMessage,
+    MarketTable,
+  } from "./market-search";
 
   // Initial state
   let markets: MarketDetails[] = [];
@@ -11,24 +18,6 @@
   let searchQuery = "";
   let selectedPlatform = "";
   let selectedSort = "volume_usd.desc.nullslast";
-
-  // Available sorting options
-  const sortOptions = [
-    { value: "title.asc", label: "Title A-Z" },
-    { value: "title.desc", label: "Title Z-A" },
-    { value: "open_datetime.desc", label: "Newest (by open)" },
-    { value: "open_datetime.asc", label: "Oldest (by open)" },
-    { value: "close_datetime.asc", label: "Newest (by close)" },
-    { value: "close_datetime.desc", label: "Oldest (by close)" },
-    { value: "traders_count.desc.nullslast", label: "Most traders" },
-    { value: "traders_count.asc.nullslast", label: "Least traders" },
-    { value: "volume_usd.desc.nullslast", label: "Highest volume" },
-    { value: "volume_usd.asc.nullslast", label: "Lowest volume" },
-    { value: "duration_days.desc", label: "Longest duration" },
-    { value: "duration_days.asc", label: "Shortest duration" },
-    { value: "prob_time_avg.desc", label: "Highest average prob" },
-    { value: "prob_time_avg.asc", label: "Lowest average prob" },
-  ];
 
   onMount(async () => {
     // Get initial values from URL
@@ -94,9 +83,9 @@
       error = markets.length === 0 ? "No items found." : null;
     } catch (err: unknown) {
       error = err instanceof Error ? err.message : "Error loading table data.";
+    } finally {
       loading = false;
     }
-    loading = false;
   }
 
   function updateUrl(query: string, platform: string, sort: string) {
@@ -143,157 +132,21 @@
 </script>
 
 <div class="w-full mb-4 mx-auto">
-  <div class="flex gap-2 my-2">
-    <input
-      type="text"
-      placeholder="Search markets..."
-      class="w-full px-4 py-2 pl-4 bg-crust rounded-lg focus:outline-none focus:ring-1 focus:ring-lavender"
-      bind:value={searchQuery}
-      on:keydown={(e) => e.key === "Enter" && handleSearch()}
-    />
-    <button
-      class="px-4 py-2 bg-blue hover:bg-blue/80 text-white rounded-md"
-      on:click={handleSearch}
-    >
-      Search
-    </button>
-  </div>
-
-  <div class="mt-2 flex gap-2">
-    <select
-      class="w-1/2 px-4 py-2 bg-crust rounded-lg focus:outline-none focus:ring-1 focus:ring-lavender"
-      bind:value={selectedPlatform}
-      on:change={handleSearch}
-    >
-      <option value="">All Platforms</option>
-      {#each platforms as platform}
-        <option value={platform.slug}>{platform.name}</option>
-      {/each}
-    </select>
-
-    <select
-      class="w-1/2 px-4 py-2 bg-crust rounded-lg focus:outline-none focus:ring-1 focus:ring-lavender"
-      bind:value={selectedSort}
-      on:change={handleSearch}
-    >
-      {#each sortOptions as option}
-        <option value={option.value}>{option.label}</option>
-      {/each}
-    </select>
-  </div>
+  <SearchBar bind:searchQuery onSearch={handleSearch} />
+  <FilterControls
+    {platforms}
+    bind:selectedPlatform
+    bind:selectedSort
+    onChange={handleSearch}
+  />
 </div>
 
 <div class="w-6xl mx-auto">
   {#if loading}
-    <div class="flex justify-center p-4">
-      <div
-        class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue"
-      ></div>
-    </div>
+    <LoadingSpinner />
   {:else if error}
-    <div class="text-red p-4 text-center">{error}</div>
+    <ErrorMessage message={error} />
   {:else}
-    <table class="w-full divide-y divide-subtext bg-crust rounded-lg shadow">
-      <thead>
-        <tr>
-          <th
-            class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
-          >
-            Platform
-          </th>
-          <th
-            class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
-          >
-            Title
-          </th>
-          <th
-            class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
-          >
-            Stats
-          </th>
-          <th
-            class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
-          >
-            Actions
-          </th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-subtext">
-        {#each markets as market}
-          <tr class="hover:bg-base-dark">
-            <td class="px-6 py-4 text-sm">
-              {market.platform_name}
-            </td>
-            <td class="px-6 py-4 text-sm">
-              {market.title}
-              <br />
-              {#if market.resolution == 1.0}
-                <span class="px-2 rounded-md bg-green/20">Resolved YES</span>
-              {:else if market.resolution == 0.0}
-                <span class="px-2 rounded-md bg-red/20">Resolved NO</span>
-              {:else}
-                <span class="px-2 rounded-md bg-teal/20"
-                  >Resolved {market.resolution}</span
-                >
-              {/if}
-            </td>
-            <td class="px-6 py-4 w-50 text-sm">
-              ${market.volume_usd
-                ? Math.round(market.volume_usd).toLocaleString()
-                : "N/A"}
-              <br />
-              {market.traders_count?.toLocaleString() || "N/A"}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                height={16}
-                fill="currentColor"
-                class="inline"
-              >
-                <title>People</title>
-                <path
-                  d="M16 17V19H2V17S2 13 9 13 16 17 16 17M12.5 7.5A3.5 3.5 0 1 0 9 11A3.5 3.5 0 0 0 12.5 7.5M15.94 13A5.32 5.32 0 0 1 18 17V19H22V17S22 13.37 15.94 13M15 4A3.39 3.39 0 0 0 13.07 4.59A5 5 0 0 1 13.07 10.41A3.39 3.39 0 0 0 15 11A3.5 3.5 0 0 0 15 4Z"
-                />
-              </svg>
-              {market.duration_days?.toLocaleString() || "N/A"}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                height={16}
-                fill="currentColor"
-                class="inline"
-              >
-                <title>Days</title>
-                <path
-                  d="M19,19H5V8H19M16,1V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3H18V1"
-                />
-              </svg>
-              <br />
-              {market.close_datetime.split("T")[0]}
-            </td>
-            <td class="px-6 py-4 w-60 text-sm font-medium actions">
-              <a
-                href={`/markets/edit?id=${market.id}`}
-                class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-blue/50 hover:bg-blue"
-              >
-                View
-              </a>
-              <button
-                on:click={() => navigator.clipboard.writeText(market.id)}
-                class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-teal/50 hover:bg-teal"
-              >
-                ID
-              </button>
-              <button
-                on:click={() => handleDismiss(market.id, 1)}
-                class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-red/50 hover:bg-red"
-              >
-                Dismiss
-              </button>
-            </td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
+    <MarketTable {markets} onDismiss={handleDismiss} />
   {/if}
 </div>
