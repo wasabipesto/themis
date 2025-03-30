@@ -1,12 +1,12 @@
 ---
-import Base from "@layouts/base.astro";
+import BaseWide from "@layouts/base-wide.astro";
 import MarketView from "@components/MarketView.svelte";
 ---
 
-<Base title="View Market">
+<BaseWide title="View Market">
     <div class="p-4 m-2 border-b border-text">
         <h2 class="text-3xl font-bold text-text">View Market Details</h2>
     </div>
 
     <MarketView client:load />
-</Base>
+</BaseWide>
