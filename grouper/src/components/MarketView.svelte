@@ -346,6 +346,8 @@
                   markets={platformResult?.markets}
                   {stagedMarkets}
                   onStage={toggleStageMarket}
+                  onRefreshAfterDismiss={() =>
+                    loadPlatformData(searchQuery, platform.slug, platform.sort)}
                 />
               {/if}
             </div>
