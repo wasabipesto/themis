@@ -8,8 +8,8 @@
 <div>
   {#if volumeUsd}
     ${Math.round(volumeUsd).toLocaleString()}
+    <br />
   {/if}
-  <br />
   {#if tradersCount}
     {tradersCount.toLocaleString() || "N/A"}
     <svg
