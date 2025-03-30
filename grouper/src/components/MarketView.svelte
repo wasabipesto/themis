@@ -6,6 +6,7 @@
     DailyProbabilityDetails,
   } from "@types";
   import {
+    LoadingSpinnerSmall,
     MarketDetailsCard,
     MarketProbabilityChart,
     QuestionLinkCard,
@@ -320,7 +321,7 @@
           disabled={keywordsLoading}
         >
           {#if keywordsLoading}
-            <LoadingSpinner />
+            <LoadingSpinnerSmall />
           {:else}
             Keywords
           {/if}
