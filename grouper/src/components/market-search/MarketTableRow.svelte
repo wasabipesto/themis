@@ -14,7 +14,6 @@
   </td>
   <td class="px-6 py-4 text-sm">
     {market.title}
-    <br />
     <MarketBadge resolution={market.resolution} />
   </td>
   <td class="px-6 py-4 w-50 text-sm">
