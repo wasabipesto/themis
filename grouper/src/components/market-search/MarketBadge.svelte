@@ -3,9 +3,9 @@
 </script>
 
 {#if resolution === 1.0}
-  <span class="px-2 rounded-md bg-green/20">Resolved YES</span>
+  <span class="mx-1 px-2 rounded-md bg-green/20">YES</span>
 {:else if resolution === 0.0}
-  <span class="px-2 rounded-md bg-red/20">Resolved NO</span>
+  <span class="mx-1 px-2 rounded-md bg-red/20">NO</span>
 {:else if resolution !== null}
-  <span class="px-2 rounded-md bg-teal/20">Resolved {resolution}</span>
+  <span class="mx-1 px-2 rounded-md bg-teal/20">{resolution}</span>
 {/if}
