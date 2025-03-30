@@ -7,7 +7,6 @@
 
   afterUpdate(() => {
     if (plotData.length > 0) {
-      console.log("Rendering plot with data:", plotData.length);
       renderPlot();
     }
   });
