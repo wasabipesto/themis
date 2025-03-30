@@ -180,16 +180,37 @@
 
   // Functions for staging markets
   function toggleStageMarket(market: MarketDetails) {
-    // Check if the market is already staged to avoid duplicates
+    // Check if the market is already staged
     if (!stagedMarkets.some((m) => m.id === market.id)) {
-      stagedMarkets = [...stagedMarkets, market];
+      stageMarket(market);
     } else {
-      stagedMarkets = stagedMarkets.filter((m) => m.id !== market.id);
+      unstageMarket(market.id);
     }
+  }
+
+  async function stageMarket(market: MarketDetails) {
+    // Add the market to the staged list
+    stagedMarkets = [...stagedMarkets, market];
+
+    console.log(plotData.length);
+    // Fetch and add probability data for the staged market
+    try {
+      const newProbs = await getMarketProbs(market.id);
+      plotData = [...plotData, ...newProbs];
+    } catch (err) {
+      console.error(
+        `Failed to load probability data for market ${market.id}:`,
+        err,
+      );
+    }
+    console.log(plotData.length);
   }
 
   function unstageMarket(marketId: string) {
     stagedMarkets = stagedMarkets.filter((m) => m.id !== marketId);
+
+    // Remove probability data for the unstaged market
+    plotData = plotData.filter((dataPoint) => dataPoint.market_id !== marketId);
   }
 
   async function createQuestionFromStaged() {
@@ -268,10 +289,11 @@
               <div
                 class="flex justify-between items-center p-2 bg-base rounded"
               >
-                <span class="text-sm truncate flex-1">{stagedMarket.title}</span
-                >
+                <span class="text-sm truncate flex-1">
+                  {stagedMarket.platform_name} | {stagedMarket.title}
+                </span>
                 <a
-                  href={`/markets/edit?id=${market.id}`}
+                  href={`/markets/edit?id=${stagedMarket.id}`}
                   target="_blank"
                   class="mx-1 px-2 py-1 text-sm rounded-md text-white bg-blue/50 hover:bg-blue"
                 >

@@ -1,13 +1,13 @@
 <script lang="ts">
   import type { DailyProbabilityDetails } from "@types";
   import * as Plot from "@observablehq/plot";
-  import { onMount, afterUpdate } from "svelte";
+  import { afterUpdate } from "svelte";
 
   export let plotData: DailyProbabilityDetails[] = [];
-  let plotRendered = false;
 
   afterUpdate(() => {
-    if (plotData.length > 0 && !plotRendered) {
+    if (plotData.length > 0) {
+      console.log("Rendering plot with data:", plotData.length);
       renderPlot();
     }
   });
@@ -34,6 +34,7 @@
           Plot.line(plotData, {
             x: "date",
             y: "prob",
+            stroke: "platform_name",
             curve: "step",
             tip: {
               fill: "black",
@@ -49,7 +50,6 @@
       }
 
       plotElement.append(plot);
-      plotRendered = true;
     } catch (e) {
       console.error("Error rendering plot:", e);
     }
