@@ -62,13 +62,25 @@ function buildSearchQuery(userQuery: string): string {
 
 export function assembleParamString(
   searchQuery: string | null,
-  platformSlug: string | null,
+  platformSlugs: string[] | null,
   order: string,
 ): string {
+  // Initialize params with order and default filters
   let params = `order=${order}`;
   params += "&question_id=is.null&question_dismissed=eq.0&duration_days=gte.4";
+
+  // Build the search query if provided
   if (searchQuery) params += buildSearchQuery(searchQuery);
-  if (platformSlug) params += `&platform_slug=eq.${platformSlug}`;
+
+  // Check if platform slugs are provided and not empty
+  if (
+    platformSlugs &&
+    platformSlugs.length > 0 &&
+    !(platformSlugs.length === 1 && platformSlugs[0] === "")
+  ) {
+    params += `&platform_slug=in.(${platformSlugs.join(",")})`;
+  }
+
   return params;
 }
 

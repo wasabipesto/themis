@@ -18,14 +18,14 @@
   let loading = true;
   let error: string | null = null;
   let searchQuery = "";
-  let selectedPlatform = "";
+  let selectedPlatformSlug = "";
   let selectedSort = "volume_usd.desc.nullslast";
 
   onMount(async () => {
     // Get initial values from URL
     const urlParams = new URLSearchParams(window.location.search);
     searchQuery = urlParams.get("q") || "";
-    selectedPlatform = urlParams.get("platform") || "";
+    selectedPlatformSlug = urlParams.get("platform") || "";
     selectedSort = urlParams.get("sort") || "volume_usd.desc.nullslast";
 
     // Load platforms for the dropdown
@@ -39,16 +39,17 @@
 
   async function loadTableData(
     query = searchQuery,
-    platform = selectedPlatform,
+    platformSlug = selectedPlatformSlug,
     sort = selectedSort,
   ) {
     loading = true;
 
     // Update URL with current search parameters
-    updateUrl(query, platform, sort);
+    updateUrl(query, platformSlug, sort);
 
     // Base query parameters
-    let params = assembleParamString(query, platform, sort);
+    console.log([platformSlug]);
+    let params = assembleParamString(query, [platformSlug], sort);
 
     try {
       markets = await getMarkets(params);
@@ -61,7 +62,7 @@
   }
 
   function handleSearch() {
-    loadTableData(searchQuery, selectedPlatform, selectedSort);
+    loadTableData(searchQuery, selectedPlatformSlug, selectedSort);
   }
 
   async function handleDismiss(marketId: string, level: number) {
@@ -90,7 +91,7 @@
   <SearchBar bind:searchQuery onSearch={handleSearch} />
   <FilterControls
     {platforms}
-    bind:selectedPlatform
+    bind:selectedPlatform={selectedPlatformSlug}
     bind:selectedSort
     onChange={handleSearch}
   />
