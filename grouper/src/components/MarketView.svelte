@@ -12,6 +12,7 @@
     updateUrl,
     assembleParamString,
     getOtherPlatforms,
+    type HardcodedPlatform,
   } from "./market-search";
   import { onMount, afterUpdate } from "svelte";
   import { getMarket, getQuestion, getMarketProbs, getMarkets } from "@lib/api";
@@ -30,12 +31,19 @@
   let plotRendered = false;
 
   // Search sidebar
-  let platformSlugs: string[] = [];
-  let platformSort = "volume_usd.desc.nullslast";
+  let otherPlatforms: HardcodedPlatform[] = [];
   let searchQuery = "";
   let searchLoading = true;
-  let searchError: string | null = null;
-  let marketSearchResults: MarketDetails[] = [];
+
+  // Separate results for each platform
+  let platformResults: Map<
+    string,
+    {
+      loading: boolean;
+      error: string | null;
+      markets: MarketDetails[];
+    }
+  > = new Map();
 
   onMount(async () => {
     try {
@@ -66,13 +74,21 @@
         console.error("Failed to load probability data:", err);
       }
 
-      // Fetch initial search results
+      // Set up platforms for search
       try {
-        platformSlugs = getOtherPlatforms(market.platform_slug).map(
-          (platform) => platform.slug,
-        );
-        platformSort = getOtherPlatforms(market.platform_slug)[0].sort;
-        await loadTableData(searchQuery, platformSlugs, platformSort);
+        otherPlatforms = getOtherPlatforms(market.platform_slug);
+
+        // Initialize platform results map
+        otherPlatforms.forEach((platform) => {
+          platformResults.set(platform.slug, {
+            loading: true,
+            error: null,
+            markets: [],
+          });
+        });
+
+        // Load data for each platform
+        await loadAllPlatformData(searchQuery);
       } catch (err) {
         console.error("Error loading platforms:", err);
       }
@@ -90,32 +106,58 @@
     }
   });
 
-  async function loadTableData(
+  async function loadPlatformData(
     query: string | null,
-    platformSlugs: string[] | null,
+    platformSlug: string,
     sort: string,
   ) {
+    // Update the loading state for this platform
+    platformResults.set(platformSlug, {
+      loading: true,
+      error: null,
+      markets: [],
+    });
+    platformResults = platformResults; // Trigger reactivity
+
+    // Assemble query parameters for this specific platform
+    let params = assembleParamString(query, [platformSlug], sort);
+
+    try {
+      const results = await getMarkets(params);
+      platformResults.set(platformSlug, {
+        loading: false,
+        error: results.length === 0 ? "No items found." : null,
+        markets: results,
+      });
+    } catch (err: unknown) {
+      platformResults.set(platformSlug, {
+        loading: false,
+        error: err instanceof Error ? err.message : "Error loading table data.",
+        markets: [],
+      });
+    }
+
+    // Update the map to trigger reactivity
+    platformResults = platformResults;
+  }
+
+  async function loadAllPlatformData(query: string | null) {
     searchLoading = true;
 
     // Update URL with current search parameters
     updateUrl(query, null, null);
 
-    // Base query parameters
-    let params = assembleParamString(query, platformSlugs, sort);
+    // Fetch data for each platform in parallel
+    const promises = otherPlatforms.map((platform) =>
+      loadPlatformData(query, platform.slug, platform.sort),
+    );
 
-    try {
-      marketSearchResults = await getMarkets(params);
-      searchError = marketSearchResults.length === 0 ? "No items found." : null;
-    } catch (err: unknown) {
-      searchError =
-        err instanceof Error ? err.message : "Error loading table data.";
-    } finally {
-      searchLoading = false;
-    }
+    await Promise.all(promises);
+    searchLoading = false;
   }
 
   function handleSearch() {
-    loadTableData(searchQuery, platformSlugs, platformSort);
+    loadAllPlatformData(searchQuery);
   }
 
   function renderPlot() {
@@ -286,16 +328,31 @@
 
     <!-- Search Sidebar -->
     <div class="max-w-4xl mx-auto w-full">
-      <SearchBar bind:searchQuery onSearch={handleSearch} />
+      <div class="mb-4">
+        <SearchBar bind:searchQuery onSearch={handleSearch} />
+      </div>
+
       {#if searchLoading}
         <LoadingSpinner />
-      {:else if searchError}
-        <ErrorMessage message={searchError} />
       {:else}
-        <MarketTableLite
-          platformName={platformSlugs[0]}
-          markets={marketSearchResults}
-        />
+        <!-- Display results from each platform separately -->
+        {#each otherPlatforms as platform}
+          {#if platformResults.has(platform.slug)}
+            {@const platformResult = platformResults.get(platform.slug)}
+            <div class="mb-4">
+              {#if platformResult?.loading}
+                <LoadingSpinner />
+              {:else if platformResult?.error}
+                <ErrorMessage message={platformResult.error} />
+              {:else}
+                <MarketTableLite
+                  platformName={platform.name}
+                  markets={platformResult?.markets}
+                />
+              {/if}
+            </div>
+          {/if}
+        {/each}
       {/if}
     </div>
 
