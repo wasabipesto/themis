@@ -77,7 +77,9 @@
   <div class="mb-0">
     <h2 class="text-xl font-semibold mb-2">Description</h2>
     <div class="bg-mantle p-4 rounded-md">
-      <p class="whitespace-pre-line">{market.description}</p>
+      <p class="whitespace-pre-line max-h-60 overflow-y-auto pr-2">
+        {market.description}
+      </p>
     </div>
   </div>
 </div>
