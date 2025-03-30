@@ -5,6 +5,13 @@
 
   export let platformName: string = "";
   export let markets: MarketDetails[] = [];
+  export let stagedMarkets: MarketDetails[] = []; // Add this prop
+  export let onStage: (market: MarketDetails) => void; // Add this prop
+
+  // Helper function to check if a market is already staged
+  function isMarketStaged(marketId: string): boolean {
+    return stagedMarkets.some((m) => m.id === marketId);
+  }
 </script>
 
 <div class="w-full rounded-lg shadow bg-crust">
@@ -47,18 +54,25 @@
                 closeDateTime={market.close_datetime}
               />
             </td>
-            <td class="px-6 py-2 w-40 text-sm font-medium actions">
+            <td class="px-6 py-2 text-sm font-medium actions flex gap-1">
               <a
                 href={`/markets/edit?id=${market.id}`}
-                class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-blue/50 hover:bg-blue"
+                target="_blank"
+                class="inline-flex items-center px-2 py-1 text-sm font-medium rounded-md text-white bg-blue/50 hover:bg-blue"
               >
                 View
               </a>
               <button
                 on:click={() => navigator.clipboard.writeText(market.id)}
-                class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-teal/50 hover:bg-teal"
+                class="inline-flex items-center px-2 py-1 text-sm font-medium rounded-md text-white bg-teal/50 hover:bg-teal"
               >
                 ID
+              </button>
+              <button
+                on:click={() => onStage(market)}
+                class="inline-flex items-center px-2 py-1 text-sm font-medium rounded-md text-white bg-yellow/50 hover:bg-yellow"
+              >
+                {isMarketStaged(market.id) ? "Unstage" : "Stage"}
               </button>
             </td>
           </tr>

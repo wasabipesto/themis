@@ -58,6 +58,14 @@ export interface CategoryDetails {
 }
 
 /** All data for a question (a group of markets). */
+export interface NewQuestion {
+  title: string;
+  slug: string;
+  description: string;
+  category_slug: string;
+  start_date_override: string | null;
+  end_date_override: string | null;
+}
 export interface Question {
   id: number;
   title: string;

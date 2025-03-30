@@ -1,5 +1,6 @@
 <script lang="ts">
   import type {
+    NewQuestion,
     Question,
     MarketDetails,
     DailyProbabilityDetails,
@@ -8,6 +9,7 @@
     MarketDetailsCard,
     MarketProbabilityChart,
     QuestionLinkCard,
+    slugify,
   } from "./market-view";
   import {
     SearchBar,
@@ -20,11 +22,20 @@
     type HardcodedPlatform,
   } from "./market-search";
   import { onMount } from "svelte";
-  import { getMarket, getQuestion, getMarketProbs, getMarkets } from "@lib/api";
+  import {
+    getMarket,
+    getQuestion,
+    getMarketProbs,
+    getMarkets,
+    createQuestionNoRefresh,
+    linkMarketNoRefresh,
+    refreshViewsQuick,
+  } from "@lib/api";
 
   // Market view
   let marketId: string | null = null;
   let market: MarketDetails | null = null;
+  let newQuestion: NewQuestion | null = null;
   let question: Question | null = null;
   let marketLoading = true;
   let error: string | null = null;
@@ -49,6 +60,10 @@
     }
   > = new Map();
 
+  // Staged markets feature
+  let stagedMarkets: MarketDetails[] = [];
+  let creatingQuestion = false;
+
   onMount(async () => {
     try {
       // Get initial values from URL
@@ -64,6 +79,9 @@
 
       // Fetch market data
       market = await getMarket(marketId);
+
+      // Add to staging
+      stagedMarkets.push(market);
 
       // Fetch question data
       if (market.question_id) {
@@ -159,6 +177,66 @@
   function handleSearch() {
     loadAllPlatformData(searchQuery);
   }
+
+  // Functions for staging markets
+  function toggleStageMarket(market: MarketDetails) {
+    // Check if the market is already staged to avoid duplicates
+    if (!stagedMarkets.some((m) => m.id === market.id)) {
+      stagedMarkets = [...stagedMarkets, market];
+    } else {
+      stagedMarkets = stagedMarkets.filter((m) => m.id !== market.id);
+    }
+  }
+
+  function unstageMarket(marketId: string) {
+    stagedMarkets = stagedMarkets.filter((m) => m.id !== marketId);
+  }
+
+  async function createQuestionFromStaged() {
+    if (stagedMarkets.length === 0) {
+      alert("Please stage at least one market first");
+      return;
+    }
+
+    creatingQuestion = true;
+    try {
+      // Use the first staged market for the question details
+      const firstMarket = stagedMarkets[0];
+
+      // Create a new Question object
+      const newQuestion: NewQuestion = {
+        title: firstMarket.title,
+        slug: slugify(firstMarket.title),
+        description: "",
+        category_slug: firstMarket.category_slug || "politics", // TODO
+        start_date_override: null,
+        end_date_override: null,
+      };
+
+      // Create the question
+      const createdQuestion = await createQuestionNoRefresh(newQuestion);
+      const questionId = createdQuestion.id;
+
+      // Link all staged markets to the question
+      const linkPromises = stagedMarkets.map((market) =>
+        linkMarketNoRefresh(market.id, questionId),
+      );
+      await Promise.all(linkPromises);
+
+      // Refresh views
+      await refreshViewsQuick();
+
+      // Navigate to the question edit page
+      window.location.href = `/questions/edit?id=${questionId}`;
+    } catch (err) {
+      console.error("Error creating question:", err);
+      alert(
+        "Failed to create question: " +
+          (err instanceof Error ? err.message : String(err)),
+      );
+      creatingQuestion = false;
+    }
+  }
 </script>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
@@ -169,6 +247,48 @@
   {:else if market}
     <div class="max-w-4xl mx-auto w-full">
       <MarketDetailsCard {market} />
+
+      <!-- Staged Markets List -->
+      {#if stagedMarkets.length > 0}
+        <div class="bg-crust p-6 rounded-lg shadow-md mb-6">
+          <div class="flex justify-between items-center mb-2">
+            <h2 class="text-xl font-semibold mb-2">
+              Staged Markets ({stagedMarkets.length})
+            </h2>
+            <button
+              on:click={createQuestionFromStaged}
+              disabled={creatingQuestion}
+              class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-blue/50 hover:bg-blue disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {creatingQuestion ? "Creating..." : "Create Question"}
+            </button>
+          </div>
+          <div class="space-y-2 max-h-60 overflow-y-auto">
+            {#each stagedMarkets as stagedMarket}
+              <div
+                class="flex justify-between items-center p-2 bg-base rounded"
+              >
+                <span class="text-sm truncate flex-1">{stagedMarket.title}</span
+                >
+                <a
+                  href={`/markets/edit?id=${market.id}`}
+                  target="_blank"
+                  class="mx-1 px-2 py-1 text-sm rounded-md text-white bg-blue/50 hover:bg-blue"
+                >
+                  View
+                </a>
+                <button
+                  on:click={() => unstageMarket(stagedMarket.id)}
+                  class="mx-1 px-2 py-1 text-sm rounded-md text-white bg-red/50 hover:bg-red"
+                >
+                  Unstage
+                </button>
+              </div>
+            {/each}
+          </div>
+        </div>
+      {/if}
+
       <QuestionLinkCard {question} />
       <MarketProbabilityChart {plotData} />
     </div>
@@ -195,6 +315,8 @@
                 <MarketTableLite
                   platformName={platform.name}
                   markets={platformResult?.markets}
+                  {stagedMarkets}
+                  onStage={toggleStageMarket}
                 />
               {/if}
             </div>

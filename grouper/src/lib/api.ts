@@ -5,6 +5,7 @@ import type {
   MarketDetails,
   Platform,
   PlatformDetails,
+  NewQuestion,
   Question,
   QuestionDetails,
 } from "@types";
@@ -130,7 +131,7 @@ export async function getCategory(slug: string): Promise<CategoryDetails> {
   );
 }
 
-export async function createCategory(data: Category): Promise<Category> {
+export async function createCategory(data: Category): Promise<CategoryDetails> {
   await fetchFromAPI("categories", {
     method: "POST",
     body: JSON.stringify(data),
@@ -139,7 +140,7 @@ export async function createCategory(data: Category): Promise<Category> {
   return await getCategory(data.slug);
 }
 
-export async function updateCategory(data: Category): Promise<Category> {
+export async function updateCategory(data: Category): Promise<CategoryDetails> {
   await fetchFromAPI(`categories?slug=eq.${data.slug}`, {
     method: "PATCH",
     body: JSON.stringify(data),
@@ -168,7 +169,19 @@ export async function getQuestionBySlug(
   );
 }
 
-export async function createQuestion(data: Question): Promise<Question> {
+export async function createQuestionNoRefresh(
+  data: NewQuestion,
+): Promise<Question> {
+  return fetchFromAPI("questions", {
+    method: "POST",
+    body: JSON.stringify(data),
+    headers: {
+      Prefer: "return=representation",
+    },
+  }).then((data) => data[0] || null);
+}
+
+export async function createQuestion(data: NewQuestion): Promise<Question> {
   await fetchFromAPI("questions", {
     method: "POST",
     body: JSON.stringify(data),
@@ -177,12 +190,15 @@ export async function createQuestion(data: Question): Promise<Question> {
   return await getQuestionBySlug(data.slug);
 }
 
-export async function updateQuestion(data: Question): Promise<Question> {
+export async function updateQuestion(data: Question): Promise<QuestionDetails> {
   await fetchFromAPI(`questions?id=eq.${data.id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
   });
   await refreshViewsQuick();
+  if (!data.id) {
+    throw new Error("Question ID is missing");
+  }
   return await getQuestion(data.id.toString());
 }
 
@@ -227,11 +243,21 @@ export async function getMarketProbs(
   );
 }
 
+export async function linkMarketNoRefresh(
+  marketId: string,
+  questionId: number,
+): Promise<MarketDetails> {
+  return fetchFromAPI(`market_questions`, {
+    method: "POST",
+    body: JSON.stringify({ market_id: marketId, question_id: questionId }),
+  });
+}
+
 export async function linkMarket(
   marketId: string,
   questionId: number,
 ): Promise<MarketDetails> {
-  await fetchFromAPI(`market_questions?market_id=eq.${marketId}`, {
+  await fetchFromAPI(`market_questions`, {
     method: "POST",
     body: JSON.stringify({ market_id: marketId, question_id: questionId }),
   });
