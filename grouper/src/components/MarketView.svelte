@@ -18,7 +18,6 @@
     LoadingSpinner,
     ErrorMessage,
     MarketTableLite,
-    updateUrl,
     assembleParamString,
     getOtherPlatforms,
     type HardcodedPlatform,
@@ -165,9 +164,6 @@
 
   async function loadAllPlatformData(query: string | null) {
     searchLoading = true;
-
-    // Update URL with current search parameters
-    updateUrl(query, null, null);
 
     // Fetch data for each platform in parallel
     const promises = otherPlatforms.map((platform) =>
