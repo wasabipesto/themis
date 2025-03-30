@@ -1,7 +1,21 @@
 <script lang="ts">
   import type { MarketDetails } from "@types";
+  import { dismissMarket } from "@lib/api";
 
   export let market: MarketDetails;
+
+  // Market dismiss function
+  async function handleDismiss(marketId: string, level: number = 1) {
+    try {
+      await dismissMarket(marketId, level);
+    } catch (err) {
+      console.error("Error dismissing market:", err);
+      alert(
+        "Failed to dismiss market: " +
+          (err instanceof Error ? err.message : String(err)),
+      );
+    }
+  }
 
   function formatDate(dateString: string) {
     if (!dateString) return "N/A";
@@ -42,6 +56,13 @@
       class="inline-flex items-center px-3 py-1 mr-2 mb-2 text-sm rounded-md text-white bg-teal/50 hover:bg-teal"
     >
       Copy ID
+    </button>
+    <button
+      on:click={() => handleDismiss(market.id, 1)}
+      disabled={market.question_dismissed > 0}
+      class="inline-flex items-center px-3 py-1 mr-2 mb-2 text-sm rounded-md text-white bg-red/50 hover:bg-red disabled:bg-red/50 disabled:text-white/50 disabled:cursor-not-allowed"
+    >
+      {market.question_dismissed ? "Dismissed" : "Dismiss"}
     </button>
     <span class="text-sm bg-blue/20 text-text px-4 py-1 rounded-md mr-2 mb-2">
       <a href={market.url} target="_blank" rel="noopener noreferrer">

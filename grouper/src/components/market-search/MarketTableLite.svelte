@@ -2,32 +2,25 @@
   import type { MarketDetails } from "@types";
   import MarketBadge from "./MarketBadge.svelte";
   import MarketStats from "./MarketStats.svelte";
-  import { dismissMarket } from "@lib/api"; // Import the API function
+  import { dismissMarket } from "@lib/api";
 
   export let platformName: string = "";
   export let markets: MarketDetails[] = [];
   export let stagedMarkets: MarketDetails[] = [];
   export let onStage: (market: MarketDetails) => void;
 
-  // Add new prop for refreshing search results after dismissal
-  export let onRefreshAfterDismiss: () => void = () => {};
-
   // Helper function to check if a market is already staged
   function isMarketStaged(marketId: string): boolean {
     return stagedMarkets.some((m) => m.id === marketId);
   }
 
-  // Add dismiss function
+  // Market dismiss function
   async function handleDismiss(marketId: string, level: number = 1) {
     try {
       // First, filter out the dismissed market from our local markets array
       markets = markets.filter((market) => market.id !== marketId);
-
       // Then call the API to dismiss the market
       await dismissMarket(marketId, level);
-
-      // Trigger refresh of search results
-      onRefreshAfterDismiss();
     } catch (err) {
       console.error("Error dismissing market:", err);
       alert(
