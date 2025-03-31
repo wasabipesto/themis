@@ -28,7 +28,7 @@
       } else if (endpoint === "platforms") {
         items = await getPlatformsLite();
       } else if (endpoint === "questions") {
-        items = await getQuestions();
+        items = await getQuestions(null, 1000);
       } else {
         error = "Invalid endpoint";
       }
