@@ -7,6 +7,7 @@
     QuestionDetails,
   } from "@types";
   import { onMount } from "svelte";
+  import { MarketStats } from "./market-search";
   import {
     getQuestion,
     createQuestion,
@@ -500,7 +501,7 @@
                 <th class="text-left py-2 px-3 text-text/70"> Links </th>
                 <th class="text-left py-2 px-3 text-text/70"> Platform </th>
                 <th class="text-left py-2 px-3 text-text/70"> Title </th>
-                <th class="text-right py-2 px-3 text-text/70 w-25"> Stats </th>
+                <th class="text-left py-2 px-3 text-text/70 w-25"> Stats </th>
                 <th class="text-center py-2 px-3 text-text/70"> Actions </th>
               </tr>
             </thead>
@@ -540,44 +541,33 @@
                       </span>
                     {/if}
                   </td>
-                  <td class="py-3 px-3 text-right">
-                    ${market.volume_usd
-                      ? Math.round(market.volume_usd).toLocaleString()
-                      : "N/A"}
-                    <br />
-                    {market.traders_count?.toLocaleString() || "N/A"}
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      height={16}
-                      fill="currentColor"
-                      class="inline"
-                    >
-                      <title>People</title>
-                      <path
-                        d="M16 17V19H2V17S2 13 9 13 16 17 16 17M12.5 7.5A3.5 3.5 0 1 0 9 11A3.5 3.5 0 0 0 12.5 7.5M15.94 13A5.32 5.32 0 0 1 18 17V19H22V17S22 13.37 15.94 13M15 4A3.39 3.39 0 0 0 13.07 4.59A5 5 0 0 1 13.07 10.41A3.39 3.39 0 0 0 15 11A3.5 3.5 0 0 0 15 4Z"
-                      />
-                    </svg>
+                  <td class="py-3 px-3 w-30 text-left">
+                    <MarketStats
+                      volumeUsd={market.volume_usd}
+                      tradersCount={market.traders_count}
+                      durationDays={market.duration_days}
+                      closeDateTime={market.close_datetime}
+                    />
                   </td>
                   <td class="py-3 px-3 text-center">
                     {#if market.question_invert}
                       <button
                         on:click={() => handleInvertMarketLink(market)}
-                        class="px-3 py-1 m-0.5 bg-lavender/50 text-text rounded-md hover:bg-lavender transition-colors"
+                        class="px-2 py-1 m-0.5 bg-lavender/50 text-text rounded-md hover:bg-lavender transition-colors"
                       >
                         Inverted
                       </button>
                     {:else}
                       <button
                         on:click={() => handleInvertMarketLink(market)}
-                        class="px-3 py-1 m-0.5 bg-blue/50 text-text rounded-md hover:bg-blue transition-colors"
+                        class="px-2 py-1 m-0.5 bg-blue/50 text-text rounded-md hover:bg-blue transition-colors"
                       >
                         Straight
                       </button>
                     {/if}
                     <button
                       on:click={() => handleRemoveMarket(market)}
-                      class="px-3 py-1 m-0.5 bg-red/50 text-text rounded-md hover:bg-red transition-colors"
+                      class="px-2 py-1 m-0.5 bg-red/50 text-text rounded-md hover:bg-red transition-colors"
                     >
                       Remove
                     </button>

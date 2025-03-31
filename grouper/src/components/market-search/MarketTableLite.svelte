@@ -41,12 +41,12 @@
           {platformName} Results
         </th>
         <th
-          class="px-2 py-2 w-35 text-center text-xs font-medium uppercase tracking-wider"
+          class="px-2 py-2 w-40 text-center text-xs font-medium uppercase tracking-wider"
         >
           Stats
         </th>
         <th
-          class="px-2 py-2 w-35 text-center text-xs font-medium uppercase tracking-wider"
+          class="px-2 py-2 w-40 text-center text-xs font-medium uppercase tracking-wider"
         >
           Actions
         </th>
@@ -63,7 +63,7 @@
               {market.title}
               <MarketBadge resolution={market.resolution} />
             </td>
-            <td class="px-6 py-2 w-35 text-sm">
+            <td class="px-6 py-2 w-40 text-sm">
               <MarketStats
                 volumeUsd={market.volume_usd}
                 tradersCount={market.traders_count}
@@ -71,7 +71,7 @@
                 closeDateTime={market.close_datetime}
               />
             </td>
-            <td class="px-2 py-2 w-35 text-sm font-medium actions">
+            <td class="px-2 py-2 w-40 text-sm font-medium actions">
               <div class="flex gap-1 mb-1">
                 <a
                   href={`/markets/edit?id=${market.id}`}
