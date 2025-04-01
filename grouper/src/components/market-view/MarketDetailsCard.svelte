@@ -7,6 +7,7 @@
   // Market dismiss function
   async function handleDismiss(marketId: string, level: number = 1) {
     try {
+      market.question_dismissed = level;
       await dismissMarket(marketId, level);
     } catch (err) {
       console.error("Error dismissing market:", err);
