@@ -42,6 +42,7 @@ pub enum KalshiMarketStatus {
     Active,
     Inactive,
     Closed,
+    Disputed,
     Determined,
     Settled,
     /// Finalized is the status used after everything is paid out and complete.
