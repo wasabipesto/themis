@@ -336,12 +336,8 @@ fn standardize_single(
             // Get probability segments. If there are none then skip.
             // Using recency_weighted (community prediction) here, may change in the future.
             // Since this is binary, get the first (and only) prob in the set.
-            let probs = build_prob_segments(
-                &aggregations.recency_weighted.history,
-                0,
-                &details.actual_close_time,
-            )
-            .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?;
+            let probs = build_prob_segments(&aggregations.recency_weighted.history, 0)
+                .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?;
             if probs.is_empty() {
                 return Err(MarketError::NoMarketTrades(market_id.to_owned()));
             }
@@ -443,12 +439,8 @@ fn standardize_single(
             // Get probability segments. If there are none then skip.
             // Using recency_weighted (community prediction) here, may change in the future.
             // Since this is multiple choice, we need to use the index of the resolved option.
-            let probs = build_prob_segments(
-                &aggregations.recency_weighted.history,
-                index,
-                &details.actual_close_time,
-            )
-            .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?;
+            let probs = build_prob_segments(&aggregations.recency_weighted.history, index)
+                .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?;
             if probs.is_empty() {
                 return Err(MarketError::NoMarketTrades(market_id.to_owned()));
             }
@@ -540,7 +532,6 @@ fn create_standard_market(
 pub fn build_prob_segments(
     raw_history: &[MetaculusAggregationHistoryPoint],
     index: usize,
-    actual_close_time: &Option<DateTime<Utc>>,
 ) -> Result<Vec<ProbSegment>> {
     // Sort the history by time.
     let mut history = raw_history.to_vec();
@@ -555,18 +546,10 @@ pub fn build_prob_segments(
             Some(end_time) => DateTime::from_timestamp(end_time as i64, 0)
                 .with_context(|| "Could not create datetime from history end point")?,
             None => {
-                // If end_time is null, then the segment extends to the end of the market.
-                // This should only happen for the very last item.
-                let end = actual_close_time
-                    .with_context(|| "Market actual_close_time not present for resolved market.")?;
-
-                // The actual_close_time may be before the final history point if the market was closed retroactively.
-                // We could properly redact those but I'd rather keep those predictions for comparison.
-                // For question analysis we set our own end dates anyways so more data will only be more helpful.
-                if end < start {
-                    continue;
-                }
-                end
+                // We used to extend the last segment to the end of the market, but with question groups that is more difficult.
+                // We would have to dig into each question to find that question's end time to do this right.
+                // Now we just ignore any segments that don't have an end time.
+                continue;
             }
         };
 
