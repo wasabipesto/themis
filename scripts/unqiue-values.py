@@ -1,7 +1,15 @@
-import json
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "tabulate",
+# ]
+# ///
 import argparse
+import json
 from collections import Counter
+
 from tabulate import tabulate
+
 
 def get_nested_value(d, keys):
     """

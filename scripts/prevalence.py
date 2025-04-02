@@ -1,10 +1,17 @@
-import json
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "tabulate",
+# ]
+# ///
 import argparse
+import json
 from collections import defaultdict
+
 from tabulate import tabulate
 
 blacklist = [None, ""]
-display_cutoff = 5
+display_cutoff = 1
 
 def load_jsonl(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
