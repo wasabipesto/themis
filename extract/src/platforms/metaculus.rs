@@ -311,12 +311,8 @@ pub fn standardize(input: &MetaculusData) -> MarketResult<Vec<MarketAndProbs>> {
             let daily_probabilities = helpers::get_daily_probabilities(&probs, &market_id)
                 .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?;
 
-            // We only consider the market to be open while there are actual probabilities.
-            let start = probs.first().unwrap().start;
-            let end = probs.last().unwrap().end;
-
             // Get resolution value.
-            let resolution = match resolution {
+            let resolution_value = match resolution {
                 Some(MetaculusResolution::Yes) => 1.0,
                 Some(MetaculusResolution::No) => 0.0,
                 Some(MetaculusResolution::Ambiguous) => {
@@ -334,39 +330,21 @@ pub fn standardize(input: &MetaculusData) -> MarketResult<Vec<MarketAndProbs>> {
             };
 
             // Build standard market item.
-            let market = StandardMarket {
-                id: market_id.clone(),
-                title: input.details.title.clone(),
-                url: format!("https://www.metaculus.com/questions/{}", input.details.id),
-                description: format!(
-                    "{}\n\n{}\n\n{}",
-                    description.clone(),
-                    resolution_criteria.clone(),
-                    fine_print.clone(),
-                ),
+            let market = create_standard_market(
+                market_id,
+                input.details.id,
+                input.details.title.clone(),
+                format_market_description(description, resolution_criteria, fine_print),
                 platform_slug,
-                category_slug: None, // TODO
-                open_datetime: start,
-                close_datetime: end,
-                traders_count: Some(input.details.nr_forecasters),
-                volume_usd: None, // Metaculus does not use volume.
-                duration_days: helpers::get_market_duration(start, end).map_err(|e| {
-                    MarketError::ProcessingError(market_id.to_owned(), e.to_string())
-                })?,
-                prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end).map_err(
-                    |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
-                )?,
-                prob_time_avg: helpers::get_prob_time_avg(&probs, start, end).map_err(|e| {
-                    MarketError::ProcessingError(market_id.to_owned(), e.to_string())
-                })?,
-                resolution,
-            };
+                &probs,
+                input.details.nr_forecasters,
+                resolution_value,
+            )?;
             Ok(vec![MarketAndProbs {
                 market,
                 daily_probabilities,
             }])
         }
-        // TODO: Implement other types
         Some(MetaculusQuestion::Numeric {
             description: _,
             resolution_criteria: _,
@@ -456,38 +434,17 @@ pub fn standardize(input: &MetaculusData) -> MarketResult<Vec<MarketAndProbs>> {
             let daily_probabilities = helpers::get_daily_probabilities(&probs, &market_id)
                 .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?;
 
-            // We only consider the market to be open while there are actual probabilities.
-            let start = probs.first().unwrap().start;
-            let end = probs.last().unwrap().end;
-
             // Build standard market item.
-            let market = StandardMarket {
-                id: market_id.clone(),
+            let market = create_standard_market(
+                market_id,
+                input.details.id,
                 title,
-                url: format!("https://www.metaculus.com/questions/{}", input.details.id),
-                description: format!(
-                    "{}\n\n{}\n\n{}",
-                    description.clone(),
-                    resolution_criteria.clone(),
-                    fine_print.clone(),
-                ),
+                format_market_description(description, resolution_criteria, fine_print),
                 platform_slug,
-                category_slug: None, // TODO
-                open_datetime: start,
-                close_datetime: end,
-                traders_count: Some(input.details.nr_forecasters),
-                volume_usd: None, // Metaculus does not use volume.
-                duration_days: helpers::get_market_duration(start, end).map_err(|e| {
-                    MarketError::ProcessingError(market_id.to_owned(), e.to_string())
-                })?,
-                prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end).map_err(
-                    |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
-                )?,
-                prob_time_avg: helpers::get_prob_time_avg(&probs, start, end).map_err(|e| {
-                    MarketError::ProcessingError(market_id.to_owned(), e.to_string())
-                })?,
-                resolution: resolution_value,
-            };
+                &probs,
+                input.details.nr_forecasters,
+                resolution_value,
+            )?;
             Ok(vec![MarketAndProbs {
                 market,
                 daily_probabilities,
@@ -508,6 +465,59 @@ pub fn standardize(input: &MetaculusData) -> MarketResult<Vec<MarketAndProbs>> {
             "Metaculus::GroupOfQuestions".to_string(),
         )),
     }
+}
+
+/// Creates a standardized market description from Metaculus question fields
+fn format_market_description(
+    description: &str,
+    resolution_criteria: &str,
+    fine_print: &str,
+) -> String {
+    format!(
+        "{}\n\n{}\n\n{}",
+        description, resolution_criteria, fine_print
+    )
+}
+
+/// Creates a standardized market URL from a Metaculus question ID
+fn format_market_url(id: u32) -> String {
+    format!("https://www.metaculus.com/questions/{}", id)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn create_standard_market(
+    market_id: String,
+    metaculus_id: u32,
+    title: String,
+    description: String,
+    platform_slug: String,
+    probs: &[ProbSegment],
+    traders_count: u32,
+    resolution: f32,
+) -> Result<StandardMarket, MarketError> {
+    // We only consider the market to be open while there are actual probabilities.
+    let start = probs.first().unwrap().start;
+    let end = probs.last().unwrap().end;
+
+    Ok(StandardMarket {
+        id: market_id.to_owned(),
+        title,
+        url: format_market_url(metaculus_id),
+        description,
+        platform_slug,
+        category_slug: None, // TODO
+        open_datetime: start,
+        close_datetime: end,
+        traders_count: Some(traders_count),
+        volume_usd: None, // Metaculus does not use volume.
+        duration_days: helpers::get_market_duration(start, end)
+            .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?,
+        prob_at_midpoint: helpers::get_prob_at_midpoint(probs, start, end)
+            .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?,
+        prob_time_avg: helpers::get_prob_time_avg(probs, start, end)
+            .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?,
+        resolution,
+    })
 }
 
 /// Converts Metaculus aggregated history points into standard probability segments.
