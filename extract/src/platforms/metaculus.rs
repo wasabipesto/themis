@@ -71,13 +71,15 @@ pub struct MetaculusAggregationSeries {
     pub unweighted: MetaculusAggregationTypes,
 }
 
-/// Possible question types from the
+/// Possible question types from the Metaculus API.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type")]
 #[serde(rename_all = "snake_case")]
 pub enum MetaculusQuestion {
     /// Standard binary (Yes/No) market type.
     Binary {
+        /// Question ID.
+        id: u64,
         /// Question description.
         /// Can be multiple lines, separated with "\n\n".
         description: String,
@@ -96,6 +98,7 @@ pub enum MetaculusQuestion {
     /// Resolves to a number in a specified range.
     Numeric {
         /// Typical attributes.
+        id: u64,
         description: String,
         resolution_criteria: String,
         fine_print: String,
@@ -106,6 +109,7 @@ pub enum MetaculusQuestion {
     /// Resolves to a date in a specified range(?).
     Date {
         /// Typical attributes.
+        id: u64,
         description: String,
         resolution_criteria: String,
         fine_print: String,
@@ -116,6 +120,7 @@ pub enum MetaculusQuestion {
     /// Resolves to one of the specified options.
     MultipleChoice {
         /// Typical attributes.
+        id: u64,
         description: String,
         resolution_criteria: String,
         fine_print: String,
@@ -128,6 +133,7 @@ pub enum MetaculusQuestion {
     /// TODO
     Conditional {
         /// Typical attributes.
+        id: u64,
         description: String,
         resolution_criteria: String,
         fine_print: String,
@@ -136,26 +142,29 @@ pub enum MetaculusQuestion {
         resolution: Option<String>,
     },
 }
+impl MetaculusQuestion {
+    /// Get the ID from any question type
+    pub fn id(&self) -> u64 {
+        match self {
+            Self::Binary { id, .. } => *id,
+            Self::Numeric { id, .. } => *id,
+            Self::Date { id, .. } => *id,
+            Self::MultipleChoice { id, .. } => *id,
+            Self::Conditional { id, .. } => *id,
+        }
+    }
+}
 
-/// A group of questions.
+/// Struct for a group of questions.
 #[derive(Debug, Clone, Deserialize)]
 pub struct MetaculusGroupOfQuestions {
     pub questions: Vec<MetaculusQuestion>,
 }
 
-/// Info on each project associated with the question.
-#[derive(Debug, Clone, Deserialize)]
-pub struct MetaculusProject {
-    /// The project's ID.
-    pub id: u32,
-    /// The project's name.
-    pub name: String,
-}
-
 /// Info on each project, tag, or category applied to the question.
 /// These items have additional attributes but I'm grouping them up.
 #[derive(Debug, Clone, Deserialize)]
-pub struct MetaculusGroup {
+pub struct MetaculusProjectInfo {
     /// The item's name.
     pub name: String,
     /// The item's URL slug.
@@ -165,18 +174,18 @@ pub struct MetaculusGroup {
 /// Info on the projects, tags, and categories applied to the question.
 /// Used for deriving overall category.
 #[derive(Debug, Clone, Deserialize)]
-pub struct MetaculusGroups {
-    pub default_project: MetaculusGroup,
+pub struct MetaculusProjects {
+    pub default_project: MetaculusProjectInfo,
     #[serde(default)]
-    pub question_series: Vec<MetaculusGroup>,
+    pub question_series: Vec<MetaculusProjectInfo>,
     #[serde(default)]
-    pub site_main: Vec<MetaculusGroup>,
+    pub site_main: Vec<MetaculusProjectInfo>,
     #[serde(default)]
-    pub tournament: Vec<MetaculusGroup>,
+    pub tournament: Vec<MetaculusProjectInfo>,
     #[serde(default)]
-    pub category: Vec<MetaculusGroup>,
+    pub category: Vec<MetaculusProjectInfo>,
     #[serde(default)]
-    pub tags: Vec<MetaculusGroup>,
+    pub tags: Vec<MetaculusProjectInfo>,
 }
 
 /// What stage of the market life-cycle this is in.
@@ -230,7 +239,7 @@ pub struct MetaculusInfo {
     /// Information about a group of questions. Only for GroupOfMarkets type.
     pub group_of_questions: Option<MetaculusGroupOfQuestions>,
     /// Info on the projects, tags, and categories applied to the question.
-    pub projects: MetaculusGroups,
+    pub projects: MetaculusProjects,
 
     /// The question trading status.
     pub status: MetaculusStatus,
@@ -278,24 +287,52 @@ pub fn standardize(input: &MetaculusData) -> MarketResult<Vec<MarketAndProbs>> {
         return Err(MarketError::MarketNotResolved(market_id.to_owned()));
     }
 
-    // Convert based on market type
-    match &input.details.question {
-        Some(MetaculusQuestion::Binary {
+    if let Some(question) = &input.details.question {
+        // If there is a single question, process it
+        let standard_market = standardize_single(question, &input.details, market_id)?;
+        Ok(vec![standard_market])
+    } else if let Some(questions) = &input.details.group_of_questions {
+        // If there is a group of questions, process them
+        let mut markets = Vec::new();
+        for question in &questions.questions {
+            // Append question ID to market ID
+            let individual_market_id = format!("{}:{}", market_id, question.id());
+            let standard_market =
+                standardize_single(question, &input.details, individual_market_id)?;
+            markets.push(standard_market);
+        }
+        Ok(markets)
+    } else {
+        // If there are no questions or groups, exit
+        Err(MarketError::NotAMarket(market_id.to_owned()))
+    }
+}
+
+/// Standardize a single question
+fn standardize_single(
+    question: &MetaculusQuestion,
+    details: &MetaculusInfo,
+    market_id: String,
+) -> MarketResult<MarketAndProbs> {
+    let platform_slug = "metaculus".to_string();
+
+    match question {
+        MetaculusQuestion::Binary {
+            id: _,
             description,
             resolution_criteria,
             fine_print,
             aggregations,
             resolution,
-        }) => {
+        } => {
             // Get probability segments. If there are none then skip.
             // Using recency_weighted (community prediction) here, may change in the future.
             // Since this is binary, get the first (and only) prob in the set.
             let probs = build_prob_segments(
                 &aggregations.recency_weighted.history,
                 0,
-                &input.details.actual_close_time,
+                &details.actual_close_time,
             )
-            .with_context(|| format!("Error building probability segments. ID: {market_id}"))
             .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?;
             if probs.is_empty() {
                 return Err(MarketError::NoMarketTrades(market_id.to_owned()));
@@ -329,50 +366,50 @@ pub fn standardize(input: &MetaculusData) -> MarketResult<Vec<MarketAndProbs>> {
             // Build standard market item.
             let market = create_standard_market(
                 market_id,
-                input.details.id,
-                input.details.title.clone(),
+                details.id,
+                details.title.clone(),
                 format_market_description(description, resolution_criteria, fine_print),
                 platform_slug,
                 &probs,
-                input.details.nr_forecasters,
+                details.nr_forecasters,
                 resolution_value,
             )?;
-            Ok(vec![MarketAndProbs {
+            Ok(MarketAndProbs {
                 market,
                 daily_probabilities,
-            }])
+            })
         }
-        Some(MetaculusQuestion::Numeric {
+        MetaculusQuestion::Numeric {
+            id: _,
             description: _,
             resolution_criteria: _,
             fine_print: _,
             aggregations: _,
             resolution: _,
-        }) => Err(MarketError::MarketTypeNotImplemented(
+        } => Err(MarketError::MarketTypeNotImplemented(
             market_id.to_owned(),
             "Metaculus::Numeric".to_string(),
         )),
-        Some(MetaculusQuestion::Date {
+        MetaculusQuestion::Date {
+            id: _,
             description: _,
             resolution_criteria: _,
             fine_print: _,
             aggregations: _,
             resolution: _,
-        }) => Err(MarketError::MarketTypeNotImplemented(
+        } => Err(MarketError::MarketTypeNotImplemented(
             market_id.to_owned(),
             "Metaculus::Date".to_string(),
         )),
-        Some(MetaculusQuestion::MultipleChoice {
+        MetaculusQuestion::MultipleChoice {
+            id: _,
             description,
             resolution_criteria,
             fine_print,
             aggregations,
             options,
             resolution,
-        }) => {
-            // Get market ID. Construct from platform slug and ID within platform.
-            let market_id = format!("{}:{}", platform_slug, input.details.id);
-
+        } => {
             // Since we only allow markets where one answer is selected and only refer to the
             // winning answer, the resolution will always be YES.
             let resolution_value = 1.0;
@@ -394,7 +431,7 @@ pub fn standardize(input: &MetaculusData) -> MarketResult<Vec<MarketAndProbs>> {
             }
 
             // Append the tracked outcome to the market title so we know which side we're tracking.
-            let title = format!("{} | {}", input.details.title, resolved_option);
+            let title = format!("{} | {}", details.title, resolved_option);
 
             // Get index of resolved option for prob lookup.
             let index = options
@@ -414,7 +451,7 @@ pub fn standardize(input: &MetaculusData) -> MarketResult<Vec<MarketAndProbs>> {
             let probs = build_prob_segments(
                 &aggregations.recency_weighted.history,
                 index,
-                &input.details.actual_close_time,
+                &details.actual_close_time,
             )
             .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?;
             if probs.is_empty() {
@@ -431,32 +468,29 @@ pub fn standardize(input: &MetaculusData) -> MarketResult<Vec<MarketAndProbs>> {
             // Build standard market item.
             let market = create_standard_market(
                 market_id,
-                input.details.id,
+                details.id,
                 title,
                 format_market_description(description, resolution_criteria, fine_print),
                 platform_slug,
                 &probs,
-                input.details.nr_forecasters,
+                details.nr_forecasters,
                 resolution_value,
             )?;
-            Ok(vec![MarketAndProbs {
+            Ok(MarketAndProbs {
                 market,
                 daily_probabilities,
-            }])
+            })
         }
-        Some(MetaculusQuestion::Conditional {
+        MetaculusQuestion::Conditional {
+            id: _,
             description: _,
             resolution_criteria: _,
             fine_print: _,
             resolution: _,
             aggregations: _,
-        }) => Err(MarketError::MarketTypeNotImplemented(
+        } => Err(MarketError::MarketTypeNotImplemented(
             market_id.to_owned(),
             "Metaculus::Conditional".to_string(),
-        )),
-        None => Err(MarketError::MarketTypeNotImplemented(
-            market_id.to_owned(),
-            "Metaculus::GroupOfQuestions".to_string(),
         )),
     }
 }
@@ -486,7 +520,7 @@ fn create_standard_market(
     description: String,
     platform_slug: String,
     probs: &[ProbSegment],
-    traders_count: u32,
+    nr_forecasters: u32,
     resolution: f32,
 ) -> Result<StandardMarket, MarketError> {
     // We only consider the market to be open while there are actual probabilities.
@@ -502,7 +536,7 @@ fn create_standard_market(
         category_slug: None, // TODO
         open_datetime: start,
         close_datetime: end,
-        traders_count: Some(traders_count),
+        traders_count: Some(nr_forecasters),
         volume_usd: None, // Metaculus does not use volume.
         duration_days: helpers::get_market_duration(start, end)
             .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?,
