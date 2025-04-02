@@ -209,6 +209,14 @@ pub fn validate_prob_segments(probs: &[ProbSegment]) -> Result<()> {
             }
         }
 
+        // Check that the probability is within bounds
+        if segment.prob < 0.0 || segment.prob > 1.0 {
+            return Err(anyhow::anyhow!(
+                "Invalid segment: probability ({}) is out of bounds (0 to 1)",
+                segment.prob,
+            ));
+        }
+
         previous = Some(segment);
     }
 
