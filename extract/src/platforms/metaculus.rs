@@ -80,6 +80,9 @@ pub enum MetaculusQuestion {
     Binary {
         /// Question ID.
         id: u64,
+        /// Question title.
+        /// Contains the parent question if this is in a group.
+        title: String,
         /// Question description.
         /// Can be multiple lines, separated with "\n\n".
         description: String,
@@ -99,6 +102,7 @@ pub enum MetaculusQuestion {
     Numeric {
         /// Typical attributes.
         id: u64,
+        title: String,
         description: String,
         resolution_criteria: String,
         fine_print: String,
@@ -110,6 +114,7 @@ pub enum MetaculusQuestion {
     Date {
         /// Typical attributes.
         id: u64,
+        title: String,
         description: String,
         resolution_criteria: String,
         fine_print: String,
@@ -121,6 +126,7 @@ pub enum MetaculusQuestion {
     MultipleChoice {
         /// Typical attributes.
         id: u64,
+        title: String,
         description: String,
         resolution_criteria: String,
         fine_print: String,
@@ -134,6 +140,7 @@ pub enum MetaculusQuestion {
     Conditional {
         /// Typical attributes.
         id: u64,
+        title: String,
         description: String,
         resolution_criteria: String,
         fine_print: String,
@@ -318,12 +325,13 @@ fn standardize_single(
 
     match question {
         MetaculusQuestion::Binary {
-            id: _,
+            title,
             description,
             resolution_criteria,
             fine_print,
             aggregations,
             resolution,
+            ..
         } => {
             // Get probability segments. If there are none then skip.
             // Using recency_weighted (community prediction) here, may change in the future.
@@ -366,8 +374,8 @@ fn standardize_single(
             // Build standard market item.
             let market = create_standard_market(
                 market_id,
-                details.id,
-                details.title.clone(),
+                title,
+                format_market_url(details.id),
                 format_market_description(description, resolution_criteria, fine_print),
                 platform_slug,
                 &probs,
@@ -379,36 +387,23 @@ fn standardize_single(
                 daily_probabilities,
             })
         }
-        MetaculusQuestion::Numeric {
-            id: _,
-            description: _,
-            resolution_criteria: _,
-            fine_print: _,
-            aggregations: _,
-            resolution: _,
-        } => Err(MarketError::MarketTypeNotImplemented(
+        MetaculusQuestion::Numeric { .. } => Err(MarketError::MarketTypeNotImplemented(
             market_id.to_owned(),
             "Metaculus::Numeric".to_string(),
         )),
-        MetaculusQuestion::Date {
-            id: _,
-            description: _,
-            resolution_criteria: _,
-            fine_print: _,
-            aggregations: _,
-            resolution: _,
-        } => Err(MarketError::MarketTypeNotImplemented(
+        MetaculusQuestion::Date { .. } => Err(MarketError::MarketTypeNotImplemented(
             market_id.to_owned(),
             "Metaculus::Date".to_string(),
         )),
         MetaculusQuestion::MultipleChoice {
-            id: _,
+            title,
             description,
             resolution_criteria,
             fine_print,
             aggregations,
             options,
             resolution,
+            ..
         } => {
             // Since we only allow markets where one answer is selected and only refer to the
             // winning answer, the resolution will always be YES.
@@ -431,7 +426,7 @@ fn standardize_single(
             }
 
             // Append the tracked outcome to the market title so we know which side we're tracking.
-            let title = format!("{} | {}", details.title, resolved_option);
+            let title = format!("{} | {}", title, resolved_option);
 
             // Get index of resolved option for prob lookup.
             let index = options
@@ -468,8 +463,8 @@ fn standardize_single(
             // Build standard market item.
             let market = create_standard_market(
                 market_id,
-                details.id,
-                title,
+                &title,
+                format_market_url(details.id),
                 format_market_description(description, resolution_criteria, fine_print),
                 platform_slug,
                 &probs,
@@ -481,14 +476,7 @@ fn standardize_single(
                 daily_probabilities,
             })
         }
-        MetaculusQuestion::Conditional {
-            id: _,
-            description: _,
-            resolution_criteria: _,
-            fine_print: _,
-            resolution: _,
-            aggregations: _,
-        } => Err(MarketError::MarketTypeNotImplemented(
+        MetaculusQuestion::Conditional { .. } => Err(MarketError::MarketTypeNotImplemented(
             market_id.to_owned(),
             "Metaculus::Conditional".to_string(),
         )),
@@ -515,8 +503,8 @@ fn format_market_url(id: u32) -> String {
 #[allow(clippy::too_many_arguments)]
 fn create_standard_market(
     market_id: String,
-    metaculus_id: u32,
-    title: String,
+    title: &str,
+    url: String,
     description: String,
     platform_slug: String,
     probs: &[ProbSegment],
@@ -529,8 +517,8 @@ fn create_standard_market(
 
     Ok(StandardMarket {
         id: market_id.to_owned(),
-        title,
-        url: format_market_url(metaculus_id),
+        title: title.to_owned(),
+        url,
         description,
         platform_slug,
         category_slug: None, // TODO
