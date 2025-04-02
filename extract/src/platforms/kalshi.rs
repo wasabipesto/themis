@@ -212,9 +212,9 @@ pub fn standardize(input: &KalshiData) -> MarketResult<Vec<MarketAndProbs>> {
             }
 
             // Validate probability segments and collate into daily prob segments.
-            if let Err(e) = helpers::validate_prob_segments(&probs) {
-                return Err(MarketError::InvalidMarketTrades(market_id, e.to_string()));
-            }
+            helpers::validate_prob_segments(&probs).map_err(|e| {
+                MarketError::InvalidMarketTrades(market_id.to_owned(), e.to_string())
+            })?;
             let daily_probabilities = helpers::get_daily_probabilities(&probs, &market_id)
                 .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?;
 
