@@ -138,7 +138,7 @@
     platformResults = platformResults; // Trigger reactivity
 
     // Assemble query parameters for this specific platform
-    let params = assembleParamString(query, [platformSlug], sort);
+    let params = assembleParamString(true, query, [platformSlug], sort);
 
     try {
       const results = await getMarkets(params);
