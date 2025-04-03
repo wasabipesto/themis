@@ -205,6 +205,11 @@ fn main() -> Result<()> {
         }
     }
 
+    // Refresh materialized views
+    if !args.offline {
+        refresh_materialized_views(&postgrest_params)?;
+    }
+
     Ok(())
 }
 
@@ -266,5 +271,44 @@ fn upload_batch(
         ));
     }
 
+    Ok(())
+}
+
+/// Refreshes all materialized views in the database.
+/// Should be called after all data has been uploaded to ensure views are up-to-date.
+/// Uses a longer timeout since this operation can take around 60 seconds.
+fn refresh_materialized_views(params: &PostgrestParams) -> Result<()> {
+    // Set base url
+    let postgrest_api_base = format!("http://{}:{}", params.postgrest_host, params.postgrest_port);
+
+    info!("Refreshing all materialized views (this may take up to 2 minutes)");
+
+    // Create a new client with a longer timeout specifically for this operation
+    let timeout = Duration::from_secs(180); // 3 minute timeout
+    let long_timeout_client = Client::builder()
+        .timeout(timeout)
+        .build()
+        .context("Failed to create HTTP client with extended timeout")?;
+
+    let response = long_timeout_client
+        .post(format!(
+            "{}/rpc/refresh_all_materialized_views",
+            postgrest_api_base
+        ))
+        .bearer_auth(&params.postgrest_api_key)
+        .send()
+        .context("Failed to send refresh materialized views request")?;
+
+    let status = response.status();
+    if !status.is_success() {
+        let body = response.text()?;
+        return Err(anyhow::anyhow!(
+            "Refresh materialized views failed with status {} and body: {}",
+            status,
+            body
+        ));
+    }
+
+    info!("All materialized views refreshed successfully");
     Ok(())
 }
