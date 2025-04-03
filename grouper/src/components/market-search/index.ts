@@ -61,13 +61,19 @@ function buildSearchQuery(userQuery: string): string {
 }
 
 export function assembleParamString(
+  defaultFilters: boolean,
   searchQuery: string | null,
   platformSlugs: string[] | null,
   order: string,
 ): string {
   // Initialize params with order and default filters
   let params = `order=${order}`;
-  params += "&question_id=is.null&question_dismissed=eq.0&duration_days=gte.4";
+
+  // Add default filters if enabled
+  if (defaultFilters) {
+    params +=
+      "&question_id=is.null&question_dismissed=eq.0&duration_days=gte.4";
+  }
 
   // Build the search query if provided
   if (searchQuery) params += buildSearchQuery(searchQuery);

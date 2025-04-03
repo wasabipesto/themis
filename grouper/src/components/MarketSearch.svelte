@@ -20,6 +20,7 @@
   let searchQuery = "";
   let selectedPlatformSlug = "";
   let selectedSort = "volume_usd.desc.nullslast";
+  let defaultFilters = true;
 
   onMount(async () => {
     // Get initial values from URL
@@ -49,7 +50,12 @@
 
     // Base query parameters
     console.log([platformSlug]);
-    let params = assembleParamString(query, [platformSlug], sort);
+    let params = assembleParamString(
+      defaultFilters,
+      query,
+      [platformSlug],
+      sort,
+    );
 
     try {
       markets = await getMarkets(params);
@@ -93,6 +99,7 @@
     {platforms}
     bind:selectedPlatform={selectedPlatformSlug}
     bind:selectedSort
+    bind:defaultFilters
     onChange={handleSearch}
   />
 </div>
