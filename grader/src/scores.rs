@@ -142,6 +142,7 @@ impl RelativeScoreType {
                     .filter(|p| p.market_id == market.id)
                     .cloned()
                     .collect();
+                let prob_count_unfiltered = market_probs.len();
 
                 // Filter out probability points outside of override bounds
                 if let Some(start_date) = start_date_override {
@@ -153,7 +154,14 @@ impl RelativeScoreType {
 
                 // Confirm that there are probabilities for this market
                 if market_probs.is_empty() {
-                    return Err(anyhow!("No probabilities found for market {}", market.id));
+                    if prob_count_unfiltered == 0 {
+                        return Err(anyhow!("No probabilities found for market {}", market.id));
+                    } else {
+                        return Err(anyhow!(
+                            "All probabilities for market {} are outside of the override bounds",
+                            market.id
+                        ));
+                    }
                 }
 
                 // Sort probabilities by date
