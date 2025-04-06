@@ -95,7 +95,7 @@ pub fn get_market_probs(
     for market_id in market_ids {
         let response = client
             .get(format!(
-                "{}/daily_probability_details?order=date&market_id=eq.{}",
+                "{}/daily_probabilities?order=date&market_id=eq.{}",
                 params.postgrest_url, market_id
             ))
             .bearer_auth(&params.postgrest_api_key)
