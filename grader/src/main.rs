@@ -94,16 +94,20 @@ fn main() -> Result<()> {
 
     // Calculate absolute scores.
     info!("Calculating absolute scores...");
-    let _absolute_scores = scores::calculate_absolute_scores(&markets)?;
+    let absolute_scores = scores::calculate_absolute_scores(&markets)?;
 
     // Calculate relative scores.
     info!("Calculating relative scores...");
-    let _relative_scores = scores::calculate_relative_scores(
+    let relative_scores = scores::calculate_relative_scores(
         &linked_questions,
         &linked_markets,
         &linked_market_probs,
     )?;
-    info!("All scores calculated.");
+    info!(
+        "{} absolute and {} relative scores calculated.",
+        absolute_scores.len(),
+        relative_scores.len()
+    );
 
     // TODO:
     // Wipe market scores table.

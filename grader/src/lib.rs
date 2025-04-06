@@ -37,7 +37,6 @@ pub struct DailyProbabilityPoint {
     pub market_id: String,
     pub date: DateTime<Utc>,
     pub prob: f32,
-    pub question_invert: bool,
 }
 
 /// Market with probability.

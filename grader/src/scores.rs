@@ -213,9 +213,15 @@ impl RelativeScoreType {
                     };
 
                 // Invert the predicted probability if necessary
-                let prediction = match market_prob_point.question_invert {
-                    true => 1.0 - market_prob_point.prob,
-                    false => market_prob_point.prob,
+                let prediction = match market.question_invert {
+                    Some(true) => 1.0 - market_prob_point.prob,
+                    Some(false) => market_prob_point.prob,
+                    None => {
+                        return Err(anyhow!(
+                            "Market {} has no question invert attribute provided",
+                            market.id
+                        ))
+                    }
                 };
 
                 // Get the score for the market on this day
