@@ -4,10 +4,65 @@ use crate::{DailyProbabilityPoint, Question};
 
 use super::PostgrestParams;
 use anyhow::{Context, Result};
-use reqwest::blocking::Client;
+use reqwest::blocking::{Client, Response};
 use std::time::Duration;
 
 use super::Market;
+
+/// Makes an API request and handles errors consistently
+fn make_request(client: &Client, url: String, auth_key: &str) -> Result<Response> {
+    client
+        .get(url)
+        .bearer_auth(auth_key)
+        .send()
+        .context("Failed to send request")
+}
+
+/// Makes a POST API request and handles errors consistently
+fn make_post_request(client: &Client, url: String, auth_key: &str) -> Result<Response> {
+    client
+        .post(url)
+        .bearer_auth(auth_key)
+        .send()
+        .context("Failed to send request")
+}
+
+/// Process API response, returning deserialized data or an error
+fn process_response<T>(response: Response, error_context: &str) -> Result<T>
+where
+    T: serde::de::DeserializeOwned,
+{
+    let status = response.status();
+    if status.is_success() {
+        response
+            .json::<T>()
+            .context("Failed to parse response JSON")
+    } else {
+        let body = response.text()?;
+        Err(anyhow::anyhow!(
+            "{} failed with status {} and body: {}",
+            error_context,
+            status,
+            body
+        ))
+    }
+}
+
+/// Process a response when we don't need the body content, just success/failure
+fn process_empty_response(response: Response, error_context: &str) -> Result<()> {
+    let status = response.status();
+    if status.is_success() {
+        Ok(())
+    } else {
+        let body = response.text()?;
+        Err(anyhow::anyhow!(
+            "{} failed with status {} and body: {}",
+            error_context,
+            status,
+            body
+        ))
+    }
+}
 
 /// Downloads all markets from the database.
 /// Paginates through the PostgREST endpoint until all are downloaded.
@@ -17,31 +72,20 @@ pub fn get_all_markets(client: &Client, params: &PostgrestParams) -> Result<Vec<
     let mut markets = Vec::new();
 
     loop {
-        let response = client
-            .get(format!(
-                "{}/market_details?order=id&limit={}&offset={}",
-                params.postgrest_url, limit, offset
-            ))
-            .bearer_auth(&params.postgrest_api_key)
-            .send()
-            .context("Failed to send download markets request")?;
+        let url = format!(
+            "{}/market_details?order=id&limit={}&offset={}",
+            params.postgrest_url, limit, offset
+        );
 
-        let status = response.status();
-        if status.is_success() {
-            let body = response.json::<Vec<Market>>()?;
-            if body.is_empty() {
-                break;
-            }
-            markets.extend(body);
-            offset += limit;
-        } else {
-            let body = response.text()?;
-            return Err(anyhow::anyhow!(
-                "Download markets failed with status {} and body: {}",
-                status,
-                body
-            ));
+        let response = make_request(client, url, &params.postgrest_api_key)?;
+        let body: Vec<Market> = process_response(response, "Download markets")?;
+
+        if body.is_empty() {
+            break;
         }
+
+        markets.extend(body);
+        offset += limit;
     }
 
     Ok(markets)
@@ -56,28 +100,16 @@ pub fn get_questions(
     let mut questions = Vec::with_capacity(question_ids.len());
 
     for question_id in question_ids {
-        let response = client
-            .get(format!(
-                "{}/question_details?id=eq.{}",
-                params.postgrest_url, question_id
-            ))
-            .bearer_auth(&params.postgrest_api_key)
-            .send()
-            .context("Failed to send download questions request")?;
+        let url = format!(
+            "{}/question_details?id=eq.{}",
+            params.postgrest_url, question_id
+        );
 
-        let status = response.status();
-        if status.is_success() {
-            let body = response.json::<Vec<Question>>()?;
-            if let Some(question) = body.first() {
-                questions.push(question.clone());
-            }
-        } else {
-            let body = response.text()?;
-            return Err(anyhow::anyhow!(
-                "Download questions failed with status {} and body: {}",
-                status,
-                body
-            ));
+        let response = make_request(client, url, &params.postgrest_api_key)?;
+        let body: Vec<Question> = process_response(response, "Download questions")?;
+
+        if let Some(question) = body.first() {
+            questions.push(question.clone());
         }
     }
 
@@ -93,27 +125,16 @@ pub fn get_market_probs(
     let mut probs = Vec::new();
 
     for market_id in market_ids {
-        let response = client
-            .get(format!(
-                "{}/daily_probabilities?order=date&market_id=eq.{}",
-                params.postgrest_url, market_id
-            ))
-            .bearer_auth(&params.postgrest_api_key)
-            .send()
-            .context("Failed to send download probabilities request")?;
+        let url = format!(
+            "{}/daily_probabilities?order=date&market_id=eq.{}",
+            params.postgrest_url, market_id
+        );
 
-        let status = response.status();
-        if status.is_success() {
-            let body = response.json::<Vec<DailyProbabilityPoint>>()?;
-            probs.extend(body);
-        } else {
-            let body = response.text()?;
-            return Err(anyhow::anyhow!(
-                "Download probabilities failed with status {} and body: {}",
-                status,
-                body
-            ));
-        }
+        let response = make_request(client, url, &params.postgrest_api_key)?;
+        let body: Vec<DailyProbabilityPoint> =
+            process_response(response, "Download probabilities")?;
+
+        probs.extend(body);
     }
 
     Ok(probs)
@@ -121,26 +142,13 @@ pub fn get_market_probs(
 
 /// Refreshes the market and question materialized views in the database.
 pub fn refresh_quick_materialized_views(client: &Client, params: &PostgrestParams) -> Result<()> {
-    let response = client
-        .post(format!(
-            "{}/rpc/refresh_quick_materialized_views",
-            params.postgrest_url
-        ))
-        .bearer_auth(&params.postgrest_api_key)
-        .send()
-        .context("Failed to send refresh materialized views request")?;
+    let url = format!(
+        "{}/rpc/refresh_quick_materialized_views",
+        params.postgrest_url
+    );
 
-    let status = response.status();
-    if status.is_success() {
-        Ok(())
-    } else {
-        let body = response.text()?;
-        Err(anyhow::anyhow!(
-            "Refresh materialized views failed with status {} and body: {}",
-            status,
-            body
-        ))
-    }
+    let response = make_post_request(client, url, &params.postgrest_api_key)?;
+    process_empty_response(response, "Refresh quick materialized views")
 }
 
 /// Refreshes all materialized views in the database.
@@ -154,24 +162,11 @@ pub fn refresh_all_materialized_views(params: &PostgrestParams) -> Result<()> {
         .build()
         .context("Failed to create HTTP client with extended timeout")?;
 
-    let response = long_timeout_client
-        .post(format!(
-            "{}/rpc/refresh_all_materialized_views",
-            params.postgrest_url
-        ))
-        .bearer_auth(&params.postgrest_api_key)
-        .send()
-        .context("Failed to send refresh materialized views request")?;
+    let url = format!(
+        "{}/rpc/refresh_all_materialized_views",
+        params.postgrest_url
+    );
 
-    let status = response.status();
-    if status.is_success() {
-        Ok(())
-    } else {
-        let body = response.text()?;
-        Err(anyhow::anyhow!(
-            "Refresh materialized views failed with status {} and body: {}",
-            status,
-            body
-        ))
-    }
+    let response = make_post_request(&long_timeout_client, url, &params.postgrest_api_key)?;
+    process_empty_response(response, "Refresh all materialized views")
 }
