@@ -119,10 +119,34 @@ pub fn get_market_probs(
     Ok(probs)
 }
 
+/// Refreshes the market and question materialized views in the database.
+pub fn refresh_quick_materialized_views(client: &Client, params: &PostgrestParams) -> Result<()> {
+    let response = client
+        .post(format!(
+            "{}/rpc/refresh_quick_materialized_views",
+            params.postgrest_url
+        ))
+        .bearer_auth(&params.postgrest_api_key)
+        .send()
+        .context("Failed to send refresh materialized views request")?;
+
+    let status = response.status();
+    if status.is_success() {
+        Ok(())
+    } else {
+        let body = response.text()?;
+        Err(anyhow::anyhow!(
+            "Refresh materialized views failed with status {} and body: {}",
+            status,
+            body
+        ))
+    }
+}
+
 /// Refreshes all materialized views in the database.
 /// Should be called after all data has been uploaded to ensure views are up-to-date.
 /// Uses a longer timeout since this operation can take around 60 seconds.
-pub fn refresh_materialized_views(params: &PostgrestParams) -> Result<()> {
+pub fn refresh_all_materialized_views(params: &PostgrestParams) -> Result<()> {
     // Create a new client with a longer timeout specifically for this operation
     let timeout = Duration::from_secs(180); // 3 minute timeout
     let long_timeout_client = Client::builder()

@@ -58,6 +58,10 @@ fn main() -> Result<()> {
         .context("Failed to create HTTP client")?;
 
     // Get all markets
+    info!("Refreshing quick views...");
+    api::refresh_quick_materialized_views(&client, &postgrest_params)?;
+
+    // Get all markets
     info!("Downloading all markets...");
     let markets = api::get_all_markets(&client, &postgrest_params)?;
 
@@ -121,7 +125,7 @@ fn main() -> Result<()> {
 
     // Refresh all materialized views
     info!("Refreshing all materialized views...");
-    api::refresh_materialized_views(&postgrest_params)?;
+    api::refresh_all_materialized_views(&postgrest_params)?;
     info!("All views refreshed.");
 
     info!("Grading complete.");
