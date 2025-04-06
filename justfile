@@ -24,6 +24,16 @@ extract *args:
 extract-test:
     cargo test
 
+# Grade markets
+[working-directory: 'grader']
+grade *args:
+  cargo run -r -- {{args}}
+
+# Run grader tests
+[working-directory: 'grader']
+grade-test:
+  cargo test
+
 # Start the database containers
 db-up:
     docker compose up -d
@@ -111,4 +121,4 @@ group-deploy: group-test group-build
     rclone sync grouper/dist $RCLONE_ADMIN_TARGET --progress
 
 # Run all tests
-test-all: download-test extract-test site-test group-test
+test-all: download-test extract-test grade-test site-test group-test
