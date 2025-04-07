@@ -124,4 +124,6 @@ group-deploy: group-test group-build
 test-all: download-test extract-test grade-test site-test group-test
 
 # Run nightly process
-nightly: test-all download extract grade deploy
+nightly: test-all
+    just download --reset-cache
+    just extract grade deploy
