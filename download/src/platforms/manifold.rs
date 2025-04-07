@@ -44,6 +44,9 @@ async fn get_full_market(client: &ClientWithMiddleware, id: &str) -> Result<Valu
 
 /// Download extended data from the `/bets` endpoint.
 /// Detect errors and warn but don't stop processing.
+/// Source links:
+/// https://github.com/manifoldmarkets/manifold/blob/d23cb16f7a2b781d5097648c29d01ed3bebbf55e/common/src/api/schema.ts#L359
+/// https://github.com/manifoldmarkets/manifold/blob/d23cb16f7a2b781d5097648c29d01ed3bebbf55e/backend/shared/src/supabase/bets.ts#L34
 async fn get_bet_data(client: &ClientWithMiddleware, market_id: &str) -> Result<Vec<Value>> {
     trace!("Getting Manifold bet data for Market {market_id}");
     let api_url = MANIFOLD_API_BASE.to_owned() + "/bets";
@@ -59,7 +62,8 @@ async fn get_bet_data(client: &ClientWithMiddleware, market_id: &str) -> Result<
                 .get(&api_url)
                 .query(&[("contractId", market_id)])
                 .query(&[("limit", &limit)])
-                .query(&[("before", &before)]), // if value is None, param is not sent
+                .query(&[("before", &before)]) // if value is None, param is not sent
+                .query(&[("includeZeroShareRedemptions", true)]), // include price movements on linked MC
         )
         .await
         {
