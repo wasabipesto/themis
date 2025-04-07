@@ -122,3 +122,6 @@ group-deploy: group-test group-build
 
 # Run all tests
 test-all: download-test extract-test grade-test site-test group-test
+
+# Run nightly process
+nightly: test-all download extract grade deploy
