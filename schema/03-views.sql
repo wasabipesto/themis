@@ -88,9 +88,10 @@ SELECT
     m.title AS market_title,
     p.slug AS platform_slug,
     p.name AS platform_name,
+    mq.question_id AS question_id,
+    mq.question_invert AS question_invert,
     dp.date AS date,
-    dp.prob AS prob,
-    mq.question_invert
+    dp.prob AS prob
 FROM
     daily_probabilities dp
     JOIN markets m ON dp.market_id = m.id
