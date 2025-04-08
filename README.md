@@ -268,10 +268,17 @@ just extract
 uv run scripts/migrate_mq.py --mode import
 
 # refresh views
-just db-refresh-views
+just db-refresh-quick
 
 # check everything is in place
 just db-curl "market_details?limit=10&question_slug=not.is.null"
+
+# calculate stats and refresh everything else
+just grade
+
+# check and build the site
+just dev
+just build
 ```
 
 Note that this is not necessary if you want to edit table views. To reload the database view schema, just run:
