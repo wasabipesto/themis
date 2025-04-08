@@ -14,10 +14,9 @@ const { points } = Astro.props;
 </div>
 
 <script>
-    // @ts-nocheck
     import * as Plot from "@observablehq/plot";
     const plotElement = document.querySelector("#plot");
-    const points = JSON.parse(plotElement?.dataset.points || "[]");
+    const points = JSON.parse((plotElement as HTMLElement)?.dataset.points || "[]");
 
     const plot = Plot.plot({
         title: "Probability History",
@@ -39,7 +38,7 @@ const { points } = Astro.props;
             Plot.line(points, {
                 x: "date",
                 y: "prob",
-                stroke: "platform",
+                stroke: "platform_name",
                 curve: "step",
                 tip: {
                     format: {
