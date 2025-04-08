@@ -99,7 +99,7 @@ CREATE INDEX idx_market_dismissals_market_id ON market_dismissals (market_id);
 CREATE INDEX idx_market_dismissals_status ON market_dismissals (market_id, dismissed_status);
 
 -- === PLATFORM-CATEGORY SCORES ===
-CREATE TABLE platform_scores (
+CREATE TABLE platform_category_scores (
     platform_slug TEXT NOT NULL,
     category_slug TEXT NOT NULL,
     score_type TEXT NOT NULL,
@@ -119,6 +119,16 @@ CREATE TABLE market_scores (
     grade TEXT NOT NULL,
     PRIMARY KEY (market_id, score_type),
     FOREIGN KEY (market_id) REFERENCES markets (id) ON UPDATE CASCADE
+);
+
+-- === OTHER SCORES ===
+CREATE TABLE other_scores (
+    item_id TEXT NOT NULL,
+    score_type TEXT NOT NULL,
+    num_markets INTEGER NOT NULL,
+    score DECIMAL NOT NULL,
+    grade TEXT NOT NULL,
+    PRIMARY KEY (item_id, score_type)
 );
 
 -- === DAILY PROBABILITY POINTS ===

@@ -5,7 +5,7 @@
 -- === DROP ALL VIEWS (NO DATA LOSS) ===
 DROP MATERIALIZED VIEW IF EXISTS question_details;
 DROP MATERIALIZED VIEW IF EXISTS market_details;
-DROP MATERIALIZED VIEW IF EXISTS platform_scores_details;
+DROP MATERIALIZED VIEW IF EXISTS platform_category_scores_details;
 DROP MATERIALIZED VIEW IF EXISTS daily_probability_details;
 DROP MATERIALIZED VIEW IF EXISTS market_scores_details;
 DROP MATERIALIZED VIEW IF EXISTS category_details;
@@ -100,7 +100,7 @@ FROM
 CREATE UNIQUE INDEX daily_probability_details_md_idx ON daily_probability_details (market_id, date);
 
 -- === PLATFORM-CATEGORY SCORE DETAILS ===
-CREATE MATERIALIZED VIEW platform_scores_details AS
+CREATE MATERIALIZED VIEW platform_category_scores_details AS
 SELECT
     ps.platform_slug,
     p.name AS platform_name,
@@ -111,10 +111,10 @@ SELECT
     ps.score,
     ps.grade
 FROM
-    platform_scores ps
+    platform_category_scores ps
     JOIN platforms p ON ps.platform_slug = p.slug
     JOIN categories c ON ps.category_slug = c.slug;
-CREATE UNIQUE INDEX platform_scores_details_pc_idx ON platform_scores_details (platform_slug, category_slug);
+CREATE UNIQUE INDEX platform_category_scores_details_pc_idx ON platform_category_scores_details (platform_slug, category_slug);
 
 -- === MARKET DETAILS ===
 CREATE MATERIALIZED VIEW market_details AS
@@ -182,7 +182,7 @@ BEGIN
     REFRESH MATERIALIZED VIEW CONCURRENTLY platform_details; -- 2 SECONDS
     REFRESH MATERIALIZED VIEW CONCURRENTLY category_details; -- INSTANT
     REFRESH MATERIALIZED VIEW CONCURRENTLY market_scores_details;
-    REFRESH MATERIALIZED VIEW CONCURRENTLY platform_scores_details;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY platform_category_scores_details;
     REFRESH MATERIALIZED VIEW CONCURRENTLY daily_probability_details; -- >30 SECONDS
     -- These depend on other materialized views
     REFRESH MATERIALIZED VIEW CONCURRENTLY question_details; -- INSTANT
