@@ -5,21 +5,25 @@ import QuestionCard from "@components/question-card.astro";
 import SeeMoreLink from "@components/see-more-link.astro";
 import PlatformCard from "@components/platform-card.astro";
 import CalibrationChart from "@components/calibration-chart.astro";
-import type { PlatformDetails, PlatformScoreDetails, QuestionDetails } from "@types";
+import type { PlatformDetails, PlatformScoreDetails, QuestionDetails, MarketScoreDetails } from "@types";
 
-const pgrst_url = "https://data.predictionmetrics.org"; // import.meta.env.PGRST_URL;
+const pgrst_url = import.meta.env.PGRST_URL;
 
 const platforms = (await fetch(`${pgrst_url}/platform_details`).then((res) =>
     res.json(),
 )) as PlatformDetails[];
 
-const featuredQuestions = (await fetch(`${pgrst_url}/question_details`).then((res) =>
-    res.json(),
-)) as QuestionDetails[];
-
 const platformScores = (await fetch(`${pgrst_url}/platform_scores_details`).then(
     (res) => res.json(),
 )) as PlatformScoreDetails[];
+
+const featuredQuestions = (await fetch(`${pgrst_url}/question_details?order=total_volume.desc&limit=9`).then(
+    (res) => res.json(),
+)) as QuestionDetails[];
+
+const marketScores = (await fetch(
+  `${pgrst_url}/market_scores_details?question_id=in.(${featuredQuestions.map(q => q.id).join(',')})`
+).then((res) => res.json())) as MarketScoreDetails[];
 ---
 
 <Base title="Home">
@@ -78,12 +82,10 @@ const platformScores = (await fetch(`${pgrst_url}/platform_scores_details`).then
         </p>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        <QuestionCard question={featuredQuestions[0]} />
-        <QuestionCard question={featuredQuestions[0]} />
-        <QuestionCard question={featuredQuestions[0]} />
-        <QuestionCard question={featuredQuestions[0]} />
-        <QuestionCard question={featuredQuestions[0]} />
-        <QuestionCard question={featuredQuestions[0]} />
+        {featuredQuestions.map((question) => {
+            const questionScores = marketScores.filter(score => score.question_id === question.id);
+            return <QuestionCard question={question} scores={questionScores} />;
+        })}
     </div>
     <SeeMoreLink link={`/questions`} text="See all questions" />
     <hr class="my-2" />

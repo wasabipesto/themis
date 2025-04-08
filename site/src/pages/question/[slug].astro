@@ -8,23 +8,29 @@ import Grade from "@atoms/grade.astro";
 import ScoreRel from "@atoms/score-rel.astro";
 import ScoreAbs from "@atoms/score-abs.astro";
 import LinkOut from "@icons/link-out.svg";
-import type { DailyProbabilityDetails, QuestionDetails } from "@types";
+import type { DailyProbabilityDetails, QuestionDetails, MarketScoreDetails } from "@types";
 
-const pgrst_url = "https://data.predictionmetrics.org"; // import.meta.env.PGRST_URL;
+const pgrst_url = import.meta.env.PGRST_URL;
 
 // Generate routes for all items
 export async function getStaticPaths() {
-    const pgrst_url = "https://data.predictionmetrics.org"; // import.meta.env.PGRST_URL;
-    const questions = (await fetch(`${pgrst_url}/questions`).then((res) =>
+    const pgrst_url = import.meta.env.PGRST_URL;
+    const questions = (await fetch(`${pgrst_url}/question_details`).then((res) =>
         res.json(),
     )) as QuestionDetails[];
-    return questions.map((question) => ({
-        params: { slug: question.slug },
-        props: { question },
-    }));
+    return questions.map((question) => {
+        return {
+            params: { slug: question.slug },
+            props: { question },
+        };
+    });
 }
 const { question } = Astro.props;
 
+// Download market scores and probabilities
+const marketScores = (await fetch(
+  `${pgrst_url}/market_scores_details?question_id=${question.id}`
+).then((res) => res.json())) as MarketScoreDetails[];
 const dailyProbabilityPoints = (await fetch(
     `${pgrst_url}/daily_probabilities?question_id=${question.id}`,
 ).then((res) => res.json())) as DailyProbabilityDetails[];
@@ -75,7 +81,7 @@ const dailyProbabilityPoints = (await fetch(
             </thead>
             <tbody>
                 {
-                    question.market_scores?.map((market_score) => (
+                    marketScores.map((market_score) => (
                         <tr>
                             <td class="px-4 py-2">{market_score.platform_name}</td>
                             <td class="px-6 py-2">
@@ -100,11 +106,11 @@ const dailyProbabilityPoints = (await fetch(
                                 <Grade grade={market_score.grade} />
                             </td>
                             <td class="px-4 py-2">
-                                <ScoreRel num={market_score.brier_score_rel} />
+                                <ScoreRel num={market_score.score} />
                             </td>
                             <td class="px-4 py-2">
                                 <ScoreAbs
-                                    num={market_score.brier_score_abs}
+                                    num={market_score.score}
                                     detailed={false}
                                 />
                             </td>
@@ -123,16 +129,10 @@ const dailyProbabilityPoints = (await fetch(
                     <td class="px-4 py-2">
                         <Duration num={question.total_duration} />
                     </td>
-                    <td class="px-4 py-2">
-                        <Grade grade={question.overall_grade} />
-                    </td>
                     <td class="px-4 py-2"> </td>
-                    <td class="px-4 py-2">
-                        <ScoreAbs
-                            num={question.overall_brier_score_abs}
-                            detailed={false}
-                        />
-                    </td>
+                    <td class="px-4 py-2"> </td>
+                    <td class="px-4 py-2"> </td>
+                    <td class="px-4 py-2"> </td>
                 </tr>
             </tbody>
         </table>

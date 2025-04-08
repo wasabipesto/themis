@@ -3,13 +3,14 @@ import Grade from "@atoms/grade.astro";
 import Volume from "@atoms/volume.astro";
 import Traders from "@atoms/traders.astro";
 import ScoreRel from "@atoms/score-rel.astro";
-import type { QuestionDetails } from "@types";
+import type { QuestionDetails, MarketScoreDetails } from "@types";
 
 interface Props {
     question: QuestionDetails;
+    scores: MarketScoreDetails[];
 }
 
-let { question } = Astro.props;
+let { question, scores } = Astro.props;
 ---
 
 <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
@@ -33,14 +34,14 @@ let { question } = Astro.props;
     <table class="mt-2 table-auto text-sm w-full">
         <tbody>
             {
-                question.market_scores.map((market_score) => (
+                scores.map((market_score) => (
                     <tr>
                         <td class="px-2 pt-1">{market_score.platform_name}</td>
                         <td class="px-2 pt-1">
                             <Grade grade={market_score.grade} />
                         </td>
                         <td class="px-2 pt-1 font-mono">
-                            <ScoreRel num={market_score.brier_score_rel} />
+                            <ScoreRel num={market_score.score} />
                         </td>
                     </tr>
                 ))

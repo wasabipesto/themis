@@ -33,7 +33,7 @@ export interface PlatformScoreDetails {
   category_name: string;
   score_type: string;
   num_markets: number;
-  score: string;
+  score: number;
   grade: string;
 }
 
@@ -97,13 +97,13 @@ export interface MarketScoreDetails {
   market_url: string;
   platform_slug: string;
   platform_name: string;
-  question_id: string | null;
+  question_id: number | null;
   traders_count: number;
   volume_usd: number;
   duration_days: number;
   question_invert: boolean;
   resolution: number;
-  score: string;
+  score: number;
   grade: string;
 }
 

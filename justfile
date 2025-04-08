@@ -71,13 +71,13 @@ db-curl *endpoint:
     -H "Authorization: Bearer ${PGRST_APIKEY}" | jq
 
 # Refresh all database views
-db-refresh-views *endpoint:
+db-refresh-views:
     curl -sf \
     -X POST "${PGRST_URL}/rpc/refresh_all_materialized_views" \
     -H "Authorization: Bearer ${PGRST_APIKEY}" | jq
 
 # Refresh the quick database views
-db-refresh-quick *endpoint:
+db-refresh-quick:
     curl -sf \
     -X POST "${PGRST_URL}/rpc/refresh_quick_materialized_views" \
     -H "Authorization: Bearer ${PGRST_APIKEY}" | jq

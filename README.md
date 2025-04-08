@@ -181,6 +181,12 @@ For now I am intentionally not documenting specific features of the admin tools 
 - While you have those searches open, look for other possible question groups in the same topic.
 - Once you have exhausted the markets in that topic, return to the top-level search and find another topic.
 
+When you have finished grouping markets, you can calculate all market scores by running the grader tool:
+
+```bash
+just grade
+```
+
 ## Step 5. Generating site
 
 The site is static and designed to be deployed behind any standard web server such as `nginx`. It could also be deployed to GitHub Pages, an AWS S3 bucket, or any other static site host.
@@ -260,6 +266,9 @@ just extract
 
 # import the questions and market links
 uv run scripts/migrate_mq.py --mode import
+
+# refresh views
+just db-refresh-views
 
 # check everything is in place
 just db-curl "market_details?limit=10&question_slug=not.is.null"
