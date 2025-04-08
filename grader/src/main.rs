@@ -17,13 +17,6 @@ struct Args {
     /// Set the log level (e.g., error, warn, info, debug, trace)
     #[arg(short, long, default_value = "info")]
     log_level: String,
-    //
-    // Future params:
-    // - dry_run
-    // - absolute_only
-    // - relative_only
-    // - platform_only
-    // - calibration_only
 }
 
 fn main() -> Result<()> {
@@ -113,9 +106,13 @@ fn main() -> Result<()> {
         relative_scores.len()
     );
 
+    info!("Uploading scores...");
+    api::wipe_market_scores(&client, &postgrest_params)?;
+    api::upload_market_scores(&client, &postgrest_params, &absolute_scores)?;
+    api::upload_market_scores(&client, &postgrest_params, &relative_scores)?;
+    info!("All scores uploaded.");
+
     // TODO:
-    // Wipe market scores table.
-    // Upload new market scores.
     // Average market scores into platform-category scores.
     // Wipe platform-category scores table.
     // Upload new platform-category scores.

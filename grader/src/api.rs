@@ -1,30 +1,47 @@
 //! Module containing common API functions.
 
-use crate::{DailyProbabilityPoint, Question};
+use crate::{scores::MarketScore, DailyProbabilityPoint, Question};
 
 use super::PostgrestParams;
 use anyhow::{Context, Result};
 use reqwest::blocking::{Client, Response};
-use std::time::Duration;
+use std::{fmt::Display, time::Duration};
 
 use super::Market;
 
-/// Makes an API request and handles errors consistently
-fn make_request(client: &Client, url: String, auth_key: &str) -> Result<Response> {
-    client
-        .get(url)
-        .bearer_auth(auth_key)
-        .send()
-        .context("Failed to send request")
+/// HTTP methods supported by our API wrapper
+pub enum HttpMethod {
+    GET,
+    POST,
+    DELETE,
+}
+impl Display for HttpMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HttpMethod::GET => write!(f, "GET"),
+            HttpMethod::POST => write!(f, "POST"),
+            HttpMethod::DELETE => write!(f, "DELETE"),
+        }
+    }
 }
 
-/// Makes a POST API request and handles errors consistently
-fn make_post_request(client: &Client, url: String, auth_key: &str) -> Result<Response> {
-    client
-        .post(url)
+/// Makes an API request with the specified method and handles errors consistently
+fn make_request(
+    client: &Client,
+    url: String,
+    method: HttpMethod,
+    auth_key: &str,
+) -> Result<Response> {
+    let request_builder = match method {
+        HttpMethod::GET => client.get(&url),
+        HttpMethod::POST => client.post(&url),
+        HttpMethod::DELETE => client.delete(&url),
+    };
+
+    request_builder
         .bearer_auth(auth_key)
         .send()
-        .context("Failed to send request")
+        .with_context(|| format!("Failed to send {method} request to {url}"))
 }
 
 /// Process API response, returning deserialized data or an error
@@ -77,7 +94,7 @@ pub fn get_all_markets(client: &Client, params: &PostgrestParams) -> Result<Vec<
             params.postgrest_url, limit, offset
         );
 
-        let response = make_request(client, url, &params.postgrest_api_key)?;
+        let response = make_request(client, url, HttpMethod::GET, &params.postgrest_api_key)?;
         let body: Vec<Market> = process_response(response, "Download markets")?;
 
         if body.is_empty() {
@@ -105,7 +122,7 @@ pub fn get_questions(
             params.postgrest_url, question_id
         );
 
-        let response = make_request(client, url, &params.postgrest_api_key)?;
+        let response = make_request(client, url, HttpMethod::GET, &params.postgrest_api_key)?;
         let body: Vec<Question> = process_response(response, "Download questions")?;
 
         if let Some(question) = body.first() {
@@ -130,7 +147,7 @@ pub fn get_market_probs(
             params.postgrest_url, market_id
         );
 
-        let response = make_request(client, url, &params.postgrest_api_key)?;
+        let response = make_request(client, url, HttpMethod::GET, &params.postgrest_api_key)?;
         let body: Vec<DailyProbabilityPoint> =
             process_response(response, "Download probabilities")?;
 
@@ -140,6 +157,31 @@ pub fn get_market_probs(
     Ok(probs)
 }
 
+/// Wipes all market scores from the database.
+pub fn wipe_market_scores(client: &Client, params: &PostgrestParams) -> Result<()> {
+    let url = format!("{}/market_scores", params.postgrest_url);
+
+    let response = make_request(client, url, HttpMethod::DELETE, &params.postgrest_api_key)?;
+    process_empty_response(response, "Wipe market scores")
+}
+
+/// Uploads market scores to the database.
+pub fn upload_market_scores(
+    client: &Client,
+    params: &PostgrestParams,
+    scores: &[MarketScore],
+) -> Result<()> {
+    let url = format!("{}/market_scores", params.postgrest_url);
+
+    let response = client
+        .post(&url)
+        .bearer_auth(&params.postgrest_api_key)
+        .json(scores)
+        .send()
+        .with_context(|| format!("Failed to send POST request to {url}"))?;
+    process_empty_response(response, "Wipe market scores")
+}
+
 /// Refreshes the market and question materialized views in the database.
 pub fn refresh_quick_materialized_views(client: &Client, params: &PostgrestParams) -> Result<()> {
     let url = format!(
@@ -147,7 +189,7 @@ pub fn refresh_quick_materialized_views(client: &Client, params: &PostgrestParam
         params.postgrest_url
     );
 
-    let response = make_post_request(client, url, &params.postgrest_api_key)?;
+    let response = make_request(client, url, HttpMethod::POST, &params.postgrest_api_key)?;
     process_empty_response(response, "Refresh quick materialized views")
 }
 
@@ -167,6 +209,11 @@ pub fn refresh_all_materialized_views(params: &PostgrestParams) -> Result<()> {
         params.postgrest_url
     );
 
-    let response = make_post_request(&long_timeout_client, url, &params.postgrest_api_key)?;
+    let response = make_request(
+        &long_timeout_client,
+        url,
+        HttpMethod::POST,
+        &params.postgrest_api_key,
+    )?;
     process_empty_response(response, "Refresh all materialized views")
 }

@@ -7,22 +7,45 @@ use crate::{helpers, DailyProbabilityPoint, Market, MarketWithProbability, Quest
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Duration, Utc};
 use log::error;
-use serde::{Deserialize, Serialize};
+use serde::{Serialize, Serializer};
 
 pub mod brier;
 
 /// Possible absolute score types.
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone)]
 pub enum ScoreType {
     Absolute(AbsoluteScoreType),
     Relative(RelativeScoreType),
 }
+impl Serialize for ScoreType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            ScoreType::Absolute(abs_type) => abs_type.serialize(serializer),
+            ScoreType::Relative(rel_type) => rel_type.serialize(serializer),
+        }
+    }
+}
 
 /// Absolute score types.
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone)]
 pub enum AbsoluteScoreType {
     BrierAverage,
     BrierMidpoint,
+}
+impl Serialize for AbsoluteScoreType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let s = match self {
+            AbsoluteScoreType::BrierAverage => "brier-average",
+            AbsoluteScoreType::BrierMidpoint => "brier-midpoint",
+        };
+        serializer.serialize_str(s)
+    }
 }
 impl AbsoluteScoreType {
     /// List of all possible absolute score types.
@@ -64,9 +87,20 @@ impl AbsoluteScoreType {
 }
 
 /// Relative score types.
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone)]
 pub enum RelativeScoreType {
     BrierRelative,
+}
+impl Serialize for RelativeScoreType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let s = match self {
+            RelativeScoreType::BrierRelative => "brier-relative",
+        };
+        serializer.serialize_str(s)
+    }
 }
 impl RelativeScoreType {
     /// List of all relative score types.
@@ -299,7 +333,7 @@ impl RelativeScoreType {
 }
 
 /// Market-question scores.
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Clone)]
 pub struct MarketScore {
     pub market_id: String,
     pub score_type: ScoreType,
@@ -308,7 +342,7 @@ pub struct MarketScore {
 }
 
 /// Platform-category scores.
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Clone)]
 pub struct PlatformScore {
     pub platform_slug: String,
     pub category_slug: String,
