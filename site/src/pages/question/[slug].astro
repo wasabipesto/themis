@@ -8,7 +8,7 @@ import Grade from "@atoms/grade.astro";
 import ScoreRel from "@atoms/score-rel.astro";
 import ScoreAbs from "@atoms/score-abs.astro";
 import LinkOut from "@icons/link-out.svg";
-import type { DailyProbabilityDetails, QuestionDetails, MarketScoreDetails } from "@types";
+import type { DailyProbabilityDetails, QuestionDetails, MarketScoreDetails, MarketDetails } from "@types";
 
 const pgrst_url = import.meta.env.PGRST_URL;
 
@@ -28,11 +28,22 @@ export async function getStaticPaths() {
 const { question } = Astro.props;
 
 // Download market scores and probabilities
+const markets = (await fetch(
+  `${pgrst_url}/market_details?question_id=eq.${question.id}`
+).then((res) => res.json())) as MarketDetails[];
 const marketScores = (await fetch(
-  `${pgrst_url}/market_scores_details?question_id=${question.id}`
+  `${pgrst_url}/market_scores_details?question_id=eq.${question.id}`,
 ).then((res) => res.json())) as MarketScoreDetails[];
-const dailyProbabilityPoints = (await fetch(
-    `${pgrst_url}/daily_probabilities?question_id=${question.id}`,
+
+// Download daily probabilities
+let dailyProbURL = `${pgrst_url}/daily_probability_details?order=date.asc&question_id=eq.${question.id}`;
+if (question.start_date_override) {
+    dailyProbURL += `&date=gte.${question.start_date_override}`;
+}
+if (question.end_date_override) {
+    dailyProbURL += `&date=lte.${question.end_date_override}`;
+}
+const dailyProbabilityPoints = (await fetch(`${dailyProbURL}`,
 ).then((res) => res.json())) as DailyProbabilityDetails[];
 ---
 
