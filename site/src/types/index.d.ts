@@ -31,10 +31,10 @@ export interface PlatformScoreDetails {
   platform_name: string;
   category_slug: string;
   category_name: string;
+  score_type: string;
   num_markets: number;
+  score: string;
   grade: string;
-  brier_score_rel: number;
-  brier_score_abs: number;
 }
 
 /**
@@ -87,27 +87,24 @@ export interface QuestionDetails {
   total_traders: number;
   total_volume: number;
   total_duration: number;
-  overall_grade: string;
-  overall_brier_score_rel: number;
-  overall_brier_score_abs: number;
-  market_scores: MarketScoreDetails[];
 }
 
 /** Score data for a market's performance within a question. */
 export interface MarketScoreDetails {
-  question_id: number;
+  score_type: string;
+  market_id: string;
+  market_title: string;
+  market_url: string;
   platform_slug: string;
   platform_name: string;
-  market_id: string;
-  market_url: string;
+  question_id: string | null;
   traders_count: number;
   volume_usd: number;
   duration_days: number;
   question_invert: boolean;
   resolution: number;
+  score: string;
   grade: string;
-  brier_score_rel: number;
-  brier_score_abs: number;
 }
 
 /** Data for an individual market */

@@ -31,9 +31,6 @@ CREATE TABLE questions (
     category_slug TEXT NOT NULL,
     start_date_override DATE,
     end_date_override DATE,
-    overall_grade TEXT,
-    overall_brier_score_rel DECIMAL,
-    overall_brier_score_abs DECIMAL,
     FOREIGN KEY (category_slug) REFERENCES categories (slug) ON UPDATE CASCADE
 );
 
@@ -105,31 +102,23 @@ CREATE INDEX idx_market_dismissals_status ON market_dismissals (market_id, dismi
 CREATE TABLE platform_scores (
     platform_slug TEXT NOT NULL,
     category_slug TEXT NOT NULL,
+    score_type TEXT NOT NULL,
     num_markets INTEGER NOT NULL,
+    score DECIMAL NOT NULL,
     grade TEXT NOT NULL,
-    brier_score_rel DECIMAL NOT NULL,
-    brier_score_abs DECIMAL NOT NULL,
-    PRIMARY KEY (platform_slug, category_slug),
+    PRIMARY KEY (platform_slug, category_slug, score_type),
     FOREIGN KEY (platform_slug) REFERENCES platforms (slug) ON UPDATE CASCADE,
     FOREIGN KEY (category_slug) REFERENCES categories (slug) ON UPDATE CASCADE
 );
 
 -- === MARKET-QUESTION SCORES ===
 CREATE TABLE market_scores (
-    market_id TEXT PRIMARY KEY,
+    market_id TEXT NOT NULL,
+    score_type TEXT NOT NULL,
+    score DECIMAL NOT NULL,
     grade TEXT NOT NULL,
-    brier_score_rel DECIMAL NOT NULL,
-    brier_score_abs DECIMAL NOT NULL,
+    PRIMARY KEY (market_id, score_type),
     FOREIGN KEY (market_id) REFERENCES markets (id) ON UPDATE CASCADE
-);
-
-CREATE INDEX idx_market_scores_market_id ON market_scores (market_id);
-
-CREATE INDEX idx_market_scores_comprehensive ON market_scores (
-    market_id,
-    grade,
-    brier_score_rel,
-    brier_score_abs
 );
 
 -- === DAILY PROBABILITY POINTS ===

@@ -92,9 +92,9 @@ just db-schema # extract the current schema and output to stdout
 Import the schema, roles, and some basic data by running the following SQL files:
 
 ```bash
-just db-run-sql schema/01-schema.sql
-just db-run-sql schema/02-views.sql
-just db-run-sql schema/03-postgrest.sql
+just db-run-sql schema/01-roles.sql
+just db-run-sql schema/02-schema.sql
+just db-run-sql schema/03-views.sql
 just db-run-sql schema/04-platforms.sql
 just db-run-sql schema/05-categories.sql
 ```
@@ -238,17 +238,17 @@ just db-backup
 # export the questions and market links
 uv run scripts/migrate_mq.py --mode export
 
-# drop all tables
-just db-run-sql 00-drop-all.sql
+# either drop all tables
+just db-run-sql schema/00-drop-all.sql
 # or wipe the data folder
 just db-down
 sudo rm -r postgres_data
 just db-up
 
 # load the schema
-just db-run-sql schema/01-schema.sql
-just db-run-sql schema/02-views.sql
-just db-run-sql schema/03-postgrest.sql
+just db-run-sql schema/01-roles.sql
+just db-run-sql schema/02-schema.sql
+just db-run-sql schema/03-views.sql
 just db-run-sql schema/04-platforms.sql
 just db-run-sql schema/05-categories.sql
 
@@ -268,7 +268,7 @@ just db-curl "market_details?limit=10&question_slug=not.is.null"
 Note that this is not necessary if you want to edit table views. To reload the database view schema, just run:
 
 ```bash
-just db-run-sql schema/02-views.sql
+just db-run-sql schema/03-views.sql
 ```
 
 # I just want the data

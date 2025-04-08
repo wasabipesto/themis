@@ -60,26 +60,25 @@ CREATE UNIQUE INDEX category_details_slug_idx ON category_details (slug);
 -- === MARKET-QUESTION SCORE DETAILS ===
 CREATE MATERIALIZED VIEW market_scores_details AS
 SELECT
-    q.id AS question_id,
-    p.slug AS platform_slug,
-    p.name AS platform_name,
+    ms.score_type,
     m.id AS market_id,
     m.title AS market_title,
     m.url AS market_url,
+    p.slug AS platform_slug,
+    p.name AS platform_name,
+    mq.question_id AS question_id,
     m.traders_count,
     m.volume_usd,
     m.duration_days,
     mq.question_invert,
     m.resolution,
-    ms.grade,
-    ms.brier_score_rel,
-    ms.brier_score_abs
+    ms.score,
+    ms.grade
 FROM
     market_scores ms
     JOIN markets m ON ms.market_id = m.id
     JOIN platforms p ON m.platform_slug = p.slug
-    JOIN market_questions mq ON m.id = mq.market_id
-    JOIN questions q ON mq.question_id = q.id;
+    JOIN market_questions mq ON m.id = mq.market_id;
 CREATE UNIQUE INDEX market_scores_details_qm_idx ON market_scores_details (question_id, market_id);
 
 -- === DAILY PROBABILITY POINT DETAILS ===
@@ -106,20 +105,10 @@ SELECT
     p.name AS platform_name,
     ps.category_slug,
     c.name AS category_name,
-    (
-        SELECT
-            COUNT(DISTINCT m.id)
-        FROM
-            markets m
-            JOIN market_questions mq ON m.id = mq.market_id
-            JOIN questions q ON mq.question_id = q.id
-        WHERE
-            m.platform_slug = ps.platform_slug
-            AND q.category_slug = ps.category_slug
-    ) AS num_markets,
-    ps.grade,
-    ps.brier_score_rel,
-    ps.brier_score_abs
+    ps.score_type,
+    ps.num_markets,
+    ps.score,
+    ps.grade
 FROM
     platform_scores ps
     JOIN platforms p ON ps.platform_slug = p.slug
@@ -166,13 +155,7 @@ SELECT
     c.name AS category_name,
     COALESCE(stats.market_count, 0) AS market_count,
     COALESCE(stats.total_traders, 0) AS total_traders,
-    COALESCE(stats.total_volume, 0) AS total_volume,
-    COALESCE(
-        (SELECT ARRAY_AGG(msd.*)
-         FROM market_scores_details msd
-         WHERE msd.question_id = q.id),
-        ARRAY[]::market_scores_details[]
-    ) AS market_scores
+    COALESCE(stats.total_volume, 0) AS total_volume
 FROM
     questions q
     LEFT JOIN categories c ON q.category_slug = c.slug
