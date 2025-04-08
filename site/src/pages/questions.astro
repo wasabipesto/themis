@@ -11,15 +11,16 @@ const pgrst_url = import.meta.env.PGRST_URL;
 // Fetch all questions at build time
 const questions = (await fetch(`${pgrst_url}/question_details`).then(
   (res) => res.json())) as QuestionDetails[];
-const scores = (await fetch(`${pgrst_url}/market_scores_details?score_type=brier-relative`).then(
+const scores = (await fetch(`${pgrst_url}/market_scores_details?score_type=eq.brier-relative`).then(
   (res) => res.json())) as MarketScoreDetails[];
 
 // Connect questions and scores at build time
 let questions_and_scores = [];
-for (const score of scores) {
-  const question = questions.find((q) => q.id === score.question_id);
+for (const question of questions) {
+  // Placeholder: get first score
+  const questionScores = scores.find((s) => s.question_id === question.id);
   if (question) {
-    questions_and_scores.push({ question: question, score: score });
+    questions_and_scores.push({ question: question, score: questionScores });
   }
 }
 
@@ -112,8 +113,8 @@ questions.sort((a, b) => b.total_volume - a.total_volume);
                             data-traders={question.total_traders}
                             data-volume={question.total_volume}
                             data-duration={question.total_duration}
-                            data-grade={score.grade}
-                            data-score={score.score}
+                            data-grade={score?.grade || 'Error'}
+                            data-score={score?.score || 0}
                         >
                             <td class="py-3 px-4 pr-6">
                                 <a
@@ -143,11 +144,11 @@ questions.sort((a, b) => b.total_volume - a.total_volume);
                             </td>
                             -->
                             <td class="py-3 px-4 text-center">
-                                <Grade grade={score.grade} />
+                                <Grade grade={score?.grade || 'Error'} />
                             </td>
                             <td class="py-3 px-4 text-center">
                                 <ScoreAbs
-                                    num={score.score}
+                                    num={score?.score || 0}
                                     detailed={false}
                                 />
                             </td>

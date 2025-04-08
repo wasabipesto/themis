@@ -167,9 +167,10 @@ export interface DailyProbabilityDetails {
   market_title: string;
   platform_slug: string;
   platform_name: string;
+  question_id: number | null;
+  question_invert: boolean;
   date: string;
   prob: number;
-  question_invert: boolean;
 }
 
 /** Single point on a calibration plot. */
