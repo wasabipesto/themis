@@ -79,7 +79,7 @@ FROM
     JOIN markets m ON ms.market_id = m.id
     JOIN platforms p ON m.platform_slug = p.slug
     JOIN market_questions mq ON m.id = mq.market_id;
-CREATE UNIQUE INDEX market_scores_details_qm_idx ON market_scores_details (question_id, market_id);
+CREATE UNIQUE INDEX market_scores_details_qms_idx ON market_scores_details (question_id, market_id, score_type);
 
 -- === DAILY PROBABILITY POINT DETAILS ===
 CREATE MATERIALIZED VIEW daily_probability_details AS
