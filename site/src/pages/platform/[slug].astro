@@ -91,7 +91,7 @@ const marketScores = (await fetch(
         {
             platformCategoryScores
                 .filter((score) => score.category_slug !== "overall")
-                .sort((a, b) => b.score - a.score)
+                .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
                 .slice(0, 4)
                 .map((score, index) => (
                     <div class="bg-base-light text-crust p-4 m-2 rounded-lg first:border-4 first:border-amber-600/60 relative">

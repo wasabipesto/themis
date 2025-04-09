@@ -25,27 +25,6 @@ export interface PlatformDetails {
   total_volume: number;
 }
 
-/** Score data for a platform's performance within a category. */
-export interface PlatformCategoryScoreDetails {
-  platform_slug: string;
-  platform_name: string;
-  category_slug: string;
-  category_name: string;
-  score_type: string;
-  num_markets: number;
-  score: number;
-  grade: string;
-}
-
-/** Score data for platforms, categories, or questions. */
-export interface OtherScoreDetails {
-  item_id: string;
-  score_type: string;
-  num_markets: number;
-  score: number;
-  grade: string;
-}
-
 /**
  * All data for a category (a collection of questions).
  * Can be a parent or a child category.
@@ -96,24 +75,6 @@ export interface QuestionDetails {
   total_traders: number;
   total_volume: number;
   total_duration: number;
-}
-
-/** Score data for a market's performance within a question. */
-export interface MarketScoreDetails {
-  score_type: string;
-  market_id: string;
-  market_title: string;
-  market_url: string;
-  platform_slug: string;
-  platform_name: string;
-  question_id: number | null;
-  traders_count: number;
-  volume_usd: number;
-  duration_days: number;
-  question_invert: boolean;
-  resolution: number;
-  score: number;
-  grade: string;
 }
 
 /** Data for an individual market */
@@ -168,6 +129,45 @@ export interface MarketQuestionLink {
 export interface MarketDismissStatus {
   market_id: string;
   dismissed_status: number;
+}
+
+/** Score data for a market's performance within a question. */
+export interface MarketScoreDetails {
+  score_type: string;
+  market_id: string;
+  market_title: string;
+  market_url: string;
+  platform_slug: string;
+  platform_name: string;
+  question_id: number | null;
+  traders_count: number;
+  volume_usd: number;
+  duration_days: number;
+  question_invert: boolean;
+  resolution: number;
+  score: number;
+  grade: string;
+}
+
+/** Score data for a platform's performance within a category. */
+export interface PlatformCategoryScoreDetails {
+  platform_slug: string;
+  platform_name: string;
+  category_slug: string;
+  category_name: string;
+  score_type: string;
+  num_markets: number;
+  score: number | null;
+  grade: string | null;
+}
+
+/** Score data for platforms, categories, or questions. */
+export interface OtherScoreDetails {
+  item_id: string;
+  score_type: string;
+  num_markets: number;
+  score: number | null;
+  grade: string | null;
 }
 
 /** Single point on a daily probability plot. */
