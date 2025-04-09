@@ -13,8 +13,6 @@ use serde::{Serialize, Serializer};
 
 pub mod brier;
 
-const GRADE_NONE: &str = "-";
-
 /// Possible absolute score types.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScoreType {
@@ -376,8 +374,8 @@ pub struct PlatformCategoryScore {
     pub category_slug: String,
     pub score_type: ScoreType,
     pub num_markets: usize,
-    pub score: f32,
-    pub grade: String,
+    pub score: Option<f32>,
+    pub grade: Option<String>,
 }
 
 /// Other scores.
@@ -386,8 +384,8 @@ pub struct OtherScore {
     pub item_id: String,
     pub score_type: ScoreType,
     pub num_markets: usize,
-    pub score: f32,
-    pub grade: String,
+    pub score: Option<f32>,
+    pub grade: Option<String>,
 }
 
 /// Calculate and return all absolute scores for a market.
@@ -465,8 +463,8 @@ fn average_platform_category_scores(
             category_slug: category_slug.to_string(),
             score_type: score_type.clone(),
             num_markets: market_scores.len(),
-            score: average_score,
-            grade: score_type.get_grade(&average_score),
+            score: Some(average_score),
+            grade: Some(score_type.get_grade(&average_score)),
         }
     } else {
         PlatformCategoryScore {
@@ -474,8 +472,8 @@ fn average_platform_category_scores(
             category_slug: category_slug.to_string(),
             score_type: score_type.clone(),
             num_markets: 0,
-            score: 0.0,
-            grade: GRADE_NONE.to_string(),
+            score: None,
+            grade: None,
         }
     }
 }
@@ -493,16 +491,16 @@ fn average_other_scores(
             item_id: item_id.to_string(),
             score_type: score_type.clone(),
             num_markets: market_scores.len(),
-            score: average_score,
-            grade: score_type.get_grade(&average_score),
+            score: Some(average_score),
+            grade: Some(score_type.get_grade(&average_score)),
         }
     } else {
         OtherScore {
             item_id: item_id.to_string(),
             score_type: score_type.clone(),
             num_markets: 0,
-            score: 0.0,
-            grade: GRADE_NONE.to_string(),
+            score: None,
+            grade: None,
         }
     }
 }

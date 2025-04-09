@@ -98,19 +98,6 @@ CREATE INDEX idx_market_dismissals_market_id ON market_dismissals (market_id);
 
 CREATE INDEX idx_market_dismissals_status ON market_dismissals (market_id, dismissed_status);
 
--- === PLATFORM-CATEGORY SCORES ===
-CREATE TABLE platform_category_scores (
-    platform_slug TEXT NOT NULL,
-    category_slug TEXT NOT NULL,
-    score_type TEXT NOT NULL,
-    num_markets INTEGER NOT NULL,
-    score DECIMAL NOT NULL,
-    grade TEXT NOT NULL,
-    PRIMARY KEY (platform_slug, category_slug, score_type),
-    FOREIGN KEY (platform_slug) REFERENCES platforms (slug) ON UPDATE CASCADE,
-    FOREIGN KEY (category_slug) REFERENCES categories (slug) ON UPDATE CASCADE
-);
-
 -- === MARKET-QUESTION SCORES ===
 CREATE TABLE market_scores (
     market_id TEXT NOT NULL,
@@ -121,13 +108,26 @@ CREATE TABLE market_scores (
     FOREIGN KEY (market_id) REFERENCES markets (id) ON UPDATE CASCADE
 );
 
+-- === PLATFORM-CATEGORY SCORES ===
+CREATE TABLE platform_category_scores (
+    platform_slug TEXT NOT NULL,
+    category_slug TEXT NOT NULL,
+    score_type TEXT NOT NULL,
+    num_markets INTEGER NOT NULL,
+    score DECIMAL,
+    grade TEXT,
+    PRIMARY KEY (platform_slug, category_slug, score_type),
+    FOREIGN KEY (platform_slug) REFERENCES platforms (slug) ON UPDATE CASCADE,
+    FOREIGN KEY (category_slug) REFERENCES categories (slug) ON UPDATE CASCADE
+);
+
 -- === OTHER SCORES ===
 CREATE TABLE other_scores (
     item_id TEXT NOT NULL,
     score_type TEXT NOT NULL,
     num_markets INTEGER NOT NULL,
-    score DECIMAL NOT NULL,
-    grade TEXT NOT NULL,
+    score DECIMAL,
+    grade TEXT,
     PRIMARY KEY (item_id, score_type)
 );
 
