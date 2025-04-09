@@ -6,8 +6,8 @@ use clap::Parser;
 use dotenvy::dotenv;
 use log::{debug, info};
 use reqwest::blocking::Client;
+use std::env;
 use std::time::Duration;
-use std::{collections::HashSet, env};
 
 use themis_grader::{api, scores, Market, PostgrestParams};
 
@@ -50,13 +50,19 @@ fn main() -> Result<()> {
         .build()
         .context("Failed to create HTTP client")?;
 
-    // Get all markets
+    // Refresh views
     info!("Refreshing quick views...");
     api::refresh_quick_materialized_views(&client, &postgrest_params)?;
 
+    // Get all platforms and categories
+    info!("Downloading platforms and categories...");
+    let platforms = api::get_all_platforms(&client, &postgrest_params)?;
+    let categories = api::get_all_categories(&client, &postgrest_params)?;
+
     // Get all markets
-    info!("Downloading all markets...");
+    info!("Downloading markets and questions...");
     let markets = api::get_all_markets(&client, &postgrest_params)?;
+    let questions = api::get_questions(&client, &postgrest_params)?;
 
     // Get probabilities for linked markets.
     info!("Downloading probabilities for linked markets...");
@@ -71,54 +77,44 @@ fn main() -> Result<()> {
         .collect();
     let linked_market_probs =
         api::get_market_probs(&client, &postgrest_params, &linked_market_ids)?;
-
-    // Get questions for linked markets.
-    info!("Downloading questions for linked markets...");
-    let question_ids: Vec<u32> = linked_markets
-        .iter()
-        .map(|market| market.question_id.unwrap())
-        .collect::<HashSet<u32>>()
-        .iter()
-        .cloned()
-        .collect();
-    let linked_questions = api::get_questions(&client, &postgrest_params, &question_ids)?;
     info!(
         "{} markets, {} questions, {} probabilities downloaded.",
         markets.len(),
-        linked_questions.len(),
+        questions.len(),
         linked_market_probs.len()
     );
 
     // Calculate absolute scores.
-    info!("Calculating absolute scores...");
+    info!("Calculating market scores...");
     let absolute_scores = scores::calculate_absolute_scores(&markets)?;
+    let relative_scores =
+        scores::calculate_relative_scores(&questions, &linked_markets, &linked_market_probs)?;
+    let all_market_scores = [absolute_scores, relative_scores].concat();
+    api::wipe_market_scores(&client, &postgrest_params)?;
+    api::upload_market_scores(&client, &postgrest_params, &all_market_scores)?;
+    info!("{} market scores uploaded.", all_market_scores.len());
 
-    // Calculate relative scores.
-    info!("Calculating relative scores...");
-    let relative_scores = scores::calculate_relative_scores(
-        &linked_questions,
+    // Average market scores into platform-category scores.
+    info!("Aggregating market scores overall scores...");
+    let (platform_category_scores, other_scores) = scores::aggregate_platform_category_scores(
+        &platforms,
+        &categories,
+        &questions,
         &linked_markets,
-        &linked_market_probs,
-    )?;
+        &all_market_scores,
+    );
+    api::wipe_platform_category_scores(&client, &postgrest_params)?;
+    api::upload_platform_category_scores(&client, &postgrest_params, &platform_category_scores)?;
+    api::wipe_other_scores(&client, &postgrest_params)?;
+    api::upload_other_scores(&client, &postgrest_params, &other_scores)?;
     info!(
-        "{} absolute and {} relative scores calculated.",
-        absolute_scores.len(),
-        relative_scores.len()
+        "{} aggregate scores uploaded.",
+        platform_category_scores.len() + other_scores.len()
     );
 
-    info!("Uploading scores...");
-    api::wipe_market_scores(&client, &postgrest_params)?;
-    api::upload_market_scores(&client, &postgrest_params, &absolute_scores)?;
-    api::upload_market_scores(&client, &postgrest_params, &relative_scores)?;
-    info!("All scores uploaded.");
-
     // TODO:
-    // Average market scores into platform-category scores.
-    // Wipe platform-category scores table.
-    // Upload new platform-category scores.
     // Build calibration points.
-    // Wipe calibration points table.
-    // Upload new calibration points.
+    // Wipe & upload calibration points.
 
     // Refresh all materialized views
     info!("Refreshing all materialized views...");
