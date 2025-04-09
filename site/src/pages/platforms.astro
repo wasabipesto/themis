@@ -7,7 +7,7 @@ import Traders from "@atoms/traders.astro";
 import Volume from "@atoms/volume.astro";
 import Markets from "@atoms/num-markets.astro";
 import Base from "@layouts/base.astro";
-import type { PlatformDetails, PlatformScoreDetails, QuestionDetails, MarketScoreDetails } from "@types";
+import type { PlatformDetails, PlatformCategoryScoreDetails, QuestionDetails, MarketScoreDetails } from "@types";
 
 const pgrst_url = import.meta.env.PGRST_URL;
 
@@ -15,9 +15,9 @@ const platforms = (await fetch(`${pgrst_url}/platform_details`).then((res) =>
     res.json(),
 )) as PlatformDetails[];
 
-const platformScores = (await fetch(`${pgrst_url}/platform_scores_details`).then(
+const platformCategoryScores = (await fetch(`${pgrst_url}/platform_category_scores_details`).then(
     (res) => res.json(),
-)) as PlatformScoreDetails[];
+)) as PlatformCategoryScoreDetails[];
 
 const featuredQuestions = (await fetch(`${pgrst_url}/question_details?order=total_volume.desc&limit=6`).then(
     (res) => res.json(),
@@ -70,7 +70,7 @@ const marketScores = (await fetch(
                         <LongText text={platform.long_description} />
                     </div>
                     <PlatformReportCard
-                        scores={platformScores.filter(
+                        scores={platformCategoryScores.filter(
                             (score) => score.platform_slug == platform.slug,
                         )}
                         pivot="category"

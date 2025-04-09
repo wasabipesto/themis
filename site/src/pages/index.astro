@@ -5,7 +5,7 @@ import QuestionCard from "@components/question-card.astro";
 import SeeMoreLink from "@components/see-more-link.astro";
 import PlatformCard from "@components/platform-card.astro";
 import CalibrationChart from "@components/calibration-chart.astro";
-import type { PlatformDetails, PlatformScoreDetails, QuestionDetails, MarketScoreDetails } from "@types";
+import type { PlatformDetails, PlatformCategoryScoreDetails, QuestionDetails, MarketScoreDetails } from "@types";
 
 const pgrst_url = import.meta.env.PGRST_URL;
 
@@ -13,9 +13,9 @@ const platforms = (await fetch(`${pgrst_url}/platform_details`).then((res) =>
     res.json(),
 )) as PlatformDetails[];
 
-const platformScores = (await fetch(`${pgrst_url}/platform_scores_details`).then(
+const platformCategoryScores = (await fetch(`${pgrst_url}/platform_category_scores_details`).then(
     (res) => res.json(),
-)) as PlatformScoreDetails[];
+)) as PlatformCategoryScoreDetails[];
 
 const featuredQuestions = (await fetch(`${pgrst_url}/question_details?order=total_volume.desc&limit=9`).then(
     (res) => res.json(),
@@ -64,7 +64,7 @@ const marketScores = (await fetch(
         </div>
         <div class="">
             <ReportCard
-                scores={platformScores.filter(
+                scores={platformCategoryScores.filter(
                     (score) => score.platform_slug !== "overall",
                 )}
             />

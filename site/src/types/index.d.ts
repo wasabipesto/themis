@@ -25,12 +25,21 @@ export interface PlatformDetails {
   total_volume: number;
 }
 
-/** Score data for a platform's performance within a category, or overall. */
-export interface PlatformScoreDetails {
+/** Score data for a platform's performance within a category. */
+export interface PlatformCategoryScoreDetails {
   platform_slug: string;
   platform_name: string;
   category_slug: string;
   category_name: string;
+  score_type: string;
+  num_markets: number;
+  score: number;
+  grade: string;
+}
+
+/** Score data for platforms, categories, or questions. */
+export interface OtherScoreDetails {
+  item_id: string;
   score_type: string;
   num_markets: number;
   score: number;

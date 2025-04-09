@@ -11,7 +11,7 @@ import Traders from "@atoms/traders.astro";
 import Volume from "@atoms/volume.astro";
 import Markets from "@atoms/num-markets.astro";
 import Star from "@icons/star.svg";
-import type { PlatformDetails, PlatformScoreDetails, QuestionDetails, MarketScoreDetails } from "@types";
+import type { PlatformDetails, PlatformCategoryScoreDetails, QuestionDetails, MarketScoreDetails } from "@types";
 
 const pgrst_url = import.meta.env.PGRST_URL;
 
@@ -28,10 +28,10 @@ export async function getStaticPaths() {
 }
 const { platform } = Astro.props;
 
-const platformScores = (
+const platformCategoryScores = (
     (await fetch(
         `${pgrst_url}/platform_scores?platform_slug=${platform.slug}`,
-    ).then((res) => res.json())) as PlatformScoreDetails[]
+    ).then((res) => res.json())) as PlatformCategoryScoreDetails[]
 ).filter((score) => score.platform_slug == platform.slug);
 
 const featuredQuestions = (await fetch(`${pgrst_url}/question_details?order=total_volume.desc&limit=6`).then(
@@ -65,7 +65,7 @@ const marketScores = (await fetch(
             <LongText text={platform.long_description} />
         </div>
         <div>
-            <CategoryReportCard scores={platformScores} pivot="category" />
+            <CategoryReportCard scores={platformCategoryScores} pivot="category" />
             <div class="grid grid-cols-1 md:grid-cols-2 mx-2">
                 <div class="flex p-2">
                     <LinkButton
@@ -89,7 +89,7 @@ const marketScores = (await fetch(
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
         {
-            platformScores
+            platformCategoryScores
                 .filter((score) => score.category_slug !== "overall")
                 .sort((a, b) => b.score - a.score)
                 .slice(0, 4)

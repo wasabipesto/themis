@@ -1,10 +1,10 @@
 ---
 import Grade from "@atoms/grade.astro";
 import ScoreRel from "@atoms/score-rel.astro";
-import type { PlatformScoreDetails } from "../types";
+import type { PlatformCategoryScoreDetails } from "../types";
 
 interface Props {
-    scores: PlatformScoreDetails[];
+    scores: PlatformCategoryScoreDetails[];
 }
 const { scores } = Astro.props;
 
@@ -25,7 +25,7 @@ const categories = Array.from(new Set(scores.map((s) => s.category_slug))).map(
 );
 
 // Build score map for table lookup
-const scoreMap = new Map<string, PlatformScoreDetails>();
+const scoreMap = new Map<string, PlatformCategoryScoreDetails>();
 scores.forEach((score) => {
     const key = `${score.platform_slug}-${score.category_slug}`;
     scoreMap.set(key, score);
@@ -35,7 +35,7 @@ scores.forEach((score) => {
 const getScore = (
     platformSlug: string,
     categorySlug: string,
-): PlatformScoreDetails | undefined => {
+): PlatformCategoryScoreDetails | undefined => {
     return scoreMap.get(`${platformSlug}-${categorySlug}`);
 };
 
