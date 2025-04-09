@@ -153,10 +153,13 @@ def export_data(cache_dir, postgrest_base, postgrest_apikey):
     )
     if response.ok:
         data = response.json()
-        output_file = cache_dir / 'questions.json'
-        with open(output_file, 'w') as f:
-            json.dump(data, f, indent=2)
-        print(f"Exported {len(data)} questions to {output_file}")
+        if len(data) > 0:
+            output_file = cache_dir / 'questions.json'
+            with open(output_file, 'w') as f:
+                json.dump(data, f, indent=2)
+            print(f"Exported {len(data)} questions to {output_file}")
+        else:
+            print("No questions found.")
     else:
         print(f"Failed to export questions: {response.status_code}")
         print(json.dumps(response.json(), indent=2), '\n')
@@ -171,10 +174,13 @@ def export_data(cache_dir, postgrest_base, postgrest_apikey):
     )
     if response.ok:
         data = response.json()
-        output_file = cache_dir / 'markets.json'
-        with open(output_file, 'w') as f:
-            json.dump(data, f, indent=2)
-        print(f"Exported {len(data)} markets to {output_file}")
+        if len(data) > 0:
+            output_file = cache_dir / 'markets.json'
+            with open(output_file, 'w') as f:
+                json.dump(data, f, indent=2)
+            print(f"Exported {len(data)} markets to {output_file}")
+        else:
+            print("No markets found.")
     else:
         print(f"Failed to export markets: {response.status_code}")
         print(json.dumps(response.json(), indent=2), '\n')
