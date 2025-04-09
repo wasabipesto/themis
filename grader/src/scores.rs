@@ -2,7 +2,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::{helpers, DailyProbabilityPoint, Market, MarketWithProbability, Question};
+use crate::{
+    helpers, Category, DailyProbabilityPoint, Market, MarketWithProbability, Platform, Question,
+};
 
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Duration, Utc};
@@ -11,8 +13,10 @@ use serde::{Serialize, Serializer};
 
 pub mod brier;
 
+const GRADE_NONE: &str = "-";
+
 /// Possible absolute score types.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScoreType {
     Absolute(AbsoluteScoreType),
     Relative(RelativeScoreType),
@@ -28,9 +32,33 @@ impl Serialize for ScoreType {
         }
     }
 }
+impl ScoreType {
+    /// List of all possible score types.
+    pub fn all() -> Vec<ScoreType> {
+        vec![
+            ScoreType::Absolute(AbsoluteScoreType::BrierAverage),
+            ScoreType::Absolute(AbsoluteScoreType::BrierMidpoint),
+            ScoreType::Relative(RelativeScoreType::BrierRelative),
+        ]
+    }
+    /// Get the grade for a market using this score type.
+    pub fn get_grade(&self, score: &f32) -> String {
+        match self {
+            ScoreType::Absolute(AbsoluteScoreType::BrierAverage) => {
+                brier::abs_brier_letter_grade(score)
+            }
+            ScoreType::Absolute(AbsoluteScoreType::BrierMidpoint) => {
+                brier::abs_brier_letter_grade(score)
+            }
+            ScoreType::Relative(RelativeScoreType::BrierRelative) => {
+                brier::rel_brier_letter_grade(score)
+            }
+        }
+    }
+}
 
 /// Absolute score types.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AbsoluteScoreType {
     BrierAverage,
     BrierMidpoint,
@@ -87,7 +115,7 @@ impl AbsoluteScoreType {
 }
 
 /// Relative score types.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RelativeScoreType {
     BrierRelative,
 }
@@ -343,9 +371,19 @@ pub struct MarketScore {
 
 /// Platform-category scores.
 #[derive(Debug, Serialize, Clone)]
-pub struct PlatformScore {
+pub struct PlatformCategoryScore {
     pub platform_slug: String,
     pub category_slug: String,
+    pub score_type: ScoreType,
+    pub num_markets: usize,
+    pub score: f32,
+    pub grade: String,
+}
+
+/// Other scores.
+#[derive(Debug, Serialize, Clone)]
+pub struct OtherScore {
+    pub item_id: String,
     pub score_type: ScoreType,
     pub num_markets: usize,
     pub score: f32,
@@ -410,4 +448,177 @@ pub fn calculate_relative_scores(
         }
     }
     Ok(scores)
+}
+
+fn average_platform_category_scores(
+    platform_slug: &str,
+    category_slug: &str,
+    score_type: &ScoreType,
+    market_scores: &[MarketScore],
+) -> PlatformCategoryScore {
+    if !market_scores.is_empty() {
+        // Average the scores
+        let average_score =
+            market_scores.iter().map(|s| s.score).sum::<f32>() / market_scores.len() as f32;
+        PlatformCategoryScore {
+            platform_slug: platform_slug.to_string(),
+            category_slug: category_slug.to_string(),
+            score_type: score_type.clone(),
+            num_markets: market_scores.len(),
+            score: average_score,
+            grade: score_type.get_grade(&average_score),
+        }
+    } else {
+        PlatformCategoryScore {
+            platform_slug: platform_slug.to_string(),
+            category_slug: category_slug.to_string(),
+            score_type: score_type.clone(),
+            num_markets: 0,
+            score: 0.0,
+            grade: GRADE_NONE.to_string(),
+        }
+    }
+}
+
+fn average_other_scores(
+    item_id: String,
+    score_type: &ScoreType,
+    market_scores: &[MarketScore],
+) -> OtherScore {
+    if !market_scores.is_empty() {
+        // Average the scores
+        let average_score =
+            market_scores.iter().map(|s| s.score).sum::<f32>() / market_scores.len() as f32;
+        OtherScore {
+            item_id: item_id.to_string(),
+            score_type: score_type.clone(),
+            num_markets: market_scores.len(),
+            score: average_score,
+            grade: score_type.get_grade(&average_score),
+        }
+    } else {
+        OtherScore {
+            item_id: item_id.to_string(),
+            score_type: score_type.clone(),
+            num_markets: 0,
+            score: 0.0,
+            grade: GRADE_NONE.to_string(),
+        }
+    }
+}
+
+pub fn aggregate_platform_category_scores(
+    platforms: &[Platform],
+    categories: &[Category],
+    questions: &[Question],
+    markets: &[Market],
+    market_scores: &[MarketScore],
+) -> (Vec<PlatformCategoryScore>, Vec<OtherScore>) {
+    // Link questions, markets, and scores together for filtering
+    struct QuestionsMarketsAndScores<'a> {
+        question: &'a Question,
+        market: &'a Market,
+        score: &'a MarketScore,
+    }
+    let mut markets_and_scores = Vec::new();
+    for market in markets {
+        let question = questions
+            .iter()
+            .find(|q| market.question_id == Some(q.id))
+            .unwrap();
+        for score in market_scores {
+            if score.market_id == market.id {
+                markets_and_scores.push(QuestionsMarketsAndScores {
+                    question,
+                    market,
+                    score,
+                });
+            }
+        }
+    }
+
+    let mut platform_category_scores = Vec::new();
+    let mut other_overall_scores = Vec::new();
+
+    // Average scores by platform x category
+    for platform in platforms {
+        for category in categories {
+            for score_type in ScoreType::all() {
+                // Collect scores that match the platform, category, and score type
+                let filtered_market_scores: Vec<MarketScore> = markets_and_scores
+                    .iter()
+                    .filter(|item| {
+                        item.market.platform_slug == platform.slug
+                            && item.question.category_slug == category.slug
+                            && item.score.score_type == score_type
+                    })
+                    .map(|item| item.score.clone())
+                    .collect();
+
+                // Average the scores and push
+                platform_category_scores.push(average_platform_category_scores(
+                    &platform.slug,
+                    &category.slug,
+                    &score_type,
+                    &filtered_market_scores,
+                ));
+            }
+        }
+    }
+
+    // Average overall per platform
+    for platform in platforms {
+        for score_type in ScoreType::all() {
+            let filtered_market_scores: Vec<MarketScore> = markets_and_scores
+                .iter()
+                .filter(|item| {
+                    item.market.platform_slug == platform.slug
+                        && item.score.score_type == score_type
+                })
+                .map(|item| item.score.clone())
+                .collect();
+            other_overall_scores.push(average_other_scores(
+                format!("platform:{}", platform.slug),
+                &score_type,
+                &filtered_market_scores,
+            ));
+        }
+    }
+    // Average overall per category
+    for category in categories {
+        for score_type in ScoreType::all() {
+            let filtered_market_scores: Vec<MarketScore> = markets_and_scores
+                .iter()
+                .filter(|item| {
+                    item.question.category_slug == category.slug
+                        && item.score.score_type == score_type
+                })
+                .map(|item| item.score.clone())
+                .collect();
+            other_overall_scores.push(average_other_scores(
+                format!("category:{}", category.slug),
+                &score_type,
+                &filtered_market_scores,
+            ));
+        }
+    }
+    // Average overall per question
+    for question in questions {
+        for score_type in ScoreType::all() {
+            let filtered_market_scores: Vec<MarketScore> = markets_and_scores
+                .iter()
+                .filter(|item| {
+                    item.question.id == question.id && item.score.score_type == score_type
+                })
+                .map(|item| item.score.clone())
+                .collect();
+            other_overall_scores.push(average_other_scores(
+                format!("question:{}", question.id),
+                &score_type,
+                &filtered_market_scores,
+            ));
+        }
+    }
+
+    (platform_category_scores, other_overall_scores)
 }
