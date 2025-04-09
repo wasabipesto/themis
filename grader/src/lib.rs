@@ -13,6 +13,20 @@ pub struct PostgrestParams {
     pub postgrest_api_key: String,
 }
 
+/// Standard platform information.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Platform {
+    pub slug: String,
+    pub name: String,
+}
+
+/// Standard category information.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Category {
+    pub slug: String,
+    pub name: String,
+}
+
 /// Standard market information.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Market {
