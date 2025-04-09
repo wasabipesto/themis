@@ -114,7 +114,7 @@ FROM
     platform_category_scores ps
     JOIN platforms p ON ps.platform_slug = p.slug
     JOIN categories c ON ps.category_slug = c.slug;
-CREATE UNIQUE INDEX platform_category_scores_details_pc_idx ON platform_category_scores_details (platform_slug, category_slug);
+CREATE UNIQUE INDEX platform_category_scores_details_pc_idx ON platform_category_scores_details (platform_slug, category_slug, score_type);
 
 -- === MARKET DETAILS ===
 CREATE MATERIALIZED VIEW market_details AS
