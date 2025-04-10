@@ -194,8 +194,8 @@ The site is static and designed to be deployed behind any standard web server su
 You can view a preview of the site or build it like so:
 
 ```bash
-just dev # live preview the site in a browser
-just build # build the site to the site/dist directory
+just site-dev # live preview the site in a browser
+just site-build # build the site to the site/dist directory
 ```
 
 We use `rclone` to deploy the site to your provider of choice. First, configure your `rclone` target and add the details to the `.env` file:
@@ -277,8 +277,8 @@ just db-curl "market_details?limit=10&question_slug=not.is.null"
 just grade
 
 # check and build the site
-just dev
-just build
+just site-dev
+just site-build
 ```
 
 Note that this is not necessary if you want to edit table views. To reload the database view schema, just run:

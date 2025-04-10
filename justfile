@@ -71,7 +71,7 @@ db-curl *endpoint:
     -H "Authorization: Bearer ${PGRST_APIKEY}" | jq
 
 # Refresh all database views
-db-refresh-views:
+db-refresh-all:
     curl -sf \
     -X POST "${PGRST_URL}/rpc/refresh_all_materialized_views" \
     -H "Authorization: Bearer ${PGRST_APIKEY}" | jq
@@ -84,7 +84,7 @@ db-refresh-quick:
 
 # Start the main site dev server
 [working-directory: 'site']
-dev:
+site-dev:
     npx astro dev
 
 # Check the main site for errors
@@ -94,12 +94,15 @@ site-test:
 
 # Build the main site
 [working-directory: 'site']
-build:
+site-build:
     npx astro build
 
-# Build the main site and deploy with rclone
-deploy: site-test build
+# Push the main site with rclone
+site-push:
     rclone sync site/dist $RCLONE_SITE_TARGET --progress
+
+# Build the main site and deploy
+deploy: site-test site-build site-push
 
 # Start the grouper dev server
 [working-directory: 'grouper']
@@ -111,19 +114,12 @@ group:
 group-test:
     npx astro check
 
-# Build the grouper site
-[working-directory: 'grouper']
-group-build:
-    npx astro build
-
-# Build the grouper site and deploy with rclone
-group-deploy: group-test group-build
-    rclone sync grouper/dist $RCLONE_ADMIN_TARGET --progress
-
 # Run all tests
 test-all: download-test extract-test grade-test site-test group-test
 
 # Run nightly process
 nightly: test-all
     just download --reset-cache
-    just extract grade deploy
+    just extract
+    just grade
+    just site-build site-push
