@@ -107,6 +107,10 @@ deploy: site-test site-build site-push
 # Start the grouper dev server
 [working-directory: 'grouper']
 group:
+    PUBLIC_PGRST_URL=${PGRST_URL} \
+    PUBLIC_PGRST_APIKEY=${PGRST_APIKEY} \
+    PUBLIC_OLLAMA_URL=${OLLAMA_URL} \
+    PUBLIC_OLLAMA_MODEL=${OLLAMA_MODEL} \
     npx astro dev
 
 # Check the grouper site for errors

@@ -26,6 +26,7 @@ Install any other dependencies:
   - There are a few Python scripts I use for development in the `scripts` folder. If you want to use these, ensure you have `uv` [installed](https://docs.astral.sh/uv/getting-started/installation/).
   - When testing API responses I use `jq` for filtering and general formatting. You can get that [here](https://jqlang.org/download/).
   - A couple scripts for debugging are written with `rust-script`. Installation instructions are [here](https://rust-script.org/#installation).
+  - Some admin tools lean on an `ollama` API endpoint for extracting keywords, generating slugs, and more. You can find installation instructions [here](https://ollama.com/download). By default it expects that the service will be started and available on localhost.
 
 ## Step 1. Downloading API data to disk
 
