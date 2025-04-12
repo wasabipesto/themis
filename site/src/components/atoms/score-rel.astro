@@ -1,19 +1,19 @@
 ---
 interface Props {
-    num: number | null;
+  num: number | null;
 }
 
 const { num = null } = Astro.props;
 ---
 
 <div class="font-mono">
-    {
-        num != null
-            ? `${num >= 0 ? "+" : ""}${num.toLocaleString("en-US", {
-                  minimumFractionDigits: 3,
-                  maximumFractionDigits: 3,
-                  useGrouping: false,
-              })}`
-            : "N/A"
-    }
+  {
+    num != null
+      ? `${num >= 0 ? "+" : ""}${num.toLocaleString("en-US", {
+          minimumFractionDigits: 3,
+          maximumFractionDigits: 3,
+          useGrouping: false,
+        })}`
+      : "N/A"
+  }
 </div>
