@@ -327,3 +327,9 @@ This project has been featured in the following publications:
 I use prediction markets, mainly Manifold and Metaculus, as a personal exercise in calibration. This project grew out of an effort to see how useful they can be as information-gathering tools.
 
 As with any statistics, this data can be used to tell many stories. I do my best to present this data in a way that is fair, accurate, and with sufficient context.
+
+## License
+
+The code for this project as presented in this repository is copyright under the MIT License, attached.
+
+The contents of the live published website and database, including the explanatory descriptions, market/question links, categorizations, graphics, and visualizations are copyright under CC BY-NC-SA 4.0 Deed, attached.
