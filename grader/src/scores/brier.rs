@@ -30,6 +30,19 @@ pub fn abs_brier_letter_grade(score: &f32) -> String {
 pub fn rel_brier_letter_grade(score: &f32) -> String {
     match score {
         x if *x < -0.95 => "S".to_string(),
-        _ => "TODO".to_string(),
+        x if *x < -0.75 => "A+".to_string(),
+        x if *x < -0.55 => "A".to_string(),
+        x if *x < -0.35 => "A-".to_string(),
+        x if *x < -0.25 => "B+".to_string(),
+        x if *x < -0.15 => "B".to_string(),
+        x if *x < -0.05 => "B-".to_string(),
+        x if *x < 0.0 => "C+".to_string(),
+        x if *x < 0.05 => "C".to_string(),
+        x if *x < 0.15 => "C-".to_string(),
+        x if *x < 0.25 => "D+".to_string(),
+        x if *x < 0.35 => "D".to_string(),
+        x if *x < 0.55 => "D-".to_string(),
+        x if *x <= 1.0 => "F".to_string(),
+        _ => "ERROR".to_string(),
     }
 }
