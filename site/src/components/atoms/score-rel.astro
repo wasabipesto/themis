@@ -10,8 +10,8 @@ const { num = null } = Astro.props;
     {
         num != null
             ? `${num >= 0 ? "+" : ""}${num.toLocaleString("en-US", {
-                  minimumFractionDigits: 1,
-                  maximumFractionDigits: 1,
+                  minimumFractionDigits: 3,
+                  maximumFractionDigits: 3,
                   useGrouping: false,
               })}`
             : "N/A"
