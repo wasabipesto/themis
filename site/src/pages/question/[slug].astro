@@ -8,144 +8,180 @@ import Grade from "@atoms/grade.astro";
 import ScoreRel from "@atoms/score-rel.astro";
 import ScoreAbs from "@atoms/score-abs.astro";
 import LinkOut from "@icons/link-out.svg";
-import type { DailyProbabilityDetails, QuestionDetails, MarketScoreDetails, MarketDetails } from "@types";
+import type {
+  DailyProbabilityDetails,
+  QuestionDetails,
+  MarketScoreDetails,
+  MarketDetails,
+  OtherScoreDetails,
+} from "@types";
 
 const pgrst_url = import.meta.env.PGRST_URL;
+const absoluteScoreType = "brier-average";
+const relativeScoreType = "brier-relative";
 
 // Generate routes for all items
 export async function getStaticPaths() {
-    const pgrst_url = import.meta.env.PGRST_URL;
-    const questions = (await fetch(`${pgrst_url}/question_details`).then((res) =>
-        res.json(),
-    )) as QuestionDetails[];
-    return questions.map((question) => {
-        return {
-            params: { slug: question.slug },
-            props: { question },
-        };
-    });
+  const pgrst_url = import.meta.env.PGRST_URL;
+  const questions = (await fetch(`${pgrst_url}/question_details`).then((res) =>
+    res.json(),
+  )) as QuestionDetails[];
+  return questions.map((question) => {
+    return {
+      params: { slug: question.slug },
+      props: { question },
+    };
+  });
 }
 const { question } = Astro.props;
 
 // Download market scores and probabilities
 const markets = (await fetch(
-  `${pgrst_url}/market_details?question_id=eq.${question.id}`
+  `${pgrst_url}/market_details?question_id=eq.${question.id}`,
 ).then((res) => res.json())) as MarketDetails[];
-const marketScores = (await fetch(
-  `${pgrst_url}/market_scores_details?question_id=eq.${question.id}`,
+const absoluteMarketScores = (await fetch(
+  `${pgrst_url}/market_scores_details?score_type=eq.${absoluteScoreType}&question_id=eq.${question.id}`,
 ).then((res) => res.json())) as MarketScoreDetails[];
+const relativeMarketScores = (await fetch(
+  `${pgrst_url}/market_scores_details?score_type=eq.${relativeScoreType}&question_id=eq.${question.id}`,
+).then((res) => res.json())) as MarketScoreDetails[];
+
+const marketsWithScores = markets.map((market) => {
+  const absoluteScore = absoluteMarketScores.find(
+    (s) => s.market_id === market.id,
+  );
+  const relativeScore = relativeMarketScores.find(
+    (s) => s.market_id === market.id,
+  );
+  if (!absoluteScore || !relativeScore) {
+    throw new Error(
+      `Missing scores for market ${market.id} (${market.platform_name}): ` +
+        `absoluteScore=${!!absoluteScore}, relativeScore=${!!relativeScore}`,
+    );
+  }
+  return {
+    market: market,
+    absoluteScore: absoluteScore,
+    relativeScore: relativeScore,
+  };
+});
+
+const questionScores = (await fetch(
+  `${pgrst_url}/other_scores?item_type=eq.question&item_id=eq.${question.id}`,
+).then((res) => res.json())) as OtherScoreDetails[];
+const questionWithScores = {
+  question: question,
+  absoluteScore: questionScores.find((s) => s.score_type === absoluteScoreType),
+  relativeScore: questionScores.find((s) => s.score_type === relativeScoreType),
+};
 
 // Download daily probabilities
 let dailyProbURL = `${pgrst_url}/daily_probability_details?order=date.asc&question_id=eq.${question.id}`;
 if (question.start_date_override) {
-    dailyProbURL += `&date=gte.${question.start_date_override}`;
+  dailyProbURL += `&date=gte.${question.start_date_override}`;
 }
 if (question.end_date_override) {
-    dailyProbURL += `&date=lte.${question.end_date_override}`;
+  dailyProbURL += `&date=lte.${question.end_date_override}`;
 }
-const dailyProbabilityPoints = (await fetch(`${dailyProbURL}`,
-).then((res) => res.json())) as DailyProbabilityDetails[];
+const dailyProbabilityPoints = (await fetch(`${dailyProbURL}`).then((res) =>
+  res.json(),
+)) as DailyProbabilityDetails[];
 ---
 
 <Base title="Market">
-    <div class="grid grid-cols-1 md:grid-cols-2 pt-4">
-        <div class="p-4 m-2">
-            <div class="text-2xl">{question.title}</div>
-            <ul class="flex items-center space-x-4 my-2">
-                <li class="font-semibold">Categories:</li>
-                <li>
-                    <a
-                        href={`/category/${question.category_slug}`}
-                        class="text-lavender"
-                    >
-                        {question.category_name}
-                    </a>
-                </li>
-            </ul>
-            <!-- TODO: Tags
-            <ul class="flex items-center space-x-4 my-2">
-                <li class="font-semibold">Tags:</li>
-                {question.tags.map((tag) => <li>{tag}</li>)}
-            </ul>
-            -->
-            <div class="whitespace-pre-wrap my-2">{question.description}</div>
-        </div>
-        <div>
-            <QuestionProbChart points={dailyProbabilityPoints} />
-        </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 pt-4">
+    <div class="p-4 m-2">
+      <div class="text-2xl">{question.title}</div>
+      <ul class="flex items-center space-x-4 my-2">
+        <li class="font-semibold">Categories:</li>
+        <li>
+          <a href={`/category/${question.category_slug}`} class="text-lavender">
+            {question.category_name}
+          </a>
+        </li>
+      </ul>
+      <!-- TODO: Tags
+        <ul class="flex items-center space-x-4 my-2">
+            <li class="font-semibold">Tags:</li>
+            {question.tags.map((tag) => <li>{tag}</li>)}
+        </ul>
+      -->
+      <div class="whitespace-pre-wrap my-2">{question.description}</div>
     </div>
+    <div>
+      <QuestionProbChart points={dailyProbabilityPoints} />
+    </div>
+  </div>
 
-    <!-- Platform Table -->
-    <div class="pt-6 overflow-x-auto md:overflow-x-hidden">
-        <table class="table-auto text-left p-4 m-2 w-full">
-            <thead>
-                <tr class="border-b-2">
-                    <th class="px-4 py-2 w-40">Platform</th>
-                    <th class="px-4 py-2">Link</th>
-                    <th class="px-4 py-2">Traders</th>
-                    <th class="px-4 py-2">Volume (USD)</th>
-                    <th class="px-4 py-2">Duration</th>
-                    <th class="px-4 py-2">Letter Grade</th>
-                    <th class="px-4 py-2">Relative Brier</th>
-                    <th class="px-4 py-2">Absolute Brier</th>
-                </tr>
-            </thead>
-            <tbody>
-                {
-                    marketScores.map((market_score) => (
-                        <tr>
-                            <td class="px-4 py-2">{market_score.platform_name}</td>
-                            <td class="px-6 py-2">
-                                <a href={market_score.market_url}>
-                                    <LinkOut
-                                        height={18}
-                                        fill="currentColor"
-                                        class="inline"
-                                    />
-                                </a>
-                            </td>
-                            <td class="px-4 py-2">
-                                <Traders num={market_score.traders_count} />
-                            </td>
-                            <td class="px-4 py-2">
-                                <Volume num={market_score.volume_usd} />
-                            </td>
-                            <td class="px-4 py-2">
-                                <Duration num={market_score.duration_days} />
-                            </td>
-                            <td class="px-4 py-2">
-                                <Grade grade={market_score.grade} />
-                            </td>
-                            <td class="px-4 py-2">
-                                <ScoreRel num={market_score.score} />
-                            </td>
-                            <td class="px-4 py-2">
-                                <ScoreAbs
-                                    num={market_score.score}
-                                    detailed={false}
-                                />
-                            </td>
-                        </tr>
-                    ))
-                }
-                <tr class="border-t-2">
-                    <td class="px-4 py-2">Overall</td>
-                    <td class="px-6 py-2"></td>
-                    <td class="px-4 py-2">
-                        <Traders num={question.total_traders} />
-                    </td>
-                    <td class="px-4 py-2">
-                        <Volume num={question.total_volume} />
-                    </td>
-                    <td class="px-4 py-2">
-                        <Duration num={question.total_duration} />
-                    </td>
-                    <td class="px-4 py-2"> </td>
-                    <td class="px-4 py-2"> </td>
-                    <td class="px-4 py-2"> </td>
-                    <td class="px-4 py-2"> </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+  <!-- Platform Table -->
+  <div class="pt-6 overflow-x-auto md:overflow-x-hidden">
+    <table class="table-auto text-left p-4 m-2 w-full">
+      <thead>
+        <tr class="border-b-2">
+          <th class="px-4 py-2 w-40">Platform</th>
+          <th class="px-4 py-2">Link</th>
+          <th class="px-4 py-2">Traders</th>
+          <th class="px-4 py-2">Volume (USD)</th>
+          <th class="px-4 py-2">Duration</th>
+          <th class="px-4 py-2 text-center">Letter Grade</th>
+          <th class="px-4 py-2 text-right">Relative Score</th>
+          <th class="px-4 py-2 text-right">Absolute Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          marketsWithScores.map((item) => (
+            <tr>
+              <td class="px-4 py-2">{item.market.platform_name}</td>
+              <td class="px-6 py-2">
+                <a href={item.market.url}>
+                  <LinkOut height={18} fill="currentColor" class="inline" />
+                </a>
+              </td>
+              <td class="px-4 py-2">
+                <Traders num={item.market.traders_count} />
+              </td>
+              <td class="px-4 py-2">
+                <Volume num={item.market.volume_usd} />
+              </td>
+              <td class="px-4 py-2">
+                <Duration num={item.market.duration_days} />
+              </td>
+              <td class="px-4 py-2 text-center">
+                <Grade grade={item.relativeScore.grade} />
+              </td>
+              <td class="px-4 py-2 text-right">
+                <ScoreRel num={item.relativeScore.score} />
+              </td>
+              <td class="px-4 py-2 text-right">
+                <ScoreAbs num={item.absoluteScore.score} />
+              </td>
+            </tr>
+          ))
+        }
+        <tr class="border-t-2">
+          <td class="px-4 py-2">Overall</td>
+          <td class="px-6 py-2"></td>
+          <td class="px-4 py-2">
+            <Traders num={question.total_traders} />
+          </td>
+          <td class="px-4 py-2">
+            <Volume num={question.total_volume} />
+          </td>
+          <td class="px-4 py-2">
+            <Duration num={question.total_duration} />
+          </td>
+          <td class="px-4 py-2 text-center">
+            <Grade grade={questionWithScores.absoluteScore?.grade || "ERROR"} />
+          </td>
+          <td class="px-4 py-2 text-right">
+            <ScoreRel num={questionWithScores.relativeScore?.score || 0} />
+          </td>
+          <td class="px-4 py-2 text-right">
+            <ScoreAbs num={questionWithScores.absoluteScore?.score || 0} />
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </Base>
