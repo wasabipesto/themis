@@ -15,13 +15,44 @@ pub fn log_score(prediction: f32, outcome: f32) -> f32 {
 }
 
 /// Convert a Logarithmic score to a letter grade.
-pub fn abs_log_letter_grade(_score: &f32) -> String {
-    "TODO".to_string()
+pub fn abs_log_letter_grade(score: &f32) -> String {
+    match score {
+        x if *x > -0.00500 => "S".to_string(),
+        x if *x > -0.03013 => "A+".to_string(),
+        x if *x > -0.04091 => "A".to_string(),
+        x if *x > -0.04735 => "A-".to_string(),
+        x if *x > -0.05600 => "B+".to_string(),
+        x if *x > -0.06299 => "B".to_string(),
+        x if *x > -0.07578 => "B-".to_string(),
+        x if *x > -0.08933 => "C+".to_string(),
+        x if *x > -0.12052 => "C".to_string(),
+        x if *x > -0.16637 => "C-".to_string(),
+        x if *x > -0.24381 => "D+".to_string(),
+        x if *x > -0.39046 => "D".to_string(),
+        x if *x > -0.66730 => "D-".to_string(),
+        _ => "F".to_string(),
+    }
 }
 
 /// Convert a Logarithmic score to a letter grade.
-pub fn rel_log_letter_grade(_score: &f32) -> String {
-    "TODO".to_string()
+pub fn rel_log_letter_grade(score: &f32) -> String {
+    match score {
+        x if *x < -0.95 => "S".to_string(),
+        x if *x < -0.75 => "A+".to_string(),
+        x if *x < -0.55 => "A".to_string(),
+        x if *x < -0.35 => "A-".to_string(),
+        x if *x < -0.25 => "B+".to_string(),
+        x if *x < -0.15 => "B".to_string(),
+        x if *x < -0.05 => "B-".to_string(),
+        x if *x < 0.0 => "C+".to_string(),
+        x if *x < 0.05 => "C".to_string(),
+        x if *x < 0.15 => "C-".to_string(),
+        x if *x < 0.25 => "D+".to_string(),
+        x if *x < 0.35 => "D".to_string(),
+        x if *x < 0.55 => "D-".to_string(),
+        x if *x <= 1.0 => "F".to_string(),
+        _ => "ERROR".to_string(),
+    }
 }
 
 #[cfg(test)]
@@ -55,7 +86,7 @@ mod tests {
         // Very low probability with outcome 0
         // For outcome=0, the formula is (1.0 - outcome) * (1.0 - prediction).ln() = 1.0 * 0.99999.ln()
         assert_approx_eq(log_score(0.00001, 0.0), (1.0 - 0.00001_f32).ln());
-    
+
         // Very high probability with outcome 1
         // For outcome=1, the formula is outcome * prediction.ln() = 1.0 * 0.99999.ln()
         assert_approx_eq(log_score(0.99999, 1.0), 0.99999_f32.ln());

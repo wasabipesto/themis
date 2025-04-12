@@ -8,19 +8,19 @@ pub fn brier_score(prediction: f32, outcome: f32) -> f32 {
 /// Convert a Brier score to a letter grade.
 pub fn abs_brier_letter_grade(score: &f32) -> String {
     match score {
-        x if *x < 0.05 => "S".to_string(),
-        x if *x < 0.06 => "A+".to_string(),
-        x if *x < 0.09 => "A".to_string(),
-        x if *x < 0.10 => "A-".to_string(),
-        x if *x < 0.11 => "B+".to_string(),
-        x if *x < 0.14 => "B".to_string(),
-        x if *x < 0.15 => "B-".to_string(),
-        x if *x < 0.16 => "C+".to_string(),
-        x if *x < 0.19 => "C".to_string(),
-        x if *x < 0.20 => "C-".to_string(),
-        x if *x < 0.21 => "D+".to_string(),
-        x if *x < 0.25 => "D".to_string(),
-        x if *x < 0.26 => "D-".to_string(),
+        x if *x < 0.00005 => "S".to_string(),
+        x if *x < 0.00088 => "A+".to_string(),
+        x if *x < 0.00161 => "A".to_string(),
+        x if *x < 0.00214 => "A-".to_string(),
+        x if *x < 0.00297 => "B+".to_string(),
+        x if *x < 0.00373 => "B".to_string(),
+        x if *x < 0.00533 => "B-".to_string(),
+        x if *x < 0.00730 => "C+".to_string(),
+        x if *x < 0.01289 => "C".to_string(),
+        x if *x < 0.02349 => "C-".to_string(),
+        x if *x < 0.04681 => "D+".to_string(),
+        x if *x < 0.10449 => "D".to_string(),
+        x if *x < 0.23708 => "D-".to_string(),
         x if *x <= 1.0 => "F".to_string(),
         _ => "ERROR".to_string(),
     }
@@ -79,13 +79,13 @@ mod tests {
         // Test with prediction values at extremes
         // Very low probability with outcome 0
         assert_approx_eq(brier_score(0.00001, 0.0), 0.00001_f32.powi(2));
-        
+
         // Very high probability with outcome 1
         assert_approx_eq(brier_score(0.99999, 1.0), (0.99999_f32 - 1.0_f32).powi(2));
 
         // Very low probability with outcome 1 (bad prediction)
         assert_approx_eq(brier_score(0.00001, 1.0), (0.00001_f32 - 1.0_f32).powi(2));
-        
+
         // Very high probability with outcome 0 (bad prediction)
         assert_approx_eq(brier_score(0.99999, 0.0), 0.99999_f32.powi(2));
     }
@@ -158,16 +158,16 @@ mod tests {
         let o1 = 0.3;
         let p2 = 1.0 - p1; // 0.3
         let o2 = 1.0 - o1; // 0.7
-        
+
         assert_approx_eq(brier_score(p1, o1), brier_score(p2, o2));
-        
+
         // Try with more values
         for i in 0..10 {
             let p = i as f32 * 0.1;
             let o = 0.5; // fixed outcome
             let p_complement = 1.0 - p;
             let o_complement = 1.0 - o;
-            
+
             assert_approx_eq(brier_score(p, o), brier_score(p_complement, o_complement));
         }
     }
