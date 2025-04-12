@@ -40,7 +40,7 @@ def fetch_scores(postgrest_url, score_type=None, linked_only=False, min_traders=
         # Add linked_only filter if enabled
         if linked_only:
             params.append("question_id=is.not.null")
-            
+
         # Handle min_traders and min_volume parameters
         if min_traders is not None or min_volume is not None:
             # If only one is provided, calculate the other based on the 1:10 ratio
@@ -48,10 +48,10 @@ def fetch_scores(postgrest_url, score_type=None, linked_only=False, min_traders=
                 min_volume = min_traders * 10
             elif min_volume is not None and min_traders is None:
                 min_traders = int(min_volume / 10)
-                
+
             # Add OR filter for traders count or volume
             params.append(f"or=(traders_count.gte.{min_traders},volume_usd.gte.{min_volume})")
-            
+
         # Add min_duration filter if provided
         if min_duration is not None:
             params.append(f"duration_days=gte.{min_duration}")
@@ -128,19 +128,26 @@ def plot_score_histograms(scores_by_type, clip_range=(-10, 10)):
         # Create histogram
         n, bins, patches = plt.hist(clipped_scores, bins=50, alpha=0.7, color='skyblue', edgecolor='black')
 
-        # Add mean line (of the original data)
-        mean_score = sum(scores_list)/len(scores_list)
-        mean_clipped = np.clip(mean_score, min_clip, max_clip)  # Clip mean if it's outside range
-        plt.axvline(mean_clipped, color='black', linestyle='solid', linewidth=1,
-                   label=f'Mean: {mean_score:.5f}')
+        # Calculate percentiles (every 10th percentile)
+        percentiles = np.percentile(clipped_scores, np.arange(0, 101, 10))
+        colors = plt.cm.viridis(np.linspace(0, 1, len(percentiles)))
+        
+        # Add percentile lines
+        legend_entries = []
+        for j, (percentile_value, color) in enumerate(zip(percentiles, colors)):
+            percentile_line = plt.axvline(percentile_value, color=color, linestyle='solid', linewidth=1)
+            legend_entries.append((percentile_line, f'{j*10}th: {percentile_value:.5f}'))
 
         # Set title and labels
         plt.title(f'Distribution of {score_type} Scores', fontsize=12)
         plt.xlabel('Score', fontsize=10)
         plt.ylabel('Frequency', fontsize=10)
         plt.grid(axis='y', alpha=0.75)
-
-        plt.legend(loc='upper right', fontsize='small')
+        
+        # Add legend with percentiles
+        plt.legend(handles=[line for line, _ in legend_entries],
+                  labels=[label for _, label in legend_entries],
+                  loc='upper right', fontsize='x-small', ncol=2)
 
     plt.tight_layout()
     return fig
