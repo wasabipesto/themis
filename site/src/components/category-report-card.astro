@@ -3,14 +3,92 @@ import Markets from "@atoms/num-markets.astro";
 import Grade from "@atoms/grade.astro";
 import ScoreRel from "@atoms/score-rel.astro";
 import ScoreAbs from "@atoms/score-abs.astro";
-import type { OtherScoreDetails, PlatformCategoryScoreDetails } from "@types";
+import type {
+  OtherScoreDetails,
+  PlatformCategoryScoreDetails,
+  Category,
+  Platform,
+} from "@types";
 
 interface Props {
-  comboScores: PlatformCategoryScoreDetails[];
-  overallScore: OtherScoreDetails;
+  platforms: Platform[];
+  categories: Category[];
+  platformCategoryScores: PlatformCategoryScoreDetails[];
+  overallScores: OtherScoreDetails[];
   pivot: "platform" | "category";
 }
-const { comboScores, overallScore, pivot } = Astro.props;
+const { platforms, categories, platformCategoryScores, overallScores, pivot } =
+  Astro.props;
+
+let scoreType = "brier";
+let relScorePostfix = "relative";
+let absScorePostfix = "average";
+
+// Find the appropriate combination scores
+let comboScores = [];
+if (pivot == "platform") {
+  comboScores = platforms.map((platform) => {
+    const scoreRel = platformCategoryScores.find(
+      (pcs) =>
+        pcs.platform_slug == platform.slug &&
+        pcs.score_type == `${scoreType}-${relScorePostfix}`,
+    );
+    if (!scoreRel) {
+      throw new Error(
+        `Combo score ${platform.slug}/${scoreType}-${relScorePostfix} not found!`,
+      );
+    }
+    const scoreAbs = platformCategoryScores.find(
+      (pcs) =>
+        pcs.platform_slug == platform.slug &&
+        pcs.score_type == `${scoreType}-${absScorePostfix}`,
+    );
+    if (!scoreAbs) {
+      throw new Error(
+        `Combo score ${platform.slug}/${scoreType}-${absScorePostfix} not found!`,
+      );
+    }
+    return { name: platform.name, scoreRel: scoreRel, scoreAbs: scoreAbs };
+  });
+} else {
+  comboScores = categories.map((category) => {
+    const scoreRel = platformCategoryScores.find(
+      (pcs) =>
+        pcs.category_slug == category.slug &&
+        pcs.score_type == `${scoreType}-${relScorePostfix}`,
+    );
+    if (!scoreRel) {
+      throw new Error(
+        `Combo score ${category.slug}/${scoreType}-${relScorePostfix} not found!`,
+      );
+    }
+    const scoreAbs = platformCategoryScores.find(
+      (pcs) =>
+        pcs.category_slug == category.slug &&
+        pcs.score_type == `${scoreType}-${absScorePostfix}`,
+    );
+    if (!scoreAbs) {
+      throw new Error(
+        `Combo score ${category.slug}/${scoreType}-${absScorePostfix} not found!`,
+      );
+    }
+    return { name: category.name, scoreRel: scoreRel, scoreAbs: scoreAbs };
+  });
+}
+
+// Find the appropriate overall scores
+const overallScoreRel = overallScores.find(
+  (s) => s.score_type == `${scoreType}-${relScorePostfix}`,
+);
+if (!overallScoreRel) {
+  throw new Error(`Overall score not found!`);
+}
+const overallScoreAbs = overallScores.find(
+  (s) => s.score_type == `${scoreType}-${absScorePostfix}`,
+);
+if (!overallScoreAbs) {
+  throw new Error(`Overall score not found!`);
+}
 
 const headerLabel = pivot === "platform" ? "Platform" : "Category";
 const scoreField = pivot === "platform" ? "platform_name" : "category_name";
@@ -33,18 +111,18 @@ const scoreField = pivot === "platform" ? "platform_name" : "category_name";
       {
         comboScores.map((score) => (
           <tr class="last:border-t-2">
-            <td class="px-2 py-1 text-left">{score[scoreField]}</td>
+            <td class="px-2 py-1 text-left">{score.name}</td>
             <td class="px-2 py-1 text-center">
-              <Markets num={score.num_markets} />
+              <Markets num={score.scoreRel.num_markets} />
             </td>
             <td class="px-2 py-1 text-center">
-              <Grade grade={score.grade} />
+              <Grade grade={score.scoreRel.grade} />
             </td>
             <td class="px-2 py-1 text-center">
-              <ScoreRel num={score.score} />
+              <ScoreRel num={score.scoreRel.score} />
             </td>
             <td class="px-2 py-1 text-center">
-              <ScoreAbs num={score.score} />
+              <ScoreAbs num={score.scoreAbs.score} />
             </td>
           </tr>
         ))
@@ -52,16 +130,16 @@ const scoreField = pivot === "platform" ? "platform_name" : "category_name";
       <tr class="last:border-t-2">
         <td class="px-2 py-1 text-left">Overall</td>
         <td class="px-2 py-1 text-center">
-          <Markets num={overallScore.num_markets} />
+          <Markets num={overallScoreRel.num_markets} />
         </td>
         <td class="px-2 py-1 text-center">
-          <Grade grade={overallScore.grade} />
+          <Grade grade={overallScoreRel.grade} />
         </td>
         <td class="px-2 py-1 text-center">
-          <ScoreRel num={overallScore.score} />
+          <ScoreRel num={overallScoreRel.score} />
         </td>
         <td class="px-2 py-1 text-center">
-          <ScoreAbs num={overallScore.score} />
+          <ScoreAbs num={overallScoreAbs.score} />
         </td>
       </tr>
     </tbody>

@@ -13,9 +13,11 @@ import Markets from "@atoms/num-markets.astro";
 import Star from "@icons/star.svg";
 import {
   getPlatforms,
+  getCategories,
   getFeaturedQuestions,
   getMarketScoresByQuestion,
   getPlatformCategoryScores,
+  getPlatformOverallScores,
 } from "@lib/api";
 
 // Generate routes for all items
@@ -28,12 +30,15 @@ export async function getStaticPaths() {
 }
 const { platform } = Astro.props;
 
-const platformCategoryScores =
-  await getPlatformCategoryScores("brier-relative");
+const scoreType = "brier-relative";
+
+const categories = await getCategories();
+const platformCategoryScores = await getPlatformCategoryScores(null);
+const platformOverallScores = await getPlatformOverallScores();
 const featuredQuestions = await getFeaturedQuestions(6);
 const marketScores = await getMarketScoresByQuestion(
   featuredQuestions.map((q) => q.id),
-  "brier-relative",
+  scoreType,
 );
 ---
 
@@ -60,9 +65,12 @@ const marketScores = await getMarketScoresByQuestion(
     </div>
     <div>
       <CategoryReportCard
-        scores={platformCategoryScores.filter(
-          (s) => s.platform_slug == platform.slug,
+        platforms={[platform]}
+        categories={categories}
+        platformCategoryScores={platformCategoryScores.filter(
+          (score) => score.platform_slug == platform.slug,
         )}
+        overallScores={platformOverallScores}
         pivot="category"
       />
       <div class="grid grid-cols-1 md:grid-cols-2 mx-2">
@@ -123,10 +131,14 @@ const marketScores = await getMarketScoresByQuestion(
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
     {
       featuredQuestions.map((question) => {
-        const questionScores = marketScores.filter(
-          (score) => score.question_id === question.id,
+        return (
+          <QuestionCard
+            question={question}
+            scores={marketScores.filter(
+              (score) => score.question_id === question.id,
+            )}
+          />
         );
-        return <QuestionCard question={question} scores={questionScores} />;
       })
     }
   </div>

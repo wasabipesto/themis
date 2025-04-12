@@ -7,6 +7,7 @@ import Volume from "@atoms/volume.astro";
 import Markets from "@atoms/num-markets.astro";
 import Base from "@layouts/base.astro";
 import {
+  getPlatforms,
   getCategories,
   getPlatformCategoryScores,
   getFeaturedQuestions,
@@ -16,8 +17,9 @@ import {
 
 const scoreType = "brier-relative";
 
+const platforms = await getPlatforms();
 const categories = await getCategories();
-const platformCategoryScores = await getPlatformCategoryScores(scoreType);
+const platformCategoryScores = await getPlatformCategoryScores(null);
 const categoryOverallScores = await getCategoryOverallScores();
 const featuredQuestions = await getFeaturedQuestions(6);
 const marketScores = await getMarketScoresByQuestion(
@@ -57,22 +59,12 @@ const marketScores = await getMarketScoresByQuestion(
             <p class="my-2">{category.description}</p>
           </div>
           <CategoryReportCard
-            comboScores={platformCategoryScores.filter(
+            platforms={platforms}
+            categories={categories}
+            platformCategoryScores={platformCategoryScores.filter(
               (score) => score.category_slug == category.slug,
             )}
-            overallScore={(() => {
-              const score = categoryOverallScores.find(
-                (score) =>
-                  score.item_id == category.slug &&
-                  score.score_type == scoreType,
-              );
-              if (!score) {
-                throw new Error(
-                  `Overall score not found for category ${category.slug} and score type ${scoreType}`,
-                );
-              }
-              return score;
-            })()}
+            overallScores={categoryOverallScores}
             pivot="platform"
           />
         </div>
