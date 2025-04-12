@@ -97,7 +97,6 @@ const marketScores = await getMarketScoresByQuestion(
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
     {
       platformCategoryScores
-        .filter((score) => score.category_slug !== "overall")
         .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
         .slice(0, 4)
         .map((score, index) => (
