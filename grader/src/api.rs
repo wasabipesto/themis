@@ -198,12 +198,17 @@ pub fn wipe_market_scores(client: &Client, params: &PostgrestParams) -> Result<(
 }
 
 /// Uploads market scores to the database.
+/// Sends scores in batches of 10000 to avoid overwhelming the server.
 pub fn upload_market_scores(
     client: &Client,
     params: &PostgrestParams,
-    scores: &Vec<MarketScore>,
+    scores: &[MarketScore],
 ) -> Result<()> {
-    make_post_request(client, params, "/market_scores", Some(scores))
+    const BATCH_SIZE: usize = 10000;
+    for chunk in scores.chunks(BATCH_SIZE) {
+        make_post_request(client, params, "/market_scores", Some(&chunk))?;
+    }
+    Ok(())
 }
 
 /// Wipes all platform-category scores from the database.
