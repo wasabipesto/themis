@@ -10,8 +10,10 @@ use anyhow::{anyhow, Result};
 use chrono::{DateTime, Duration, Utc};
 use log::error;
 use serde::{Serialize, Serializer};
+use std::fmt::{self, Display};
 
 pub mod brier;
+pub mod logarithmic;
 
 /// Possible absolute score types.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -19,38 +21,43 @@ pub enum ScoreType {
     Absolute(AbsoluteScoreType),
     Relative(RelativeScoreType),
 }
+impl Display for ScoreType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ScoreType::Absolute(abs_type) => write!(f, "{}", abs_type),
+            ScoreType::Relative(rel_type) => write!(f, "{}", rel_type),
+        }
+    }
+}
 impl Serialize for ScoreType {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        match self {
-            ScoreType::Absolute(abs_type) => abs_type.serialize(serializer),
-            ScoreType::Relative(rel_type) => rel_type.serialize(serializer),
-        }
+        serializer.serialize_str(&self.to_string())
     }
 }
 impl ScoreType {
     /// List of all possible score types.
     pub fn all() -> Vec<ScoreType> {
-        vec![
-            ScoreType::Absolute(AbsoluteScoreType::BrierAverage),
-            ScoreType::Absolute(AbsoluteScoreType::BrierMidpoint),
-            ScoreType::Relative(RelativeScoreType::BrierRelative),
-        ]
+        let mut score_types = AbsoluteScoreType::all()
+            .into_iter()
+            .map(ScoreType::Absolute)
+            .collect::<Vec<_>>();
+
+        score_types.extend(
+            RelativeScoreType::all()
+                .into_iter()
+                .map(ScoreType::Relative),
+        );
+
+        score_types
     }
     /// Get the grade for a market using this score type.
     pub fn get_grade(&self, score: &f32) -> String {
         match self {
-            ScoreType::Absolute(AbsoluteScoreType::BrierAverage) => {
-                brier::abs_brier_letter_grade(score)
-            }
-            ScoreType::Absolute(AbsoluteScoreType::BrierMidpoint) => {
-                brier::abs_brier_letter_grade(score)
-            }
-            ScoreType::Relative(RelativeScoreType::BrierRelative) => {
-                brier::rel_brier_letter_grade(score)
-            }
+            ScoreType::Absolute(absolute_score_type) => absolute_score_type.get_grade(score),
+            ScoreType::Relative(relative_score_type) => relative_score_type.get_grade(score),
         }
     }
 }
@@ -60,17 +67,26 @@ impl ScoreType {
 pub enum AbsoluteScoreType {
     BrierAverage,
     BrierMidpoint,
+    LogarithmicAverage,
+    LogarithmicMidpoint,
+}
+impl Display for AbsoluteScoreType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            AbsoluteScoreType::BrierAverage => "brier-average",
+            AbsoluteScoreType::BrierMidpoint => "brier-midpoint",
+            AbsoluteScoreType::LogarithmicAverage => "logarithmic-average",
+            AbsoluteScoreType::LogarithmicMidpoint => "logarithmic-midpoint",
+        };
+        write!(f, "{}", s)
+    }
 }
 impl Serialize for AbsoluteScoreType {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let s = match self {
-            AbsoluteScoreType::BrierAverage => "brier-average",
-            AbsoluteScoreType::BrierMidpoint => "brier-midpoint",
-        };
-        serializer.serialize_str(s)
+        serializer.serialize_str(&self.to_string())
     }
 }
 impl AbsoluteScoreType {
@@ -79,6 +95,8 @@ impl AbsoluteScoreType {
         vec![
             AbsoluteScoreType::BrierAverage,
             AbsoluteScoreType::BrierMidpoint,
+            AbsoluteScoreType::LogarithmicAverage,
+            AbsoluteScoreType::LogarithmicMidpoint,
         ]
     }
     /// Score a market using this absolute score type.
@@ -96,10 +114,16 @@ impl AbsoluteScoreType {
     pub fn get_score(&self, market: &Market) -> f32 {
         match self {
             AbsoluteScoreType::BrierAverage => {
-                brier::brier_score(&market.prob_time_avg, &market.resolution)
+                brier::brier_score(market.prob_time_avg, market.resolution)
             }
             AbsoluteScoreType::BrierMidpoint => {
-                brier::brier_score(&market.prob_at_midpoint, &market.resolution)
+                brier::brier_score(market.prob_at_midpoint, market.resolution)
+            }
+            AbsoluteScoreType::LogarithmicAverage => {
+                logarithmic::log_score(market.prob_time_avg, market.resolution)
+            }
+            AbsoluteScoreType::LogarithmicMidpoint => {
+                logarithmic::log_score(market.prob_at_midpoint, market.resolution)
             }
         }
     }
@@ -108,6 +132,8 @@ impl AbsoluteScoreType {
         match self {
             AbsoluteScoreType::BrierAverage => brier::abs_brier_letter_grade(score),
             AbsoluteScoreType::BrierMidpoint => brier::abs_brier_letter_grade(score),
+            AbsoluteScoreType::LogarithmicAverage => logarithmic::abs_log_letter_grade(score),
+            AbsoluteScoreType::LogarithmicMidpoint => logarithmic::abs_log_letter_grade(score),
         }
     }
 }
@@ -116,22 +142,32 @@ impl AbsoluteScoreType {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RelativeScoreType {
     BrierRelative,
+    LogarithmicRelative,
+}
+impl Display for RelativeScoreType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            RelativeScoreType::BrierRelative => "brier-relative",
+            RelativeScoreType::LogarithmicRelative => "logarithmic-relative",
+        };
+        write!(f, "{}", s)
+    }
 }
 impl Serialize for RelativeScoreType {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let s = match self {
-            RelativeScoreType::BrierRelative => "brier-relative",
-        };
-        serializer.serialize_str(s)
+        serializer.serialize_str(&self.to_string())
     }
 }
 impl RelativeScoreType {
     /// List of all relative score types.
     pub fn all() -> Vec<RelativeScoreType> {
-        vec![RelativeScoreType::BrierRelative]
+        vec![
+            RelativeScoreType::BrierRelative,
+            RelativeScoreType::LogarithmicRelative,
+        ]
     }
     /// Score a market using this relative score type.
     /// This uses the methodology described here:
@@ -293,7 +329,7 @@ impl RelativeScoreType {
                 };
 
                 // Get the score for the market on this day
-                let score = self.get_score(&prediction, &resolution);
+                let score = self.get_score(prediction, resolution);
                 daily_market_absolute_scores.insert(market.id.clone(), score);
             }
 
@@ -326,6 +362,12 @@ impl RelativeScoreType {
                     None
                 } else {
                     let score = scores.iter().sum::<f64>() as f32 / scores.len() as f32;
+                    if &serde_json::to_string(&score).unwrap() == "null" {
+                        error!(
+                            "{market_id} {self} score ({score}) serializes to null: {:?}",
+                            scores
+                        );
+                    }
                     Some((market_id.clone(), score))
                 }
             })
@@ -345,15 +387,17 @@ impl RelativeScoreType {
         Ok(result_scores)
     }
     /// Get the score for a market using this relative score type.
-    pub fn get_score(&self, prediction: &f32, outcome: &f32) -> f32 {
+    pub fn get_score(&self, prediction: f32, outcome: f32) -> f32 {
         match self {
             RelativeScoreType::BrierRelative => brier::brier_score(prediction, outcome),
+            RelativeScoreType::LogarithmicRelative => logarithmic::log_score(prediction, outcome),
         }
     }
     /// Get the grade for a market using this relative score type.
     pub fn get_grade(&self, score: &f32) -> String {
         match self {
             RelativeScoreType::BrierRelative => brier::rel_brier_letter_grade(score),
+            RelativeScoreType::LogarithmicRelative => logarithmic::rel_log_letter_grade(score),
         }
     }
 }

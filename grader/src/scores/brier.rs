@@ -1,7 +1,7 @@
-//! Module containing the Brier score calculation.
+//! Module containing Brier score calculations.
 
 /// Calculate the Brier score given the prediction and the outcome.
-pub fn brier_score(prediction: &f32, outcome: &f32) -> f32 {
+pub fn brier_score(prediction: f32, outcome: f32) -> f32 {
     (prediction - outcome).powi(2)
 }
 
