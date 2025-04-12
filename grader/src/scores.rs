@@ -308,13 +308,15 @@ impl RelativeScoreType {
             let mut daily_market_absolute_scores = HashMap::with_capacity(markets.len());
             for market in markets {
                 // Get the market's probability point for the current day
-                let market_prob_point =
-                    if let Some(market_prob_point) = probs.iter().find(|p| p.date == day) {
-                        market_prob_point
-                    } else {
-                        // If no probability point is found, skip this market
-                        continue;
-                    };
+                let market_prob_point = if let Some(market_prob_point) = probs
+                    .iter()
+                    .find(|p| p.date == day && p.market_id == market.id)
+                {
+                    market_prob_point
+                } else {
+                    // If no probability point is found, skip this market
+                    continue;
+                };
 
                 // Invert the predicted probability if necessary
                 let prediction = match market.question_invert {
