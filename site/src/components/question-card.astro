@@ -9,8 +9,14 @@ interface Props {
   question: QuestionDetails;
   scores: MarketScoreDetails[];
 }
-
 let { question, scores } = Astro.props;
+
+const scoreType = "brier-relative";
+const filteredScores = scores.filter((s) => s.score_type == scoreType);
+
+const resolution = filteredScores[0].question_invert
+  ? !filteredScores[0].resolution
+  : filteredScores[0].resolution;
 ---
 
 <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
@@ -19,33 +25,50 @@ let { question, scores } = Astro.props;
       {question.title}
     </a>
   </div>
-  <div class="text-sm">
+  <div class="text-sm mb-2">
     <ul class="flex items-center space-x-4">
       <li>
-        <a href={`/category/${question.category_slug}`}>
-          {question.category_name}
-        </a>
+        Resolved
+        {
+          resolution ? (
+            <span class="mx-1 px-2 rounded-sm bg-green/20">YES</span>
+          ) : (
+            <span class="mx-1 px-2 rounded-sm bg-red/20">NO</span>
+          )
+        }
       </li>
+      <li>
+        Category
+        <span class="mx-1 px-2 rounded-sm bg-selection/20">
+          <a href={`/category/${question.category_slug}`}>
+            {question.category_name}
+          </a>
+        </span>
+      </li>
+    </ul>
+  </div>
+  <div class="text-sm mb-2">
+    <ul class="flex items-center space-x-4">
       <li><Traders num={question.total_traders} /></li>
       <li><Volume num={question.total_volume} /></li>
     </ul>
-  </div>
 
-  <table class="mt-2 table-auto text-sm w-full">
-    <tbody>
-      {
-        scores.map((market_score) => (
-          <tr>
-            <td class="px-2 pt-1">{market_score.platform_name}</td>
-            <td class="px-2 pt-1">
-              <Grade grade={market_score.grade} />
-            </td>
-            <td class="px-2 pt-1 font-mono">
-              <ScoreRel num={market_score.score} />
-            </td>
-          </tr>
-        ))
-      }
-    </tbody>
-  </table>
+    <table class="mt-2 table-auto text-sm w-full">
+      <tbody>
+        {
+          filteredScores.map((market_score) => (
+            <tr>
+              <td class="px-2 pt-1">{market_score.platform_name}</td>
+              <td class="px-2 pt-1">
+                <Grade grade={market_score.grade} />
+              </td>
+              <td class="px-2 pt-1 font-mono">
+                <ScoreRel num={market_score.score} />
+              </td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
 </div>
