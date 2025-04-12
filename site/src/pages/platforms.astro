@@ -7,86 +7,87 @@ import Traders from "@atoms/traders.astro";
 import Volume from "@atoms/volume.astro";
 import Markets from "@atoms/num-markets.astro";
 import Base from "@layouts/base.astro";
-import type { PlatformDetails, PlatformCategoryScoreDetails, QuestionDetails, MarketScoreDetails } from "@types";
+import type {
+  PlatformDetails,
+  PlatformCategoryScoreDetails,
+  QuestionDetails,
+  MarketScoreDetails,
+} from "@types";
 
 const pgrst_url = import.meta.env.PGRST_URL;
+const scoreType = "brier-relative";
 
 const platforms = (await fetch(`${pgrst_url}/platform_details`).then((res) =>
-    res.json(),
+  res.json(),
 )) as PlatformDetails[];
 
-const platformCategoryScores = (await fetch(`${pgrst_url}/platform_category_scores_details`).then(
-    (res) => res.json(),
-)) as PlatformCategoryScoreDetails[];
+const platformCategoryScores = (await fetch(
+  `${pgrst_url}/platform_category_scores_details?score_type=eq.${scoreType}`,
+).then((res) => res.json())) as PlatformCategoryScoreDetails[];
 
-const featuredQuestions = (await fetch(`${pgrst_url}/question_details?order=total_volume.desc&limit=6`).then(
-    (res) => res.json(),
-)) as QuestionDetails[];
+const featuredQuestions = (await fetch(
+  `${pgrst_url}/question_details?order=total_volume.desc&limit=6`,
+).then((res) => res.json())) as QuestionDetails[];
 
 const marketScores = (await fetch(
-  `${pgrst_url}/market_scores_details?question_id=in.(${featuredQuestions.map(q => q.id).join(',')})`
+  `${pgrst_url}/market_scores_details?score_type=eq.${scoreType}&question_id=in.(${featuredQuestions.map((q) => q.id).join(",")})`,
 ).then((res) => res.json())) as MarketScoreDetails[];
 ---
 
 <Base title="Categories">
-    <div class="p-4 m-2">
-        <h1 class="text-4xl font-bold">All Market Platforms</h1>
-    </div>
+  <div class="p-4 m-2">
+    <h1 class="text-4xl font-bold">All Market Platforms</h1>
+  </div>
 
-    {
-        platforms.map((platform) => (
-            <div class="px-4 m-2">
-                <div class="flex space-x-8 pb-2 border-b-2 flex-col sm:flex-row">
-                    <h2 class="font-bold text-2xl">
-                        <a href={`/platform/${platform.slug}`}>
-                            {platform.name}
-                        </a>
-                        {/*
-                        <a href={platform.site_url}>
-                            <LinkOut
-                                height={24}
-                                fill="currentColor"
-                                class="inline"
-                            />
-                        </a>
-                        */}
-                    </h2>
-                    <div class="self-baseline sm:self-center">
-                        <ul class="flex items-center space-x-4">
-                            <li>
-                                <Markets num={platform.total_markets} />
-                            </li>
-                            <li>
-                                <Traders num={platform.total_traders} />
-                            </li>
-                            <li>
-                                <Volume num={platform.total_volume} />
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2">
-                    <div class="my-2">
-                        <LongText text={platform.long_description} />
-                    </div>
-                    <PlatformReportCard
-                        scores={platformCategoryScores.filter(
-                            (score) => score.platform_slug == platform.slug,
-                        )}
-                        pivot="category"
-                    />
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                    {featuredQuestions.map((question) => {
-                        const questionScores = marketScores.filter(score => score.question_id === question.id);
-                        return <QuestionCard question={question} scores={questionScores} />;
-                    })}
-                </div>
-                <SeeMoreLink
-                    link={`/questions?platform=${platform.slug}`}
-                    text={`See all ${platform.name} questions`}
-                />
-            </div>
-        ))
-    }
+  {
+    platforms.map((platform) => (
+      <div class="px-4 m-2">
+        <div class="flex space-x-8 pb-2 border-b-2 flex-col sm:flex-row">
+          <h2 class="font-bold text-2xl">
+            <a href={`/platform/${platform.slug}`}>{platform.name}</a>
+          </h2>
+          <div class="self-baseline sm:self-center">
+            <ul class="flex items-center space-x-4">
+              <li>
+                <Markets num={platform.total_markets} />
+              </li>
+              <li>
+                <Traders num={platform.total_traders} />
+              </li>
+              <li>
+                <Volume num={platform.total_volume} />
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2">
+          <div class="my-2">
+            <LongText text={platform.long_description} />
+          </div>
+          <PlatformReportCard
+            scores={platformCategoryScores.filter(
+              (score) => score.platform_slug == platform.slug,
+            )}
+            pivot="category"
+          />
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {featuredQuestions.map((question) => {
+            return (
+              <QuestionCard
+                question={question}
+                scores={marketScores.filter(
+                  (score) => score.question_id === question.id,
+                )}
+              />
+            );
+          })}
+        </div>
+        <SeeMoreLink
+          link={`/questions?platform=${platform.slug}`}
+          text={`See all ${platform.name} questions`}
+        />
+      </div>
+    ))
+  }
 </Base>

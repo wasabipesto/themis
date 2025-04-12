@@ -8,24 +8,21 @@ import Grade from "@atoms/grade.astro";
 import ScoreRel from "@atoms/score-rel.astro";
 import ScoreAbs from "@atoms/score-abs.astro";
 import LinkOut from "@icons/link-out.svg";
-import type {
-  DailyProbabilityDetails,
-  QuestionDetails,
-  MarketScoreDetails,
-  MarketDetails,
-  OtherScoreDetails,
-} from "@types";
+import {
+  getMarketsByQuestion,
+  getQuestions,
+  getMarketScoresByQuestion,
+  getQuestionOverallScores,
+  getDailyProbabilities,
+} from "@lib/api";
 
-const pgrst_url = import.meta.env.PGRST_URL;
-const absoluteScoreType = "brier-average";
-const relativeScoreType = "brier-relative";
+// Default score types
+let absoluteScoreType = "brier-average";
+let relativeScoreType = "brier-relative";
 
 // Generate routes for all items
 export async function getStaticPaths() {
-  const pgrst_url = import.meta.env.PGRST_URL;
-  const questions = (await fetch(`${pgrst_url}/question_details`).then((res) =>
-    res.json(),
-  )) as QuestionDetails[];
+  const questions = await getQuestions();
   return questions.map((question) => {
     return {
       params: { slug: question.slug },
@@ -35,23 +32,50 @@ export async function getStaticPaths() {
 }
 const { question } = Astro.props;
 
-// Download market scores and probabilities
-const markets = (await fetch(
-  `${pgrst_url}/market_details?question_id=eq.${question.id}`,
-).then((res) => res.json())) as MarketDetails[];
-const absoluteMarketScores = (await fetch(
-  `${pgrst_url}/market_scores_details?score_type=eq.${absoluteScoreType}&question_id=eq.${question.id}`,
-).then((res) => res.json())) as MarketScoreDetails[];
-const relativeMarketScores = (await fetch(
-  `${pgrst_url}/market_scores_details?score_type=eq.${relativeScoreType}&question_id=eq.${question.id}`,
-).then((res) => res.json())) as MarketScoreDetails[];
+// Download question scores
+const questionScores = await getQuestionOverallScores(question.id);
 
-const marketsWithScores = markets.map((market) => {
-  const absoluteScore = absoluteMarketScores.find(
-    (s) => s.market_id === market.id,
+// Download market and scores
+const markets = await getMarketsByQuestion(question.id);
+const marketScores = await getMarketScoresByQuestion([question.id], null);
+
+// Download daily probabilities
+const dailyProbabilityPoints = await getDailyProbabilities(
+  question.id,
+  question.start_date_override,
+  question.end_date_override,
+);
+
+// Select appropriate question scores
+const absoluteQuestionScore = questionScores.find(
+  (s) => s.score_type === absoluteScoreType,
+);
+if (!absoluteQuestionScore) {
+  throw new Error(
+    `No absolute question score found for question ${question.id} (${question.slug})`,
   );
-  const relativeScore = relativeMarketScores.find(
-    (s) => s.market_id === market.id,
+}
+const relativeQuestionScore = questionScores.find(
+  (s) => s.score_type === relativeScoreType,
+);
+if (!relativeQuestionScore) {
+  throw new Error(
+    `No relative question score found for question ${question.id} (${question.slug})`,
+  );
+}
+let questionWithScores = {
+  question: question,
+  absoluteScore: absoluteQuestionScore,
+  relativeScore: relativeQuestionScore,
+};
+
+// Select appropriate market scores
+let marketsWithScores = markets.map((market) => {
+  const absoluteScore = marketScores.find(
+    (s) => s.market_id === market.id && s.score_type == absoluteScoreType,
+  );
+  const relativeScore = marketScores.find(
+    (s) => s.market_id === market.id && s.score_type == relativeScoreType,
   );
   if (!absoluteScore || !relativeScore) {
     throw new Error(
@@ -65,27 +89,6 @@ const marketsWithScores = markets.map((market) => {
     relativeScore: relativeScore,
   };
 });
-
-const questionScores = (await fetch(
-  `${pgrst_url}/other_scores?item_type=eq.question&item_id=eq.${question.id}`,
-).then((res) => res.json())) as OtherScoreDetails[];
-const questionWithScores = {
-  question: question,
-  absoluteScore: questionScores.find((s) => s.score_type === absoluteScoreType),
-  relativeScore: questionScores.find((s) => s.score_type === relativeScoreType),
-};
-
-// Download daily probabilities
-let dailyProbURL = `${pgrst_url}/daily_probability_details?order=date.asc&question_id=eq.${question.id}`;
-if (question.start_date_override) {
-  dailyProbURL += `&date=gte.${question.start_date_override}`;
-}
-if (question.end_date_override) {
-  dailyProbURL += `&date=lte.${question.end_date_override}`;
-}
-const dailyProbabilityPoints = (await fetch(`${dailyProbURL}`).then((res) =>
-  res.json(),
-)) as DailyProbabilityDetails[];
 ---
 
 <Base title="Market">
@@ -172,13 +175,13 @@ const dailyProbabilityPoints = (await fetch(`${dailyProbURL}`).then((res) =>
             <Duration num={question.total_duration} />
           </td>
           <td class="px-4 py-2 text-center">
-            <Grade grade={questionWithScores.absoluteScore?.grade || "ERROR"} />
+            <Grade grade={questionWithScores.absoluteScore.grade} />
           </td>
           <td class="px-4 py-2 text-right">
-            <ScoreRel num={questionWithScores.relativeScore?.score || 0} />
+            <ScoreRel num={questionWithScores.relativeScore.score} />
           </td>
           <td class="px-4 py-2 text-right">
-            <ScoreAbs num={questionWithScores.absoluteScore?.score || 0} />
+            <ScoreAbs num={questionWithScores.absoluteScore.score} />
           </td>
         </tr>
       </tbody>

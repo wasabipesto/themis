@@ -10,7 +10,8 @@
       "@icons/*": ["src/icons/*"],
       "@layouts/*": ["src/layouts/*"],
       "@styles/*": ["src/styles/*"],
-      "@types": ["src/types/index.d.ts"]
+      "@types": ["src/types/index.d.ts"],
+      "@lib/*": ["src/lib/*"]
     }
   }
 }
