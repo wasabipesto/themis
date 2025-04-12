@@ -3,21 +3,21 @@ import type { Platform } from "@types";
 import LinkOut from "@icons/link-out.svg";
 
 interface Props {
-    platform: Platform;
+  platform: Platform;
 }
 const { platform } = Astro.props;
 ---
 
 <div class="bg-base-light text-crust rounded-md drop-shadow-sm p-4 m-2">
-    <div class="font-bold mb-1">
-        <span class="underline">
-            <a href={`/platform/${platform.slug}`}> {platform.name} </a>
-        </span>
-        <span class="float-right px-2">
-            <a href={platform.site_url} target="_blank">
-                <LinkOut height={20} fill="currentColor" class="inline" />
-            </a>
-        </span>
-    </div>
-    <div>{platform.description}</div>
+  <div class="font-bold mb-1">
+    <span class="underline">
+      <a href={`/platform/${platform.slug}`}> {platform.name} </a>
+    </span>
+    <span class="float-right px-2">
+      <a href={platform.site_url} target="_blank">
+        <LinkOut height={20} fill="currentColor" class="inline" />
+      </a>
+    </span>
+  </div>
+  <div>{platform.description}</div>
 </div>

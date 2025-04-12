@@ -6,8 +6,8 @@ import ScoreAbs from "@atoms/score-abs.astro";
 import type { PlatformCategoryScoreDetails } from "@types";
 
 interface Props {
-    scores: PlatformCategoryScoreDetails[];
-    pivot: "platform" | "category";
+  scores: PlatformCategoryScoreDetails[];
+  pivot: "platform" | "category";
 }
 const { scores, pivot } = Astro.props;
 
@@ -16,38 +16,38 @@ const scoreField = pivot === "platform" ? "platform_name" : "category_name";
 ---
 
 <div
-    class="p-4 m-2 bg-base-light text-crust rounded-md drop-shadow-sm overflow-x-auto"
+  class="p-4 m-2 bg-base-light text-crust rounded-md drop-shadow-sm overflow-x-auto"
 >
-    <table class="w-full">
-        <thead>
-            <tr class="border-b-2">
-                <th class="text-left min-w-24 pb-1">{headerLabel}</th>
-                <th class="text-center min-w-20 w-24 pb-1">Markets</th>
-                <th class="text-center min-w-20 w-24 pb-1">Grade</th>
-                <th class="text-center min-w-20 w-24 pb-1">Rel. Score</th>
-                <th class="text-center min-w-20 w-24 pb-1">Abs. Score</th>
-            </tr>
-        </thead>
-        <tbody>
-            {
-                scores.map((score) => (
-                    <tr class="last:border-t-2">
-                        <td class="px-2 py-1 text-left">{score[scoreField]}</td>
-                        <td class="px-2 py-1 text-center">
-                            <Markets num={score.num_markets} />
-                        </td>
-                        <td class="px-2 py-1 text-center">
-                            <Grade grade={score.grade} />
-                        </td>
-                        <td class="px-2 py-1 text-center">
-                            <ScoreRel num={score.score} />
-                        </td>
-                        <td class="px-2 py-1 text-center">
-                            <ScoreAbs num={score.score} detailed={false} />
-                        </td>
-                    </tr>
-                ))
-            }
-        </tbody>
-    </table>
+  <table class="w-full">
+    <thead>
+      <tr class="border-b-2">
+        <th class="text-left min-w-24 pb-1">{headerLabel}</th>
+        <th class="text-center min-w-20 w-24 pb-1">Markets</th>
+        <th class="text-center min-w-20 w-24 pb-1">Grade</th>
+        <th class="text-center min-w-20 w-24 pb-1">Rel. Score</th>
+        <th class="text-center min-w-20 w-24 pb-1">Abs. Score</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        scores.map((score) => (
+          <tr class="last:border-t-2">
+            <td class="px-2 py-1 text-left">{score[scoreField]}</td>
+            <td class="px-2 py-1 text-center">
+              <Markets num={score.num_markets} />
+            </td>
+            <td class="px-2 py-1 text-center">
+              <Grade grade={score.grade} />
+            </td>
+            <td class="px-2 py-1 text-center">
+              <ScoreRel num={score.score} />
+            </td>
+            <td class="px-2 py-1 text-center">
+              <ScoreAbs num={score.score} />
+            </td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
 </div>

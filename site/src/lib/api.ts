@@ -156,7 +156,7 @@ export async function getQuestionOverallScores(
 ): Promise<OtherScoreDetails[]> {
   let url = "/other_scores?item_type=eq.question";
   if (question_id) {
-    url += `?item_id=eq.${question_id}`;
+    url += `&item_id=eq.${question_id}`;
   }
   return fetchFromAPI<OtherScoreDetails[]>(url);
 }

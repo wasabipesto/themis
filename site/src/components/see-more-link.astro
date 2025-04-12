@@ -2,15 +2,15 @@
 import LinkButton from "./link-button.astro";
 
 interface Props {
-    link: string;
-    text: string;
+  link: string;
+  text: string;
 }
 
 const { link, text } = Astro.props;
 ---
 
 <div class="flex justify-end m-2 mt-0 p-2">
-    <div class="w-auto">
-        <LinkButton link={link} text={text} icon="arrow-right" />
-    </div>
+  <div class="w-auto">
+    <LinkButton link={link} text={text} icon="arrow-right" />
+  </div>
 </div>

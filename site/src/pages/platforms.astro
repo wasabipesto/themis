@@ -7,31 +7,22 @@ import Traders from "@atoms/traders.astro";
 import Volume from "@atoms/volume.astro";
 import Markets from "@atoms/num-markets.astro";
 import Base from "@layouts/base.astro";
-import type {
-  PlatformDetails,
-  PlatformCategoryScoreDetails,
-  QuestionDetails,
-  MarketScoreDetails,
-} from "@types";
+import {
+  getPlatforms,
+  getPlatformCategoryScores,
+  getFeaturedQuestions,
+  getMarketScoresByQuestion,
+} from "@lib/api";
 
-const pgrst_url = import.meta.env.PGRST_URL;
 const scoreType = "brier-relative";
 
-const platforms = (await fetch(`${pgrst_url}/platform_details`).then((res) =>
-  res.json(),
-)) as PlatformDetails[];
-
-const platformCategoryScores = (await fetch(
-  `${pgrst_url}/platform_category_scores_details?score_type=eq.${scoreType}`,
-).then((res) => res.json())) as PlatformCategoryScoreDetails[];
-
-const featuredQuestions = (await fetch(
-  `${pgrst_url}/question_details?order=total_volume.desc&limit=6`,
-).then((res) => res.json())) as QuestionDetails[];
-
-const marketScores = (await fetch(
-  `${pgrst_url}/market_scores_details?score_type=eq.${scoreType}&question_id=in.(${featuredQuestions.map((q) => q.id).join(",")})`,
-).then((res) => res.json())) as MarketScoreDetails[];
+const platforms = await getPlatforms();
+const platformCategoryScores = await getPlatformCategoryScores(scoreType);
+const featuredQuestions = await getFeaturedQuestions(6);
+const marketScores = await getMarketScoresByQuestion(
+  featuredQuestions.map((q) => q.id),
+  scoreType,
+);
 ---
 
 <Base title="Categories">

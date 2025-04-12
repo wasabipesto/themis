@@ -1,95 +1,90 @@
 ---
-import type { CalibrationPoint } from "@types";
-
-const pgrst_url = import.meta.env.PGRST_URL;
-
-const response = await fetch(`${pgrst_url}/calibration_points`);
-const points: CalibrationPoint[] = await response.json();
-
 // Generate a unique ID for each instance
 const uniqueId = `plot-${Math.random().toString(36).substring(2, 9)}`;
+
+const points: any[] = [];
 ---
 
 <div
-    class="bg-base-light [&_h2]:text-2xl text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
+  class="bg-base-light [&_h2]:text-2xl text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
 >
-    <div
-        id={uniqueId}
-        class="calibration-plot"
-        data-points={JSON.stringify(points)}
-    >
-    </div>
+  <div
+    id={uniqueId}
+    class="calibration-plot"
+    data-points={JSON.stringify(points)}
+  >
+  </div>
 </div>
 
 <script>
-    // @ts-nocheck
-    import * as Plot from "@observablehq/plot";
+  // @ts-nocheck
+  import * as Plot from "@observablehq/plot";
 
-    // Initialize all plots on the page
-    document.querySelectorAll(".calibration-plot").forEach((plotElement) => {
-        const points = JSON.parse(plotElement?.dataset.points || "[]");
-        const binWidth = 0.05;
+  // Initialize all plots on the page
+  document.querySelectorAll(".calibration-plot").forEach((plotElement) => {
+    const points = JSON.parse(plotElement?.dataset.points || "[]");
+    const binWidth = 0.05;
 
-        const plot = Plot.plot({
-            title: "Calibration Plot",
-            subtitle: "All platforms, comparing matched markets only.",
-            width: 1200,
-            height: 600,
-            x: {
-                domain: [0, 100],
-                percent: true,
-                label: "Prediction (Midpoint)",
+    const plot = Plot.plot({
+      title: "Calibration Plot",
+      subtitle: "All platforms, comparing matched markets only.",
+      width: 1200,
+      height: 600,
+      x: {
+        domain: [0, 100],
+        percent: true,
+        label: "Prediction (Midpoint)",
+      },
+      y: {
+        domain: [0, 100],
+        grid: true,
+        percent: true,
+        label: "Resolution",
+      },
+      r: { range: [10, 20], label: "Scale" },
+      color: {
+        legend: true,
+        label: "Platform",
+        domain: ["Manifold", "Kalshi", "Metaculus", "Polymarket"],
+        range: ["#4337c9", "#00d298", "#283441", "#0072f9"],
+      },
+      marks: [
+        Plot.dot(points, {
+          x: "x_center",
+          y: "y_center",
+          r: "count",
+          fill: "platform",
+          stroke: "platform",
+          fillOpacity: 0.5,
+          channels: {
+            Prediction: (i) =>
+              ((i.x_center - binWidth / 2) * 100).toFixed(0) +
+              "-" +
+              ((i.x_center + binWidth / 2) * 100).toFixed(0) +
+              "%",
+            Resolution: (i) => (i.y_center * 100).toFixed(1) + "%",
+            Markets: "n",
+          },
+          tip: {
+            format: {
+              x: null,
+              y: null,
+              r: null,
             },
-            y: {
-                domain: [0, 100],
-                grid: true,
-                percent: true,
-                label: "Resolution",
-            },
-            r: { range: [10, 20], label: "Scale" },
-            color: {
-                legend: true,
-                label: "Platform",
-                domain: ["Manifold", "Kalshi", "Metaculus", "Polymarket"],
-                range: ["#4337c9", "#00d298", "#283441", "#0072f9"],
-            },
-            marks: [
-                Plot.dot(points, {
-                    x: "x_center",
-                    y: "y_center",
-                    r: "count",
-                    fill: "platform",
-                    stroke: "platform",
-                    fillOpacity: 0.5,
-                    channels: {
-                        Prediction: (i) =>
-                            ((i.x_center - binWidth / 2) * 100).toFixed(0) +
-                            "-" +
-                            ((i.x_center + binWidth / 2) * 100).toFixed(0) +
-                            "%",
-                        Resolution: (i) => (i.y_center * 100).toFixed(1) + "%",
-                        Markets: "n",
-                    },
-                    tip: {
-                        format: {
-                            x: null,
-                            y: null,
-                            r: null,
-                        },
-                    },
-                }),
-                Plot.ruleX([0]),
-                Plot.ruleY([0]),
-                Plot.lineY(
-                    [
-                        { x: 0, y: 0 },
-                        { x: 1, y: 1 },
-                    ],
-                    { x: "x", y: "y" },
-                ),
-            ],
-        });
-
-        plotElement.append(plot);
+          },
+        }),
+        Plot.ruleX([0]),
+        Plot.ruleY([0]),
+        Plot.lineY(
+          [
+            { x: 0, y: 0 },
+            { x: 1, y: 1 },
+          ],
+          { x: "x", y: "y" },
+        ),
+      ],
     });
+
+    plotElement.append(plot);
+  });
 </script>

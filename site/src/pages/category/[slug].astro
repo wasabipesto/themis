@@ -6,72 +6,72 @@ import SeeMoreLink from "@components/see-more-link.astro";
 import Traders from "@atoms/traders.astro";
 import Volume from "@atoms/volume.astro";
 import Markets from "@atoms/num-markets.astro";
-import type { CategoryDetails, PlatformCategoryScoreDetails, QuestionDetails, MarketScoreDetails } from "@types";
-
-const pgrst_url = import.meta.env.PGRST_URL;
+import {
+  getCategories,
+  getFeaturedQuestions,
+  getMarketScoresByQuestion,
+  getPlatformCategoryScores,
+} from "@lib/api";
 
 // Generate routes for all items
 export async function getStaticPaths() {
-    const pgrst_url = import.meta.env.PGRST_URL;
-    const categories = (await fetch(`${pgrst_url}/category_details`).then((res) =>
-        res.json(),
-    )) as CategoryDetails[];
-    return categories.map((category) => ({
-        params: { slug: category.slug },
-        props: { category },
-    }));
+  const categories = await getCategories();
+  return categories.map((category) => ({
+    params: { slug: category.slug },
+    props: { category },
+  }));
 }
 const { category } = Astro.props;
 
-const platformCategoryScores = (await fetch(`${pgrst_url}/platform_scores`).then(
-    (res) => res.json(),
-)) as PlatformCategoryScoreDetails[];
-
-const featuredQuestions = (await fetch(`${pgrst_url}/question_details?order=total_volume.desc&limit=6`).then(
-    (res) => res.json(),
-)) as QuestionDetails[];
-
-const marketScores = (await fetch(
-  `${pgrst_url}/market_scores_details?question_id=in.(${featuredQuestions.map(q => q.id).join(',')})`
-).then((res) => res.json())) as MarketScoreDetails[];
+const platformCategoryScores =
+  await getPlatformCategoryScores("brier-relative");
+const featuredQuestions = await getFeaturedQuestions(6);
+const marketScores = await getMarketScoresByQuestion(
+  featuredQuestions.map((q) => q.id),
+  "brier-relative",
+);
 ---
 
 <Base title={category.name}>
-    <div class="grid grid-cols-1 md:grid-cols-2 pt-4">
-        <div class="p-4 m-2">
-            <div class="text-2xl font-semibold border-b-2">
-                Category: {category.name}
-            </div>
-            <div class="my-2">
-                <ul class="flex items-center space-x-4">
-                    <li>
-                        <Markets num={category.total_markets} />
-                    </li>
-                    <li>
-                        <Traders num={category.total_traders} />
-                    </li>
-                    <li>
-                        <Volume num={category.total_volume} />
-                    </li>
-                </ul>
-            </div>
-            <div class="whitespace-pre-wrap my-2">{category.description}</div>
-        </div>
-        <CategoryReportCard
-            scores={platformCategoryScores.filter(
-                (score) => score.category_slug == category.slug,
-            )}
-            pivot="platform"
-        />
+  <div class="grid grid-cols-1 md:grid-cols-2 pt-4">
+    <div class="p-4 m-2">
+      <div class="text-2xl font-semibold border-b-2">
+        Category: {category.name}
+      </div>
+      <div class="my-2">
+        <ul class="flex items-center space-x-4">
+          <li>
+            <Markets num={category.total_markets} />
+          </li>
+          <li>
+            <Traders num={category.total_traders} />
+          </li>
+          <li>
+            <Volume num={category.total_volume} />
+          </li>
+        </ul>
+      </div>
+      <div class="whitespace-pre-wrap my-2">{category.description}</div>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {featuredQuestions.map((question) => {
-            const questionScores = marketScores.filter(score => score.question_id === question.id);
-            return <QuestionCard question={question} scores={questionScores} />;
-        })}
-    </div>
-    <SeeMoreLink
-        link={`/questions?category=${category.slug}`}
-        text={`See all ${category.name} questions`}
+    <CategoryReportCard
+      scores={platformCategoryScores.filter(
+        (score) => score.category_slug == category.slug,
+      )}
+      pivot="platform"
     />
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+    {
+      featuredQuestions.map((question) => {
+        const questionScores = marketScores.filter(
+          (score) => score.question_id === question.id,
+        );
+        return <QuestionCard question={question} scores={questionScores} />;
+      })
+    }
+  </div>
+  <SeeMoreLink
+    link={`/questions?category=${category.slug}`}
+    text={`See all ${category.name} questions`}
+  />
 </Base>

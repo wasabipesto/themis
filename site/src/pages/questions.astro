@@ -4,24 +4,20 @@ import Traders from "@atoms/traders.astro";
 import Volume from "@atoms/volume.astro";
 import Grade from "@atoms/grade.astro";
 import ScoreAbs from "@atoms/score-abs.astro";
-import type { QuestionDetails, OtherScoreDetails } from "@types";
+import { getQuestions, getQuestionOverallScores } from "@lib/api";
 
-const pgrst_url = import.meta.env.PGRST_URL;
+// Set score type
 const scoreType = "brier-average";
 
 // Fetch all questions at build time
-const questions = (await fetch(`${pgrst_url}/question_details`).then((res) =>
-  res.json(),
-)) as QuestionDetails[];
-const scores = (await fetch(
-  `${pgrst_url}/other_scores?item_type=eq.question&score_type=eq.${scoreType}`,
-).then((res) => res.json())) as OtherScoreDetails[];
+const questions = await getQuestions();
+const scores = await getQuestionOverallScores(null);
 
 // Connect questions and scores at build time
 let questions_and_scores = [];
 for (const question of questions) {
   const questionScore = scores.find(
-    (s) => s.item_id === question.id.toString(),
+    (s) => s.item_id === question.id.toString() && s.score_type === scoreType,
   );
   if (questionScore) {
     questions_and_scores.push({ question: question, score: questionScore });

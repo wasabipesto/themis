@@ -2,18 +2,18 @@
 import People from "@icons/people.svg";
 
 interface Props {
-    num: number | null;
+  num: number | null;
 }
 
 const { num = null } = Astro.props;
 ---
 
 <div>
-    <People height={18} fill="currentColor" class="inline" />
-    {
-        num?.toLocaleString("en-US", {
-            maximumFractionDigits: 0,
-            useGrouping: true,
-        }) ?? "N/A"
-    }
+  <People height={18} fill="currentColor" class="inline" />
+  {
+    num?.toLocaleString("en-US", {
+      maximumFractionDigits: 0,
+      useGrouping: true,
+    }) ?? "N/A"
+  }
 </div>

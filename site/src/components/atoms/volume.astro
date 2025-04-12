@@ -2,19 +2,19 @@
 import Money from "@icons/money.svg";
 
 interface Props {
-    num: number | null;
+  num: number | null;
 }
 
 const { num = null } = Astro.props;
 ---
 
 <div>
-    <Money height={18} fill="currentColor" class="inline" />
-    {
-        num?.toLocaleString("en-US", {
-            style: "currency",
-            currency: "USD",
-            maximumFractionDigits: 0,
-        }) ?? "N/A"
-    }
+  <Money height={18} fill="currentColor" class="inline" />
+  {
+    num?.toLocaleString("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }) ?? "N/A"
+  }
 </div>

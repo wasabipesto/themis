@@ -3,326 +3,314 @@ import Base from "@layouts/base.astro";
 ---
 
 <style>
-    a {
-        color: var(--color-lavender);
-    }
+  a {
+    color: var(--color-lavender);
+  }
 </style>
 
 <Base title="About">
-    <div class="p-4 m-2">
-        <h1 class="text-4xl font-bold">About</h1>
+  <div class="p-4 m-2">
+    <h1 class="text-4xl font-bold">About</h1>
+    <p class="my-2">
+      <a href="https://predictionmetrics.org/" target="_blank"
+        >PredictionMetrics.org</a
+      > launched in 2025 to help people compare and evaluate prediction markets fairly.
+      Our mission is to help the public make informed decisions about which markets
+      to trust and how to interpret forecasting data. We believe in transparency,
+      honest comparisons, and providing meaningful context.
+    </p>
+    <p class="my-2">
+      The idea for this site started in July 2023 when we set out to create a
+      calibration plot for Manifold, as they weren't publishing their own
+      accuracy statistics at the time. What began as "Calibration City"
+      eventually grew to include other platforms like Kalshi, Metaculus, and
+      Polymarket. Thanks to grants from the Manifold Community Fund and EA
+      Community Choice programs, we were able to expand our work. We added more
+      markets, created new filters and charts, tracked accuracy metrics, and
+      built guides for newcomers. However, we weren't comfortable sharing hard
+      number or directly comparing platforms because they were fundamentally
+      different from each other.
+    </p>
+    <p class="my-2">
+      While our data was solid, it wasn't conveying the insights people
+      expected. Calibration is very useful, but it can't ever tell the whole
+      story. In January 2025, we initiated a complete overhaul. We started
+      fresh, linking similar markets across platforms and finding directly
+      comparable questions. We built a new website, less focused on
+      experimentation and more focused on showing valuable results. We wanted to
+      have something that actually answered questions like “How accurate are
+      prediction markets?” and “Which platform is more accurate on the topics I
+      care about?”
+    </p>
+    <p class="my-2">
+      We're still growing - adding new platforms, curating interesting
+      questions, and building new features. You can find all our source code
+      under the on <a
+        href="https://github.com/wasabipesto/themis"
+        target="_blank"
+      >
+        GitHub project Themis</a
+      >, complete with our open issues and roadmap. All our data is available
+      through
+      <a href="https://data.predictionmetrics.org" target="_blank">
+        our PostgREST API</a
+      >. We welcome collaboration and encourage others to use our data, with the
+      hope that you'll share your findings with us.
+    </p>
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <h2 class="text-3xl font-bold">Contact</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 my-2">
+      <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
+        <h3 class="text-xl font-bold">Suggest a New Connection</h3>
         <p class="my-2">
-            <a href="https://predictionmetrics.org/" target="_blank"
-                >PredictionMetrics.org</a
-            > launched in 2025 to help people compare and evaluate prediction markets
-            fairly. Our mission is to help the public make informed decisions about
-            which markets to trust and how to interpret forecasting data. We believe
-            in transparency, honest comparisons, and providing meaningful context.
+          Found a set of markets that aren't covered here? Send us an email with
+          links to each, or submit them as an issue.
         </p>
-        <p class="my-2">
-            The idea for this site started in July 2023 when we set out to
-            create a calibration plot for Manifold, as they weren't publishing
-            their own accuracy statistics at the time. What began as
-            "Calibration City" eventually grew to include other platforms like
-            Kalshi, Metaculus, and Polymarket. Thanks to grants from the
-            Manifold Community Fund and EA Community Choice programs, we were
-            able to expand our work. We added more markets, created new filters
-            and charts, tracked accuracy metrics, and built guides for
-            newcomers. However, we weren't comfortable sharing hard number or
-            directly comparing platforms because they were fundamentally
-            different from each other.
-        </p>
-        <p class="my-2">
-            While our data was solid, it wasn't conveying the insights people
-            expected. Calibration is very useful, but it can't ever tell the
-            whole story. In January 2025, we initiated a complete overhaul. We
-            started fresh, linking similar markets across platforms and finding
-            directly comparable questions. We built a new website, less focused
-            on experimentation and more focused on showing valuable results. We
-            wanted to have something that actually answered questions like “How
-            accurate are prediction markets?” and “Which platform is more
-            accurate on the topics I care about?”
-        </p>
-        <p class="my-2">
-            We're still growing - adding new platforms, curating interesting
-            questions, and building new features. You can find all our source
-            code under the on <a
-                href="https://github.com/wasabipesto/themis"
-                target="_blank"
+        <ul class="list-disc my-2 px-6">
+          <li>
+            <a href="mailto:connections@predictionmetrics.org">
+              Email us: connections@&#8203;predictionmetrics.org
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://github.com/wasabipesto/themis/issues/new"
+              target="_blank"
             >
-                GitHub project Themis</a
-            >, complete with our open issues and roadmap. All our data is
-            available through
-            <a href="https://data.predictionmetrics.org" target="_blank">
-                our PostgREST API</a
-            >. We welcome collaboration and encourage others to use our data,
-            with the hope that you'll share your findings with us.
+              Submit an issue on GitHub: wasabipesto/themis
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
+        <h3 class="text-xl font-bold">Contributors</h3>
+        <p class="my-2">
+          Interested in contributing to the application code? Pick an open issue
+          on GitHub to get started or email us to ask about priorities.
         </p>
+        <ul class="list-disc my-2 px-6">
+          <li>
+            <a href="mailto:contributors@predictionmetrics.org">
+              Email us: contributors@&#8203;predictionmetrics.org
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://github.com/wasabipesto/themis/issues/new"
+              target="_blank"
+            >
+              Pick an issue on GitHub: wasabipesto/themis
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
+        <h3 class="text-xl font-bold">Issues with the Site</h3>
+        <p class="my-2">
+          Having trouble with the site? Submit an issue with screenshots, or
+          email us directly for security issues.
+        </p>
+        <ul class="list-disc my-2 px-6">
+          <li>
+            <a href="mailto:issues@predictionmetrics.org">
+              Email us: issues@&#8203;predictionmetrics.org
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://github.com/wasabipesto/themis/issues/new"
+              target="_blank"
+            >
+              Submit an issue on GitHub: wasabipesto/themis
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
+        <h3 class="text-xl font-bold">General Inquiry/Data Requests</h3>
+        <p class="my-2">
+          Want help with the data? We are happy to work with students, faculty,
+          or enthusiasts to further your research.
+        </p>
+        <ul class="list-disc my-2 px-6">
+          <li>
+            <a href="mailto:general-inquiry@predictionmetrics.org">
+              Email us: general-inquiry@&#8203;predictionmetrics.org
+            </a>
+          </li>
+          <li>
+            <a href="mailto:research@predictionmetrics.org">
+              Email us: research@&#8203;predictionmetrics.org
+            </a>
+          </li>
+        </ul>
+      </div>
     </div>
-    <hr class="my-2" />
+  </div>
+  <hr class="my-2" />
 
-    <div class="p-4 m-2">
-        <h2 class="text-3xl font-bold">Contact</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 my-2">
-            <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
-                <h3 class="text-xl font-bold">Suggest a New Connection</h3>
-                <p class="my-2">
-                    Found a set of markets that aren't covered here? Send us an
-                    email with links to each, or submit them as an issue.
-                </p>
-                <ul class="list-disc my-2 px-6">
-                    <li>
-                        <a href="mailto:connections@predictionmetrics.org">
-                            Email us: connections@&#8203;predictionmetrics.org
-                        </a>
-                    </li>
-                    <li>
-                        <a
-                            href="https://github.com/wasabipesto/themis/issues/new"
-                            target="_blank"
-                        >
-                            Submit an issue on GitHub: wasabipesto/themis
-                        </a>
-                    </li>
-                </ul>
-            </div>
-            <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
-                <h3 class="text-xl font-bold">Contributors</h3>
-                <p class="my-2">
-                    Interested in contributing to the application code? Pick an
-                    open issue on GitHub to get started or email us to ask about
-                    priorities.
-                </p>
-                <ul class="list-disc my-2 px-6">
-                    <li>
-                        <a href="mailto:contributors@predictionmetrics.org">
-                            Email us: contributors@&#8203;predictionmetrics.org
-                        </a>
-                    </li>
-                    <li>
-                        <a
-                            href="https://github.com/wasabipesto/themis/issues/new"
-                            target="_blank"
-                        >
-                            Pick an issue on GitHub: wasabipesto/themis
-                        </a>
-                    </li>
-                </ul>
-            </div>
-            <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
-                <h3 class="text-xl font-bold">Issues with the Site</h3>
-                <p class="my-2">
-                    Having trouble with the site? Submit an issue with
-                    screenshots, or email us directly for security issues.
-                </p>
-                <ul class="list-disc my-2 px-6">
-                    <li>
-                        <a href="mailto:issues@predictionmetrics.org">
-                            Email us: issues@&#8203;predictionmetrics.org
-                        </a>
-                    </li>
-                    <li>
-                        <a
-                            href="https://github.com/wasabipesto/themis/issues/new"
-                            target="_blank"
-                        >
-                            Submit an issue on GitHub: wasabipesto/themis
-                        </a>
-                    </li>
-                </ul>
-            </div>
-            <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
-                <h3 class="text-xl font-bold">General Inquiry/Data Requests</h3>
-                <p class="my-2">
-                    Want help with the data? We are happy to work with students,
-                    faculty, or enthusiasts to further your research.
-                </p>
-                <ul class="list-disc my-2 px-6">
-                    <li>
-                        <a href="mailto:general-inquiry@predictionmetrics.org">
-                            Email us:
-                            general-inquiry@&#8203;predictionmetrics.org
-                        </a>
-                    </li>
-                    <li>
-                        <a href="mailto:research@predictionmetrics.org">
-                            Email us: research@&#8203;predictionmetrics.org
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </div>
+  <div class="p-4 m-2">
+    <h2 class="text-3xl font-bold">Links & Resources</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 my-2">
+      <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
+        <h3 class="text-xl font-bold">Prediction Markets</h3>
+        <ul class="list-disc my-2 px-6">
+          <li>
+            <a
+              href="https://www.astralcodexten.com/p/prediction-market-faq"
+              target="_blank"
+            >
+              Astral Codex Ten: Prediction Market FAQ
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://kalshi.com/blog/article/glossary-predictionmarket"
+              target="_blank"
+            >
+              Kalshi: What is a Prediction Market?
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://en.wikipedia.org/wiki/Prediction_market"
+              target="_blank"
+            >
+              Wikipedia: Prediction market
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://outsidetheasylum.blog/prediction-markets-are-not-polls/"
+              target="_blank"
+            >
+              Isaac King: Prediction Markets are not Polls
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://www.sciencedirect.com/science/article/abs/pii/S0169207008000320"
+              target="_blank"
+            >
+              Berg, Nelson, Rietz: Prediction market accuracy in the long run
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
+        <h3 class="text-xl font-bold">Scoring Rules and Examples</h3>
+        <ul class="list-disc my-2 px-6">
+          <li>
+            <a
+              href="https://en.wikipedia.org/wiki/Scoring_rule"
+              target="_blank"
+            >
+              Wikipedia: Scoring Rule
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://www.cultivatelabs.com/crowdsourced-forecasting-guide/what-are-relative-brier-scores-and-how-are-they-calculated"
+              target="_blank"
+            >
+              Cultivate Labs: Relative Brier Scores
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://projects.fivethirtyeight.com/checking-our-work/"
+              target="_blank"
+            >
+              538: How Good Are FiveThirtyEight Forecasts?
+            </a>
+          </li>
+          <li>
+            <a href="https://manifold.markets/calibration" target="_blank">
+              Manifold: Calibration
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://www.metaculus.com/questions/track-record/"
+              target="_blank"
+            >
+              Metaculus: Track Record
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://www.metaculus.com/help/scores-faq/"
+              target="_blank"
+            >
+              Metaculus: Scores FAQ
+            </a>
+          </li>
+          <li>
+            <a href="https://polymarketanalytics.com/" target="_blank">
+              Polymarket Analytics
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
+        <h3 class="text-xl font-bold">Previous Research & Aggregation</h3>
+        <ul class="list-disc my-2 px-6">
+          <li>
+            <a href="https://metaforecast.org/" target="_blank">
+              QURI: Metaforecast
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://firstsigma.substack.com/p/midterm-elections-forecast-comparison-analysis"
+              target="_blank"
+            >
+              First Sigma: What can we learn from scoring different election
+              forecasts?
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://projects.jhkforecasts.com/forecast-history/index.html"
+              target="_blank"
+            >
+              JHK Forecasts: Forecast Database
+            </a>
+          </li>
+          <li>
+            <a href="https://data.adj.news/" target="_blank">
+              Adjacent News: Data
+            </a>
+            <a
+              href="https://github.com/adjacentresearchxyz/data.adj.news"
+              target="_blank"
+            >
+              (and source)
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
+        <h3 class="text-xl font-bold">Miscellaneous Resources</h3>
+        <ul class="list-disc my-2 px-6">
+          <li>
+            <a
+              href="https://saul-munn.notion.site/64b8b93b076a40f598f1788b314039c7?v=472f982a7d834a1185167e48ea1f41e3"
+              target="_blank"
+            >
+              Saul Munn: Prediction Market Map
+            </a>
+          </li>
+        </ul>
+      </div>
     </div>
-    <hr class="my-2" />
+  </div>
+  <hr class="my-2" />
 
-    <div class="p-4 m-2">
-        <h2 class="text-3xl font-bold">Links & Resources</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 my-2">
-            <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
-                <h3 class="text-xl font-bold">Prediction Markets</h3>
-                <ul class="list-disc my-2 px-6">
-                    <li>
-                        <a
-                            href="https://www.astralcodexten.com/p/prediction-market-faq"
-                            target="_blank"
-                        >
-                            Astral Codex Ten: Prediction Market FAQ
-                        </a>
-                    </li>
-                    <li>
-                        <a
-                            href="https://kalshi.com/blog/article/glossary-predictionmarket"
-                            target="_blank"
-                        >
-                            Kalshi: What is a Prediction Market?
-                        </a>
-                    </li>
-                    <li>
-                        <a
-                            href="https://en.wikipedia.org/wiki/Prediction_market"
-                            target="_blank"
-                        >
-                            Wikipedia: Prediction market
-                        </a>
-                    </li>
-                    <li>
-                        <a
-                            href="https://outsidetheasylum.blog/prediction-markets-are-not-polls/"
-                            target="_blank"
-                        >
-                            Isaac King: Prediction Markets are not Polls
-                        </a>
-                    </li>
-                    <li>
-                        <a
-                            href="https://www.sciencedirect.com/science/article/abs/pii/S0169207008000320"
-                            target="_blank"
-                        >
-                            Berg, Nelson, Rietz: Prediction market accuracy in
-                            the long run
-                        </a>
-                    </li>
-                </ul>
-            </div>
-            <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
-                <h3 class="text-xl font-bold">Scoring Rules and Examples</h3>
-                <ul class="list-disc my-2 px-6">
-                    <li>
-                        <a
-                            href="https://en.wikipedia.org/wiki/Scoring_rule"
-                            target="_blank"
-                        >
-                            Wikipedia: Scoring Rule
-                        </a>
-                    </li>
-                    <li>
-                        <a
-                            href="https://www.cultivatelabs.com/crowdsourced-forecasting-guide/what-are-relative-brier-scores-and-how-are-they-calculated"
-                            target="_blank"
-                        >
-                            Cultivate Labs: Relative Brier Scores
-                        </a>
-                    </li>
-                    <li>
-                        <a
-                            href="https://projects.fivethirtyeight.com/checking-our-work/"
-                            target="_blank"
-                        >
-                            538: How Good Are FiveThirtyEight Forecasts?
-                        </a>
-                    </li>
-                    <li>
-                        <a
-                            href="https://manifold.markets/calibration"
-                            target="_blank"
-                        >
-                            Manifold: Calibration
-                        </a>
-                    </li>
-                    <li>
-                        <a
-                            href="https://www.metaculus.com/questions/track-record/"
-                            target="_blank"
-                        >
-                            Metaculus: Track Record
-                        </a>
-                    </li>
-                    <li>
-                        <a
-                            href="https://www.metaculus.com/help/scores-faq/"
-                            target="_blank"
-                        >
-                            Metaculus: Scores FAQ
-                        </a>
-                    </li>
-                    <li>
-                        <a
-                            href="https://polymarketanalytics.com/"
-                            target="_blank"
-                        >
-                            Polymarket Analytics
-                        </a>
-                    </li>
-                </ul>
-            </div>
-            <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
-                <h3 class="text-xl font-bold">
-                    Previous Research & Aggregation
-                </h3>
-                <ul class="list-disc my-2 px-6">
-                    <li>
-                        <a href="https://metaforecast.org/" target="_blank">
-                            QURI: Metaforecast
-                        </a>
-                    </li>
-                    <li>
-                        <a
-                            href="https://firstsigma.substack.com/p/midterm-elections-forecast-comparison-analysis"
-                            target="_blank"
-                        >
-                            First Sigma: What can we learn from scoring
-                            different election forecasts?
-                        </a>
-                    </li>
-                    <li>
-                        <a
-                            href="https://projects.jhkforecasts.com/forecast-history/index.html"
-                            target="_blank"
-                        >
-                            JHK Forecasts: Forecast Database
-                        </a>
-                    </li>
-                    <li>
-                        <a href="https://data.adj.news/" target="_blank">
-                            Adjacent News: Data
-                        </a>
-                        <a
-                            href="https://github.com/adjacentresearchxyz/data.adj.news"
-                            target="_blank"
-                        >
-                            (and source)
-                        </a>
-                    </li>
-                </ul>
-            </div>
-            <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
-                <h3 class="text-xl font-bold">Miscellaneous Resources</h3>
-                <ul class="list-disc my-2 px-6">
-                    <li>
-                        <a
-                            href="https://saul-munn.notion.site/64b8b93b076a40f598f1788b314039c7?v=472f982a7d834a1185167e48ea1f41e3"
-                            target="_blank"
-                        >
-                            Saul Munn: Prediction Market Map
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </div>
-    <hr class="my-2" />
-
-    <!--
+  <!--
     <div class="p-4 m-2">
         <h2 class="text-3xl font-bold">Thanks</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 my-2">

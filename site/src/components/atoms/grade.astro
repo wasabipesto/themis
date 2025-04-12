@@ -1,31 +1,31 @@
 ---
 interface Props {
-    grade: string | null;
+  grade: string | null;
 }
 
 const { grade = "Error" } = Astro.props;
 
 // Converts a grade S-F (with or without modifiers) to a background color.
 function getColorClassFromGrade(grade: string | null): string {
-    const gradeMap: Record<string, string> = {
-        S: "bg-blue/60",
-        A: "bg-green/60",
-        B: "bg-teal/60",
-        C: "bg-yellow/60",
-        D: "bg-peach/60",
-        F: "bg-red/60",
-    };
+  const gradeMap: Record<string, string> = {
+    S: "bg-blue/60",
+    A: "bg-green/60",
+    B: "bg-teal/60",
+    C: "bg-yellow/60",
+    D: "bg-peach/60",
+    F: "bg-red/60",
+  };
 
-    if (!grade) return "bg-red/60";
-    return gradeMap[grade.charAt(0).toUpperCase()] || "bg-red/60";
+  if (!grade) return "bg-red/60";
+  return gradeMap[grade.charAt(0).toUpperCase()] || "bg-red/60";
 }
 ---
 
 <div
-    class:list={[
-        getColorClassFromGrade(grade),
-        "rounded-md text-crust px-2 text-center",
-    ]}
+  class:list={[
+    getColorClassFromGrade(grade),
+    "rounded-md text-crust px-2 text-center",
+  ]}
 >
-    {grade}
+  {grade}
 </div>
