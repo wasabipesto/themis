@@ -4,23 +4,29 @@ import Traders from "@atoms/traders.astro";
 import Volume from "@atoms/volume.astro";
 import Grade from "@atoms/grade.astro";
 import ScoreAbs from "@atoms/score-abs.astro";
-import type { QuestionDetails, MarketScoreDetails } from "@types";
+import type { QuestionDetails, OtherScoreDetails } from "@types";
 
 const pgrst_url = import.meta.env.PGRST_URL;
+const scoreType = "brier-average";
 
 // Fetch all questions at build time
-const questions = (await fetch(`${pgrst_url}/question_details`).then(
-  (res) => res.json())) as QuestionDetails[];
-const scores = (await fetch(`${pgrst_url}/market_scores_details?score_type=eq.brier-relative`).then(
-  (res) => res.json())) as MarketScoreDetails[];
+const questions = (await fetch(`${pgrst_url}/question_details`).then((res) =>
+  res.json(),
+)) as QuestionDetails[];
+const scores = (await fetch(
+  `${pgrst_url}/other_scores?item_type=eq.question&score_type=eq.${scoreType}`,
+).then((res) => res.json())) as OtherScoreDetails[];
 
 // Connect questions and scores at build time
 let questions_and_scores = [];
 for (const question of questions) {
-  // Placeholder: get first score
-  const questionScores = scores.find((s) => s.question_id === question.id);
-  if (question) {
-    questions_and_scores.push({ question: question, score: questionScores });
+  const questionScore = scores.find(
+    (s) => s.item_id === question.id.toString(),
+  );
+  if (questionScore) {
+    questions_and_scores.push({ question: question, score: questionScore });
+  } else {
+    console.error(`No score found for question ${question.id}`);
   }
 }
 
@@ -29,293 +35,266 @@ questions.sort((a, b) => b.total_volume - a.total_volume);
 ---
 
 <Base title="Questions">
-    <div class="p-4 m-2">
-        <h1 class="text-4xl font-bold">All Questions</h1>
-    </div>
+  <div class="p-4 m-2">
+    <h1 class="text-4xl font-bold">All Questions</h1>
+  </div>
 
-    <!-- Search Bar -->
-    <div class="my-4">
-        <div class="relative">
-            <input
-                type="text"
-                id="searchInput"
-                placeholder="Search questions..."
-                class="w-full px-4 py-2 pl-4 bg-crust rounded-lg focus:outline-none focus:ring-1 focus:ring-lavender"
-            />
-        </div>
+  <!-- Search Bar -->
+  <div class="my-4">
+    <div class="relative">
+      <input
+        type="text"
+        id="searchInput"
+        placeholder="Search questions..."
+        class="w-full px-4 py-2 pl-4 bg-crust rounded-lg focus:outline-none focus:ring-1 focus:ring-lavender"
+      />
     </div>
+  </div>
 
-    <!-- Results Table -->
-    <div class="overflow-x-auto">
-        <table class="w-full border-collapse">
-            <thead>
-                <tr class="border-b-2">
-                    <th
-                        class="text-left py-3 px-4 cursor-pointer hover:text-lavender"
-                        data-sort="title"
-                    >
-                        Question
-                        <span class="sort-indicator"></span>
-                    </th>
-                    <th
-                        class="text-left py-3 px-4 cursor-pointer hover:text-lavender"
-                        data-sort="category"
-                    >
-                        Category
-                        <span class="sort-indicator"></span>
-                    </th>
-                    <th
-                        class="text-center py-3 px-4 cursor-pointer hover:text-lavender"
-                        data-sort="traders"
-                    >
-                        Traders
-                        <span class="sort-indicator"></span>
-                    </th>
-                    <th
-                        class="text-center py-3 px-4 cursor-pointer hover:text-lavender"
-                        data-sort="volume"
-                    >
-                        Volume
-                        <span class="sort-indicator"></span>
-                    </th>
-                    <!--
-                    <th
-                        class="text-center py-3 px-4 cursor-pointer hover:text-lavender"
-                        data-sort="duration"
-                    >
-                        Duration
-                        <span class="sort-indicator"></span>
-                    </th>
-                    -->
-                    <th
-                        class="text-center py-3 px-4 w-26 cursor-pointer hover:text-lavender"
-                        data-sort="grade"
-                    >
-                        Grade
-                        <span class="sort-indicator"></span>
-                    </th>
-                    <th
-                        class="text-center py-3 px-4 w-26 cursor-pointer hover:text-lavender"
-                        data-sort="score"
-                    >
-                        Score
-                        <span class="sort-indicator"></span>
-                    </th>
-                </tr>
-            </thead>
-            <tbody id="questionsTable">
-                {
-                    questions_and_scores.map(({question, score}) => (
-                        <tr
-                            class="border-b border-surface1 hover:bg-surface1/50 question-row"
-                            data-title={question.title.toLowerCase()}
-                            data-category={question.category_slug}
-                            data-traders={question.total_traders}
-                            data-volume={question.total_volume}
-                            data-duration={question.total_duration}
-                            data-grade={score?.grade || 'Error'}
-                            data-score={score?.score || 0}
-                        >
-                            <td class="py-3 px-4 pr-6">
-                                <a
-                                    href={`/question/${question.slug}`}
-                                    class="hover:text-lavender"
-                                >
-                                    {question.title}
-                                </a>
-                            </td>
-                            <td class="py-3 px-4">
-                                <a
-                                    href={`/category/${question.category_slug}`}
-                                    class="hover:text-lavender"
-                                >
-                                    {question.category_name}
-                                </a>
-                            </td>
-                            <td class="py-3 px-4 text-center">
-                                <Traders num={question.total_traders} />
-                            </td>
-                            <td class="py-3 px-4 text-center">
-                                <Volume num={question.total_volume} />
-                            </td>
-                            <!--
-                            <td class="py-3 px-4 text-center">
-                                <Duration num={question.total_duration} />
-                            </td>
-                            -->
-                            <td class="py-3 px-4 text-center">
-                                <Grade grade={score?.grade || 'Error'} />
-                            </td>
-                            <td class="py-3 px-4 text-center">
-                                <ScoreAbs
-                                    num={score?.score || 0}
-                                    detailed={false}
-                                />
-                            </td>
-                        </tr>
-                    ))
-                }
-            </tbody>
-        </table>
+  <!-- Results Table -->
+  <div class="overflow-x-auto">
+    <table class="w-full border-collapse text-sm">
+      <thead>
+        <tr class="border-b-2">
+          <th
+            class="text-left py-3 px-4 cursor-pointer hover:text-lavender"
+            data-sort="title"
+          >
+            Question
+            <span class="sort-indicator"></span>
+          </th>
+          <th
+            class="text-left py-3 px-4 w-30 cursor-pointer hover:text-lavender"
+            data-sort="category"
+          >
+            Category
+            <span class="sort-indicator"></span>
+          </th>
+          <th
+            class="text-center py-3 px-4 w-30 cursor-pointer hover:text-lavender"
+            data-sort="traders"
+          >
+            Traders
+            <span class="sort-indicator"></span>
+          </th>
+          <th
+            class="text-center py-3 px-4 w-40 cursor-pointer hover:text-lavender"
+            data-sort="volume"
+          >
+            Volume
+            <span class="sort-indicator"></span>
+          </th>
+          <th
+            class="text-center py-3 px-4 w-26 cursor-pointer hover:text-lavender"
+            data-sort="grade"
+          >
+            Grade
+            <span class="sort-indicator"></span>
+          </th>
+          <th
+            class="text-center py-3 px-4 w-26 cursor-pointer hover:text-lavender"
+            data-sort="score"
+          >
+            Brier Score
+            <span class="sort-indicator"></span>
+          </th>
+        </tr>
+      </thead>
+      <tbody id="questionsTable">
+        {
+          questions_and_scores.map(({ question, score }) => (
+            <tr
+              class="border-b border-surface1 hover:bg-surface1/50 question-row"
+              data-title={question.title.toLowerCase()}
+              data-category={question.category_slug}
+              data-traders={question.total_traders}
+              data-volume={question.total_volume}
+              data-grade={score?.grade || "Error"}
+              data-score={score?.score || 0}
+            >
+              <td class="py-3 px-4 pr-6">
+                <a
+                  href={`/question/${question.slug}`}
+                  class="hover:text-lavender"
+                >
+                  {question.title}
+                </a>
+              </td>
+              <td class="py-3 px-4">
+                <a
+                  href={`/category/${question.category_slug}`}
+                  class="hover:text-lavender"
+                >
+                  {question.category_name}
+                </a>
+              </td>
+              <td class="py-3 px-4 text-center">
+                <Traders num={question.total_traders} />
+              </td>
+              <td class="py-3 px-4 text-center">
+                <Volume num={question.total_volume} />
+              </td>
+              <td class="py-3 px-4 text-center">
+                <Grade grade={score?.grade || "Error"} />
+              </td>
+              <td class="py-3 px-4 text-center">
+                <ScoreAbs num={score?.score || 0} />
+              </td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
 
-        <div id="noResults" class="hidden text-center py-8 text-overlay1">
-            No questions found
-        </div>
+    <div id="noResults" class="hidden text-center py-8 text-overlay1">
+      No questions found
     </div>
+  </div>
 </Base>
 
 <style>
-    .sort-indicator::after {
-        content: "";
-        margin-left: 2px;
-        opacity: 0.5;
-    }
-    th[data-sort-dir="asc"] .sort-indicator::after {
-        content: "↑";
-        opacity: 1;
-    }
-    th[data-sort-dir="desc"] .sort-indicator::after {
-        content: "↓";
-        opacity: 1;
-    }
+  .sort-indicator::after {
+    content: "";
+    margin-left: 2px;
+    opacity: 0.5;
+  }
+  th[data-sort-dir="asc"] .sort-indicator::after {
+    content: "↑";
+    opacity: 1;
+  }
+  th[data-sort-dir="desc"] .sort-indicator::after {
+    content: "↓";
+    opacity: 1;
+  }
 </style>
 
 <script>
-    // Client-side search and sort functionality
-    const searchInput = document.getElementById(
-        "searchInput",
-    ) as HTMLInputElement;
-    const questionRows = document.querySelectorAll(".question-row");
-    const noResults = document.getElementById("noResults");
-    const headers = document.querySelectorAll("th[data-sort]");
+  // Client-side search and sort functionality
+  const searchInput = document.getElementById(
+    "searchInput",
+  ) as HTMLInputElement;
+  const questionRows = document.querySelectorAll(".question-row");
+  const noResults = document.getElementById("noResults");
+  const headers = document.querySelectorAll("th[data-sort]");
 
-    let currentSort = {
-        column: "volume",
-        direction: "desc",
-    };
+  let currentSort = {
+    column: "volume",
+    direction: "desc",
+  };
 
-    // Initialize from URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const initialSearch = urlParams.get("q") || "";
-    const initialSort = urlParams.get("sort") || "volume";
-    const initialDir = urlParams.get("dir") || "desc";
+  // Initialize from URL parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialSearch = urlParams.get("q") || "";
+  const initialSort = urlParams.get("sort") || "volume";
+  const initialDir = urlParams.get("dir") || "desc";
 
-    searchInput.value = initialSearch;
-    currentSort = { column: initialSort, direction: initialDir };
+  searchInput.value = initialSearch;
+  currentSort = { column: initialSort, direction: initialDir };
 
-    function updateUrl() {
-        const params = new URLSearchParams();
-        if (searchInput.value) params.set("q", searchInput.value);
-        params.set("sort", currentSort.column);
-        params.set("dir", currentSort.direction);
-        const newUrl = `${window.location.pathname}?${params.toString()}`;
-        window.history.replaceState({}, "", newUrl);
-    }
+  function updateUrl() {
+    const params = new URLSearchParams();
+    if (searchInput.value) params.set("q", searchInput.value);
+    params.set("sort", currentSort.column);
+    params.set("dir", currentSort.direction);
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, "", newUrl);
+  }
 
-    function sortQuestions() {
-        const tbody = document.getElementById("questionsTable");
-        const rows = Array.from(questionRows);
+  function sortQuestions() {
+    const tbody = document.getElementById("questionsTable");
+    const rows = Array.from(questionRows);
 
-        // Update sort indicators
-        headers.forEach((header) => {
-            const sortCol = header.getAttribute("data-sort");
-            if (sortCol === currentSort.column) {
-                header.setAttribute("data-sort-dir", currentSort.direction);
-            } else {
-                header.removeAttribute("data-sort-dir");
-            }
-        });
-
-        // Sort rows
-        rows.sort((a, b) => {
-            const aVal = a.getAttribute(`data-${currentSort.column}`);
-            const bVal = b.getAttribute(`data-${currentSort.column}`);
-
-            if (
-                currentSort.column === "title" ||
-                currentSort.column === "category"
-            ) {
-                return currentSort.direction === "asc"
-                    ? aVal!.localeCompare(bVal!)
-                    : bVal!.localeCompare(aVal!);
-            } else {
-                const aNum =
-                    currentSort.column === "grade"
-                        ? gradeToNumber(aVal!)
-                        : Number(aVal);
-                const bNum =
-                    currentSort.column === "grade"
-                        ? gradeToNumber(bVal!)
-                        : Number(bVal);
-                return currentSort.direction === "asc"
-                    ? aNum - bNum
-                    : bNum - aNum;
-            }
-        });
-
-        // Reorder DOM
-        rows.forEach((row) => tbody!.appendChild(row));
-    }
-
-    function gradeToNumber(grade: string): number {
-        const grades = [
-            "-",
-            "F-",
-            "F",
-            "F+",
-            "D-",
-            "D",
-            "D+",
-            "C-",
-            "C",
-            "C+",
-            "B-",
-            "B",
-            "B+",
-            "A-",
-            "A",
-            "A+",
-        ];
-        return grades.indexOf(grade);
-    }
-
-    function filterQuestions() {
-        const searchTerm = searchInput.value.toLowerCase();
-        let visibleCount = 0;
-
-        questionRows.forEach((row) => {
-            const title = (row as HTMLElement).dataset.title || "";
-            const matches = title.includes(searchTerm);
-            row.classList.toggle("hidden", !matches);
-            if (matches) visibleCount++;
-        });
-
-        if (noResults) {
-            noResults.classList.toggle("hidden", visibleCount > 0);
-        }
-    }
-
-    // Event Listeners
+    // Update sort indicators
     headers.forEach((header) => {
-        header.addEventListener("click", () => {
-            const column = header.getAttribute("data-sort")!;
-            if (column === currentSort.column) {
-                currentSort.direction =
-                    currentSort.direction === "asc" ? "desc" : "asc";
-            } else {
-                currentSort = { column, direction: "desc" };
-            }
-            sortQuestions();
-            updateUrl();
-        });
+      const sortCol = header.getAttribute("data-sort");
+      if (sortCol === currentSort.column) {
+        header.setAttribute("data-sort-dir", currentSort.direction);
+      } else {
+        header.removeAttribute("data-sort-dir");
+      }
     });
 
-    searchInput.addEventListener("input", () => {
-        filterQuestions();
-        updateUrl();
+    // Sort rows
+    rows.sort((a, b) => {
+      const aVal = a.getAttribute(`data-${currentSort.column}`);
+      const bVal = b.getAttribute(`data-${currentSort.column}`);
+
+      if (currentSort.column === "title" || currentSort.column === "category") {
+        return currentSort.direction === "asc"
+          ? aVal!.localeCompare(bVal!)
+          : bVal!.localeCompare(aVal!);
+      } else {
+        const aNum =
+          currentSort.column === "grade" ? gradeToNumber(aVal!) : Number(aVal);
+        const bNum =
+          currentSort.column === "grade" ? gradeToNumber(bVal!) : Number(bVal);
+        return currentSort.direction === "asc" ? aNum - bNum : bNum - aNum;
+      }
     });
 
-    // Initial sort and filter
-    sortQuestions();
+    // Reorder DOM
+    rows.forEach((row) => tbody!.appendChild(row));
+  }
+
+  function gradeToNumber(grade: string): number {
+    const grades = [
+      "-",
+      "F-",
+      "F",
+      "F+",
+      "D-",
+      "D",
+      "D+",
+      "C-",
+      "C",
+      "C+",
+      "B-",
+      "B",
+      "B+",
+      "A-",
+      "A",
+      "A+",
+    ];
+    return grades.indexOf(grade);
+  }
+
+  function filterQuestions() {
+    const searchTerm = searchInput.value.toLowerCase();
+    let visibleCount = 0;
+
+    questionRows.forEach((row) => {
+      const title = (row as HTMLElement).dataset.title || "";
+      const matches = title.includes(searchTerm);
+      row.classList.toggle("hidden", !matches);
+      if (matches) visibleCount++;
+    });
+
+    if (noResults) {
+      noResults.classList.toggle("hidden", visibleCount > 0);
+    }
+  }
+
+  // Event Listeners
+  headers.forEach((header) => {
+    header.addEventListener("click", () => {
+      const column = header.getAttribute("data-sort")!;
+      if (column === currentSort.column) {
+        currentSort.direction =
+          currentSort.direction === "asc" ? "desc" : "asc";
+      } else {
+        currentSort = { column, direction: "desc" };
+      }
+      sortQuestions();
+      updateUrl();
+    });
+  });
+
+  searchInput.addEventListener("input", () => {
     filterQuestions();
+    updateUrl();
+  });
+
+  // Initial sort and filter
+  sortQuestions();
+  filterQuestions();
 </script>
