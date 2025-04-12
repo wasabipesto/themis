@@ -5,12 +5,6 @@ INSERT INTO
     categories (name, slug, icon, description)
 VALUES
     (
-        'AI',
-        'ai',
-        'mdi-robot',
-        'Tracking developments in artificial intelligence, from breakthroughs in machine learning to predictions about AGI timelines, capabilities, and potential impacts on society and industry.'
-    ),
-    (
         'Culture',
         'culture',
         'mdi-theater',

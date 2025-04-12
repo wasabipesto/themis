@@ -289,7 +289,7 @@ pub fn build_prob_segments(raw_history: &[PolymarketPricePoint]) -> Vec<ProbSegm
 /// Manual mapping of tags to our standard categories.
 fn get_category(tags: &Option<Vec<String>>) -> Option<String> {
     const CATEGORIES: [(&str, &str); 17] = [
-        ("AI", "ai"),
+        ("ai", "technology"),
         ("Business", "economics"),
         ("CBB", "sports"),
         ("Coronavirus", "science"),
