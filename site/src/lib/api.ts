@@ -132,22 +132,22 @@ export async function getFeaturedQuestions(
 export async function getPlatformCategoryScores(
   score_type: string | null,
 ): Promise<PlatformCategoryScoreDetails[]> {
-  let url = "/platform_category_scores_details";
+  let url = "/platform_category_scores_details?order=category_slug";
   if (score_type) {
-    url += `?score_type=eq.${score_type}`;
+    url += `&score_type=eq.${score_type}`;
   }
   return fetchFromAPI<PlatformCategoryScoreDetails[]>(url);
 }
 
 export async function getPlatformOverallScores(): Promise<OtherScoreDetails[]> {
   return fetchFromAPI<OtherScoreDetails[]>(
-    `/other_scores?item_type=eq.platform`,
+    `/other_scores?item_type=eq.platform?order=platform_slug`,
   );
 }
 
 export async function getCategoryOverallScores(): Promise<OtherScoreDetails[]> {
   return fetchFromAPI<OtherScoreDetails[]>(
-    `/other_scores?item_type=eq.category`,
+    `/other_scores?item_type=eq.category?order=category_slug`,
   );
 }
 
