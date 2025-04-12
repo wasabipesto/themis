@@ -39,7 +39,7 @@ def fetch_scores(postgrest_url, score_type=None, linked_only=False, min_traders=
 
         # Add linked_only filter if enabled
         if linked_only:
-            params.append("question_id=is.not.null")
+            params.append("question_id=not.is.null")
 
         # Handle min_traders and min_volume parameters
         if min_traders is not None or min_volume is not None:
@@ -108,12 +108,12 @@ def custom_grade_sort_key(grade):
     # Special case for 'S' grade - should come first
     if grade == 'S':
         return (0, '')  # Tuple for sorting priority: (position, secondary sort)
-    
+
     # Handle grades with + suffix (should come before the base grade)
     if grade.endswith('+'):
         base_grade = grade[:-1]
         return (1, base_grade, 0)  # Position 1, then by base grade, then suffix priority 0 for +
-    
+
     # Regular grades
     return (1, grade, 1)  # Position 1, then by grade name, then suffix priority 1 (after +)
 
@@ -157,7 +157,7 @@ def plot_score_histograms(scores_by_type, clip_range=(-10, 10)):
         # Calculate percentiles (every 10th percentile)
         percentiles = np.percentile(clipped_scores, np.arange(0, 101, 10))
         colors = plt.cm.viridis(np.linspace(0, 1, len(percentiles)))
-        
+
         # Add percentile lines
         legend_entries = []
         for j, (percentile_value, color) in enumerate(zip(percentiles, colors)):
@@ -169,7 +169,7 @@ def plot_score_histograms(scores_by_type, clip_range=(-10, 10)):
         plt.xlabel('Score', fontsize=10)
         plt.ylabel('Frequency', fontsize=10)
         plt.grid(axis='y', alpha=0.75)
-        
+
         # Add legend with percentiles
         plt.legend(handles=[line for line, _ in legend_entries],
                   labels=[label for _, label in legend_entries],
@@ -200,14 +200,14 @@ def plot_grade_bar_charts(grades_by_type):
         if not grade_counts:  # Skip if no grades for this score type
             plt.title(f'No Grades for {score_type}', fontsize=12)
             continue
-            
+
         # Sort grade values with custom sorting (S first, X+ before X)
         grades = sorted(grade_counts.keys(), key=custom_grade_sort_key)
         counts = [grade_counts[grade] for grade in grades]
-        
+
         # Create bar chart with pleasant colors
         bars = plt.bar(grades, counts, alpha=0.7, color=plt.cm.Paired(np.linspace(0, 1, len(grades))))
-        
+
         # Add count labels on top of bars
         for bar, count in zip(bars, counts):
             plt.text(bar.get_x() + bar.get_width()/2., bar.get_height() + 0.1,
@@ -219,10 +219,8 @@ def plot_grade_bar_charts(grades_by_type):
         plt.ylabel('Frequency', fontsize=10)
         plt.xticks(rotation=45)
         plt.grid(axis='y', alpha=0.3)
-        
-        # Add explanation of sorting order in small text
-        plt.figtext(0.01, 0.01, "Grades sorted with S first, then X+ before X", 
-                   fontsize=6, ha='left', va='bottom')
+
+        # Filter info will be added at the figure level in the main function
 
     plt.tight_layout()
     return fig
@@ -260,7 +258,7 @@ def parse_arguments():
     parser.add_argument('--min-traders', type=int, help='Minimum number of traders (if min-volume not provided, uses min-traders * 10 for volume)')
     parser.add_argument('--min-volume', type=float, help='Minimum volume in USD (if min-traders not provided, uses min-volume / 10 for traders)')
     parser.add_argument('--min-duration', type=int, help='Minimum market duration in days')
-    parser.add_argument('--plot-grades', action='store_true', help='Plot grade frequencies as bar charts instead of score histograms')
+    # No longer needed as we now plot both score histograms and grade bar charts
     return parser.parse_args()
 
 
@@ -275,57 +273,86 @@ def main():
         print("Error: PGRST_URL not found in environment variables")
         sys.exit(1)
 
-    # Fetch scores from API
+    # Fetch scores from API (only need to do this once)
     scores = fetch_scores(postgrest_url, args.score_type, args.linked_only, args.min_traders, args.min_volume, args.min_duration)
-    
-    # Process scores based on plot type
-    if args.plot_grades:
-        # Group by grades for bar charts
-        data_by_type = group_grades_by_type(scores)
-        if not data_by_type:
-            print("No valid grade data found.")
-            sys.exit(1)
-        # Create grade frequency bar charts
-        fig = plot_grade_bar_charts(data_by_type)
-        plot_type = 'grades'  # For filename
-    else:
-        # Group by scores for histograms (original behavior)
-        data_by_type = group_scores_by_type(scores)
-        if not data_by_type:
-            print("No valid scores found.")
-            sys.exit(1)
-        # Create score histograms with percentiles
-        fig = plot_score_histograms(data_by_type, clip_range=(args.clip_min, args.clip_max))
-        plot_type = 'scores'  # For filename
 
-    # If filtering is applied, update output path to reflect this
-    output_path = args.output
-    if not output_path:
-        default_dir = 'cache'
-        os.makedirs(default_dir, exist_ok=True)
+    # Build common filename components based on filters applied
+    filename_parts = []
+    if args.score_type:
+        filename_parts.append(args.score_type)
+    if args.linked_only:
+        filename_parts.append('linked')
+    if args.min_traders:
+        filename_parts.append(f'min{args.min_traders}traders')
+    if args.min_volume:
+        filename_parts.append(f'min{int(args.min_volume)}vol')
+    if args.min_duration:
+        filename_parts.append(f'min{args.min_duration}days')
 
-        # Build filename based on filters applied
-        filename_parts = []
-        if args.score_type:
-            filename_parts.append(args.score_type)
-        if args.linked_only:
-            filename_parts.append('linked')
-        if args.min_traders:
-            filename_parts.append(f'min{args.min_traders}traders')
-        if args.min_volume:
-            filename_parts.append(f'min{int(args.min_volume)}vol')
-        if args.min_duration:
-            filename_parts.append(f'min{args.min_duration}days')
+    filter_text = []
+    if args.score_type:
+        filter_text.append(f"Score type: {args.score_type}")
+    if args.linked_only:
+        filter_text.append("Linked only")
+    if args.min_traders:
+        filter_text.append(f"Min traders: {args.min_traders}")
+    if args.min_volume:
+        filter_text.append(f"Min volume: ${args.min_volume}")
+    if args.min_duration:
+        filter_text.append(f"Min duration: {args.min_duration} days")
 
-        if filename_parts:
-            # If we have filters, use them in the filename
-            filter_text = '_'.join(filename_parts)
-            output_path = f'{default_dir}/{filter_text}_{plot_type}_plot.png'
+    default_dir = 'cache'
+    os.makedirs(default_dir, exist_ok=True)
+    filter_str = '_'.join(filename_parts) if filename_parts else 'all'
+
+    # 1. Process and plot score histograms
+    scores_by_type = group_scores_by_type(scores)
+    if scores_by_type:
+        # Create histograms with percentiles
+        fig_scores = plot_score_histograms(scores_by_type, clip_range=(args.clip_min, args.clip_max))
+
+        # Add filter information to the figure
+        if filter_text:
+            fig_scores.text(0.01, 0.01, "Filters: " + ", ".join(filter_text), fontsize=8, ha='left', va='bottom')
+
+        # Determine output path for scores plot
+        if args.output:
+            # If explicit output provided, add a suffix for scores
+            output_base = os.path.splitext(args.output)
+            scores_output = f"{output_base[0]}_scores{output_base[1]}"
         else:
-            # Default filename if no filters
-            output_path = f'{default_dir}/all_{plot_type}_plot.png'
+            # Use default path with filter string
+            scores_output = f'{default_dir}/{filter_str}_scores_plot.png'
 
-    save_or_show_plot(fig, output_path)
+        save_or_show_plot(fig_scores, scores_output)
+        plt.close(fig_scores)  # Close figure to free memory
+    else:
+        print("No valid scores found to plot histograms.")
+
+    # 2. Process and plot grade bar charts
+    grades_by_type = group_grades_by_type(scores)
+    if grades_by_type:
+        # Create grade frequency bar charts
+        fig_grades = plot_grade_bar_charts(grades_by_type)
+
+        # Add filter information to the figure
+        local_filter_text = filter_text.copy()
+        if local_filter_text:
+            fig_grades.text(0.01, 0.01, "Filters: " + ", ".join(local_filter_text), fontsize=8, ha='left', va='bottom')
+
+        # Determine output path for grades plot
+        if args.output:
+            # If explicit output provided, add a suffix for grades
+            output_base = os.path.splitext(args.output)
+            grades_output = f"{output_base[0]}_grades{output_base[1]}"
+        else:
+            # Use default path with filter string
+            grades_output = f'{default_dir}/{filter_str}_grades_plot.png'
+
+        save_or_show_plot(fig_grades, grades_output)
+        plt.close(fig_grades)  # Close figure to free memory
+    else:
+        print("No valid grade data found to plot bar charts.")
 
 
 if __name__ == "__main__":
