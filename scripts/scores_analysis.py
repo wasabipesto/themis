@@ -103,6 +103,32 @@ def group_scores_by_type(scores):
     return scores_by_type
 
 
+def custom_grade_sort_key(grade):
+    """Custom sorting function for grades where S comes first and X+ comes before X."""
+    # Special case for 'S' grade - should come first
+    if grade == 'S':
+        return (0, '')  # Tuple for sorting priority: (position, secondary sort)
+    
+    # Handle grades with + suffix (should come before the base grade)
+    if grade.endswith('+'):
+        base_grade = grade[:-1]
+        return (1, base_grade, 0)  # Position 1, then by base grade, then suffix priority 0 for +
+    
+    # Regular grades
+    return (1, grade, 1)  # Position 1, then by grade name, then suffix priority 1 (after +)
+
+
+def group_grades_by_type(scores):
+    """Group grade values by score_type."""
+    grades_by_type = defaultdict(lambda: defaultdict(int))
+    for s in scores:
+        # Check if the score has a valid grade value
+        if 'grade' in s and s['grade'] is not None:
+            # Increment the count for this grade value in the appropriate score_type
+            grades_by_type[s['score_type']][s['grade']] += 1
+    return grades_by_type
+
+
 def plot_score_histograms(scores_by_type, clip_range=(-10, 10)):
     """Create a figure with histograms for each score type."""
     # Calculate grid dimensions
@@ -153,6 +179,55 @@ def plot_score_histograms(scores_by_type, clip_range=(-10, 10)):
     return fig
 
 
+def plot_grade_bar_charts(grades_by_type):
+    """Create a figure with bar charts for grade frequencies by score type."""
+    # Calculate grid dimensions
+    num_score_types = len(grades_by_type)
+    num_cols = np.clip(num_score_types, 1, 3)
+    num_rows = int(np.ceil(num_score_types / num_cols))
+
+    # Create the figure and subplots
+    fig = plt.figure(figsize=(6 * num_cols, 4 * num_rows))
+
+    # Sort score types alphabetically
+    sorted_score_types = sorted(grades_by_type.keys())
+
+    # Create a bar chart for each score_type
+    for i, score_type in enumerate(sorted_score_types):
+        grade_counts = grades_by_type[score_type]
+        plt.subplot(num_rows, num_cols, i + 1)
+
+        if not grade_counts:  # Skip if no grades for this score type
+            plt.title(f'No Grades for {score_type}', fontsize=12)
+            continue
+            
+        # Sort grade values with custom sorting (S first, X+ before X)
+        grades = sorted(grade_counts.keys(), key=custom_grade_sort_key)
+        counts = [grade_counts[grade] for grade in grades]
+        
+        # Create bar chart with pleasant colors
+        bars = plt.bar(grades, counts, alpha=0.7, color=plt.cm.Paired(np.linspace(0, 1, len(grades))))
+        
+        # Add count labels on top of bars
+        for bar, count in zip(bars, counts):
+            plt.text(bar.get_x() + bar.get_width()/2., bar.get_height() + 0.1,
+                    str(count), ha='center', va='bottom', fontsize=8)
+
+        # Set title and labels
+        plt.title(f'Grade Distribution for {score_type}', fontsize=12)
+        plt.xlabel('Grade', fontsize=10)
+        plt.ylabel('Frequency', fontsize=10)
+        plt.xticks(rotation=45)
+        plt.grid(axis='y', alpha=0.3)
+        
+        # Add explanation of sorting order in small text
+        plt.figtext(0.01, 0.01, "Grades sorted with S first, then X+ before X", 
+                   fontsize=6, ha='left', va='bottom')
+
+    plt.tight_layout()
+    return fig
+
+
 def save_or_show_plot(fig, output_path=None):
     """Save the figure to a file or show it interactively."""
     if output_path:
@@ -185,6 +260,7 @@ def parse_arguments():
     parser.add_argument('--min-traders', type=int, help='Minimum number of traders (if min-volume not provided, uses min-traders * 10 for volume)')
     parser.add_argument('--min-volume', type=float, help='Minimum volume in USD (if min-traders not provided, uses min-volume / 10 for traders)')
     parser.add_argument('--min-duration', type=int, help='Minimum market duration in days')
+    parser.add_argument('--plot-grades', action='store_true', help='Plot grade frequencies as bar charts instead of score histograms')
     return parser.parse_args()
 
 
@@ -199,16 +275,28 @@ def main():
         print("Error: PGRST_URL not found in environment variables")
         sys.exit(1)
 
-    # Fetch and process scores
+    # Fetch scores from API
     scores = fetch_scores(postgrest_url, args.score_type, args.linked_only, args.min_traders, args.min_volume, args.min_duration)
-    scores_by_type = group_scores_by_type(scores)
-
-    if not scores_by_type:
-        print("No valid scores found.")
-        sys.exit(1)
-
-    # Create and display/save plot
-    fig = plot_score_histograms(scores_by_type, clip_range=(args.clip_min, args.clip_max))
+    
+    # Process scores based on plot type
+    if args.plot_grades:
+        # Group by grades for bar charts
+        data_by_type = group_grades_by_type(scores)
+        if not data_by_type:
+            print("No valid grade data found.")
+            sys.exit(1)
+        # Create grade frequency bar charts
+        fig = plot_grade_bar_charts(data_by_type)
+        plot_type = 'grades'  # For filename
+    else:
+        # Group by scores for histograms (original behavior)
+        data_by_type = group_scores_by_type(scores)
+        if not data_by_type:
+            print("No valid scores found.")
+            sys.exit(1)
+        # Create score histograms with percentiles
+        fig = plot_score_histograms(data_by_type, clip_range=(args.clip_min, args.clip_max))
+        plot_type = 'scores'  # For filename
 
     # If filtering is applied, update output path to reflect this
     output_path = args.output
@@ -232,10 +320,10 @@ def main():
         if filename_parts:
             # If we have filters, use them in the filename
             filter_text = '_'.join(filename_parts)
-            output_path = f'{default_dir}/{filter_text}_scores_histogram.png'
+            output_path = f'{default_dir}/{filter_text}_{plot_type}_plot.png'
         else:
             # Default filename if no filters
-            output_path = f'{default_dir}/all_scores_histogram.png'
+            output_path = f'{default_dir}/all_{plot_type}_plot.png'
 
     save_or_show_plot(fig, output_path)
 
