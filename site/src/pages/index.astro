@@ -5,193 +5,200 @@ import QuestionCard from "@components/question-card.astro";
 import SeeMoreLink from "@components/see-more-link.astro";
 import PlatformCard from "@components/platform-card.astro";
 import CalibrationChart from "@components/calibration-chart.astro";
-import type { PlatformDetails, PlatformCategoryScoreDetails, QuestionDetails, MarketScoreDetails } from "@types";
+import type {
+  PlatformDetails,
+  PlatformCategoryScoreDetails,
+  QuestionDetails,
+  MarketScoreDetails,
+  OtherScoreDetails,
+  CategoryDetails,
+} from "@types";
 
 const pgrst_url = import.meta.env.PGRST_URL;
+let scoreType = "brier-relative";
 
-const platforms = (await fetch(`${pgrst_url}/platform_details`).then((res) =>
-    res.json(),
+const platforms = (await fetch(`${pgrst_url}/platform_details?order=slug`).then(
+  (res) => res.json(),
 )) as PlatformDetails[];
 
-const platformCategoryScores = (await fetch(`${pgrst_url}/platform_category_scores_details`).then(
-    (res) => res.json(),
-)) as PlatformCategoryScoreDetails[];
+const categories = (await fetch(
+  `${pgrst_url}/category_details?order=slug`,
+).then((res) => res.json())) as CategoryDetails[];
 
-const featuredQuestions = (await fetch(`${pgrst_url}/question_details?order=total_volume.desc&limit=9`).then(
-    (res) => res.json(),
-)) as QuestionDetails[];
+const platformCategoryScores = (await fetch(
+  `${pgrst_url}/platform_category_scores_details?score_type=eq.${scoreType}`,
+).then((res) => res.json())) as PlatformCategoryScoreDetails[];
+
+const platformOverallScores = (await fetch(
+  `${pgrst_url}/other_scores?item_type=eq.platform&score_type=eq.${scoreType}`,
+).then((res) => res.json())) as OtherScoreDetails[];
+
+const featuredQuestions = (await fetch(
+  `${pgrst_url}/question_details?order=total_volume.desc&limit=9`,
+).then((res) => res.json())) as QuestionDetails[];
 
 const marketScores = (await fetch(
-  `${pgrst_url}/market_scores_details?question_id=in.(${featuredQuestions.map(q => q.id).join(',')})`
+  `${pgrst_url}/market_scores_details?score_type=eq.${scoreType}&question_id=in.(${featuredQuestions.map((q) => q.id).join(",")})&order=platform_slug`,
 ).then((res) => res.json())) as MarketScoreDetails[];
 ---
 
 <Base title="Home">
-    <div class="grid grid-cols-1 md:grid-cols-2 pt-4">
-        <div class="p-4 m-2">
-            <h1 class="text-4xl font-bold">
-                How accurate are prediction markets?
-            </h1>
-            <p class="my-2">
-                In the past it's been hard to measure the accuracy of prediction
-                markets since question difficulty can vary so drastically. You
-                can't compare apples to oranges!
-            </p>
-            <p class="my-2">
-                In order to solve that problem we've matched markets across
-                platforms and curated a collection of predictive questions that
-                are actually comparable. Using those matches, we can generate a
-                score for each platform in each category that rewards whichever
-                market was correct earliest.
-            </p>
-            <ul class="list-disc px-4">
-                <li>
-                    <a href="#intro" class="underline">
-                        What's a prediction market?
-                    </a>
-                </li>
-                <li>
-                    <a href="#scoring" class="underline">
-                        How do you calculate the scores?
-                    </a>
-                </li>
-                <li>
-                    <a href="#calibration" class="underline">
-                        What about calibration?
-                    </a>
-                </li>
-            </ul>
-        </div>
-        <div class="">
-            <ReportCard
-                scores={platformCategoryScores.filter(
-                    (score) => score.platform_slug !== "overall",
-                )}
-            />
-        </div>
-    </div>
-    <hr class="my-2" />
+  <div class="grid grid-cols-1 md:grid-cols-2 pt-4">
     <div class="p-4 m-2">
-        <h1 class="text-4xl font-bold">Top Questions</h1>
-        <p class="mt-2">
-            Each of these cards links to a question about a high-level
-            predictable outcome with some amount of uncertainty. Each question
-            is predicted by markets from each prediction market platform, and
-            those markets are graded to create the scores for each platform
-            above.
-        </p>
+      <h1 class="text-4xl font-bold">How accurate are prediction markets?</h1>
+      <p class="my-2">
+        In the past it's been hard to measure the accuracy of prediction markets
+        since question difficulty can vary so drastically. You can't compare
+        apples to oranges!
+      </p>
+      <p class="my-2">
+        In order to solve that problem we've matched markets across platforms
+        and curated a collection of predictive questions that are actually
+        comparable. Using those matches, we can generate a score for each
+        platform in each category that rewards whichever market was correct
+        earliest.
+      </p>
+      <ul class="list-disc px-4">
+        <li>
+          <a href="#intro" class="underline"> What's a prediction market? </a>
+        </li>
+        <li>
+          <a href="#scoring" class="underline">
+            How do you calculate the scores?
+          </a>
+        </li>
+        <li>
+          <a href="#calibration" class="underline"> What about calibration? </a>
+        </li>
+      </ul>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {featuredQuestions.map((question) => {
-            const questionScores = marketScores.filter(score => score.question_id === question.id);
-            return <QuestionCard question={question} scores={questionScores} />;
-        })}
+    <div class="">
+      <ReportCard
+        platforms={platforms}
+        categories={categories}
+        platformCategoryScores={platformCategoryScores}
+        platformOverallScores={platformOverallScores}
+      />
     </div>
-    <SeeMoreLink link={`/questions`} text="See all questions" />
-    <hr class="my-2" />
-    <div class="p-4 m-2" id="intro">
-        <h1 class="text-4xl font-bold">What's a prediction market?</h1>
-        <p class="my-2">
-            Predicting the future is hard, but it's also incredibly important.
-            Let's say someone starts making predictions about important events.
-            How much should you believe them when they say the world will end
-            tomorrow? What about when they say there's a 70% chance the world
-            will end in 50 years?
-        </p>
-        <p class="my-2">
-            Prediction markets are based on a simple concept: If you're
-            confident about something, you can place a bet on it. If someone
-            else disagrees with you, declare terms with them and whoever wins
-            takes the money. By aggregating the implied odds of these trades,
-            you can gain an insight into the <b>wisdom of the crowds</b>.
-        </p>
-        <p class="my-2">
-            Imagine a stock exchange, but instead of trading shares, you trade
-            on the likelihood of future events. Each prediction market offers
-            contracts tied to specific events, like elections, economic
-            indicators, or scientific breakthroughs. You can buy or sell these
-            contracts based on your belief about the outcome - if you are very
-            confident about something, or you have specialized information, you
-            can make a lot of money from a market.
-        </p>
-        <p class="my-2">
-            Markets give participants a <b>financial incentive</b> to be correct,
-            encouraging researchers and skilled forecasters to spend time investigating
-            events. Individuals with insider information or niche skills can profit
-            by trading, which also updates the market's probability. Prediction markets
-            have <a
-                href="https://daily.jstor.org/how-accurate-are-prediction-markets/"
-                class="text-lavender"
-            >
-                out-performed polls
-            </a> and <a
-                href="https://news.manifold.markets/p/manifold-predicted-the-ai-extinction"
-                class="text-lavender"
-            >
-                revealed insider information</a
-            >, making them a useful tool for information gathering or profit.
-        </p>
-        <p class="my-2">Some popular prediction market platforms include:</p>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-            {platforms.map((platform) => <PlatformCard platform={platform} />)}
-        </div>
-        <SeeMoreLink link={`/introduction`} text="Learn more" />
+  </div>
+  <hr class="my-2" />
+  <div class="p-4 m-2">
+    <h1 class="text-4xl font-bold">Top Questions</h1>
+    <p class="mt-2">
+      Each of these cards links to a question about a high-level predictable
+      outcome with some amount of uncertainty. Each question is predicted by
+      markets from each prediction market platform, and those markets are graded
+      to create the scores for each platform above.
+    </p>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+    {
+      featuredQuestions.map((question) => {
+        const questionScores = marketScores.filter(
+          (score) => score.question_id === question.id,
+        );
+        return <QuestionCard question={question} scores={questionScores} />;
+      })
+    }
+  </div>
+  <SeeMoreLink link={`/questions`} text="See all questions" />
+  <hr class="my-2" />
+  <div class="p-4 m-2" id="intro">
+    <h1 class="text-4xl font-bold">What's a prediction market?</h1>
+    <p class="my-2">
+      Predicting the future is hard, but it's also incredibly important. Let's
+      say someone starts making predictions about important events. How much
+      should you believe them when they say the world will end tomorrow? What
+      about when they say there's a 70% chance the world will end in 50 years?
+    </p>
+    <p class="my-2">
+      Prediction markets are based on a simple concept: If you're confident
+      about something, you can place a bet on it. If someone else disagrees with
+      you, declare terms with them and whoever wins takes the money. By
+      aggregating the implied odds of these trades, you can gain an insight into
+      the <b>wisdom of the crowds</b>.
+    </p>
+    <p class="my-2">
+      Imagine a stock exchange, but instead of trading shares, you trade on the
+      likelihood of future events. Each prediction market offers contracts tied
+      to specific events, like elections, economic indicators, or scientific
+      breakthroughs. You can buy or sell these contracts based on your belief
+      about the outcome - if you are very confident about something, or you have
+      specialized information, you can make a lot of money from a market.
+    </p>
+    <p class="my-2">
+      Markets give participants a <b>financial incentive</b> to be correct, encouraging
+      researchers and skilled forecasters to spend time investigating events. Individuals
+      with insider information or niche skills can profit by trading, which also
+      updates the market's probability. Prediction markets have <a
+        href="https://daily.jstor.org/how-accurate-are-prediction-markets/"
+        class="text-lavender"
+      >
+        out-performed polls
+      </a> and <a
+        href="https://news.manifold.markets/p/manifold-predicted-the-ai-extinction"
+        class="text-lavender"
+      >
+        revealed insider information</a
+      >, making them a useful tool for information gathering or profit.
+    </p>
+    <p class="my-2">Some popular prediction market platforms include:</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+      {platforms.map((platform) => <PlatformCard platform={platform} />)}
     </div>
-    <hr class="my-2" />
-    <div class="p-4 m-2" id="scoring">
-        <h1 class="text-4xl font-bold">How do you calculate the scores?</h1>
-        <p class="my-2">
-            The traditional way to score predictions is using Brier scores,
-            which measure how far off your prediction was from reality. While
-            these work great for individual predictions, they struggle to
-            compare predictions across different time periods - being 90%
-            confident a month before an event is more impressive than being 90%
-            confident the day before.
-        </p>
-        <p class="my-2">
-            To account for this, we use a relative Brier scoring system. For
-            each matched question across platforms, we compare how early each
-            platform reached the correct probability range. Platforms that
-            arrive at accurate predictions earlier receive more points, while
-            those that take longer or never reach accuracy receive fewer points.
-        </p>
-        <p class="my-2">
-            For example, if Platform A predicts an event at 80% likelihood three
-            months out and Platform B reaches the same prediction one month
-            before, Platform A would score higher - assuming they were both
-            correct. This rewards both accuracy and early insight, giving us a
-            better picture of which platforms are best at surfacing predictive
-            information quickly.
-        </p>
-        <SeeMoreLink link={`/scoring`} text="Learn more" />
+    <SeeMoreLink link={`/introduction`} text="Learn more" />
+  </div>
+  <hr class="my-2" />
+  <div class="p-4 m-2" id="scoring">
+    <h1 class="text-4xl font-bold">How do you calculate the scores?</h1>
+    <p class="my-2">
+      The traditional way to score predictions is using Brier scores, which
+      measure how far off your prediction was from reality. While these work
+      great for individual predictions, they struggle to compare predictions
+      across different time periods - being 90% confident a month before an
+      event is more impressive than being 90% confident the day before.
+    </p>
+    <p class="my-2">
+      To account for this, we use a relative Brier scoring system. For each
+      matched question across platforms, we compare how early each platform
+      reached the correct probability range. Platforms that arrive at accurate
+      predictions earlier receive more points, while those that take longer or
+      never reach accuracy receive fewer points.
+    </p>
+    <p class="my-2">
+      For example, if Platform A predicts an event at 80% likelihood three
+      months out and Platform B reaches the same prediction one month before,
+      Platform A would score higher - assuming they were both correct. This
+      rewards both accuracy and early insight, giving us a better picture of
+      which platforms are best at surfacing predictive information quickly.
+    </p>
+    <SeeMoreLink link={`/scoring`} text="Learn more" />
+  </div>
+  <hr class="my-2" />
+  <div class="p-4 m-2" id="calibration">
+    <h1 class="text-4xl font-bold">What about calibration?</h1>
+    <p class="my-2">
+      Accuracy is a good metric, but another lens we can use for analysis is
+      calibration. For a group of markets to be perfectly calibrated, their
+      average resolution values much match their average prediction values.
+    </p>
+    <p class="my-2">
+      For example, let's say there are a handful of markets that will be
+      determined by rolling a 6 on a fair six-sided die. We would expect each
+      market to have an average probability of around 17%, and once they resolve
+      we would expect around 17% of them to resolve positively. If both are
+      true, then those markets were well-calibrated. If not, then some of our
+      assumptions were incorrect.
+    </p>
+    <p class="my-2">
+      This plot takes all of the prediction and resolution values and shows how
+      closely they match. They should form a straight line from the bottom-left
+      to the top-right - points significantly under or over that line represent
+      systemic errors.
+    </p>
+    <div class="my-4">
+      <CalibrationChart />
     </div>
-    <hr class="my-2" />
-    <div class="p-4 m-2" id="calibration">
-        <h1 class="text-4xl font-bold">What about calibration?</h1>
-        <p class="my-2">
-            Accuracy is a good metric, but another lens we can use for analysis
-            is calibration. For a group of markets to be perfectly calibrated,
-            their average resolution values much match their average prediction
-            values.
-        </p>
-        <p class="my-2">
-            For example, let's say there are a handful of markets that will be
-            determined by rolling a 6 on a fair six-sided die. We would expect
-            each market to have an average probability of around 17%, and once
-            they resolve we would expect around 17% of them to resolve
-            positively. If both are true, then those markets were
-            well-calibrated. If not, then some of our assumptions were
-            incorrect.
-        </p>
-        <p class="my-2">
-            This plot takes all of the prediction and resolution values and
-            shows how closely they match. They should form a straight line from
-            the bottom-left to the top-right - points significantly under or
-            over that line represent systemic errors.
-        </p>
-        <div class="my-4">
-            <CalibrationChart />
-        </div>
-        <SeeMoreLink link={`/charts`} text="See all charts" />
-    </div>
+    <SeeMoreLink link={`/charts`} text="See all charts" />
+  </div>
 </Base>

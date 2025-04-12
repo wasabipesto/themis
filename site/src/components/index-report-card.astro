@@ -1,130 +1,140 @@
 ---
 import Grade from "@atoms/grade.astro";
 import ScoreRel from "@atoms/score-rel.astro";
-import type { PlatformCategoryScoreDetails } from "../types";
+import type {
+  Category,
+  OtherScoreDetails,
+  Platform,
+  PlatformCategoryScoreDetails,
+} from "../types";
 
 interface Props {
-    scores: PlatformCategoryScoreDetails[];
+  platforms: Platform[];
+  categories: Category[];
+  platformCategoryScores: PlatformCategoryScoreDetails[];
+  platformOverallScores: OtherScoreDetails[];
 }
-const { scores } = Astro.props;
-
-// Collect unique platforms for columns/headers
-const platforms = Array.from(new Set(scores.map((s) => s.platform_slug))).map(
-    (slug) => ({
-        slug,
-        name: scores.find((s) => s.platform_slug === slug)?.platform_name || "",
-    }),
-);
-
-// Collect categories for rows
-const categories = Array.from(new Set(scores.map((s) => s.category_slug))).map(
-    (slug) => ({
-        slug,
-        name: scores.find((s) => s.category_slug === slug)?.category_name || "",
-    }),
-);
+const { platforms, categories, platformCategoryScores, platformOverallScores } =
+  Astro.props;
 
 // Build score map for table lookup
 const scoreMap = new Map<string, PlatformCategoryScoreDetails>();
-scores.forEach((score) => {
-    const key = `${score.platform_slug}-${score.category_slug}`;
-    scoreMap.set(key, score);
+platformCategoryScores.forEach((score) => {
+  const key = `${score.platform_slug}-${score.category_slug}`;
+  scoreMap.set(key, score);
 });
 
 // Helper to get scores in table
-const getScore = (
-    platformSlug: string,
-    categorySlug: string,
+const getPlatCatScore = (
+  platformSlug: string,
+  categorySlug: string,
 ): PlatformCategoryScoreDetails | undefined => {
-    return scoreMap.get(`${platformSlug}-${categorySlug}`);
+  return scoreMap.get(`${platformSlug}-${categorySlug}`);
+};
+
+const getPlatformScore = (
+  platformSlug: string,
+): OtherScoreDetails | undefined => {
+  return platformOverallScores.find((s) => s.item_id == platformSlug);
 };
 
 // Process data for mobile view
 const categoryData = categories.map((cat) => ({
-    name: cat.name,
-    link: `/category/${cat.slug}`,
-    platforms: platforms.map((platform) => {
-        const score = getScore(platform.slug, cat.slug);
-        return {
-            name: platform.name,
-            grade: score?.grade || "-",
-            score: score?.score || 0,
-        };
-    }),
-    overall: {
-        grade: getScore(platforms[0].slug, "overall")?.grade || "-",
-        score: getScore(platforms[0].slug, "overall")?.score || 0,
-    },
+  name: cat.name,
+  link: `/category/${cat.slug}`,
+  platforms: platforms.map((platform) => {
+    const score = getPlatCatScore(platform.slug, cat.slug);
+    return {
+      name: platform.name,
+      grade: score?.grade || "-",
+      score: score?.score || 0,
+    };
+  }),
+  overall: {
+    grade: getPlatformScore(platforms[0].slug)?.grade || "-",
+    score: getPlatformScore(platforms[0].slug)?.score || 0,
+  },
 }));
 ---
 
 <div
-    class="bg-base-light text-crust rounded-md shadow-sm p-4 m-2 overflow-x-auto"
+  class="bg-base-light text-crust rounded-md shadow-sm p-4 m-2 overflow-x-auto"
 >
-    <!-- Desktop View -->
-    <div class="hidden md:block">
-        <table class="table-auto w-full">
-            <thead>
-                <tr class="border-b-2">
-                    <th class="text-left min-w-24 pb-1">Category</th>
-                    {
-                        platforms.map((platform) => (
-                            <th class="text-center text-crust min-w-20 w-24 pb-1">
-                                <a href={`/platform/${platform.slug}`}>
-                                    {platform.name}
-                                </a>
-                            </th>
-                        ))
-                    }
-                </tr>
-            </thead>
-            <tbody>
-                {
-                    categories.map((cat) => (
-                        <tr class="last:border-t-2">
-                            <td class="text-left">
-                                <a href={`/category/${cat.slug}`}>{cat.name}</a>
-                            </td>
-                            {platforms.map((platform) => {
-                                const score = getScore(platform.slug, cat.slug);
-                                return (
-                                    <td class="text-center px-2 py-1.5">
-                                        <Grade grade={score?.grade || "-"} />
-                                    </td>
-                                );
-                            })}
-                        </tr>
-                    ))
-                }
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Mobile View -->
-    <div class="md:hidden">
-        {
-            categoryData.map((cat) => (
-                <div class="pb-2">
-                    <h2 class="font-bold border-b-2">
-                        <a href={cat.link}>{cat.name}</a>
-                    </h2>
-                    <table class="mt-2 table-auto text-sm w-full">
-                        <tbody>
-                            {cat.platforms.map((platform) => (
-                                <tr>
-                                    <td class="px-2 pt-1">{platform.name}</td>
-                                    <td class="px-2 pt-1">
-                                        <Grade grade={platform.grade} />
-                                    </td>
-                                    <td class="px-2 pt-1">
-                                        <ScoreRel num={platform.score} />
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+  <!-- Desktop View -->
+  <div class="hidden md:block">
+    <table class="table-auto w-full">
+      <thead>
+        <tr class="border-b-2">
+          <th class="text-left min-w-24 pb-1">Category</th>
+          {
+            platforms.map((platform) => (
+              <th class="text-center text-crust min-w-20 w-24 pb-1">
+                <a href={`/platform/${platform.slug}`}>{platform.name}</a>
+              </th>
             ))
+          }
+        </tr>
+      </thead>
+      <tbody>
+        {
+          categories.map((cat) => (
+            <tr>
+              <td class="text-left">
+                <a href={`/category/${cat.slug}`}>{cat.name}</a>
+              </td>
+              {platforms.map((platform) => {
+                const score = getPlatCatScore(platform.slug, cat.slug);
+                return (
+                  <td class="text-center px-2 py-1.5">
+                    <Grade grade={score?.grade || "-"} />
+                  </td>
+                );
+              })}
+            </tr>
+          ))
         }
-    </div>
+        <tr class="border-t-2">
+          <td class="text-left">Overall</td>
+          {
+            platforms.map((platform) => {
+              const score = getPlatformScore(platform.slug);
+              return (
+                <td class="text-center px-2 py-1.5">
+                  <Grade grade={score?.grade || "-"} />
+                </td>
+              );
+            })
+          }
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Mobile View -->
+  <div class="md:hidden">
+    {
+      categoryData.map((cat) => (
+        <div class="pb-2">
+          <h2 class="font-bold border-b-2">
+            <a href={cat.link}>{cat.name}</a>
+          </h2>
+          <table class="mt-2 table-auto text-sm w-full">
+            <tbody>
+              {cat.platforms.map((platform) => (
+                <tr>
+                  <td class="px-2 pt-1">{platform.name}</td>
+                  <td class="px-2 pt-1">
+                    <Grade grade={platform.grade} />
+                  </td>
+                  <td class="px-2 pt-1">
+                    <ScoreRel num={platform.score} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))
+    }
+  </div>
 </div>
