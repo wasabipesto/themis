@@ -12,12 +12,14 @@ import {
   getPlatformCategoryScores,
   getFeaturedQuestions,
   getMarketScoresByQuestion,
+  getPlatformOverallScores,
 } from "@lib/api";
 
 const scoreType = "brier-relative";
 
 const platforms = await getPlatforms();
 const platformCategoryScores = await getPlatformCategoryScores(scoreType);
+const platformOverallScores = await getPlatformOverallScores();
 const featuredQuestions = await getFeaturedQuestions(6);
 const marketScores = await getMarketScoresByQuestion(
   featuredQuestions.map((q) => q.id),
@@ -60,9 +62,19 @@ const marketScores = await getMarketScoresByQuestion(
             <LongText text={platform.long_description} />
           </div>
           <PlatformReportCard
-            scores={platformCategoryScores.filter(
+            comboScores={platformCategoryScores.filter(
               (score) => score.platform_slug == platform.slug,
             )}
+            overallScore={(() => {
+              const score = platformOverallScores.find(
+                (score) =>
+                  score.item_id == platform.slug && score.score_type == scoreType,
+              );
+              if (!score) {
+                throw new Error(`Overall score not found for platform ${platform.slug} and score type ${scoreType}`);
+              }
+              return score;
+            })()}
             pivot="category"
           />
         </div>

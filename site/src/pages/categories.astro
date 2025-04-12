@@ -10,18 +10,19 @@ import {
   getCategories,
   getPlatformCategoryScores,
   getFeaturedQuestions,
-  getPlatformOverallScores,
+  getCategoryOverallScores,
   getMarketScoresByQuestion,
 } from "@lib/api";
 
+const scoreType = "brier-relative";
+
 const categories = await getCategories();
-const platformCategoryScores =
-  await getPlatformCategoryScores("brier-relative");
-const platformOverallScores = await getPlatformOverallScores();
+const platformCategoryScores = await getPlatformCategoryScores(scoreType);
+const categoryOverallScores = await getCategoryOverallScores();
 const featuredQuestions = await getFeaturedQuestions(6);
 const marketScores = await getMarketScoresByQuestion(
   featuredQuestions.map((q) => q.id),
-  "brier-relative",
+  scoreType,
 );
 ---
 
@@ -56,18 +57,35 @@ const marketScores = await getMarketScoresByQuestion(
             <p class="my-2">{category.description}</p>
           </div>
           <CategoryReportCard
-            scores={platformCategoryScores.filter(
+            comboScores={platformCategoryScores.filter(
               (score) => score.category_slug == category.slug,
             )}
+            overallScore={(() => {
+              const score = categoryOverallScores.find(
+                (score) =>
+                  score.item_id == category.slug &&
+                  score.score_type == scoreType,
+              );
+              if (!score) {
+                throw new Error(
+                  `Overall score not found for category ${category.slug} and score type ${scoreType}`,
+                );
+              }
+              return score;
+            })()}
             pivot="platform"
           />
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {featuredQuestions.map((question) => {
-            const questionScores = marketScores.filter(
-              (score) => score.question_id === question.id,
+            return (
+              <QuestionCard
+                question={question}
+                scores={marketScores.filter(
+                  (score) => score.question_id === question.id,
+                )}
+              />
             );
-            return <QuestionCard question={question} scores={questionScores} />;
           })}
         </div>
         <SeeMoreLink

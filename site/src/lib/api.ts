@@ -141,13 +141,13 @@ export async function getPlatformCategoryScores(
 
 export async function getPlatformOverallScores(): Promise<OtherScoreDetails[]> {
   return fetchFromAPI<OtherScoreDetails[]>(
-    `/other_scores?item_type=eq.platform?order=platform_slug`,
+    `/other_scores?item_type=eq.platform&order=item_id`,
   );
 }
 
 export async function getCategoryOverallScores(): Promise<OtherScoreDetails[]> {
   return fetchFromAPI<OtherScoreDetails[]>(
-    `/other_scores?item_type=eq.category?order=category_slug`,
+    `/other_scores?item_type=eq.category&order=item_id`,
   );
 }
 

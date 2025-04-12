@@ -3,13 +3,14 @@ import Markets from "@atoms/num-markets.astro";
 import Grade from "@atoms/grade.astro";
 import ScoreRel from "@atoms/score-rel.astro";
 import ScoreAbs from "@atoms/score-abs.astro";
-import type { PlatformCategoryScoreDetails } from "@types";
+import type { OtherScoreDetails, PlatformCategoryScoreDetails } from "@types";
 
 interface Props {
-  scores: PlatformCategoryScoreDetails[];
+  comboScores: PlatformCategoryScoreDetails[];
+  overallScore: OtherScoreDetails;
   pivot: "platform" | "category";
 }
-const { scores, pivot } = Astro.props;
+const { comboScores, overallScore, pivot } = Astro.props;
 
 const headerLabel = pivot === "platform" ? "Platform" : "Category";
 const scoreField = pivot === "platform" ? "platform_name" : "category_name";
@@ -30,7 +31,7 @@ const scoreField = pivot === "platform" ? "platform_name" : "category_name";
     </thead>
     <tbody>
       {
-        scores.map((score) => (
+        comboScores.map((score) => (
           <tr class="last:border-t-2">
             <td class="px-2 py-1 text-left">{score[scoreField]}</td>
             <td class="px-2 py-1 text-center">
@@ -48,6 +49,21 @@ const scoreField = pivot === "platform" ? "platform_name" : "category_name";
           </tr>
         ))
       }
+      <tr class="last:border-t-2">
+        <td class="px-2 py-1 text-left">Overall</td>
+        <td class="px-2 py-1 text-center">
+          <Markets num={overallScore.num_markets} />
+        </td>
+        <td class="px-2 py-1 text-center">
+          <Grade grade={overallScore.grade} />
+        </td>
+        <td class="px-2 py-1 text-center">
+          <ScoreRel num={overallScore.score} />
+        </td>
+        <td class="px-2 py-1 text-center">
+          <ScoreAbs num={overallScore.score} />
+        </td>
+      </tr>
     </tbody>
   </table>
 </div>
