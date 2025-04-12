@@ -112,10 +112,6 @@ fn main() -> Result<()> {
         platform_category_scores.len() + other_scores.len()
     );
 
-    // TODO:
-    // Build calibration points.
-    // Wipe & upload calibration points.
-
     // Refresh all materialized views
     info!("Refreshing all materialized views...");
     api::refresh_all_materialized_views(&postgrest_params)?;

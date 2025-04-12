@@ -428,6 +428,7 @@ pub struct PlatformCategoryScore {
 /// Other scores.
 #[derive(Debug, Serialize, Clone)]
 pub struct OtherScore {
+    pub item_type: String,
     pub item_id: String,
     pub score_type: ScoreType,
     pub num_markets: usize,
@@ -526,7 +527,8 @@ fn average_platform_category_scores(
 }
 
 fn average_other_scores(
-    item_id: String,
+    item_type: &str,
+    item_id: &str,
     score_type: &ScoreType,
     market_scores: &[MarketScore],
 ) -> OtherScore {
@@ -535,6 +537,7 @@ fn average_other_scores(
         let average_score =
             market_scores.iter().map(|s| s.score).sum::<f32>() / market_scores.len() as f32;
         OtherScore {
+            item_type: item_type.to_string(),
             item_id: item_id.to_string(),
             score_type: score_type.clone(),
             num_markets: market_scores.len(),
@@ -543,6 +546,7 @@ fn average_other_scores(
         }
     } else {
         OtherScore {
+            item_type: item_type.to_string(),
             item_id: item_id.to_string(),
             score_type: score_type.clone(),
             num_markets: 0,
@@ -623,7 +627,8 @@ pub fn aggregate_platform_category_scores(
                 .map(|item| item.score.clone())
                 .collect();
             other_overall_scores.push(average_other_scores(
-                format!("platform:{}", platform.slug),
+                "platform",
+                &platform.slug,
                 &score_type,
                 &filtered_market_scores,
             ));
@@ -641,7 +646,8 @@ pub fn aggregate_platform_category_scores(
                 .map(|item| item.score.clone())
                 .collect();
             other_overall_scores.push(average_other_scores(
-                format!("category:{}", category.slug),
+                "category",
+                &category.slug,
                 &score_type,
                 &filtered_market_scores,
             ));
@@ -658,7 +664,8 @@ pub fn aggregate_platform_category_scores(
                 .map(|item| item.score.clone())
                 .collect();
             other_overall_scores.push(average_other_scores(
-                format!("question:{}", question.id),
+                "question",
+                &question.id.to_string(),
                 &score_type,
                 &filtered_market_scores,
             ));

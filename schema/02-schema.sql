@@ -123,12 +123,13 @@ CREATE TABLE platform_category_scores (
 
 -- === OTHER SCORES ===
 CREATE TABLE other_scores (
+    item_type TEXT NOT NULL,
     item_id TEXT NOT NULL,
     score_type TEXT NOT NULL,
     num_markets INTEGER NOT NULL,
     score DECIMAL,
     grade TEXT,
-    PRIMARY KEY (item_id, score_type)
+    PRIMARY KEY (item_type, item_id, score_type)
 );
 
 -- === DAILY PROBABILITY POINTS ===
