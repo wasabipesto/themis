@@ -5,6 +5,7 @@
 #     "matplotlib",
 #     "requests",
 #     "numpy",
+#     "tabulate",
 # ]
 # ///
 
@@ -16,6 +17,7 @@ import numpy as np
 from dotenv import load_dotenv
 import matplotlib.pyplot as plt
 from collections import defaultdict
+from tabulate import tabulate
 
 
 def fetch_scores(postgrest_url, score_type=None, linked_only=False, min_traders=None, min_volume=None, min_duration=None):
@@ -246,6 +248,42 @@ def save_or_show_plot(fig, output_path=None):
         else:
             plt.show()
 
+def calculate_tier_percentiles(tier_names, multiplier=2):
+    """
+    Calculate percentile cutoffs for tiers where each lower tier has
+    multiplier times as many items as the tier above it.
+
+    Args:
+        tier_names: A list of tier names (highest to lowest)
+        multiplier: How many times larger each subsequent tier should be
+
+    Returns:
+        A dictionary mapping tier names to their percentile cutoffs (upper bounds)
+    """
+    num_tiers = len(tier_names)
+
+    # Calculate the first tier's percentage based on the geometric series
+    # If x is the first tier's percentage, then:
+    # x * (1 + multiplier + multiplier^2 + ... + multiplier^(n-1)) = 100%
+    # This is a geometric series with sum: x * (multiplier^n - 1)/(multiplier - 1) = 100
+    first_tier_percentage = 100 * (multiplier - 1) / (multiplier**num_tiers - 1)
+
+    # Calculate percentages for each tier
+    tier_percentages = [first_tier_percentage * (multiplier**i) for i in range(num_tiers)]
+
+    # Calculate cumulative percentages (these are the cutoffs)
+    cumulative_percentages = []
+    current_sum = 0
+    for percentage in tier_percentages:
+        current_sum += percentage
+        cumulative_percentages.append(min(current_sum, 100))  # Cap at 100%
+
+    # Create the result dictionary with tier names and their percentile cutoffs
+    result = {}
+    for i, tier_name in enumerate(tier_names):
+        result[tier_name] = cumulative_percentages[i]
+
+    return result
 
 def parse_arguments():
     """Parse command line arguments."""
@@ -354,6 +392,61 @@ def main():
     else:
         print("No valid grade data found to plot bar charts.")
 
+    # 3. Show suggested grade cutoffs and score thresholds for each score type
+    grades = ["S", "A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "D-", "F"]
+    grade_cutoffs = calculate_tier_percentiles(grades, multiplier=1.25)
+
+    # Calculate score thresholds for each score type based on percentiles
+    score_thresholds = {}
+    for score_type, scores_list in scores_by_type.items():
+        if scores_list:  # Skip if no scores for this type
+            # For each grade, calculate the actual score value at its percentile cutoff
+            thresholds = {}
+            for grade, percentile in grade_cutoffs.items():
+                # For Brier scores, lower is better, so we flip the percentile calculation
+                if score_type.lower().startswith('brier'):
+                    thresholds[grade] = np.percentile(scores_list, percentile)
+                else:
+                    # For other score types, higher is better
+                    thresholds[grade] = np.percentile(scores_list, 100 - percentile)
+            score_thresholds[score_type] = thresholds
+
+    # Create table header with basic columns plus one column per score type
+    headers = ["Tier", "Percentile Start", "Percentile End", "Percentile Width"]
+    for score_type in sorted(score_thresholds.keys()):
+        headers.append(f"{score_type}")
+
+    # Build table data with percentiles and score thresholds
+    table_data = []
+    prev_cutoff = 0
+    for grade in grades:
+        # Start with basic percentile data
+        cutoff = grade_cutoffs[grade]
+        range_width = cutoff - prev_cutoff
+        row = [grade, f"{prev_cutoff:.2f}%", f"{cutoff:.2f}%", f"{range_width:.2f}%"]
+
+        # Add threshold value for each score type
+        for score_type in sorted(score_thresholds.keys()):
+            if grade in score_thresholds[score_type]:
+                row.append(f"{score_thresholds[score_type][grade]:.5f}")
+            else:
+                row.append("N/A")
+
+        table_data.append(row)
+        prev_cutoff = cutoff
+
+    # Print the table with all details
+    print("\nSuggested Grade Cutoffs and Score Thresholds:")
+    print(tabulate(table_data, headers=headers, tablefmt="github"))
+
+    # Save the table to a file in CSV format
+    if filename_parts:
+        cutoffs_file = f'{default_dir}/{filter_str}_grade_cutoffs.csv'
+        with open(cutoffs_file, 'w') as f:
+            f.write(','.join(headers) + '\n')
+            for row in table_data:
+                f.write(','.join(str(item).rstrip('%') for item in row) + '\n')
+        print(f"\nGrade cutoffs saved to {cutoffs_file}")
 
 if __name__ == "__main__":
     main()
