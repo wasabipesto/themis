@@ -367,6 +367,7 @@ impl RelativeScoreType {
                             "{market_id} {self} score ({score}) serializes to null: {:?}",
                             scores
                         );
+                        return None;
                     }
                     Some((market_id.clone(), score))
                 }
