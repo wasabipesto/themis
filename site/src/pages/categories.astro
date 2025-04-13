@@ -6,6 +6,7 @@ import Traders from "@atoms/traders.astro";
 import Volume from "@atoms/volume.astro";
 import Markets from "@atoms/num-markets.astro";
 import Base from "@layouts/base.astro";
+import { Icon } from "astro-icon/components";
 import {
   getPlatforms,
   getCategories,
@@ -38,6 +39,7 @@ const marketScores = await getMarketScoresByQuestion(
       <div class="px-4 m-2">
         <div class="flex space-x-8 pb-2 border-b-2 flex-col sm:flex-row">
           <h2 class="font-bold text-2xl">
+            <Icon name={category.icon} class="inline mr-1 mb-1" />
             <a href={`/category/${category.slug}`}>{category.name}</a>
           </h2>
           <div class="self-baseline sm:self-center">
