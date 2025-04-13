@@ -1,8 +1,9 @@
 ---
 import Grade from "@atoms/grade.astro";
 import ScoreRel from "@atoms/score-rel.astro";
+import { Icon } from "astro-icon/components";
 import type {
-  Category,
+  CategoryDetails,
   OtherScoreDetails,
   Platform,
   PlatformCategoryScoreDetails,
@@ -10,7 +11,7 @@ import type {
 
 interface Props {
   platforms: Platform[];
-  categories: Category[];
+  categories: CategoryDetails[];
   platformCategoryScores: PlatformCategoryScoreDetails[];
   platformOverallScores: OtherScoreDetails[];
 }
@@ -80,7 +81,10 @@ const categoryData = categories.map((cat) => ({
           categories.map((cat) => (
             <tr>
               <td class="text-left">
-                <a href={`/category/${cat.slug}`}>{cat.name}</a>
+                <a href={`/category/${cat.slug}`}>
+                  <Icon name={cat.icon} class="inline mr-1" />
+                  {cat.name}
+                </a>
               </td>
               {platforms.map((platform) => {
                 const score = getPlatCatScore(platform.slug, cat.slug);
