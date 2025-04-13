@@ -5,6 +5,7 @@ import QuestionCard from "@components/question-card-detailed.astro";
 import SeeMoreLink from "@components/see-more-link.astro";
 import PlatformCard from "@components/platform-card.astro";
 import CalibrationChart from "@components/charts/calibration.astro";
+import ProbabilityChart from "@components/question-prob-chart.astro";
 import {
   getPlatforms,
   getCategories,
@@ -65,10 +66,33 @@ const featuredQuestions = await getFeaturedQuestions(4);
   <div class="p-4 m-2">
     <h1 class="text-4xl font-bold">Top Questions</h1>
     <p class="mt-2">
-      Each of these cards links to a question about a high-level predictable
-      outcome with some amount of uncertainty. Each question is predicted by
-      markets from each prediction market platform, and those markets are graded
-      to create the scores for each platform above.
+      Each card here asks a general question that several prediction market
+      platforms have indepenently tried to predict. We find and link markets
+      when they resolve in order to judge all platforms on an even playing
+      field.
+    </p>
+    <p class="mt-2">
+      A traditional accuracy analysis would look at a single point in time,
+      usually midway through the market or 30 days prior to resolution. We
+      calculate our absolute scores in this way, and show it below as the
+      midpoint Brier score.
+    </p>
+    <p class="mt-2">
+      However, that form of scoring often misses a lot of important information.
+      When you look at the probability charts below, you can see how each
+      market's prediction changes over time as they respond to news, polls, and
+      other information. In addition, each prediction platform has different
+      rules on what they predict and how early their markets open which makes a
+      direct comparison difficult.
+    </p>
+    <p class="mt-2">
+      In order to address this, we calculate a relative score by scoring every
+      market on every day that it's open. This is the relative score - it's
+      grading that market's performance relative to the other markets on each
+      day and rewarding those that were correct earliest. Check out the <a
+        href="#scoring"
+        class="text-lavender">scoring section</a
+      > for details about the system.
     </p>
   </div>
   <div>
@@ -142,14 +166,61 @@ const featuredQuestions = await getFeaturedQuestions(4);
       predictions earlier receive more points, while those that take longer or
       never reach accuracy receive fewer points.
     </p>
-    <p class="my-2">
-      For example, if Platform A predicts an event at 80% likelihood three
-      months out and Platform B reaches the same prediction one month before,
-      Platform A would score higher - assuming they were both correct. This
-      rewards both accuracy and early insight, giving us a better picture of
-      which platforms are best at surfacing predictive information quickly.
-    </p>
-    <SeeMoreLink link={`/scoring`} text="Learn more" />
+    <div class="grid gap-2 grid-cols-1 md:grid-cols-2">
+      <div>
+        <p class="my-2">
+          As an example, let's look at the probability history for an actual set
+          of markets.
+        </p>
+        <ul class="list-disc pl-5">
+          <li>
+            Our first step is preprocessing - for every market we average the
+            probability over each day to minimize transient spikes and normalize
+            the data.
+          </li>
+          <li>
+            Next we narrow the range down to the period where at least two
+            markets are open. For some markets we will also override the start
+            or end dates to limit the scoring period.
+          </li>
+          <li>
+            For each day in the scoring range, we calculate the score for each
+            market. In this case we will use the Brier score, but other scores
+            such as log would also work. This is the daily absolute score.
+          </li>
+          <li>
+            We then calculate the median daily score as a baseline for
+            comparison. Markets that do better than this median will have better
+            scores at the end.
+          </li>
+          <li>
+            For each day, we find the difference between each market's daily
+            absolute score and that median.
+          </li>
+          <li>
+            Finally, we sum all of the market's daily differences and divide
+            them by the total number of scoring days. Not all markets are open
+            for the same duration, so this grants better scores to the markets
+            that were open for longer.
+          </li>
+          <li>
+            This gives us a number that can be graded similarly to a Brier
+            score, in the sense that lower is better. However, the scores can
+            now be from -1 to +1 and most will be centered around 0, the median
+            score.
+          </li>
+          <li>
+            In order to more easily evaluate these scores, we can assign then
+            letter grades at certain cutoffs. These are the grades that you see
+            on each question card.
+          </li>
+        </ul>
+      </div>
+      <div>
+        <ProbabilityChart question={featuredQuestions[0]} />
+      </div>
+    </div>
+    <SeeMoreLink link={`/about#resources`} text="Learn more" />
   </div>
   <hr class="my-2" />
   <div class="p-4 m-2" id="calibration">
