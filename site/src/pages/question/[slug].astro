@@ -33,14 +33,14 @@ const { question } = Astro.props;
 const scoreLayout = [
   {
     row_title: "Brier score:",
-    absolute_score_label: "Absolute:",
+    absolute_score_label: "Midpoint:",
     absolute_score_key: "brier-average",
     relative_score_label: "Relative:",
     relative_score_key: "brier-relative",
   },
   {
     row_title: "Logarithmic score:",
-    absolute_score_label: "Absolute:",
+    absolute_score_label: "Midpoint:",
     absolute_score_key: "logarithmic-average",
     relative_score_label: "Relative:",
     relative_score_key: "logarithmic-relative",
@@ -112,10 +112,10 @@ const resolution = markets[0].question_invert
   <div class="bg-crust rounded-md drop-shadow-md p-4 m-2">
     {
       markets.map((market) => (
-        <div>
-          <div class="flex space-x-4 border-b-1 flex-col sm:flex-row self-baseline sm:self-center">
-            <ul class="flex flex-wrap items-center gap-3">
-              <li class="font-bold">{market.platform_name}</li>
+        <div class="mb-6">
+          <div class="border-b-1">
+            <ul class="flex flex-wrap items-center gap-x-3">
+              <li class="font-bold text-lg">{market.platform_name}</li>
               <li>
                 <Duration num={market.duration_days} />
               </li>
@@ -130,6 +130,14 @@ const resolution = markets[0].question_invert
                 </li>
               )}
             </ul>
+          </div>
+          <div>
+            <h3 class="italic">
+              <a href={market.url} target="_blank" class="">
+                {market.title}
+                <Icon name="mdi:open-in-new" class="inline mb-1 ml-1" />
+              </a>
+            </h3>
           </div>
           {scoreLayout.map((row) => {
             const relScore = marketScores.find(
@@ -153,27 +161,33 @@ const resolution = markets[0].question_invert
               );
             }
             return (
-              <div class="ml-10 my-2">
-                <div class="flex items-center space-x-3">
-                  <span class="w-60 italic">{row.row_title}</span>
-                  <span class="w-40 italic text-right">
-                    {row.absolute_score_label}
-                  </span>
-                  <span class="w-20">
-                    <Grade grade={absScore.grade} />
-                  </span>
-                  <span class="w-20">
-                    <ScoreAbs num={absScore.score} />
-                  </span>
-                  <span class="w-40 italic text-right">
-                    {row.relative_score_label}
-                  </span>
-                  <span class="w-20">
-                    <Grade grade={relScore.grade} />
-                  </span>
-                  <span class="w-20">
-                    <ScoreRel num={relScore.score} />
-                  </span>
+              <div class="md:ml-10 my-2">
+                <div class="grid gap-x-4 grid-cols-1 md:grid-cols-3">
+                  <div class="ml-4">
+                    <span class="">{row.row_title}</span>
+                  </div>
+                  <div class="ml-8 md:ml-0">
+                    <span class="inline-block w-20 mx-2 text-right">
+                      {row.absolute_score_label}
+                    </span>
+                    <span class="inline-block w-20 text-right">
+                      <Grade grade={absScore.grade} />
+                    </span>
+                    <span class="inline-block w-20 text-right">
+                      <ScoreAbs num={absScore.score} />
+                    </span>
+                  </div>
+                  <div class="ml-8 md:ml-0">
+                    <span class="inline-block w-20 mx-2 text-right">
+                      {row.relative_score_label}
+                    </span>
+                    <span class="inline-block w-20 text-right">
+                      <Grade grade={relScore.grade} />
+                    </span>
+                    <span class="inline-block w-20 text-right">
+                      <ScoreRel num={relScore.score} />
+                    </span>
+                  </div>
                 </div>
               </div>
             );
@@ -185,7 +199,7 @@ const resolution = markets[0].question_invert
       <div
         class="flex space-x-4 border-b-1 flex-col sm:flex-row self-baseline sm:self-center"
       >
-        <ul class="flex flex-wrap items-center gap-3">
+        <ul class="flex flex-wrap items-center gap-x-3">
           <li class="font-bold">Overall</li>
           <li>
             <Traders num={question.total_traders} />
@@ -206,18 +220,22 @@ const resolution = markets[0].question_invert
             );
           }
           return (
-            <div class="ml-10 my-2">
-              <div class="flex items-center space-x-3">
-                <span class="w-60 italic">{row.row_title}</span>
-                <span class="w-40 italic text-right">
-                  {row.absolute_score_label}
-                </span>
-                <span class="w-20">
-                  <Grade grade={absScore.grade} />
-                </span>
-                <span class="w-20">
-                  <ScoreAbs num={absScore.score} />
-                </span>
+            <div class="md:ml-10 my-2">
+              <div class="grid gap-x-4 grid-cols-1 md:grid-cols-3">
+                <div class="ml-4">
+                  <span class="">{row.row_title}</span>
+                </div>
+                <div class="ml-8 md:ml-0">
+                  <span class="inline-block w-20 mx-2 text-right">
+                    {row.absolute_score_label}
+                  </span>
+                  <span class="inline-block w-20 text-right">
+                    <Grade grade={absScore.grade} />
+                  </span>
+                  <span class="inline-block w-20 text-right">
+                    <ScoreAbs num={absScore.score} />
+                  </span>
+                </div>
               </div>
             </div>
           );
