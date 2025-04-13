@@ -136,36 +136,34 @@ const resolution = markets[0].question_invert
           ))
         }
         <div>
-          <div>
-            <div class="font-bold border-b-1">Overall</div>
-            {
-              questionScoreTypes.map((type) => {
-                const score = questionScores.find(
-                  (s) => s.score_type == type.score_key,
+          <div class="font-bold border-b-1">Overall</div>
+          {
+            questionScoreTypes.map((type) => {
+              const score = questionScores.find(
+                (s) => s.score_type == type.score_key,
+              );
+              if (!score) {
+                throw new Error(
+                  `Score not found for question ${question.id}/${type.score_key}`,
                 );
-                if (!score) {
-                  throw new Error(
-                    `Score not found for question ${question.id}/${type.score_key}`,
-                  );
-                }
-                return (
-                  <div class="text-sm ml-6 my-2">
-                    <div class="flex items-center space-x-3">
-                      <span class="w-50 italic">{type.score_label}:</span>
-                      <span class="w-20">
-                        <Grade grade={score.grade} />
-                      </span>
-                      <span class="w-20">
-                        {(type.score_type == "absolute" && (
-                          <ScoreAbs num={score.score} />
-                        )) || <ScoreRel num={score.score} />}
-                      </span>
-                    </div>
+              }
+              return (
+                <div class="text-sm ml-6 my-2">
+                  <div class="flex items-center space-x-3">
+                    <span class="w-50 italic">{type.score_label}:</span>
+                    <span class="w-20">
+                      <Grade grade={score.grade} />
+                    </span>
+                    <span class="w-20">
+                      {(type.score_type == "absolute" && (
+                        <ScoreAbs num={score.score} />
+                      )) || <ScoreRel num={score.score} />}
+                    </span>
                   </div>
-                );
-              })
-            }
-          </div>
+                </div>
+              );
+            })
+          }
         </div>
       </div>
     </div>

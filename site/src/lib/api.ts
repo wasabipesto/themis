@@ -174,7 +174,7 @@ export async function getMarketsByQuestion(
   question_id: number,
 ): Promise<MarketDetails[]> {
   return fetchFromAPI<MarketDetails[]>(
-    `/market_details?question_id=eq.${question_id}`,
+    `/market_details?order=platform_slug&question_id=eq.${question_id}`,
   );
 }
 
