@@ -124,6 +124,7 @@ test-all: download-test extract-test grade-test site-test group-test
 # Run nightly process
 nightly: test-all
     just download --reset-cache
+    just download
     just extract
     just grade
     just site-build site-push
