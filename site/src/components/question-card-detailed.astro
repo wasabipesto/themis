@@ -59,7 +59,11 @@ const resolution = markets[0].question_invert
 ---
 
 <div class="bg-crust rounded-md drop-shadow-md p-4 mx-2 my-4">
-  <div class="text-xl font-bold mb-2">{question.title}</div>
+  <div class="text-xl font-bold mb-2">
+    <a href={`/question/${question.slug}`} class="hover:text-lavender">
+      {question.title}
+    </a>
+  </div>
   <div class="grid grid-cols-1 lg:grid-cols-2">
     <div class="m-2 text-sm">
       <ul class="flex flex-wrap items-center gap-3 mb-4">
