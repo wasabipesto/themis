@@ -1,6 +1,37 @@
 ---
 import Base from "@layouts/base.astro";
-import CalibrationChart from "@components/calibration-chart.astro";
+import { Icon } from "astro-icon/components";
+
+const items = [
+  {
+    title: "Calibration",
+    icon: "mdi:chart-line",
+    link: "/charts/calibration",
+    description:
+      "Compare predictions to resolutions. Identify over- and under-confidence in specific platforms and categories.",
+  },
+  {
+    title: "Accuracy",
+    icon: "mdi:chart-timeline",
+    link: "/charts/accuracy",
+    description:
+      "Examine accuracy metrics such as Brier and logarithmic scores. See if higher volume really does make more accurate markets.",
+  },
+  {
+    title: "Markets",
+    icon: "mdi:sitemap",
+    link: "/charts/markets",
+    description:
+      "Compare market statistics across all prediction platforms. See what kinds of markets each platform specializes in.",
+  },
+  {
+    title: "Other",
+    icon: "mdi:chart-arc",
+    link: "/charts/other",
+    description:
+      "See all of the charts that wouldn't fit anywhere else, plus some experimental visualizations.",
+  },
+];
 ---
 
 <Base title="Charts">
@@ -9,23 +40,18 @@ import CalibrationChart from "@components/calibration-chart.astro";
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-2">
-    <div class="p-2 m-1">
-      <CalibrationChart />
-    </div>
-    <div class="p-2 m-1">
-      <CalibrationChart />
-    </div>
-    <div class="p-2 m-1">
-      <CalibrationChart />
-    </div>
-    <div class="p-2 m-1">
-      <CalibrationChart />
-    </div>
-    <div class="p-2 m-1">
-      <CalibrationChart />
-    </div>
-    <div class="p-2 m-1">
-      <CalibrationChart />
-    </div>
+    {
+      items.map((i) => (
+        <a href={i.link} class="block">
+          <div class="p-4 m-3 bg-base-light text-crust rounded-md drop-shadow-sm transition-all duration-200 hover:bg-selection hover:translate-y-[-2px] hover:shadow-md cursor-pointer">
+            <h2 class="text-xl font-bold">
+              <Icon name={i.icon} class="inline mr-1 mb-1" />
+              {i.title}
+            </h2>
+            <p class="m-1 italic">{i.description}</p>
+          </div>
+        </a>
+      ))
+    }
   </div>
 </Base>
