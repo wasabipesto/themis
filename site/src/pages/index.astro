@@ -4,7 +4,7 @@ import ReportCard from "@components/index-report-card.astro";
 import QuestionCard from "@components/question-card-detailed.astro";
 import SeeMoreLink from "@components/see-more-link.astro";
 import PlatformCard from "@components/platform-card.astro";
-import CalibrationChart from "@components/calibration-chart.astro";
+import CalibrationChart from "@components/charts/calibration.astro";
 import {
   getPlatforms,
   getCategories,
@@ -174,7 +174,10 @@ const featuredQuestions = await getFeaturedQuestions(4);
       systemic errors.
     </p>
     <div class="my-4">
-      <CalibrationChart />
+      <CalibrationChart
+        title="Calibration Plot"
+        subtitle="All resolved binary and multiple choice markets."
+      />
     </div>
     <SeeMoreLink link={`/charts`} text="See all charts" />
   </div>
