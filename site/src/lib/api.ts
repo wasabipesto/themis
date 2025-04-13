@@ -13,13 +13,15 @@ const PGRST_URL = import.meta.env.PGRST_URL;
 
 class APIError extends Error {
   status: number;
-  endpoint: string;
+  url: string;
 
-  constructor(message: string, status: number, endpoint: string) {
-    super(message);
+  constructor(message: string, status: number, url: string) {
+    const formattedMessage = `Message: ${message}\nStatus: ${status}\nURL: ${url}`;
+    super(formattedMessage);
+
     this.name = "APIError";
     this.status = status;
-    this.endpoint = endpoint;
+    this.url = url;
   }
 }
 
@@ -67,12 +69,12 @@ export async function fetchFromAPI<T>(
           errorText || `API request failed with status ${response.status}`;
       }
 
-      throw new APIError(errorMessage, response.status, endpoint);
+      throw new APIError(errorMessage, response.status, url);
     }
 
     // Handle empty responses
     if (response.headers.get("Content-Length") === "0") {
-      throw new APIError(`JSON returned was empty`, response.status, endpoint);
+      throw new APIError(`JSON returned was empty`, response.status, url);
     }
 
     // Verify content type
@@ -81,12 +83,18 @@ export async function fetchFromAPI<T>(
       throw new APIError(
         `Expected JSON but got ${contentType}`,
         response.status,
-        endpoint,
+        url,
       );
     }
 
     // Parse JSON
     const data = await response.json();
+
+    // Check if the result is an empty array
+    if (Array.isArray(data) && data.length === 0) {
+      throw new APIError(`API returned an empty list`, response.status, url);
+    }
+
     return data as T;
   } catch (error: unknown) {
     // Clear timeout if there was an error
@@ -94,7 +102,7 @@ export async function fetchFromAPI<T>(
 
     // Handle abort errors (timeouts)
     if (error instanceof Error && error.name === "AbortError") {
-      throw new APIError(`Request timeout after ${timeout}ms`, 0, endpoint);
+      throw new APIError(`Request timeout after ${timeout}ms`, 0, url);
     }
 
     // Re-throw API errors
@@ -105,7 +113,7 @@ export async function fetchFromAPI<T>(
     // Handle other errors
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error occurred";
-    throw new APIError(errorMessage, 0, endpoint);
+    throw new APIError(errorMessage, 0, url);
   }
 }
 
