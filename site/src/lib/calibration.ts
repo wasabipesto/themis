@@ -1,7 +1,7 @@
-import type { CalibrationPoint, MarketLite } from "@types";
+import type { CalibrationPoint, MarketDetails } from "@types";
 
 export function marketsIntoCalibrationPoints(
-  markets: MarketLite[],
+  markets: MarketDetails[],
 ): CalibrationPoint[] {
   // Define types for our data structures
   type PlatformData = {
