@@ -1,0 +1,176 @@
+---
+import QuestionProbChart from "@components/question-prob-chart.astro";
+import Traders from "@atoms/traders.astro";
+import Volume from "@atoms/volume.astro";
+import Grade from "@atoms/grade.astro";
+import ScoreRel from "@atoms/score-rel.astro";
+import ScoreAbs from "@atoms/score-abs.astro";
+import type { Category, QuestionDetails } from "@types";
+import { Icon } from "astro-icon/components";
+import {
+  getMarketsByQuestion,
+  getMarketScoresByQuestion,
+  getQuestionOverallScores,
+} from "@lib/api";
+
+interface Props {
+  question: QuestionDetails;
+  categories: Category[];
+}
+let { question, categories } = Astro.props;
+
+const marketScoreTypes = [
+  {
+    score_key: "brier-average",
+    score_type: "absolute",
+    score_label: "Absolute Brier score",
+  },
+  {
+    score_key: "brier-relative",
+    score_type: "relative",
+    score_label: "Relative to others",
+  },
+];
+const questionScoreTypes = [
+  {
+    score_key: "brier-average",
+    score_type: "absolute",
+    score_label: "Average Brier score",
+  },
+];
+
+// Find correct category for icon
+const category = categories.find(
+  (category) => category.slug === question.category_slug,
+);
+if (!category) {
+  throw new Error(`Category not found for slug: ${question.category_slug}`);
+}
+
+// Download markets and scores
+const markets = await getMarketsByQuestion(question.id);
+const marketScores = await getMarketScoresByQuestion([question.id], null);
+const questionScores = await getQuestionOverallScores(question.id);
+
+// Get resolution from market
+const resolution = markets[0].question_invert
+  ? !markets[0].resolution
+  : markets[0].resolution;
+---
+
+<div class="bg-crust rounded-md drop-shadow-md p-4 mx-2 my-4">
+  <div class="text-xl font-bold mb-2">{question.title}</div>
+  <div class="grid grid-cols-1 lg:grid-cols-2">
+    <div class="m-2 text-sm">
+      <ul class="flex flex-wrap items-center gap-3 mb-4">
+        <li>
+          Resolved
+          {
+            resolution ? (
+              <span class="mx-1 px-2 rounded-sm bg-green/20">YES</span>
+            ) : (
+              <span class="mx-1 px-2 rounded-sm bg-red/20">NO</span>
+            )
+          }
+        </li>
+        <li>
+          Category
+          <span class="mx-1 px-2 rounded-sm bg-selection/20">
+            <Icon name={category.icon} class="inline mr-0 mb-1" />
+            <a href={`/category/${question.category_slug}`}>
+              {question.category_name}
+            </a>
+          </span>
+        </li>
+        <li><Traders num={question.total_traders} /></li>
+        <li><Volume num={question.total_volume} /></li>
+      </ul>
+      <div>
+        {
+          markets.map((market) => (
+            <div>
+              <div class="flex space-x-4 border-b-1 flex-col sm:flex-row">
+                <div class="self-baseline sm:self-center">
+                  <ul class="flex flex-wrap items-center gap-3">
+                    <li class="font-bold">{market.platform_name}</li>
+                    {market.traders_count && (
+                      <li>
+                        <Traders num={market.traders_count} />
+                      </li>
+                    )}
+                    {market.volume_usd && (
+                      <li>
+                        <Volume num={market.volume_usd} />
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+              {marketScoreTypes.map((type) => {
+                const score = marketScores.find(
+                  (s) =>
+                    s.market_id == market.id && s.score_type == type.score_key,
+                );
+                if (!score) {
+                  throw new Error(
+                    `Score not found for market ${market.id}/${type.score_key}`,
+                  );
+                }
+                return (
+                  <div class="text-sm ml-6 my-2">
+                    <div class="flex items-center space-x-3">
+                      <span class="w-50 italic">{type.score_label}:</span>
+                      <span class="w-20">
+                        <Grade grade={score.grade} />
+                      </span>
+                      <span class="w-20">
+                        {(type.score_type == "absolute" && (
+                          <ScoreAbs num={score.score} />
+                        )) || <ScoreRel num={score.score} />}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))
+        }
+        <div>
+          <div>
+            <div class="font-bold border-b-1">Overall</div>
+            {
+              questionScoreTypes.map((type) => {
+                const score = questionScores.find(
+                  (s) => s.score_type == type.score_key,
+                );
+                if (!score) {
+                  throw new Error(
+                    `Score not found for question ${question.id}/${type.score_key}`,
+                  );
+                }
+                return (
+                  <div class="text-sm ml-6 my-2">
+                    <div class="flex items-center space-x-3">
+                      <span class="w-50 italic">{type.score_label}:</span>
+                      <span class="w-20">
+                        <Grade grade={score.grade} />
+                      </span>
+                      <span class="w-20">
+                        {(type.score_type == "absolute" && (
+                          <ScoreAbs num={score.score} />
+                        )) || <ScoreRel num={score.score} />}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <QuestionProbChart question={question} />
+    </div>
+  </div>
+</div>

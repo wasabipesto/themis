@@ -1,7 +1,7 @@
 ---
 import Base from "@layouts/base.astro";
 import ReportCard from "@components/index-report-card.astro";
-import QuestionCard from "@components/question-card.astro";
+import QuestionCard from "@components/question-card-detailed.astro";
 import SeeMoreLink from "@components/see-more-link.astro";
 import PlatformCard from "@components/platform-card.astro";
 import CalibrationChart from "@components/calibration-chart.astro";
@@ -11,7 +11,6 @@ import {
   getPlatformCategoryScores,
   getFeaturedQuestions,
   getPlatformOverallScores,
-  getMarketScoresByQuestion,
 } from "@lib/api";
 
 let scoreType = "brier-relative";
@@ -20,11 +19,7 @@ const platforms = await getPlatforms();
 const categories = await getCategories();
 const platformCategoryScores = await getPlatformCategoryScores(scoreType);
 const platformOverallScores = await getPlatformOverallScores();
-const featuredQuestions = await getFeaturedQuestions(12);
-const marketScores = await getMarketScoresByQuestion(
-  featuredQuestions.map((q) => q.id),
-  scoreType,
-);
+const featuredQuestions = await getFeaturedQuestions(4);
 ---
 
 <Base title="Home">
@@ -76,13 +71,10 @@ const marketScores = await getMarketScoresByQuestion(
       to create the scores for each platform above.
     </p>
   </div>
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+  <div>
     {
       featuredQuestions.map((question) => {
-        const questionScores = marketScores.filter(
-          (score) => score.question_id === question.id,
-        );
-        return <QuestionCard question={question} scores={questionScores} />;
+        return <QuestionCard question={question} categories={categories} />;
       })
     }
   </div>

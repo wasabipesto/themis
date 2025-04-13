@@ -42,6 +42,7 @@ const getPlatformScore = (
 // Process data for mobile view
 const categoryData = categories.map((cat) => ({
   name: cat.name,
+  icon: cat.icon,
   link: `/category/${cat.slug}`,
   platforms: platforms.map((platform) => {
     const score = getPlatCatScore(platform.slug, cat.slug);
@@ -81,10 +82,8 @@ const categoryData = categories.map((cat) => ({
           categories.map((cat) => (
             <tr>
               <td class="text-left">
-                <a href={`/category/${cat.slug}`}>
-                  <Icon name={cat.icon} class="inline mr-1" />
-                  {cat.name}
-                </a>
+                <Icon name={cat.icon} class="inline mr-1 mb-1" />
+                <a href={`/category/${cat.slug}`}>{cat.name}</a>
               </td>
               {platforms.map((platform) => {
                 const score = getPlatCatScore(platform.slug, cat.slug);
@@ -98,7 +97,9 @@ const categoryData = categories.map((cat) => ({
           ))
         }
         <tr class="border-t-2">
-          <td class="text-left">Overall</td>
+          <td class="text-left">
+            <Icon name="mdi:compass-rose" class="inline mr-1" /> Overall
+          </td>
           {
             platforms.map((platform) => {
               const score = getPlatformScore(platform.slug);
@@ -120,6 +121,7 @@ const categoryData = categories.map((cat) => ({
       categoryData.map((cat) => (
         <div class="pb-2">
           <h2 class="font-bold border-b-2">
+            <Icon name={cat.icon} class="inline mr-1 mb-1" />
             <a href={cat.link}>{cat.name}</a>
           </h2>
           <table class="mt-2 table-auto text-sm w-full">
