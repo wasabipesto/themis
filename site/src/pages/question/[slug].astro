@@ -7,11 +7,13 @@ import Duration from "@atoms/duration.astro";
 import Grade from "@atoms/grade.astro";
 import ScoreRel from "@atoms/score-rel.astro";
 import ScoreAbs from "@atoms/score-abs.astro";
+import { Icon } from "astro-icon/components";
 import {
   getMarketsByQuestion,
   getQuestions,
   getMarketScoresByQuestion,
   getQuestionOverallScores,
+  getCategories,
 } from "@lib/api";
 
 // Generate routes for all items
@@ -47,21 +49,50 @@ const scoreLayout = [
 
 // Download market and scores
 const markets = await getMarketsByQuestion(question.id);
+const categories = await getCategories();
 const marketScores = await getMarketScoresByQuestion([question.id], null);
 const questionScores = await getQuestionOverallScores(question.id);
+
+// Select category
+const category = categories.find(
+  (category) => category.slug === question.category_slug,
+);
+if (!category) {
+  throw new Error(`Category not found for slug ${question.category_slug}`);
+}
+
+// Get resolution from market
+const resolution = markets[0].question_invert
+  ? !markets[0].resolution
+  : markets[0].resolution;
 ---
 
 <Base title="Market">
   <div class="grid grid-cols-1 md:grid-cols-2 pt-4">
     <div class="p-4 m-2">
-      <div class="text-2xl">{question.title}</div>
-      <ul class="flex items-center space-x-4 my-2">
-        <li class="font-semibold">Category:</li>
+      <div class="text-2xl mb-2">{question.title}</div>
+      <ul class="flex flex-wrap items-center gap-3 mb-4">
         <li>
-          <a href={`/category/${question.category_slug}`} class="text-lavender">
-            {question.category_name}
-          </a>
+          Resolved
+          {
+            resolution ? (
+              <span class="mx-1 px-2 rounded-sm bg-green/20">YES</span>
+            ) : (
+              <span class="mx-1 px-2 rounded-sm bg-red/20">NO</span>
+            )
+          }
         </li>
+        <li>
+          Category
+          <span class="mx-1 px-2 rounded-sm bg-selection/20">
+            <Icon name={category.icon} class="inline mr-0 mb-1" />
+            <a href={`/category/${question.category_slug}`}>
+              {question.category_name}
+            </a>
+          </span>
+        </li>
+        <li><Traders num={question.total_traders} /></li>
+        <li><Volume num={question.total_volume} /></li>
       </ul>
       <!-- TODO: Tags
         <ul class="flex items-center space-x-4 my-2">
@@ -75,7 +106,10 @@ const questionScores = await getQuestionOverallScores(question.id);
       <QuestionProbChart question={question} />
     </div>
   </div>
-  <div class="p-4 m-2">
+  <div class="p-2 m-2">
+    <h1 class="text-2xl font-bold">Detailed Scores</h1>
+  </div>
+  <div class="bg-crust rounded-md drop-shadow-md p-4 m-2">
     {
       markets.map((market) => (
         <div>
