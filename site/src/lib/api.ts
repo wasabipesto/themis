@@ -2,7 +2,6 @@ import type {
   CategoryDetails,
   DailyProbabilityDetails,
   MarketDetails,
-  MarketLite,
   MarketScoreDetails,
   OtherScoreDetails,
   PlatformCategoryScoreDetails,
