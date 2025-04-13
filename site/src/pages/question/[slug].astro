@@ -13,7 +13,6 @@ import {
   getQuestions,
   getMarketScoresByQuestion,
   getQuestionOverallScores,
-  getDailyProbabilities,
 } from "@lib/api";
 
 // Default score types
@@ -38,13 +37,6 @@ const questionScores = await getQuestionOverallScores(question.id);
 // Download market and scores
 const markets = await getMarketsByQuestion(question.id);
 const marketScores = await getMarketScoresByQuestion([question.id], null);
-
-// Download daily probabilities
-const dailyProbabilityPoints = await getDailyProbabilities(
-  question.id,
-  question.start_date_override,
-  question.end_date_override,
-);
 
 // Select appropriate question scores
 const absoluteQuestionScore = questionScores.find(
@@ -112,7 +104,7 @@ let marketsWithScores = markets.map((market) => {
       <div class="whitespace-pre-wrap my-2">{question.description}</div>
     </div>
     <div>
-      <QuestionProbChart points={dailyProbabilityPoints} />
+      <QuestionProbChart question={question} />
     </div>
   </div>
 

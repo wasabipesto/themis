@@ -1,57 +1,69 @@
 ---
-import type { DailyProbabilityDetails } from "@types";
+import { getDailyProbabilities } from "@lib/api";
+import type { QuestionDetails } from "@types";
 
 interface Props {
-  points: DailyProbabilityDetails[];
+  question: QuestionDetails;
 }
-const { points } = Astro.props;
+const { question } = Astro.props;
+
+const points = await getDailyProbabilities(
+  question.id,
+  question.start_date_override,
+  question.end_date_override,
+);
+
+// Generate a unique ID for each instance
+const plotId = `plot-probs-${question.slug}`;
 ---
 
 <div
   class="bg-base-light [&_h2]:text-xl text-crust rounded-md drop-shadow-sm p-4 m-2 overflow-x-auto"
 >
-  <div id="plot" data-points={JSON.stringify(points)}></div>
+  <div id={plotId} class="daily-prob-plot" data-points={JSON.stringify(points)}>
+  </div>
 </div>
 
 <script>
   import * as Plot from "@observablehq/plot";
-  const plotElement = document.querySelector("#plot");
-  const points = JSON.parse(
-    (plotElement as HTMLElement)?.dataset.points || "[]",
-  );
+  document.querySelectorAll(".daily-prob-plot").forEach((plotElement) => {
+    const points = JSON.parse(
+      (plotElement as HTMLElement)?.dataset.points || "[]",
+    );
 
-  const plot = Plot.plot({
-    title: "Probability History",
-    width: 600,
-    height: 300,
-    x: { type: "utc", label: "Date" },
-    y: {
-      domain: [0, 100],
-      grid: true,
-      percent: true,
-      label: "Probability",
-    },
-    color: {
-      label: "Platform",
-      domain: ["Manifold", "Kalshi", "Metaculus", "Polymarket"],
-      range: ["#4337c9", "#00d298", "#283441", "#0072f9"],
-    },
-    marks: [
-      Plot.line(points, {
-        x: "date",
-        y: (i) => (i.question_invert ? 1 - i.prob : i.prob),
-        stroke: "platform_name",
-        curve: "step",
-        tip: {
-          format: {
-            platform: null,
-            y: (i) => i.toFixed(0) + "%",
+    const plot = Plot.plot({
+      title: "Probability History",
+      width: 600,
+      height: 300,
+      x: { type: "utc", label: "Date" },
+      y: {
+        domain: [0, 100],
+        grid: true,
+        percent: true,
+        label: "Probability",
+      },
+      color: {
+        label: "Platform",
+        domain: ["Manifold", "Kalshi", "Metaculus", "Polymarket"],
+        range: ["#4337c9", "#00d298", "#283441", "#0072f9"],
+      },
+      marks: [
+        Plot.line(points, {
+          x: "date",
+          y: (i) => (i.question_invert ? 1 - i.prob : i.prob),
+          stroke: "platform_name",
+          curve: "step",
+          tip: {
+            format: {
+              platform_name: null,
+              y: (i) => i.toFixed(0) + "%",
+            },
           },
-        },
-      }),
-      Plot.ruleY([0]),
-    ],
-  });
+        }),
+        Plot.ruleY([0]),
+      ],
+    });
 
-  plotElement?.append(plot);
+    plotElement?.append(plot);
+  });
 </script>
