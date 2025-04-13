@@ -178,44 +178,28 @@ export async function getMarketsByQuestion(
   );
 }
 
-export async function getMarketsLite(
-  query: string | null,
-): Promise<MarketLite[]> {
-  const marketAttributes = [
-    "id",
-    "platform_slug",
-    "category_slug",
-    "question_slug",
-    "traders_count",
-    "volume_usd",
-    "duration_days",
-    "prob_at_midpoint",
-    "prob_time_avg",
-    "resolution",
-  ];
+let cachedMarkets: MarketDetails[] | null = null;
+export async function getMarkets(): Promise<MarketDetails[]> {
+  // Return cache if existing
+  if (cachedMarkets) {
+    return cachedMarkets;
+  }
 
   const batchSize = 10000;
-  let allMarkets: MarketLite[] = [];
+  let allMarkets: MarketDetails[] = [];
   let offset = 0;
   let hasMoreResults = true;
 
   while (hasMoreResults) {
-    let url = "/market_details?order=id";
-    if (query) {
-      url += `${query}`;
-    }
-    url += `&select=${marketAttributes.join(",")}&limit=${batchSize}&offset=${offset}`;
-    const batch = await fetchFromAPI<MarketLite[]>(url);
-
+    let url = `/market_details?order=id&limit=${batchSize}&offset=${offset}`;
+    const batch = await fetchFromAPI<MarketDetails[]>(url);
     allMarkets = [...allMarkets, ...batch];
     offset += batchSize;
-
-    // If we got fewer results than the batch size, we've reached the end
     if (batch.length < batchSize) {
       hasMoreResults = false;
     }
   }
-
+  cachedMarkets = allMarkets;
   return allMarkets;
 }
 

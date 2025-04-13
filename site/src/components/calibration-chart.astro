@@ -1,11 +1,9 @@
 ---
 import Calibration from "@components/charts/calibration.astro";
-import { getMarketsLite } from "@lib/api";
+import { getMarkets } from "@lib/api";
 import { marketsIntoCalibrationPoints } from "@lib/calibration";
 
-const markets = await getMarketsLite(
-  "&or(volume_usd.gte.200,traders_count.gte.20)&duration_days=gte.10",
-);
+const markets = await getMarkets();
 const points = marketsIntoCalibrationPoints(markets);
 ---
 
