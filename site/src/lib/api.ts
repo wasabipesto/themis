@@ -2,6 +2,7 @@ import type {
   CategoryDetails,
   DailyProbabilityDetails,
   MarketDetails,
+  MarketLite,
   MarketScoreDetails,
   OtherScoreDetails,
   PlatformCategoryScoreDetails,
@@ -177,6 +178,47 @@ export async function getMarketsByQuestion(
   );
 }
 
+export async function getMarketsLite(
+  query: string | null,
+): Promise<MarketLite[]> {
+  const marketAttributes = [
+    "id",
+    "platform_slug",
+    "category_slug",
+    "question_slug",
+    "traders_count",
+    "volume_usd",
+    "duration_days",
+    "prob_at_midpoint",
+    "prob_time_avg",
+    "resolution",
+  ];
+
+  const batchSize = 10000;
+  let allMarkets: MarketLite[] = [];
+  let offset = 0;
+  let hasMoreResults = true;
+
+  while (hasMoreResults) {
+    let url = "/market_details?order=id";
+    if (query) {
+      url += `${query}`;
+    }
+    url += `&select=${marketAttributes.join(",")}&limit=${batchSize}&offset=${offset}`;
+    const batch = await fetchFromAPI<MarketLite[]>(url);
+
+    allMarkets = [...allMarkets, ...batch];
+    offset += batchSize;
+
+    // If we got fewer results than the batch size, we've reached the end
+    if (batch.length < batchSize) {
+      hasMoreResults = false;
+    }
+  }
+
+  return allMarkets;
+}
+
 export async function getMarketScoresByQuestion(
   question_ids: number[],
   score_type: string | null,
@@ -187,7 +229,6 @@ export async function getMarketScoresByQuestion(
   }
   return fetchFromAPI<MarketScoreDetails[]>(url);
 }
-
 export async function getDailyProbabilities(
   question_id: number,
   start_date_override: string | null,

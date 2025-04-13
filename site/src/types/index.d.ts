@@ -117,6 +117,18 @@ export interface MarketDetails {
   prob_time_avg: number;
   resolution: number;
 }
+export interface MarketLite {
+  id: string;
+  platform_slug: string;
+  category_slug: string | null;
+  question_slug: string | null;
+  traders_count: number | null;
+  volume_usd: number | null;
+  duration_days: number;
+  prob_at_midpoint: number;
+  prob_time_avg: number;
+  resolution: number;
+}
 
 /** Market links to questions. **/
 export interface MarketQuestionLink {
