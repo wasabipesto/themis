@@ -108,8 +108,6 @@ buckets.forEach((bucket) => {
     const title = plotElement?.dataset.title || "";
     const subtitle = plotElement?.dataset.subtitle || "";
     const points = JSON.parse(plotElement?.dataset.points || "[]");
-    console.log(points[0]);
-    const binWidth = 0.05;
 
     const plot = Plot.plot({
       title: title,
