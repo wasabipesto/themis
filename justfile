@@ -123,8 +123,8 @@ test-all: download-test extract-test grade-test site-test group-test
 
 # Run nightly process
 nightly: test-all
-    just download --reset-cache
-    just download
-    just extract
-    just grade
+    just download --log-level warn --reset-cache
+    just download --log-level warn
+    just extract --log-level warn
+    just grade --log-level warn
     just site-build site-push
