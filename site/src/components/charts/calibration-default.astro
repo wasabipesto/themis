@@ -1,0 +1,114 @@
+---
+import { getMarkets } from "@lib/api";
+import { calculateCalibrationPoints } from "@lib/calibration";
+
+interface Props {
+  title: string;
+  subtitle: string;
+}
+const { title, subtitle } = Astro.props;
+
+// Download markets
+const markets = await getMarkets();
+
+// Calculate calibration points using our utility function
+const points = calculateCalibrationPoints(markets);
+---
+
+<div
+  class="bg-base-light [&_h2]:text-2xl text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
+>
+  <div
+    id="calibration-plot-default"
+    data-title={title}
+    data-subtitle={subtitle}
+    data-points={JSON.stringify(points)}
+  >
+  </div>
+</div>
+
+<script>
+  import * as Plot from "@observablehq/plot";
+  import type { CalibrationPoint } from "@types";
+
+  interface CalibrationPlotElement extends HTMLElement {
+    dataset: {
+      title?: string;
+      subtitle?: string;
+      points?: string;
+    };
+  }
+
+  // Get a reference to the plot element using ID
+  const plotElement = document.getElementById(
+    "calibration-plot-default",
+  ) as CalibrationPlotElement | null;
+
+  if (plotElement) {
+    const title = plotElement.dataset.title || "";
+    const subtitle = plotElement.dataset.subtitle || "";
+    const points = JSON.parse(
+      plotElement.dataset.points || "[]",
+    ) as CalibrationPoint[];
+
+    const plot = Plot.plot({
+      title: title,
+      subtitle: subtitle,
+      width: 1200,
+      height: 600,
+      x: {
+        domain: [0, 100],
+        percent: true,
+        label: "Prediction (Midpoint)",
+      },
+      y: { domain: [0, 100], grid: true, percent: true, label: "Resolution" },
+      r: { range: [10, 20], label: "Scale" },
+      color: {
+        legend: true,
+        label: "Platform",
+        domain: ["Manifold", "Kalshi", "Metaculus", "Polymarket"],
+        range: ["#4337c9", "#00d298", "#283441", "#0072f9"],
+      },
+      marks: [
+        Plot.dot(points, {
+          x: "x_center",
+          y: "y_center",
+          r: "count",
+          fill: "platform_slug",
+          stroke: "platform_slug",
+          fillOpacity: 0.5,
+          channels: {
+            Prediction: (i: CalibrationPoint) =>
+              (i.x_start * 100).toFixed(0) +
+              "-" +
+              (i.x_end * 100).toFixed(0) +
+              "%",
+            Resolution: (i: CalibrationPoint) =>
+              (i.y_center * 100).toFixed(1) + "%",
+            Markets: "count",
+          },
+          tip: {
+            format: {
+              x: null,
+              y: null,
+              r: null,
+            },
+          },
+        }),
+        Plot.ruleX([0]),
+        Plot.ruleY([0]),
+        Plot.lineY(
+          [
+            { x: 0, y: 0 },
+            { x: 1, y: 1 },
+          ],
+          { x: "x", y: "y" },
+        ),
+      ],
+    });
+
+    plotElement.append(plot);
+  } else {
+    throw new Error("Could not find plot element.");
+  }
+</script>
