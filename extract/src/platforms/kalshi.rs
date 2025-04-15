@@ -251,7 +251,7 @@ pub fn standardize(input: &KalshiData) -> MarketResult<Vec<MarketAndProbs>> {
                 duration_days: helpers::get_market_duration(start, end).map_err(|e| {
                     MarketError::ProcessingError(market_id.to_owned(), e.to_string())
                 })?,
-                prob_at_midpoint: helpers::get_prob_at_midpoint(&probs, start, end).map_err(
+                prob_at_midpoint: helpers::get_prob_at_percent(&probs, start, end, 0.5).map_err(
                     |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
                 )?,
                 prob_time_avg: helpers::get_prob_time_avg(&probs, start, end).map_err(|e| {

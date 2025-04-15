@@ -1,15 +1,15 @@
 //! Helper functions for dealing with probabilities over time
 
 use super::{DailyProbability, ProbSegment};
-use anyhow::{Context, Result};
-use chrono::{DateTime, Duration, TimeZone, Utc};
+use anyhow::{anyhow, Context, Result};
+use chrono::{DateTime, Duration, TimeDelta, TimeZone, Utc};
 use log::{debug, error, warn};
 
 /// Gets the number of calendar days covered (in UTC) by start and end,
 /// NOT the number of days from the start time to the end time.
 pub fn get_market_duration(start: DateTime<Utc>, end: DateTime<Utc>) -> Result<u32> {
     if end <= start {
-        return Err(anyhow::anyhow!("End time must be after start time"));
+        return Err(anyhow!("End time must be after start time"));
     }
 
     let days = (end.date_naive() - start.date_naive()).num_days() as u32 + 1;
@@ -29,7 +29,7 @@ pub fn get_prob_time_avg(
     }
 
     if end <= start {
-        return Err(anyhow::anyhow!("End time must be after start time"));
+        return Err(anyhow!("End time must be after start time"));
     }
 
     let mut weighted_sum = 0.0;
@@ -53,7 +53,7 @@ pub fn get_prob_time_avg(
             "No prob segments found in window ({start} to {end}): {:?}",
             probs
         );
-        Err(anyhow::anyhow!(
+        Err(anyhow!(
             "No valid time segments found for probability calculation"
         ))
     }
@@ -63,7 +63,7 @@ pub fn get_prob_time_avg(
 /// Assumes the prob segments are sorted and non-overlapping.
 pub fn get_prob_at_time(probs: &[ProbSegment], time: DateTime<Utc>) -> Result<f32> {
     if probs.is_empty() {
-        debug!("No probability segments provided for time lookup, returning default");
+        warn!("No probability segments provided for time lookup, returning default");
         return Ok(0.5);
     }
 
@@ -74,42 +74,47 @@ pub fn get_prob_at_time(probs: &[ProbSegment], time: DateTime<Utc>) -> Result<f3
     }
 
     error!("No probability segment found for specified time: {}", time);
-    Err(anyhow::anyhow!(
-        "No probability segment found for specified time"
-    ))
+    Err(anyhow!("No probability segment found for specified time"))
 }
 
-/// Find the probability at the midpoint of the specified time window.
+/// Find the probability at a percentage of the specified time window.
 /// Assumes the prob segments are sorted and non-overlapping.
-pub fn get_prob_at_midpoint(
+pub fn get_prob_at_percent(
     probs: &[ProbSegment],
     start: DateTime<Utc>,
     end: DateTime<Utc>,
+    percent: f32,
 ) -> Result<f32> {
     if end <= start {
-        return Err(anyhow::anyhow!("End time must be after start time"));
+        return Err(anyhow!("End time must be after start time"));
+    }
+    if !(0.0..1.0).contains(&percent) {
+        return Err(anyhow!("Percent must be between 0 and 1"));
     }
 
-    let duration = end - start;
-    let midpoint = start + (duration / 2);
-    get_prob_at_time(probs, midpoint)
+    let duration_seconds = (end - start).num_seconds();
+    let time_from_start = TimeDelta::new((duration_seconds as f32 * percent) as i64, 0).ok_or(
+        anyhow!("Could not create TimeDelta for {percent} between {start} and {end}"),
+    )?;
+    let time = start + time_from_start;
+    get_prob_at_time(probs, time)
 }
 
 /// Sets the hour on the given DateTime<Utc>.
 fn dt_set_hour(dt: DateTime<Utc>, hour: u32) -> Result<DateTime<Utc>> {
     if hour >= 24 {
-        return Err(anyhow::anyhow!("Hour must be between 0 and 23"));
+        return Err(anyhow!("Hour must be between 0 and 23"));
     }
 
     let naive_dt = dt
         .date_naive()
         .and_hms_opt(hour, 0, 0)
-        .ok_or_else(|| anyhow::anyhow!("Invalid hour value: {}", hour))?;
+        .ok_or_else(|| anyhow!("Invalid hour value: {}", hour))?;
 
     naive_dt
         .and_local_timezone(Utc)
         .single()
-        .ok_or_else(|| anyhow::anyhow!("Failed to convert naive datetime to UTC"))
+        .ok_or_else(|| anyhow!("Failed to convert naive datetime to UTC"))
 }
 
 /// Convert probability segments of varying width into daily segments.
@@ -164,7 +169,7 @@ pub fn validate_prob_segments(probs: &[ProbSegment]) -> Result<()> {
         let too_early = Utc::with_ymd_and_hms(&Utc, 2000, 1, 1, 0, 0, 0).unwrap();
         let too_late = Utc::now();
         if segment.start < too_early || segment.start > too_late {
-            return Err(anyhow::anyhow!(
+            return Err(anyhow!(
                 "Segment end date ({}) is out of bounds [{} - {}]",
                 segment.end,
                 too_early,
@@ -172,7 +177,7 @@ pub fn validate_prob_segments(probs: &[ProbSegment]) -> Result<()> {
             ));
         }
         if segment.end < too_early || segment.end > too_late {
-            return Err(anyhow::anyhow!(
+            return Err(anyhow!(
                 "Segment end date ({}) is out of bounds [{} - {}]",
                 segment.end,
                 too_early,
@@ -182,7 +187,7 @@ pub fn validate_prob_segments(probs: &[ProbSegment]) -> Result<()> {
 
         // Check that the segment has positive width
         if segment.end <= segment.start {
-            return Err(anyhow::anyhow!(
+            return Err(anyhow!(
                 "Invalid segment: end time ({}) <= start time ({})",
                 segment.end,
                 segment.start,
@@ -192,7 +197,7 @@ pub fn validate_prob_segments(probs: &[ProbSegment]) -> Result<()> {
         if let Some(prev) = &previous {
             // Check that the previous segment does not intrude
             if segment.start < prev.end {
-                return Err(anyhow::anyhow!(
+                return Err(anyhow!(
                 "Overlapping segments detected: previous segment ends at {}, this segment starts at {}",
                 prev.end,
                 segment.start
@@ -201,7 +206,7 @@ pub fn validate_prob_segments(probs: &[ProbSegment]) -> Result<()> {
 
             // Check that the previous segment meets this one
             if segment.start > prev.end {
-                return Err(anyhow::anyhow!(
+                return Err(anyhow!(
                 "Gap between segments detected: previous segment ends at {}, this segment starts at {}",
                 prev.end,
                 segment.start
@@ -211,7 +216,7 @@ pub fn validate_prob_segments(probs: &[ProbSegment]) -> Result<()> {
 
         // Check that the probability is within bounds
         if segment.prob < 0.0 || segment.prob > 1.0 {
-            return Err(anyhow::anyhow!(
+            return Err(anyhow!(
                 "Invalid segment: probability ({}) is out of bounds (0 to 1)",
                 segment.prob,
             ));
@@ -493,14 +498,17 @@ mod tests {
         ];
 
         // Normal case
-        assert_eq!(get_prob_at_midpoint(&probs, start, end).unwrap(), 0.8);
+        assert_eq!(get_prob_at_percent(&probs, start, end, 0.5).unwrap(), 0.8);
 
         // Invalid time window
-        assert!(get_prob_at_midpoint(&probs, end, start).is_err());
+        assert!(get_prob_at_percent(&probs, end, start, 0.5).is_err());
 
         // Empty segments
         let empty_probs: Vec<ProbSegment> = vec![];
-        assert_eq!(get_prob_at_midpoint(&empty_probs, start, end).unwrap(), 0.5);
+        assert_eq!(
+            get_prob_at_percent(&empty_probs, start, end, 0.5).unwrap(),
+            0.5
+        );
     }
 
     #[test]
