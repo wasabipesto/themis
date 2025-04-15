@@ -327,12 +327,6 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                 duration_days: helpers::get_market_duration(start, end).map_err(|e| {
                     MarketError::ProcessingError(market_id.to_owned(), e.to_string())
                 })?,
-                prob_at_midpoint: helpers::get_prob_at_percent(&probs, start, end, 0.5).map_err(
-                    |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
-                )?,
-                prob_time_avg: helpers::get_prob_time_avg(&probs, start, end).map_err(|e| {
-                    MarketError::ProcessingError(market_id.to_owned(), e.to_string())
-                })?,
                 resolution: match get_resolution_value_binary(
                     &market.resolution,
                     &market.resolution_probability,
@@ -446,13 +440,6 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                     duration_days: helpers::get_market_duration(start, end).map_err(|e| {
                         MarketError::ProcessingError(market_id.to_owned(), e.to_string())
                     })?,
-                    prob_at_midpoint: helpers::get_prob_at_percent(&probs, start, end, 0.5)
-                        .map_err(|e| {
-                            MarketError::ProcessingError(market_id.to_owned(), e.to_string())
-                        })?,
-                    prob_time_avg: helpers::get_prob_time_avg(&probs, start, end).map_err(|e| {
-                        MarketError::ProcessingError(market_id.to_owned(), e.to_string())
-                    })?,
                     resolution,
                 };
                 Ok(vec![MarketAndProbs {
@@ -545,13 +532,6 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                         duration_days: helpers::get_market_duration(start, end).map_err(|e| {
                             MarketError::ProcessingError(market_id.to_owned(), e.to_string())
                         })?,
-                        prob_at_midpoint: helpers::get_prob_at_percent(&probs, start, end, 0.5)
-                            .map_err(|e| {
-                                MarketError::ProcessingError(market_id.to_owned(), e.to_string())
-                            })?,
-                        prob_time_avg: helpers::get_prob_time_avg(&probs, start, end).map_err(
-                            |e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()),
-                        )?,
                         resolution,
                     };
                     result.push(MarketAndProbs {
