@@ -246,27 +246,53 @@ fn upload_batch(
         ));
     }
 
-    // Upload probabilities batch
-    let all_probs: Vec<_> = market_batch
+    // Upload daily probabilities batch
+    let daily_probs: Vec<_> = market_batch
         .iter()
         .flat_map(|m| &m.daily_probabilities)
         .collect();
 
-    debug!("Uploading batch of {} probabilities", all_probs.len());
+    debug!("Uploading batch of {} probabilities", daily_probs.len());
     let probs_response = client
         .post(format!("{}/daily_probabilities", postgrest_api_base))
         .bearer_auth(&params.postgrest_api_key)
         .header("Prefer", "resolution=merge-duplicates")
         .header("On-Conflict-Update", "*")
-        .json(&all_probs)
+        .json(&daily_probs)
         .send()
-        .context("Failed to send probabilities batch upload request")?;
+        .context("Failed to send daily probabilities batch upload request")?;
 
     let probs_status = probs_response.status();
     if !probs_status.is_success() {
         let probs_body = probs_response.text()?;
         return Err(anyhow::anyhow!(
-            "Probabilities batch upload failed with status {} and body: {}",
+            "Daily probability batch upload failed with status {} and body: {}",
+            probs_status,
+            probs_body
+        ));
+    }
+
+    // Upload criterion probabilities batch
+    let criteria_probs: Vec<_> = market_batch
+        .iter()
+        .flat_map(|m| &m.criterion_probabilities)
+        .collect();
+
+    debug!("Uploading batch of {} probabilities", criteria_probs.len());
+    let probs_response = client
+        .post(format!("{}/criterion_probabilities", postgrest_api_base))
+        .bearer_auth(&params.postgrest_api_key)
+        .header("Prefer", "resolution=merge-duplicates")
+        .header("On-Conflict-Update", "*")
+        .json(&criteria_probs)
+        .send()
+        .context("Failed to send criterion probabilities batch upload request")?;
+
+    let probs_status = probs_response.status();
+    if !probs_status.is_success() {
+        let probs_body = probs_response.text()?;
+        return Err(anyhow::anyhow!(
+            "Criterion probability batch upload failed with status {} and body: {}",
             probs_status,
             probs_body
         ));
