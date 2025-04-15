@@ -49,8 +49,6 @@ CREATE TABLE markets (
     traders_count INTEGER,
     volume_usd DECIMAL,
     duration_days INTEGER NOT NULL,
-    prob_at_midpoint DECIMAL NOT NULL,
-    prob_time_avg DECIMAL NOT NULL,
     resolution DECIMAL NOT NULL,
     FOREIGN KEY (platform_slug) REFERENCES platforms (slug) ON UPDATE CASCADE,
     FOREIGN KEY (category_slug) REFERENCES categories (slug) ON UPDATE CASCADE
@@ -63,10 +61,6 @@ CREATE INDEX idx_markets_category_slug ON markets (category_slug);
 CREATE INDEX idx_markets_platform_category ON markets (platform_slug, category_slug);
 
 CREATE INDEX idx_markets_platform_traders_volume ON markets (platform_slug, traders_count, volume_usd);
-
-ALTER TABLE markets ADD CONSTRAINT chk_prob_at_midpoint_range CHECK (prob_at_midpoint BETWEEN 0 AND 1);
-
-ALTER TABLE markets ADD CONSTRAINT chk_prob_time_avg_range CHECK (prob_time_avg BETWEEN 0 AND 1);
 
 ALTER TABLE markets ADD CONSTRAINT chk_resolution_range CHECK (resolution BETWEEN 0 AND 1);
 

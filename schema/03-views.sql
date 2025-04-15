@@ -137,8 +137,6 @@ SELECT
     m.traders_count,
     m.volume_usd,
     m.duration_days,
-    m.prob_at_midpoint,
-    m.prob_time_avg,
     m.resolution
 FROM
     markets m
