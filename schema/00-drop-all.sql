@@ -4,6 +4,8 @@
 -- ==========================================
 DROP TABLE IF EXISTS daily_probabilities CASCADE;
 
+DROP TABLE IF EXISTS other_probabilities CASCADE;
+
 DROP TABLE IF EXISTS market_scores CASCADE;
 
 DROP TABLE IF EXISTS platform_scores CASCADE;
