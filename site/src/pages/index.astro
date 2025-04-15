@@ -4,8 +4,8 @@ import ReportCard from "@components/index-report-card.astro";
 import QuestionCard from "@components/question-card-detailed.astro";
 import SeeMoreLink from "@components/see-more-link.astro";
 import PlatformCard from "@components/platform-card.astro";
-import CalibrationChart from "@components/charts/calibration-default.astro";
-import ProbabilityChart from "@components/charts/index-relscore-explainer.astro";
+import CalibrationDefault from "@components/charts/calibration-default.astro";
+import RelScoreExplainer from "@components/charts/index-relscore-explainer.astro";
 import {
   getPlatforms,
   getCategories,
@@ -217,7 +217,7 @@ const featuredQuestions = await getFeaturedQuestions(4);
         </ul>
       </div>
       <div>
-        <ProbabilityChart question={featuredQuestions[0]} />
+        <RelScoreExplainer question={featuredQuestions[0]} />
       </div>
     </div>
     <SeeMoreLink link={`/about#resources`} text="Learn more" />
@@ -244,12 +244,7 @@ const featuredQuestions = await getFeaturedQuestions(4);
       to the top-right - points significantly under or over that line represent
       systemic errors.
     </p>
-    <div class="my-4">
-      <CalibrationChart
-        title="Calibration Plot"
-        subtitle="All resolved binary and multiple choice markets."
-      />
-    </div>
+    <div class="my-4"><CalibrationDefault /></div>
     <SeeMoreLink link={`/charts`} text="See all charts" />
   </div>
 </Base>

@@ -1,15 +1,10 @@
 ---
-import { getMarkets } from "@lib/api";
+import { getMarkets, getPlatforms } from "@lib/api";
 import { calculateCalibrationPoints } from "@lib/calibration";
 
-interface Props {
-  title: string;
-  subtitle: string;
-}
-const { title, subtitle } = Astro.props;
-
-// Download markets
+// Download markets and platforms
 const markets = await getMarkets();
+const platforms = await getPlatforms();
 
 // Calculate calibration points using our utility function
 const points = calculateCalibrationPoints(markets);
@@ -20,8 +15,7 @@ const points = calculateCalibrationPoints(markets);
 >
   <div
     id="calibration-plot-default"
-    data-title={title}
-    data-subtitle={subtitle}
+    data-platforms={JSON.stringify(platforms)}
     data-points={JSON.stringify(points)}
   >
   </div>
@@ -29,13 +23,12 @@ const points = calculateCalibrationPoints(markets);
 
 <script>
   import * as Plot from "@observablehq/plot";
-  import type { CalibrationPoint } from "@types";
+  import type { CalibrationPoint, PlatformDetails } from "@types";
 
   interface CalibrationPlotElement extends HTMLElement {
     dataset: {
-      title?: string;
-      subtitle?: string;
-      points?: string;
+      platforms: string;
+      points: string;
     };
   }
 
@@ -45,15 +38,14 @@ const points = calculateCalibrationPoints(markets);
   ) as CalibrationPlotElement | null;
 
   if (plotElement) {
-    const title = plotElement.dataset.title || "";
-    const subtitle = plotElement.dataset.subtitle || "";
-    const points = JSON.parse(
-      plotElement.dataset.points || "[]",
-    ) as CalibrationPoint[];
+    const platforms = JSON.parse(
+      plotElement.dataset.platforms,
+    ) as PlatformDetails[];
+    const points = JSON.parse(plotElement.dataset.points) as CalibrationPoint[];
 
     const plot = Plot.plot({
-      title: title,
-      subtitle: subtitle,
+      title: "Calibration Plot",
+      subtitle: "All resolved binary and multiple choice markets.",
       width: 1200,
       height: 600,
       x: {
@@ -66,8 +58,8 @@ const points = calculateCalibrationPoints(markets);
       color: {
         legend: true,
         label: "Platform",
-        domain: ["Manifold", "Kalshi", "Metaculus", "Polymarket"],
-        range: ["#4337c9", "#00d298", "#283441", "#0072f9"],
+        domain: platforms.map((p) => p.name),
+        range: platforms.map((p) => p.color_primary),
       },
       marks: [
         Plot.dot(points, {
