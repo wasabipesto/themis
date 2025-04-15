@@ -1,5 +1,4 @@
 ---
-import Duration from "@atoms/duration.astro";
 import { getMarkets, getPlatforms } from "@lib/api";
 import { calculateCalibrationPoints } from "@lib/calibration";
 
@@ -140,7 +139,8 @@ const filtersOutput = filtersInput.map((filter) => ({
   const radios = document.querySelectorAll("input[name='filter-selection']");
   radios.forEach((radio) => {
     radio.addEventListener("change", async (event) => {
-      const newValue = parseInt(event.target.value);
+      const targetElement = event.target as HTMLInputElement;
+      const newValue = parseInt(targetElement.value);
       if (!isNaN(newValue)) {
         const currentIndex = newValue;
         filterSelectedIndex = currentIndex;
@@ -156,6 +156,9 @@ const filtersOutput = filtersInput.map((filter) => ({
       throw new Error("Could not find plot element.");
     }
     points = filters[filterSelectedIndex].points;
+    if (points.length == 0) {
+      throw new Error("Points are empty.");
+    }
 
     // Build the plot
     const plot = Plot.plot({
