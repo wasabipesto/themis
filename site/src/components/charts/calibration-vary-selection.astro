@@ -1,4 +1,5 @@
 ---
+import Duration from "@atoms/duration.astro";
 import { getMarkets, getPlatforms } from "@lib/api";
 import { calculateCalibrationPoints } from "@lib/calibration";
 
@@ -6,45 +7,88 @@ import { calculateCalibrationPoints } from "@lib/calibration";
 const markets = await getMarkets();
 const platforms = await getPlatforms();
 
-// Calculate calibration points
-const points = calculateCalibrationPoints(markets);
+// Filters and descriptions
+const filters = [
+  {
+    id: "all",
+    description: "Show all resolved markets.",
+    markets: markets,
+  },
+  {
+    id: "fl1",
+    description:
+      "Filter to at least 10 traders or $100 in trade volume, and open for at least 2 days.",
+    markets: markets.filter(
+      (market) =>
+        market?.traders_count !== null &&
+        (market.traders_count >= 10 ||
+          (market.volume_usd !== null && market.volume_usd >= 100)) &&
+        market?.duration_days !== null &&
+        market.duration_days >= 2,
+    ),
+  },
+  {
+    id: "fl2",
+    description:
+      "Filter to at least 100 traders or $1000 in trade volume, and open for at least 14 days.",
+    markets: markets.filter(
+      (market) =>
+        market?.traders_count !== null &&
+        (market.traders_count >= 100 ||
+          (market.volume_usd !== null && market.volume_usd >= 1000)) &&
+        market?.duration_days !== null &&
+        market.duration_days >= 14,
+    ),
+  },
+  {
+    id: "fl3",
+    description:
+      "Filter to at least 1000 traders or $10,000 in trade volume, and open for at least 30 days.",
+    markets: markets.filter(
+      (market) =>
+        market?.traders_count !== null &&
+        (market.traders_count >= 1000 ||
+          (market.volume_usd !== null && market.volume_usd >= 10000)) &&
+        market?.duration_days !== null &&
+        market.duration_days >= 30,
+    ),
+  },
+  {
+    id: "pastyear",
+    description: "Filter to markets from the past year.",
+    markets: markets.filter(
+      (market) =>
+        new Date(market.close_datetime).getTime() >=
+        new Date().getTime() - 365 * 24 * 60 * 60 * 1000,
+    ),
+  },
+  {
+    id: "linked",
+    description: "Filter to markets that have been linked in questions.",
+    markets: markets.filter((market) => market.question_id),
+  },
+];
 ---
 
 <div class="grid gap-2 grid-cols-1 md:grid-cols-3">
   <div class="grid gap-2 grid-cols-1">
-    <div class="bg-base-light text-crust rounded-md drop-shadow-sm px-4 py-2">
-      Show all resolved markets.
-    </div>
-    <div class="bg-base-light text-crust rounded-md drop-shadow-sm px-4 py-2">
-      Filter to at least 10 traders or $100 in trade volume, and open for at
-      least 2 days.
-    </div>
-    <div class="bg-base-light text-crust rounded-md drop-shadow-sm px-4 py-2">
-      Filter to at least 100 traders or $1000 in trade volume, and open for 14
-      days.
-    </div>
-    <div class="bg-base-light text-crust rounded-md drop-shadow-sm px-4 py-2">
-      Filter to at least 1000 traders or $10,000 in trade volume, and open for
-      30 days.
-    </div>
-    <div class="bg-base-light text-crust rounded-md drop-shadow-sm px-4 py-2">
-      Filter to the top 1000 markets in each category.
-    </div>
-    <div class="bg-base-light text-crust rounded-md drop-shadow-sm px-4 py-2">
-      Filter to markets from the past year.
-    </div>
-    <div class="bg-base-light text-crust rounded-md drop-shadow-sm px-4 py-2">
-      Filter to markets that have been linked in questions.
-    </div>
+    {
+      filters.map((filter) => (
+        <div class="bg-base-light text-crust rounded-md drop-shadow-sm px-4 py-2">
+          <span>{filter.description}</span>
+          <span class="text-xs">(n={filter.markets.length})</span>
+        </div>
+      ))
+    }
   </div>
   <div class="col-span-2">
     <div
       class="bg-base-light [&_h2]:text-2xl text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
     >
       <div
-        id="calibration-plot-default"
+        id="calibration-plot-vary-selection"
         data-platforms={JSON.stringify(platforms)}
-        data-points={JSON.stringify(points)}
+        data-points={JSON.stringify(calculateCalibrationPoints(markets))}
       >
       </div>
     </div>
@@ -64,7 +108,7 @@ const points = calculateCalibrationPoints(markets);
 
   // Get a reference to the plot element using ID
   const plotElement = document.getElementById(
-    "calibration-plot-default",
+    "calibration-plot-vary-selection",
   ) as CalibrationPlotElement | null;
 
   if (plotElement) {
