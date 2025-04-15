@@ -117,12 +117,28 @@ export async function fetchFromAPI<T>(
   }
 }
 
+let cachedPlatforms: PlatformDetails[] | null = null;
 export async function getPlatforms(): Promise<PlatformDetails[]> {
-  return fetchFromAPI<PlatformDetails[]>("/platform_details?order=slug");
+  if (cachedPlatforms) {
+    return cachedPlatforms;
+  }
+  const platforms = await fetchFromAPI<PlatformDetails[]>(
+    "/platform_details?order=slug",
+  );
+  cachedPlatforms = platforms;
+  return platforms;
 }
 
+let cachedCategories: CategoryDetails[] | null = null;
 export async function getCategories(): Promise<CategoryDetails[]> {
-  return fetchFromAPI<CategoryDetails[]>("/category_details?order=slug");
+  if (cachedCategories) {
+    return cachedCategories;
+  }
+  const categories = await fetchFromAPI<CategoryDetails[]>(
+    "/category_details?order=slug",
+  );
+  cachedCategories = categories;
+  return categories;
 }
 
 export async function getQuestions(): Promise<QuestionDetails[]> {
@@ -212,7 +228,8 @@ export async function getMarketScoresByQuestion(
   }
   return fetchFromAPI<MarketScoreDetails[]>(url);
 }
-export async function getDailyProbabilities(
+
+export async function getDailyProbabilitiesByQuestion(
   question_id: number,
   start_date_override: string | null,
   end_date_override: string | null,

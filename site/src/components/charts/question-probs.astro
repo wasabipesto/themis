@@ -1,5 +1,5 @@
 ---
-import { getDailyProbabilities } from "@lib/api";
+import { getDailyProbabilitiesByQuestion } from "@lib/api";
 import type { QuestionDetails } from "@types";
 
 interface Props {
@@ -7,7 +7,7 @@ interface Props {
 }
 const { question } = Astro.props;
 
-const points = await getDailyProbabilities(
+const points = await getDailyProbabilitiesByQuestion(
   question.id,
   question.start_date_override,
   question.end_date_override,

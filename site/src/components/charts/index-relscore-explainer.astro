@@ -2,7 +2,7 @@
 import Grade from "@atoms/grade.astro";
 import ScoreRel from "@atoms/score-rel.astro";
 import {
-  getDailyProbabilities,
+  getDailyProbabilitiesByQuestion,
   getMarketsByQuestion,
   getMarketScoresByQuestion,
 } from "@lib/api";
@@ -15,7 +15,7 @@ const { question } = Astro.props;
 
 // Download markets, points, and scores
 const markets = await getMarketsByQuestion(question.id);
-const points = await getDailyProbabilities(
+const points = await getDailyProbabilitiesByQuestion(
   question.id,
   question.start_date_override,
   question.end_date_override,
