@@ -16,38 +16,35 @@ const filtersInput = [
   {
     description:
       "Filter to at least 10 traders or $100 in trade volume, and open for at least 2 days.",
-    markets: markets.filter(
-      (market) =>
-        market?.traders_count !== null &&
-        (market.traders_count >= 10 ||
+    markets: markets.filter((market) => {
+      return (
+        ((market.traders_count !== null && market.traders_count >= 10) ||
           (market.volume_usd !== null && market.volume_usd >= 100)) &&
-        market?.duration_days !== null &&
-        market.duration_days >= 2,
-    ),
+        market.duration_days >= 2
+      );
+    }),
   },
   {
     description:
       "Filter to at least 100 traders or $1000 in trade volume, and open for at least 14 days.",
-    markets: markets.filter(
-      (market) =>
-        market?.traders_count !== null &&
-        (market.traders_count >= 100 ||
+    markets: markets.filter((market) => {
+      return (
+        ((market.traders_count !== null && market.traders_count >= 100) ||
           (market.volume_usd !== null && market.volume_usd >= 1000)) &&
-        market?.duration_days !== null &&
-        market.duration_days >= 14,
-    ),
+        market.duration_days >= 14
+      );
+    }),
   },
   {
     description:
       "Filter to at least 1000 traders or $10,000 in trade volume, and open for at least 30 days.",
-    markets: markets.filter(
-      (market) =>
-        market?.traders_count !== null &&
-        (market.traders_count >= 1000 ||
+    markets: markets.filter((market) => {
+      return (
+        ((market.traders_count !== null && market.traders_count >= 1000) ||
           (market.volume_usd !== null && market.volume_usd >= 10000)) &&
-        market?.duration_days !== null &&
-        market.duration_days >= 30,
-    ),
+        market.duration_days >= 30
+      );
+    }),
   },
   {
     description: "Filter to markets from the past year.",
@@ -65,7 +62,7 @@ const filtersInput = [
 const filtersOutput = filtersInput.map((filter) => ({
   description: filter.description,
   numMarkets: filter.markets.length,
-  points: calculateCalibrationPoints(markets),
+  points: calculateCalibrationPoints(filter.markets),
 }));
 ---
 
@@ -123,27 +120,47 @@ const filtersOutput = filtersInput.map((filter) => ({
     points: CalibrationPoint[];
   }
 
-  // Get selected filter number
-  const filterSelectedIndex = 0;
-  console.log(filterSelectedIndex);
-
   // Get a reference to the plot element using ID
   const plotElement = document.getElementById(
     "calibration-plot-vary-selection",
   ) as CalibrationPlotElement | null;
+  if (!plotElement) {
+    throw new Error("Could not find plot element.");
+  }
 
-  if (plotElement) {
-    const platforms = JSON.parse(
-      plotElement.dataset.platforms,
-    ) as PlatformDetails[];
-    const filters = JSON.parse(plotElement.dataset.filters) as FilterStruct[];
-    const points = filters[filterSelectedIndex].points;
+  // Get data embedded in plot element
+  const platforms = JSON.parse(
+    plotElement.dataset.platforms,
+  ) as PlatformDetails[];
+  const filters = JSON.parse(plotElement.dataset.filters) as FilterStruct[];
+  const plotWidth = parseInt(window.getComputedStyle(plotElement).width);
 
-    const width = parseInt(window.getComputedStyle(plotElement).width);
+  // Add listeners to update plot on change in selection
+  let filterSelectedIndex: number = 0;
+  const radios = document.querySelectorAll("input[name='filter-selection']");
+  radios.forEach((radio) => {
+    radio.addEventListener("change", async (event) => {
+      const newValue = parseInt(event.target.value);
+      if (!isNaN(newValue)) {
+        const currentIndex = newValue;
+        filterSelectedIndex = currentIndex;
+        updatePlot();
+      }
+    });
+  });
 
+  // Update plot when called
+  let points = [];
+  function updatePlot() {
+    if (!plotElement) {
+      throw new Error("Could not find plot element.");
+    }
+    points = filters[filterSelectedIndex].points;
+
+    // Build the plot
     const plot = Plot.plot({
       title: "Calibration Plot",
-      width: width,
+      width: plotWidth,
       aspectRatio: 2,
       x: {
         domain: [0, 100],
@@ -196,8 +213,14 @@ const filtersOutput = filtersInput.map((filter) => ({
       ],
     });
 
-    plotElement.append(plot);
-  } else {
-    throw new Error("Could not find plot element.");
+    // Remove existing plot
+    while (plotElement.firstChild) {
+      plotElement.removeChild(plotElement.firstChild);
+    }
+    plotElement.appendChild(plot);
+    console.log(plot);
   }
+
+  // Initial render with default values
+  updatePlot();
 </script>
