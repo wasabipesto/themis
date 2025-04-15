@@ -90,8 +90,6 @@ export interface Market {
   traders_count: number | null;
   volume_usd: number | null;
   duration_days: number;
-  prob_at_midpoint: number;
-  prob_time_avg: number;
   resolution: number;
 }
 export interface MarketDetails {

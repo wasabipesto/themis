@@ -24,7 +24,7 @@ export interface Bucket {
  */
 export function calculateCalibrationPoints(
   markets: MarketDetails[],
-  metricType: string,
+  criterion: string,
 ): CalibrationPoint[] {
   // Set bucket width
   const bucketWidth = 0.05;
@@ -63,32 +63,23 @@ export function calculateCalibrationPoints(
   }
 
   // Choose the appropriate probability metric
-  const getProbability = (market: MarketDetails) => {
-    if (metricType === "midpoint") {
-      return market.prob_at_midpoint;
-    } else if (metricType === "average") {
-      return market.prob_time_avg;
-    } else {
-      console.error(`Invalid metric type: ${metricType}`);
-      return market.prob_at_midpoint;
-    }
+  const getPrediction = (market: MarketDetails) => {
+    // TODO
+    return 0.5;
   };
 
   // Categorize markets into buckets by chosen probability and market.platform_slug
   markets.forEach((market) => {
-    const probability = getProbability(market);
-    if (probability !== null && market.resolution !== null) {
+    const prediction = getPrediction(market);
+    if (prediction !== null && market.resolution !== null) {
       const bucketIndex = Math.min(
-        Math.floor(probability / bucketWidth),
+        Math.floor(prediction / bucketWidth),
         buckets.length - 1,
       );
-      const platformName =
-        market.platform_slug.charAt(0).toUpperCase() +
-        market.platform_slug.slice(1);
-
-      if (buckets[bucketIndex].platforms[platformName]) {
-        buckets[bucketIndex].platforms[platformName].sum += market.resolution;
-        buckets[bucketIndex].platforms[platformName].count += 1;
+      if (buckets[bucketIndex].platforms[market.platform_name]) {
+        buckets[bucketIndex].platforms[market.platform_name].sum +=
+          market.resolution;
+        buckets[bucketIndex].platforms[market.platform_name].count += 1;
       }
     }
   });

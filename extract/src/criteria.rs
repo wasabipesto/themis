@@ -31,6 +31,10 @@ pub enum CriterionType {
     BeforeCloseDays90,
     BeforeCloseDays180,
     BeforeCloseDays365,
+    AfterStartHours12,
+    AfterStartHours24,
+    AfterStartDays7,
+    AfterStartDays30,
 }
 impl Display for CriterionType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -47,6 +51,10 @@ impl Display for CriterionType {
             CriterionType::BeforeCloseDays90 => write!(f, "before-close-days-90"),
             CriterionType::BeforeCloseDays180 => write!(f, "before-close-days-180"),
             CriterionType::BeforeCloseDays365 => write!(f, "before-close-days-365"),
+            CriterionType::AfterStartHours12 => write!(f, "after-start-hours-12"),
+            CriterionType::AfterStartHours24 => write!(f, "after-start-hours-24"),
+            CriterionType::AfterStartDays7 => write!(f, "after-start-days-7"),
+            CriterionType::AfterStartDays30 => write!(f, "after-start-days-30"),
         }
     }
 }
@@ -73,6 +81,10 @@ impl CriterionType {
             CriterionType::BeforeCloseDays90,
             CriterionType::BeforeCloseDays180,
             CriterionType::BeforeCloseDays365,
+            CriterionType::AfterStartHours12,
+            CriterionType::AfterStartHours24,
+            CriterionType::AfterStartDays7,
+            CriterionType::AfterStartDays30,
         ]
     }
     pub fn calc(
@@ -150,6 +162,38 @@ impl CriterionType {
             CriterionType::BeforeCloseDays365 => {
                 let time = end - TimeDelta::days(365);
                 if time > start {
+                    Some(helpers::get_prob_at_time(probs, time)?)
+                } else {
+                    None
+                }
+            }
+            CriterionType::AfterStartHours12 => {
+                let time = start + TimeDelta::hours(12);
+                if time < end {
+                    Some(helpers::get_prob_at_time(probs, time)?)
+                } else {
+                    None
+                }
+            }
+            CriterionType::AfterStartHours24 => {
+                let time = start + TimeDelta::hours(24);
+                if time < end {
+                    Some(helpers::get_prob_at_time(probs, time)?)
+                } else {
+                    None
+                }
+            }
+            CriterionType::AfterStartDays7 => {
+                let time = start + TimeDelta::days(7);
+                if time < end {
+                    Some(helpers::get_prob_at_time(probs, time)?)
+                } else {
+                    None
+                }
+            }
+            CriterionType::AfterStartDays30 => {
+                let time = start + TimeDelta::days(30);
+                if time < end {
                     Some(helpers::get_prob_at_time(probs, time)?)
                 } else {
                     None
