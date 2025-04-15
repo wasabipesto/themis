@@ -6,28 +6,57 @@ import { Icon } from "astro-icon/components";
 // Download markets and platforms
 const markets = await getMarkets();
 const platforms = await getPlatforms();
-const categories = await getCategories();
 
 // Filters and descriptions
 const filtersInput = [
   {
-    description: "All categories",
-    icon: "mdi:compass-rose",
+    description: "Probability at midpoint (default)",
+    axisTitle: "midpoint",
+    prediction: "midpoint",
     markets: markets,
   },
+  {
+    description: "Time-weighted average probability",
+    axisTitle: "average",
+    prediction: "average",
+    markets: markets,
+  },
+  {
+    description: "Probability 30 days before resolution",
+    axisTitle: "30d before resolution",
+    prediction: "30d",
+    markets: markets.filter((market) => market.duration_days > 30),
+  },
+  {
+    description: "Probability 90 days before resolution",
+    axisTitle: "90d before resolution",
+    prediction: "90d",
+    markets: markets.filter((market) => market.duration_days > 90),
+  },
+  {
+    description: "Probability 365 days before resolution",
+    axisTitle: "1y before resolution",
+    prediction: "365d",
+    markets: markets.filter((market) => market.duration_days > 365),
+  },
+  {
+    description: "Probability 25% of the way through the market's duration",
+    axisTitle: "at 25% of market duration",
+    prediction: "25pct",
+    markets: markets.filter((market) => market.duration_days >= 4),
+  },
+  {
+    description: "Probability 75% of the way through the market's duration",
+    axisTitle: "at 75% of market duration",
+    prediction: "75pct",
+    markets: markets.filter((market) => market.duration_days >= 4),
+  },
 ];
-categories.map((category) =>
-  filtersInput.push({
-    description: category.name,
-    icon: category.icon,
-    markets: markets.filter((market) => market.category_slug == category.slug),
-  }),
-);
 const filtersOutput = filtersInput.map((filter) => ({
   description: filter.description,
-  icon: filter.icon,
+  axisTitle: filter.axisTitle,
   numMarkets: filter.markets.length,
-  points: calculateCalibrationPoints(filter.markets, "midpoint"),
+  points: calculateCalibrationPoints(filter.markets, filter.prediction),
 }));
 ---
 
@@ -39,16 +68,13 @@ const filtersOutput = filtersInput.map((filter) => ({
           <div class="flex items-center">
             <input
               type="radio"
-              id={`filter-category-${index}`}
-              name="filter-category"
+              id={`filter-prediction-${index}`}
+              name="filter-prediction"
               value={index}
               class="w-5 h-5 mr-4 text-mantle"
             />
-            <label for={`filter-category-${index}`} class="w-full">
-              <span>
-                <Icon name={filter.icon} class="inline mb-1 mr-1" />
-                {filter.description}
-              </span>
+            <label for={`filter-prediction-${index}`} class="w-full">
+              <span>{filter.description}</span>
               <div class="text-xs text-right">
                 n={filter.numMarkets.toLocaleString()}
               </div>
@@ -63,7 +89,7 @@ const filtersOutput = filtersInput.map((filter) => ({
       class="bg-base-light [&_h2]:text-2xl text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
     >
       <div
-        id="calibration-plot-vary-category"
+        id="calibration-plot-vary-prediction"
         data-platforms={JSON.stringify(platforms)}
         data-filters={JSON.stringify(filtersOutput)}
       >
@@ -84,13 +110,14 @@ const filtersOutput = filtersInput.map((filter) => ({
   }
   interface FilterStruct {
     description: string;
+    axisTitle: string;
     numMakrets: number;
     points: CalibrationPoint[];
   }
 
   // Get a reference to the plot element using ID
   const plotElement = document.getElementById(
-    "calibration-plot-vary-category",
+    "calibration-plot-vary-prediction",
   ) as CalibrationPlotElement | null;
   if (!plotElement) {
     throw new Error("Could not find plot element.");
@@ -105,7 +132,7 @@ const filtersOutput = filtersInput.map((filter) => ({
 
   // Add listeners to update plot on change in selection
   let filterSelectedIndex: number = 0;
-  const radios = document.querySelectorAll("input[name='filter-category']");
+  const radios = document.querySelectorAll("input[name='filter-prediction']");
   radios.forEach((radio) => {
     radio.addEventListener("change", async (event) => {
       const targetElement = event.target as HTMLInputElement;
@@ -137,7 +164,7 @@ const filtersOutput = filtersInput.map((filter) => ({
       x: {
         domain: [0, 100],
         percent: true,
-        label: "Prediction (Midpoint)",
+        label: `Prediction (${filters[filterSelectedIndex].axisTitle})`,
       },
       y: { domain: [0, 100], grid: true, percent: true, label: "Resolution" },
       r: { range: [8, 15], label: "Scale" },

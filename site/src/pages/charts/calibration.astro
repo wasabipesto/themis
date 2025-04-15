@@ -2,6 +2,7 @@
 import Base from "@layouts/base.astro";
 import CalibrationVarySelection from "@components/charts/calibration-vary-selection.astro";
 import CalibrationVaryCategory from "@components/charts/calibration-vary-category.astro";
+import CalibrationVaryPrediction from "@components/charts/calibration-vary-prediction.astro";
 ---
 
 <Base title="Calibration Charts">
@@ -11,7 +12,7 @@ import CalibrationVaryCategory from "@components/charts/calibration-vary-categor
 
   <div class="p-4 m-2">
     <div class="my-4">
-      <h2 class="font-bold text-2xl">Basic Filtering</h2>
+      <h2 class="font-bold text-2xl" id="vary-selection">Basic Filtering</h2>
       <div class="my-2">
         Select markets to include in the calibration plot based on key
         attributes, such as number of traders, market volume, and duration.
@@ -20,9 +21,10 @@ import CalibrationVaryCategory from "@components/charts/calibration-vary-categor
     </div>
     <CalibrationVarySelection />
   </div>
+
   <div class="p-4 m-2">
     <div class="my-4">
-      <h2 class="font-bold text-2xl">Category Filtering</h2>
+      <h2 class="font-bold text-2xl" id="vary-category">Category Filtering</h2>
       <div class="my-2">
         Group markets based on what category they're in. This is determined by
         how they are categorized on each platforn, and not all platforms are
@@ -30,5 +32,19 @@ import CalibrationVaryCategory from "@components/charts/calibration-vary-categor
       </div>
     </div>
     <CalibrationVaryCategory />
+  </div>
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h2 class="font-bold text-2xl" id="vary-prediction">
+        Differing Predictions
+      </h2>
+      <div class="my-2">
+        Up until this point we've used the midpoint of each market as the
+        refrence value. What if we used something else, such as the average
+        probability or a fixed point in time?
+      </div>
+    </div>
+    <CalibrationVaryPrediction />
   </div>
 </Base>

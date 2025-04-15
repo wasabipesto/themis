@@ -7,7 +7,7 @@ const markets = await getMarkets();
 const platforms = await getPlatforms();
 
 // Calculate calibration points
-const points = calculateCalibrationPoints(markets);
+const points = calculateCalibrationPoints(markets, "midpoint");
 ---
 
 <div

@@ -61,7 +61,7 @@ const filtersInput = [
 const filtersOutput = filtersInput.map((filter) => ({
   description: filter.description,
   numMarkets: filter.markets.length,
-  points: calculateCalibrationPoints(filter.markets),
+  points: calculateCalibrationPoints(filter.markets, "midpoint"),
 }));
 ---
 

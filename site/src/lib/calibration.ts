@@ -19,12 +19,16 @@ export interface Bucket {
  *
  * @param markets - Array of market details from the API
  * @param bucketWidth - Width of each probability bucket (default: 0.05)
+ * @param metricType - Type of metric to use ("midpoint" or "average") (default: "midpoint")
  * @returns Array of calibration points ready for plotting
  */
 export function calculateCalibrationPoints(
   markets: MarketDetails[],
-  bucketWidth: number = 0.05,
+  metricType: string,
 ): CalibrationPoint[] {
+  // Set bucket width
+  const bucketWidth = 0.05;
+
   // Extract unique platform names from markets
   const platformSet = new Set<string>();
   markets.forEach((market) => {
@@ -58,10 +62,22 @@ export function calculateCalibrationPoints(
     });
   }
 
-  // Categorize markets into buckets by market.prob_at_midpoint and market.platform_slug
+  // Choose the appropriate probability metric
+  const getProbability = (market: MarketDetails) => {
+    if (metricType === "midpoint") {
+      return market.prob_at_midpoint;
+    } else if (metricType === "average") {
+      return market.prob_time_avg;
+    } else {
+      console.error(`Invalid metric type: ${metricType}`);
+      return market.prob_at_midpoint;
+    }
+  };
+
+  // Categorize markets into buckets by chosen probability and market.platform_slug
   markets.forEach((market) => {
-    if (market.prob_at_midpoint !== null && market.resolution !== null) {
-      const probability = market.prob_at_midpoint;
+    const probability = getProbability(market);
+    if (probability !== null && market.resolution !== null) {
       const bucketIndex = Math.min(
         Math.floor(probability / bucketWidth),
         buckets.length - 1,
