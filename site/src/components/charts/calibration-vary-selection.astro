@@ -8,14 +8,12 @@ const markets = await getMarkets();
 const platforms = await getPlatforms();
 
 // Filters and descriptions
-const filters = [
+const filtersInput = [
   {
-    id: "all",
     description: "Show all resolved markets.",
     markets: markets,
   },
   {
-    id: "fl1",
     description:
       "Filter to at least 10 traders or $100 in trade volume, and open for at least 2 days.",
     markets: markets.filter(
@@ -28,7 +26,6 @@ const filters = [
     ),
   },
   {
-    id: "fl2",
     description:
       "Filter to at least 100 traders or $1000 in trade volume, and open for at least 14 days.",
     markets: markets.filter(
@@ -41,7 +38,6 @@ const filters = [
     ),
   },
   {
-    id: "fl3",
     description:
       "Filter to at least 1000 traders or $10,000 in trade volume, and open for at least 30 days.",
     markets: markets.filter(
@@ -54,7 +50,6 @@ const filters = [
     ),
   },
   {
-    id: "pastyear",
     description: "Filter to markets from the past year.",
     markets: markets.filter(
       (market) =>
@@ -63,20 +58,37 @@ const filters = [
     ),
   },
   {
-    id: "linked",
     description: "Filter to markets that have been linked in questions.",
     markets: markets.filter((market) => market.question_id),
   },
 ];
+const filtersOutput = filtersInput.map((filter) => ({
+  description: filter.description,
+  numMarkets: filter.markets.length,
+  points: calculateCalibrationPoints(markets),
+}));
 ---
 
 <div class="grid gap-2 grid-cols-1 md:grid-cols-3">
-  <div class="grid gap-2 grid-cols-1">
+  <div class="flex-col space-y-2">
     {
-      filters.map((filter) => (
+      filtersOutput.map((filter, index) => (
         <div class="bg-base-light text-crust rounded-md drop-shadow-sm px-4 py-2">
-          <span>{filter.description}</span>
-          <span class="text-xs">(n={filter.markets.length})</span>
+          <div class="flex items-center">
+            <input
+              type="radio"
+              id={`filter-selection-${index}`}
+              name="filter-selection"
+              value={index}
+              class="w-5 h-5 mr-4 text-mantle"
+            />
+            <label for={`filter-selection-${index}`} class="w-full">
+              <span>{filter.description}</span>
+              <div class="text-xs text-right">
+                n={filter.numMarkets.toLocaleString()}
+              </div>
+            </label>
+          </div>
         </div>
       ))
     }
@@ -88,7 +100,7 @@ const filters = [
       <div
         id="calibration-plot-vary-selection"
         data-platforms={JSON.stringify(platforms)}
-        data-points={JSON.stringify(calculateCalibrationPoints(markets))}
+        data-filters={JSON.stringify(filtersOutput)}
       >
       </div>
     </div>
@@ -102,9 +114,18 @@ const filters = [
   interface CalibrationPlotElement extends HTMLElement {
     dataset: {
       platforms: string;
-      points: string;
+      filters: string;
     };
   }
+  interface FilterStruct {
+    description: string;
+    numMakrets: number;
+    points: CalibrationPoint[];
+  }
+
+  // Get selected filter number
+  const filterSelectedIndex = 0;
+  console.log(filterSelectedIndex);
 
   // Get a reference to the plot element using ID
   const plotElement = document.getElementById(
@@ -115,7 +136,8 @@ const filters = [
     const platforms = JSON.parse(
       plotElement.dataset.platforms,
     ) as PlatformDetails[];
-    const points = JSON.parse(plotElement.dataset.points) as CalibrationPoint[];
+    const filters = JSON.parse(plotElement.dataset.filters) as FilterStruct[];
+    const points = filters[filterSelectedIndex].points;
 
     const width = parseInt(window.getComputedStyle(plotElement).width);
 
