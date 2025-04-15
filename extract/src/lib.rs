@@ -4,9 +4,9 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use std::fmt;
 
-use criterions::CriterionProbability;
+use criteria::CriterionProbability;
 
-pub mod criterions;
+pub mod criteria;
 pub mod helpers;
 pub mod platforms;
 
@@ -34,7 +34,7 @@ pub struct StandardMarket {
 pub struct MarketAndProbs {
     pub market: StandardMarket,
     pub daily_probabilities: Vec<DailyProbability>,
-    pub other_probabilities: Vec<CriterionProbability>,
+    pub criterion_probabilities: Vec<CriterionProbability>,
 }
 
 /// A fully-constructed probability data point.

@@ -6,6 +6,7 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::collections::HashMap;
 
+use crate::criteria::{calculate_all_criteria, CriterionProbability};
 use crate::platforms::{MarketAndProbs, MarketResult};
 use crate::{helpers, MarketError, ProbSegment, StandardMarket};
 
@@ -217,6 +218,10 @@ pub fn standardize(input: &KalshiData) -> MarketResult<Vec<MarketAndProbs>> {
             })?;
             let daily_probabilities = helpers::get_daily_probabilities(&probs, &market_id)
                 .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?;
+            let criterion_probabilities: Vec<CriterionProbability> =
+                calculate_all_criteria(&market_id, &probs).map_err(|e| {
+                    MarketError::ProcessingError(market_id.to_owned(), e.to_string())
+                })?;
 
             // We only consider the market to be open while there are actual probabilities.
             let start = probs.first().unwrap().start;
@@ -266,7 +271,7 @@ pub fn standardize(input: &KalshiData) -> MarketResult<Vec<MarketAndProbs>> {
             Ok(vec![MarketAndProbs {
                 market,
                 daily_probabilities,
-                other_probabilities: Vec::new(),
+                criterion_probabilities,
             }])
         }
     }

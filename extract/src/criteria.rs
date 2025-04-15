@@ -1,6 +1,6 @@
 //! Generating the probability points (criterions) for use in calibration charts.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use chrono::TimeDelta;
 use serde::{Serialize, Serializer};
 use std::fmt::{self, Display};
@@ -166,4 +166,28 @@ impl CriterionType {
             Ok(None)
         }
     }
+}
+
+pub fn calculate_all_criteria(
+    market_id: &String,
+    probs: &[ProbSegment],
+) -> Result<Vec<CriterionProbability>> {
+    let mut criteria_probabilities = Vec::new();
+
+    // Iterate over all possible criterion types
+    for criterion_type in CriterionType::all() {
+        match criterion_type
+            .calc(market_id, probs)
+            .with_context(|| format!("Error calculating criterion for type {:?}", criterion_type))
+        {
+            Ok(Some(criterion_probability)) => {
+                criteria_probabilities.push(criterion_probability);
+            }
+            _ => {
+                // In case of None or an error, continue without adding anything.
+            }
+        }
+    }
+
+    Ok(criteria_probabilities)
 }

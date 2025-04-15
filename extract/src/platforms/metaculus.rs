@@ -5,6 +5,7 @@ use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
+use crate::criteria::{calculate_all_criteria, CriterionProbability};
 use crate::platforms::{MarketAndProbs, MarketResult};
 use crate::{helpers, MarketError, ProbSegment, StandardMarket};
 
@@ -349,6 +350,10 @@ fn standardize_single(
             })?;
             let daily_probabilities = helpers::get_daily_probabilities(&probs, &market_id)
                 .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?;
+            let criterion_probabilities: Vec<CriterionProbability> =
+                calculate_all_criteria(&market_id, &probs).map_err(|e| {
+                    MarketError::ProcessingError(market_id.to_owned(), e.to_string())
+                })?;
 
             // Get resolution value.
             let resolution_value = match resolution {
@@ -382,7 +387,7 @@ fn standardize_single(
             Ok(MarketAndProbs {
                 market,
                 daily_probabilities,
-                other_probabilities: Vec::new(),
+                criterion_probabilities,
             })
         }
         MetaculusQuestion::Numeric { .. } => Err(MarketError::MarketTypeNotImplemented(
@@ -453,6 +458,10 @@ fn standardize_single(
             })?;
             let daily_probabilities = helpers::get_daily_probabilities(&probs, &market_id)
                 .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?;
+            let criterion_probabilities: Vec<CriterionProbability> =
+                calculate_all_criteria(&market_id, &probs).map_err(|e| {
+                    MarketError::ProcessingError(market_id.to_owned(), e.to_string())
+                })?;
 
             // Build standard market item.
             let market = create_standard_market(
@@ -468,7 +477,7 @@ fn standardize_single(
             Ok(MarketAndProbs {
                 market,
                 daily_probabilities,
-                other_probabilities: Vec::new(),
+                criterion_probabilities,
             })
         }
         MetaculusQuestion::Conditional { .. } => Err(MarketError::MarketTypeNotImplemented(
