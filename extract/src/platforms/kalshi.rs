@@ -6,8 +6,8 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::collections::HashMap;
 
-use super::{helpers, MarketError, MarketResult};
-use super::{MarketAndProbs, ProbSegment, StandardMarket};
+use crate::platforms::{MarketAndProbs, MarketResult};
+use crate::{helpers, MarketError, ProbSegment, StandardMarket};
 
 /// This is the container format we used to save items to disk earlier.
 #[derive(Debug, Clone, Deserialize)]
@@ -266,6 +266,7 @@ pub fn standardize(input: &KalshiData) -> MarketResult<Vec<MarketAndProbs>> {
             Ok(vec![MarketAndProbs {
                 market,
                 daily_probabilities,
+                other_probabilities: Vec::new(),
             }])
         }
     }

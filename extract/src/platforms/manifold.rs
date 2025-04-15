@@ -9,7 +9,8 @@ use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
 
-use super::{helpers, MarketAndProbs, MarketError, MarketResult, ProbSegment, StandardMarket};
+use crate::platforms::{MarketAndProbs, MarketResult};
+use crate::{helpers, MarketError, ProbSegment, StandardMarket};
 
 const MANIFOLD_EXCHANGE_RATE: f32 = 100.0;
 
@@ -345,6 +346,7 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
             Ok(vec![MarketAndProbs {
                 market,
                 daily_probabilities,
+                other_probabilities: Vec::new(),
             }])
         }
         // Multiple choice markets
@@ -447,6 +449,7 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                 Ok(vec![MarketAndProbs {
                     market,
                     daily_probabilities,
+                    other_probabilities: Vec::new(),
                 }])
             }
             Some(false) => {
@@ -541,6 +544,7 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                     result.push(MarketAndProbs {
                         market,
                         daily_probabilities,
+                        other_probabilities: Vec::new(),
                     });
                 }
                 Ok(result)

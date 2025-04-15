@@ -146,14 +146,14 @@ CREATE INDEX idx_daily_probabilities_market_id ON daily_probabilities (market_id
 ALTER TABLE daily_probabilities ADD CONSTRAINT chk_prob_range CHECK (prob BETWEEN 0 AND 1);
 
 -- === OTHER PROBABILITY POINTS (MIDPOINT, AVERAGE, ETC) ===
-CREATE TABLE other_probabilities (
+CREATE TABLE criterion_probabilities (
     market_id TEXT NOT NULL,
-    prob_type TEXT NOT NULL,
+    criterion_type TEXT NOT NULL,
     prob DECIMAL NOT NULL,
-    PRIMARY KEY (market_id, prob_type),
+    PRIMARY KEY (market_id, criterion_type),
     FOREIGN KEY (market_id) REFERENCES markets (id) ON UPDATE CASCADE
 );
 
-CREATE INDEX idx_other_probabilities_market_id ON other_probabilities (market_id);
+CREATE INDEX idx_criterion_probabilities_market_id ON criterion_probabilities (market_id);
 
-ALTER TABLE other_probabilities ADD CONSTRAINT chk_prob_range CHECK (prob BETWEEN 0 AND 1);
+ALTER TABLE criterion_probabilities ADD CONSTRAINT chk_prob_range CHECK (prob BETWEEN 0 AND 1);

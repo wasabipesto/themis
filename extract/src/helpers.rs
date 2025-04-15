@@ -1,6 +1,6 @@
 //! Helper functions for dealing with probabilities over time
 
-use super::{DailyProbability, ProbSegment};
+use crate::{DailyProbability, ProbSegment};
 use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Duration, TimeDelta, TimeZone, Utc};
 use log::{debug, error, warn};

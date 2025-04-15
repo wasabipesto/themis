@@ -5,7 +5,8 @@ use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
-use super::{helpers, MarketAndProbs, MarketError, MarketResult, ProbSegment, StandardMarket};
+use crate::platforms::{MarketAndProbs, MarketResult};
+use crate::{helpers, MarketError, ProbSegment, StandardMarket};
 
 /// This is the container format we used to save items to disk earlier.
 #[derive(Debug, Clone, Deserialize)]
@@ -381,6 +382,7 @@ fn standardize_single(
             Ok(MarketAndProbs {
                 market,
                 daily_probabilities,
+                other_probabilities: Vec::new(),
             })
         }
         MetaculusQuestion::Numeric { .. } => Err(MarketError::MarketTypeNotImplemented(
@@ -466,6 +468,7 @@ fn standardize_single(
             Ok(MarketAndProbs {
                 market,
                 daily_probabilities,
+                other_probabilities: Vec::new(),
             })
         }
         MetaculusQuestion::Conditional { .. } => Err(MarketError::MarketTypeNotImplemented(
