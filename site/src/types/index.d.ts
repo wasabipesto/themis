@@ -185,11 +185,9 @@ export interface DailyProbabilityDetails {
 /** Single point on a calibration plot. */
 export interface CalibrationPoint {
   platform_slug: string;
-  x_start: number | null;
+  x_start: number;
   x_center: number;
-  x_end: number | null;
-  y_start: number | null;
+  x_end: number;
   y_center: number;
-  y_end: number | null;
-  count: number | null;
+  count: number;
 }

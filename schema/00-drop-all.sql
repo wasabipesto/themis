@@ -2,8 +2,6 @@
 -- DROP ALL TABLES
 -- ** THIS WILL DESTROY ALL DATA **
 -- ==========================================
-DROP TABLE IF EXISTS calibration_points CASCADE;
-
 DROP TABLE IF EXISTS daily_probabilities CASCADE;
 
 DROP TABLE IF EXISTS market_scores CASCADE;

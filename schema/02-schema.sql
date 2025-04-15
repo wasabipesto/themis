@@ -144,17 +144,3 @@ CREATE TABLE daily_probabilities (
 CREATE INDEX idx_daily_probabilities_market_id ON daily_probabilities (market_id);
 
 ALTER TABLE daily_probabilities ADD CONSTRAINT chk_prob_range CHECK (prob BETWEEN 0 AND 1);
-
--- === CALIBRATION CHART POINTS ===
-CREATE TABLE calibration_points (
-    platform_slug TEXT NOT NULL,
-    x_start DECIMAL,
-    x_center DECIMAL NOT NULL,
-    x_end DECIMAL,
-    y_start DECIMAL,
-    y_center DECIMAL NOT NULL,
-    y_end DECIMAL,
-    count INTEGER,
-    PRIMARY KEY (platform_slug, x_center, y_center),
-    FOREIGN KEY (platform_slug) REFERENCES platforms (slug) ON UPDATE CASCADE
-);
