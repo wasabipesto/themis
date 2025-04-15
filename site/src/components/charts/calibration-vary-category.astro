@@ -1,6 +1,7 @@
 ---
 import { getMarkets, getPlatforms, getCategories } from "@lib/api";
 import { calculateCalibrationPoints } from "@lib/calibration";
+import { Icon } from "astro-icon/components";
 
 // Download markets and platforms
 const markets = await getMarkets();
@@ -11,17 +12,20 @@ const categories = await getCategories();
 const filtersInput = [
   {
     description: "All categories",
+    icon: "mdi:compass-rose",
     markets: markets,
   },
 ];
 categories.map((category) =>
   filtersInput.push({
-    description: `Category: ${category.name}`,
+    description: category.name,
+    icon: category.icon,
     markets: markets.filter((market) => market.category_slug == category.slug),
   }),
 );
 const filtersOutput = filtersInput.map((filter) => ({
   description: filter.description,
+  icon: filter.icon,
   numMarkets: filter.markets.length,
   points: calculateCalibrationPoints(filter.markets),
 }));
@@ -41,7 +45,10 @@ const filtersOutput = filtersInput.map((filter) => ({
               class="w-5 h-5 mr-4 text-mantle"
             />
             <label for={`filter-category-${index}`} class="w-full">
-              <span>{filter.description}</span>
+              <span>
+                <Icon name={filter.icon} class="inline mb-1 mr-1" />
+                {filter.description}
+              </span>
               <div class="text-xs text-right">
                 n={filter.numMarkets.toLocaleString()}
               </div>
