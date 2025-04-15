@@ -1,8 +1,21 @@
 ---
 import Base from "@layouts/base.astro";
-import CalibrationDefault from "@components/charts/calibration-default.astro";
+import CalibrationVarySelection from "@components/charts/calibration-vary-selection.astro";
 ---
 
 <Base title="Calibration Charts">
-  <CalibrationDefault />
+  <div class="p-4 m-2">
+    <h1 class="text-4xl font-bold">Calibration Charts</h1>
+  </div>
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h2 class="font-bold text-2xl">Market Filtering</h2>
+      <div class="my-2">
+        Select markets to include in the calibration plot based on key
+        attributes, such as number of traders or volume.
+      </div>
+    </div>
+    <CalibrationVarySelection />
+  </div>
 </Base>
