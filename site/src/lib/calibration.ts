@@ -4,6 +4,7 @@ import { getCriterionProb } from "@lib/api";
 
 export interface PlatformData {
   sum: number;
+  weight: number;
   count: number;
 }
 
@@ -20,6 +21,7 @@ export interface Bucket {
 export async function calculateCalibrationPoints(
   markets: MarketDetails[],
   criterion_type: string,
+  weight_type: string | null,
 ): Promise<CalibrationPoint[]> {
   // Set bucket width
   const bucketWidth = 0.05;
@@ -46,7 +48,7 @@ export async function calculateCalibrationPoints(
 
     // Initialize platform data for each platform
     platforms.forEach((platform) => {
-      platformsObj[platform] = { sum: 0, count: 0 };
+      platformsObj[platform] = { sum: 0, weight: 0, count: 0 };
     });
 
     buckets.push({
@@ -57,10 +59,30 @@ export async function calculateCalibrationPoints(
     });
   }
 
+  function getWeight(
+    market: MarketDetails,
+    weight_type: string | null,
+  ): number | null {
+    if (weight_type == null) {
+      return 1;
+    } else if (weight_type == "volume_usd") {
+      return market.volume_usd;
+    } else if (weight_type == "traders_count") {
+      return market.traders_count;
+    } else if (weight_type == "duration_days") {
+      return market.duration_days;
+    } else if (weight_type == "recency") {
+      return new Date().getTime() - new Date(market.close_datetime).getTime();
+    } else {
+      throw new Error(`Invalid weight: ${weight_type}`);
+    }
+  }
+
   // Categorize markets into buckets by chosen probability and market.platform_slug
   for (const market of markets) {
     const criterionProb = await getCriterionProb(market.id, criterion_type);
-    if (criterionProb) {
+    const weight_value = getWeight(market, weight_type);
+    if (criterionProb && weight_value) {
       const prediction = criterionProb.prob;
       const bucketIndex = Math.min(
         Math.floor(prediction / bucketWidth),
@@ -68,7 +90,9 @@ export async function calculateCalibrationPoints(
       );
       if (buckets[bucketIndex].platforms[market.platform_name]) {
         buckets[bucketIndex].platforms[market.platform_name].sum +=
-          market.resolution;
+          market.resolution * weight_value;
+        buckets[bucketIndex].platforms[market.platform_name].weight +=
+          weight_value;
         buckets[bucketIndex].platforms[market.platform_name].count += 1;
       }
     } else {
@@ -88,7 +112,7 @@ export async function calculateCalibrationPoints(
           x_start: bucket.x_start,
           x_center: bucket.x_center,
           x_end: bucket.x_end,
-          y_center: data.sum / data.count,
+          y_center: data.sum / data.weight,
           count: data.count,
         });
       }

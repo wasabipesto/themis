@@ -3,6 +3,7 @@ import Base from "@layouts/base.astro";
 import CalibrationVarySelection from "@components/charts/calibration-vary-selection.astro";
 import CalibrationVaryCategory from "@components/charts/calibration-vary-category.astro";
 import CalibrationVaryPrediction from "@components/charts/calibration-vary-criterion.astro";
+import CalibrationVaryWeight from "@components/charts/calibration-vary-weight.astro";
 ---
 
 <Base title="Calibration Charts">
@@ -46,5 +47,17 @@ import CalibrationVaryPrediction from "@components/charts/calibration-vary-crite
       </div>
     </div>
     <CalibrationVaryPrediction />
+  </div>
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h2 class="font-bold text-2xl" id="vary-prediction">Weighted Averages</h2>
+      <div class="my-2">
+        Typically all markets are trated equally with a raw average. What if we
+        used a weighted average instead? For instance, markets with $100 in
+        trade volume might be weighted 10 times as heavily as one with $10.
+      </div>
+    </div>
+    <CalibrationVaryWeight />
   </div>
 </Base>
