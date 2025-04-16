@@ -1,0 +1,28 @@
+---
+import Base from "@layouts/base.astro";
+import AccuracyBoxSelect from "@components/charts/accuracy-box-select.astro";
+import { getMarkets, getPlatforms, getCategories } from "@lib/api";
+
+// Download data
+const markets = await getMarkets();
+const platforms = await getPlatforms();
+const categories = await getCategories();
+---
+
+<Base title="Accuracy Charts">
+  <div class="p-4 m-2">
+    <h1 class="text-4xl font-bold">Calibration Charts</h1>
+  </div>
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h2 class="font-bold text-2xl" id="vary-selection">Basic Filtering</h2>
+      <div class="my-2">
+        We use the Brier score by default in most plots, but we calculate many
+        more. Take a look at how the platforms compare when using these
+        alternative scoring methods.
+      </div>
+    </div>
+    <AccuracyBoxSelect platforms={platforms} markets={markets} />
+  </div>
+</Base>
