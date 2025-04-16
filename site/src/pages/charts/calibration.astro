@@ -124,7 +124,33 @@ const categories = await getCategories();
         supported yet.
       </div>
     </div>
-    <CalibrationVaryCategory />
+    <CalibrationBase
+      plotId="category"
+      platforms={platforms}
+      options={[
+        {
+          icon: "mdi:compass-rose",
+          description: "All categories",
+          axisTitleX: null,
+          axisTitleY: null,
+          markets: markets,
+          criterion: null,
+          weight: null,
+        },
+      ].concat(
+        categories.map((category) => ({
+          icon: category.icon,
+          description: category.name,
+          axisTitleX: null,
+          axisTitleY: null,
+          markets: markets.filter(
+            (market) => market.category_slug == category.slug,
+          ),
+          criterion: null,
+          weight: null,
+        })),
+      )}
+    />
   </div>
 
   <div class="p-4 m-2">

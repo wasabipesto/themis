@@ -51,7 +51,7 @@ const optionsCalculated = await Promise.all(
               id={`calibration-option-${plotId}-${index}`}
               name={`calibration-option-${plotId}`}
               value={index}
-              class="w-5 h-5 mr-4 text-mantle calibration-option"
+              class={`w-5 h-5 mr-4 text-mantle calibration-option-${plotId}`}
             />
             <label for={`calibration-option-${plotId}-${index}`} class="w-full">
               <span>
@@ -182,31 +182,47 @@ const optionsCalculated = await Promise.all(
       ],
     });
 
+    // Wipe the existing plot and add the new one
     while (plotElement.firstChild) {
       plotElement.removeChild(plotElement.firstChild);
     }
     plotElement.appendChild(plot);
   }
 
-  // Initialize and attach event listeners to each calibration-plot element
+  // Get all matching plot elements
   const plotElements = document.querySelectorAll(
     ".calibration-plot",
   ) as NodeListOf<CalibrationPlotElement>;
-  plotElements.forEach((plotElement, index) => {
+
+  // Set up each plot
+  plotElements.forEach((plotElement) => {
+    // Extract options
     const options = JSON.parse(plotElement.dataset.options) as OptionData[];
 
+    // Extract plot ID
+    let plotId = "";
+    const regex = /calibration-plot-(.*)$/;
+    const match = plotElement.id.match(regex);
+    if (match && match.length > 1) {
+      plotId = match[1];
+    } else {
+      throw new Error(`Invalid plot ID: ${plotElement.id}`);
+    }
+
+    // Find options that match the plot ID
     const radios = [
-      ...document.querySelectorAll(`.calibration-option`),
+      ...document.querySelectorAll(`.calibration-option-${plotId}`),
     ] as HTMLInputElement[];
 
-    updatePlot(plotElement, getSelectedOption(options, radios));
-
     // Set the first radio button to checked by default
-    if (radios.length > 0 && index === 0) {
+    if (radios.length > 0) {
       radios[0].checked = true;
     }
 
-    // Add event listener to update plot on option change
+    // Update the plot with initial values
+    updatePlot(plotElement, getSelectedOption(options, radios));
+
+    // Set the callbacks for future changes
     radios.forEach((radio, i) => {
       radio.addEventListener("change", () => {
         const selectedOption = getSelectedOption(options, radios);
