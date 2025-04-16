@@ -1,9 +1,16 @@
 ---
 import Base from "@layouts/base.astro";
+import CalibrationBase from "@components/charts/calibration-base.astro";
 import CalibrationVarySelection from "@components/charts/calibration-vary-selection.astro";
 import CalibrationVaryCategory from "@components/charts/calibration-vary-category.astro";
 import CalibrationVaryPrediction from "@components/charts/calibration-vary-criterion.astro";
 import CalibrationVaryWeight from "@components/charts/calibration-vary-weight.astro";
+import { getMarkets, getPlatforms, getCategories } from "@lib/api";
+
+// Download markets and platforms
+const markets = await getMarkets();
+const platforms = await getPlatforms();
+const categories = await getCategories();
 ---
 
 <Base title="Calibration Charts">
@@ -20,7 +27,92 @@ import CalibrationVaryWeight from "@components/charts/calibration-vary-weight.as
         Alternatively, pick from a few other selection criteria.
       </div>
     </div>
-    <CalibrationVarySelection />
+    <CalibrationBase
+      plotId="basic"
+      platforms={platforms}
+      options={[
+        {
+          icon: null,
+          description: "Show all resolved markets.",
+          axisTitleX: null,
+          axisTitleY: null,
+          markets: markets,
+          criterion: null,
+          weight: null,
+        },
+        {
+          icon: null,
+          description:
+            "Filter to at least 10 traders or $100 in trade volume, and open for at least 2 days.",
+          axisTitleX: null,
+          axisTitleY: null,
+          markets: markets.filter((market) => {
+            return (
+              ((market.traders_count !== null && market.traders_count >= 10) ||
+                (market.volume_usd !== null && market.volume_usd >= 100)) &&
+              market.duration_days >= 2
+            );
+          }),
+          criterion: null,
+          weight: null,
+        },
+        {
+          icon: null,
+          description:
+            "Filter to at least 100 traders or $1000 in trade volume, and open for at least 14 days.",
+          axisTitleX: null,
+          axisTitleY: null,
+          markets: markets.filter((market) => {
+            return (
+              ((market.traders_count !== null && market.traders_count >= 100) ||
+                (market.volume_usd !== null && market.volume_usd >= 1000)) &&
+              market.duration_days >= 14
+            );
+          }),
+          criterion: null,
+          weight: null,
+        },
+        {
+          icon: null,
+          description:
+            "Filter to at least 1000 traders or $10,000 in trade volume, and open for at least 30 days.",
+          axisTitleX: null,
+          axisTitleY: null,
+          markets: markets.filter((market) => {
+            return (
+              ((market.traders_count !== null &&
+                market.traders_count >= 1000) ||
+                (market.volume_usd !== null && market.volume_usd >= 10000)) &&
+              market.duration_days >= 30
+            );
+          }),
+          criterion: null,
+          weight: null,
+        },
+        {
+          icon: null,
+          description: "Filter to markets from the past year.",
+          axisTitleX: null,
+          axisTitleY: null,
+          markets: markets.filter(
+            (market) =>
+              new Date(market.close_datetime).getTime() >=
+              new Date().getTime() - 365 * 24 * 60 * 60 * 1000,
+          ),
+          criterion: null,
+          weight: null,
+        },
+        {
+          icon: null,
+          description: "Filter to markets that have been linked in questions.",
+          axisTitleX: null,
+          axisTitleY: null,
+          markets: markets.filter((market) => market.question_id),
+          criterion: null,
+          weight: null,
+        },
+      ]}
+    />
   </div>
 
   <div class="p-4 m-2">

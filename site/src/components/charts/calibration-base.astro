@@ -100,30 +100,28 @@ const optionsCalculated = await Promise.all(
     points: CalibrationPoint[];
   }
 
-  // This script will be loaded and run once even if there are many plots on the page.
-  // We will find all relevant plots and update them together.
-  const plotElements = document.querySelectorAll(
-    "calibration-plot",
-  ) as NodeListOf<CalibrationPlotElement>;
+  // Function to get the selected option based on user input
+  function getSelectedOption(
+    options: OptionData[],
+    radios: HTMLInputElement[],
+  ) {
+    for (let i = 0; i < radios.length; i++) {
+      if (radios[i].checked) {
+        return options[i];
+      }
+    }
+    // Default to first option if none are selected
+    return options[0];
+  }
 
   // Update the given plot when called
-  function updatePlot(plotElement: CalibrationPlotElement) {
-    if (!plotElement) {
-      throw new Error("Could not find plot element.");
-    }
-    // Get data embedded in plot element
+  function updatePlot(plotElement: CalibrationPlotElement, option: OptionData) {
     const platforms = JSON.parse(
       plotElement.dataset.platforms,
     ) as PlatformDetails[];
-    const options = JSON.parse(plotElement.dataset.options) as OptionData[];
-
-    // Get selected option from list
-    const option = {}; // TODO
-
-    // Get plot width for reactivcity
     const plotWidth = parseInt(window.getComputedStyle(plotElement).width);
 
-    // Build the plot
+    // Build the plot with the selected option data
     const plot = Plot.plot({
       title: "Calibration Plot",
       width: plotWidth,
@@ -184,15 +182,36 @@ const optionsCalculated = await Promise.all(
       ],
     });
 
-    // Remove existing plot
     while (plotElement.firstChild) {
       plotElement.removeChild(plotElement.firstChild);
     }
     plotElement.appendChild(plot);
   }
 
-  // Initial render with default values
-  plotElements.forEach((plotElement) => {
-    updatePlot(plotElement);
+  // Initialize and attach event listeners to each calibration-plot element
+  const plotElements = document.querySelectorAll(
+    ".calibration-plot",
+  ) as NodeListOf<CalibrationPlotElement>;
+  plotElements.forEach((plotElement, index) => {
+    const options = JSON.parse(plotElement.dataset.options) as OptionData[];
+
+    const radios = [
+      ...document.querySelectorAll(`.calibration-option`),
+    ] as HTMLInputElement[];
+
+    updatePlot(plotElement, getSelectedOption(options, radios));
+
+    // Set the first radio button to checked by default
+    if (radios.length > 0 && index === 0) {
+      radios[0].checked = true;
+    }
+
+    // Add event listener to update plot on option change
+    radios.forEach((radio, i) => {
+      radio.addEventListener("change", () => {
+        const selectedOption = getSelectedOption(options, radios);
+        updatePlot(plotElement, selectedOption);
+      });
+    });
   });
 </script>
