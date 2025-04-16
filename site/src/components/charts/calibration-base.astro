@@ -7,13 +7,13 @@ interface Props {
   plotId: string;
   platforms: PlatformDetails[];
   options: Array<{
-    icon: string | null;
+    icon?: string | null;
     description: string;
-    axisTitleX: string | null;
-    axisTitleY: string | null;
+    axisTitleX?: string | null;
+    axisTitleY?: string | null;
     markets: MarketDetails[];
-    criterion: string | null;
-    weight: string | null;
+    criterion?: string | null;
+    weight?: string | null;
   }>;
 }
 const { plotId, platforms, options } = Astro.props;
@@ -129,13 +129,13 @@ const optionsCalculated = await Promise.all(
       x: {
         domain: [0, 100],
         percent: true,
-        label: option.axisTitleY,
+        label: option.axisTitleX,
       },
       y: {
         domain: [0, 100],
         grid: true,
         percent: true,
-        label: option.axisTitleX,
+        label: option.axisTitleY,
       },
       r: { range: [8, 15], label: "Scale" },
       color: {

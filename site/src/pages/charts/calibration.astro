@@ -28,20 +28,12 @@ const categories = await getCategories();
       platforms={platforms}
       options={[
         {
-          icon: null,
           description: "Show all resolved markets.",
-          axisTitleX: null,
-          axisTitleY: null,
           markets: markets,
-          criterion: null,
-          weight: null,
         },
         {
-          icon: null,
           description:
             "Filter to at least 10 traders or $100 in trade volume, and open for at least 2 days.",
-          axisTitleX: null,
-          axisTitleY: null,
           markets: markets.filter((market) => {
             return (
               ((market.traders_count !== null && market.traders_count >= 10) ||
@@ -49,15 +41,10 @@ const categories = await getCategories();
               market.duration_days >= 2
             );
           }),
-          criterion: null,
-          weight: null,
         },
         {
-          icon: null,
           description:
             "Filter to at least 100 traders or $1000 in trade volume, and open for at least 14 days.",
-          axisTitleX: null,
-          axisTitleY: null,
           markets: markets.filter((market) => {
             return (
               ((market.traders_count !== null && market.traders_count >= 100) ||
@@ -65,15 +52,10 @@ const categories = await getCategories();
               market.duration_days >= 14
             );
           }),
-          criterion: null,
-          weight: null,
         },
         {
-          icon: null,
           description:
             "Filter to at least 1000 traders or $10,000 in trade volume, and open for at least 30 days.",
-          axisTitleX: null,
-          axisTitleY: null,
           markets: markets.filter((market) => {
             return (
               ((market.traders_count !== null &&
@@ -82,30 +64,18 @@ const categories = await getCategories();
               market.duration_days >= 30
             );
           }),
-          criterion: null,
-          weight: null,
         },
         {
-          icon: null,
           description: "Filter to markets from the past year.",
-          axisTitleX: null,
-          axisTitleY: null,
           markets: markets.filter(
             (market) =>
               new Date(market.close_datetime).getTime() >=
               new Date().getTime() - 365 * 24 * 60 * 60 * 1000,
           ),
-          criterion: null,
-          weight: null,
         },
         {
-          icon: null,
           description: "Filter to markets that have been linked in questions.",
-          axisTitleX: null,
-          axisTitleY: null,
           markets: markets.filter((market) => market.question_id),
-          criterion: null,
-          weight: null,
         },
       ]}
     />
@@ -127,23 +97,15 @@ const categories = await getCategories();
         {
           icon: "mdi:compass-rose",
           description: "All categories",
-          axisTitleX: null,
-          axisTitleY: null,
           markets: markets,
-          criterion: null,
-          weight: null,
         },
       ].concat(
         categories.map((category) => ({
           icon: category.icon,
           description: category.name,
-          axisTitleX: null,
-          axisTitleY: null,
           markets: markets.filter(
             (market) => market.category_slug == category.slug,
           ),
-          criterion: null,
-          weight: null,
         })),
       )}
     />
@@ -165,67 +127,46 @@ const categories = await getCategories();
       platforms={platforms}
       options={[
         {
-          icon: null,
           description: "Probability at midpoint (default)",
-          axisTitleX: "Prediction (Midpoint)",
-          axisTitleY: null,
+          axisTitleX: "Prediction (midpoint)",
           markets: markets,
           criterion: "midpoint",
-          weight: null,
         },
         {
-          icon: null,
           description: "Time-weighted average probability",
-          axisTitleX: "Prediction (Average)",
-          axisTitleY: null,
+          axisTitleX: "Prediction (average)",
           markets: markets,
           criterion: "time-average",
-          weight: null,
         },
         {
-          icon: null,
           description: "Probability 24 hours before resolution",
           axisTitleX: "Prediction (24h before resolution)",
-          axisTitleY: null,
           markets: markets.filter((market) => market.duration_days > 2),
           criterion: "before-close-hours-24",
-          weight: null,
         },
         {
-          icon: null,
           description: "Probability 30 days before resolution",
           axisTitleX: "Prediction (30d before resolution)",
-          axisTitleY: null,
           markets: markets.filter((market) => market.duration_days > 31),
           criterion: "before-close-days-30",
-          weight: null,
         },
         {
-          icon: null,
           description: "Probability 90 days before resolution",
           axisTitleX: "Prediction (90d before resolution)",
-          axisTitleY: null,
           markets: markets.filter((market) => market.duration_days > 91),
           criterion: "before-close-days-90",
-          weight: null,
         },
         {
-          icon: null,
           description: "Probability 365 days before resolution",
           axisTitleX: "Prediction (one year before resolution)",
-          axisTitleY: null,
           markets: markets.filter((market) => market.duration_days > 366),
           criterion: "before-close-days-365",
-          weight: null,
         },
         {
-          icon: null,
           description: "Probability 24 hours after open",
           axisTitleX: "Prediction (24h after open)",
-          axisTitleY: null,
           markets: markets.filter((market) => market.duration_days > 2),
           criterion: "after-start-hours-24",
-          weight: null,
         },
       ]}
     />
@@ -247,52 +188,36 @@ const categories = await getCategories();
       platforms={platforms}
       options={[
         {
-          icon: null,
           description: "Unweighted",
-          axisTitleX: null,
           axisTitleY: "Resolution, unweighted",
           markets: markets,
-          criterion: null,
-          weight: null,
         },
         {
-          icon: null,
           description: "Weight market by trade volume",
-          axisTitleX: null,
           axisTitleY: "Resolution, weighted by volume",
           markets: markets.filter(
             (market) => market.volume_usd && market.volume_usd > 0,
           ),
-          criterion: null,
           weight: "volume_usd",
         },
         {
-          icon: null,
           description: "Weight market by number of traders",
-          axisTitleX: null,
           axisTitleY: "Resolution, weighted by traders",
           markets: markets.filter(
             (market) => market.traders_count && market.traders_count > 0,
           ),
-          criterion: null,
           weight: "traders_count",
         },
         {
-          icon: null,
           description: "Weight market by market duration",
-          axisTitleX: null,
           axisTitleY: "Resolution, weighted by duration",
           markets: markets.filter((market) => market.duration_days > 0),
-          criterion: null,
           weight: "duration_days",
         },
         {
-          icon: null,
           description: "Weight market by recency",
-          axisTitleX: null,
           axisTitleY: "Resolution, weighted by recency",
           markets: markets,
-          criterion: null,
           weight: "recency",
         },
       ]}
