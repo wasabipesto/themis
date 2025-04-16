@@ -1,10 +1,5 @@
 ---
-import {
-  getMarkets,
-  getPlatforms,
-  getCategories,
-  getCriterionProbs,
-} from "@lib/api";
+import { getMarkets, getPlatforms, getCategories } from "@lib/api";
 import { calculateCalibrationPoints } from "@lib/calibration";
 import { Icon } from "astro-icon/components";
 
@@ -28,12 +23,17 @@ categories.map((category) =>
     markets: markets.filter((market) => market.category_slug == category.slug),
   }),
 );
-const filtersOutput = filtersInput.map((filter) => ({
-  description: filter.description,
-  icon: filter.icon,
-  numMarkets: filter.markets.length,
-  points: calculateCalibrationPoints(filter.markets, "midpoint"),
-}));
+const filtersOutput = await Promise.all(
+  filtersInput.map(async (filter) => {
+    const points = await calculateCalibrationPoints(filter.markets, "midpoint");
+    return {
+      description: filter.description,
+      icon: filter.icon,
+      numMarkets: filter.markets.length,
+      points: points,
+    };
+  }),
+);
 ---
 
 <div class="grid gap-2 grid-cols-1 md:grid-cols-3">
@@ -195,7 +195,6 @@ const filtersOutput = filtersInput.map((filter) => ({
       plotElement.removeChild(plotElement.firstChild);
     }
     plotElement.appendChild(plot);
-    console.log(plot);
   }
 
   // Initial render with default values

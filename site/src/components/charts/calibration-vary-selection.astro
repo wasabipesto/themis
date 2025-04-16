@@ -1,5 +1,5 @@
 ---
-import { getMarkets, getPlatforms, getCriterionProbs } from "@lib/api";
+import { getMarkets, getPlatforms } from "@lib/api";
 import { calculateCalibrationPoints } from "@lib/calibration";
 
 // Download markets and platforms
@@ -58,11 +58,16 @@ const filtersInput = [
     markets: markets.filter((market) => market.question_id),
   },
 ];
-const filtersOutput = filtersInput.map((filter) => ({
-  description: filter.description,
-  numMarkets: filter.markets.length,
-  points: calculateCalibrationPoints(filter.markets, "midpoint"),
-}));
+const filtersOutput = await Promise.all(
+  filtersInput.map(async (filter) => {
+    const points = await calculateCalibrationPoints(filter.markets, "midpoint");
+    return {
+      description: filter.description,
+      numMarkets: filter.markets.length,
+      points: points,
+    };
+  }),
+);
 ---
 
 <div class="grid gap-2 grid-cols-1 md:grid-cols-3">
@@ -221,7 +226,6 @@ const filtersOutput = filtersInput.map((filter) => ({
       plotElement.removeChild(plotElement.firstChild);
     }
     plotElement.appendChild(plot);
-    console.log(plot);
   }
 
   // Initial render with default values

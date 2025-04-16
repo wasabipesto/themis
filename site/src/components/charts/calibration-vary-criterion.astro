@@ -1,7 +1,6 @@
 ---
-import { getMarkets, getPlatforms, getCriterionProbs } from "@lib/api";
+import { getMarkets, getPlatforms } from "@lib/api";
 import { calculateCalibrationPoints } from "@lib/calibration";
-import { Icon } from "astro-icon/components";
 
 // Download markets and platforms
 const markets = await getMarkets();
@@ -25,39 +24,47 @@ const filtersInput = [
     description: "Probability 24 hours before resolution",
     axisTitle: "24h before resolution",
     criterion: "before-close-hours-24",
-    markets: markets.filter((market) => market.duration_days > 30),
+    markets: markets.filter((market) => market.duration_days > 2),
   },
   {
     description: "Probability 30 days before resolution",
     axisTitle: "30d before resolution",
     criterion: "before-close-days-30",
-    markets: markets.filter((market) => market.duration_days > 30),
+    markets: markets.filter((market) => market.duration_days > 31),
   },
   {
     description: "Probability 90 days before resolution",
     axisTitle: "90d before resolution",
     criterion: "before-close-days-90",
-    markets: markets.filter((market) => market.duration_days > 90),
+    markets: markets.filter((market) => market.duration_days > 91),
   },
   {
     description: "Probability 365 days before resolution",
     axisTitle: "one year before resolution",
     criterion: "before-close-days-365",
-    markets: markets.filter((market) => market.duration_days > 365),
+    markets: markets.filter((market) => market.duration_days > 366),
   },
   {
     description: "Probability 24 hours after open",
     axisTitle: "24h after open",
-    criterion: "before-close-hours-24",
-    markets: markets.filter((market) => market.duration_days > 30),
+    criterion: "after-start-hours-24",
+    markets: markets.filter((market) => market.duration_days > 2),
   },
 ];
-const filtersOutput = filtersInput.map((filter) => ({
-  description: filter.description,
-  axisTitle: filter.axisTitle,
-  numMarkets: filter.markets.length,
-  points: calculateCalibrationPoints(filter.markets, filter.criterion),
-}));
+const filtersOutput = await Promise.all(
+  filtersInput.map(async (filter) => {
+    const points = await calculateCalibrationPoints(
+      filter.markets,
+      filter.criterion,
+    );
+    return {
+      description: filter.description,
+      axisTitle: filter.axisTitle,
+      numMarkets: filter.markets.length,
+      points: points,
+    };
+  }),
+);
 ---
 
 <div class="grid gap-2 grid-cols-1 md:grid-cols-3">
@@ -217,7 +224,6 @@ const filtersOutput = filtersInput.map((filter) => ({
       plotElement.removeChild(plotElement.firstChild);
     }
     plotElement.appendChild(plot);
-    console.log(plot);
   }
 
   // Initial render with default values

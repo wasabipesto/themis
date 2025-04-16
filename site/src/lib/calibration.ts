@@ -1,10 +1,6 @@
-import type {
-  CalibrationPoint,
-  CriterionProbability,
-  MarketDetails,
-} from "@types";
+import type { CalibrationPoint, MarketDetails } from "@types";
 
-import { getCriterionProbs } from "@lib/api";
+import { getCriterionProb } from "@lib/api";
 
 export interface PlatformData {
   sum: number;
@@ -63,9 +59,9 @@ export async function calculateCalibrationPoints(
 
   // Categorize markets into buckets by chosen probability and market.platform_slug
   for (const market of markets) {
-    const criterionProbs = await getCriterionProbs(market.id, criterion_type);
-    const prediction = criterionProbs[0].prob;
-    if (prediction !== null && market.resolution !== null) {
+    const criterionProb = await getCriterionProb(market.id, criterion_type);
+    if (criterionProb) {
+      const prediction = criterionProb.prob;
       const bucketIndex = Math.min(
         Math.floor(prediction / bucketWidth),
         buckets.length - 1,
@@ -75,6 +71,10 @@ export async function calculateCalibrationPoints(
           market.resolution;
         buckets[bucketIndex].platforms[market.platform_name].count += 1;
       }
+    } else {
+      console.error(
+        `No criterion probability found for market ${market.id}/${criterion_type}`,
+      );
     }
   }
 

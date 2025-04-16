@@ -1,5 +1,5 @@
 ---
-import { getCriterionProbs, getMarkets, getPlatforms } from "@lib/api";
+import { getMarkets, getPlatforms } from "@lib/api";
 import { calculateCalibrationPoints } from "@lib/calibration";
 
 // Download markets and platforms
@@ -7,7 +7,7 @@ const markets = await getMarkets();
 const platforms = await getPlatforms();
 
 // Calculate calibration points
-const points = calculateCalibrationPoints(markets, "midpoint");
+const points = await calculateCalibrationPoints(markets, "midpoint");
 ---
 
 <div

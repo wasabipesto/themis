@@ -222,35 +222,27 @@ export async function getMarkets(): Promise<MarketDetails[]> {
   return allMarkets;
 }
 
+let cachedCriterionProbs: Map<string, CriterionProbability> = new Map();
 let cachedCriterionProbsLoading = false;
-let cachedCriterionProbs: CriterionProbability[] | null = null;
-export async function getCriterionProbs(
-  market_id: string | null,
-  criterion_type: string | null,
-): Promise<CriterionProbability[]> {
+let cachedCriterionProbsLoaded = false;
+export async function getCriterionProb(
+  market_id: string,
+  criterion_type: string,
+): Promise<CriterionProbability | null> {
   if (cachedCriterionProbsLoading) {
     console.log("Waiting for criterion probability cache to refresh...");
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    return getCriterionProbs(market_id, criterion_type);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    return getCriterionProb(market_id, criterion_type);
   }
-  if (cachedCriterionProbs) {
-    console.log("Doing lookups for cachedCriterionProbs...");
-    let criterionProbsFiltered = cachedCriterionProbs.filter(
-      (p) =>
-        (!market_id || p.market_id === market_id) &&
-        (!criterion_type || p.criterion_type === criterion_type),
-    );
-    if (criterionProbsFiltered.length > 0) {
-      return criterionProbsFiltered;
-    } else {
-      throw new Error(
-        `Could not find criterion probability for ${market_id}/${criterion_type}`,
-      );
-    }
+
+  const key = `${market_id}/${criterion_type}`;
+  if (cachedCriterionProbsLoaded) {
+    return cachedCriterionProbs.get(key) || null;
   }
 
   console.log("Refreshing criterion probability cache.");
   cachedCriterionProbsLoading = true;
+
   const batchSize = 100000;
   let allCriterionProbs: CriterionProbability[] = [];
   let offset = 0;
@@ -265,16 +257,25 @@ export async function getCriterionProbs(
       hasMoreResults = false;
     }
   }
-  cachedCriterionProbs = allCriterionProbs;
-  cachedCriterionProbsLoading = false;
+
+  // Pre-filter and cache data into maps for quick access
+  const filteredMap: Map<string, CriterionProbability> = new Map();
+  allCriterionProbs.forEach((prob) => {
+    const criterionKey = `${prob.market_id}/${prob.criterion_type}`;
+    filteredMap.set(criterionKey, prob);
+  });
+
+  // Cache all pre-filtered results
+  filteredMap.forEach((prob, key) => {
+    cachedCriterionProbs.set(key, prob);
+  });
+
   console.log(
-    `Finished downloading cachedCriterionProbs, ${cachedCriterionProbs.length} items`,
+    `Finished downloading cached criterion probabilities, ${allCriterionProbs.length} items`,
   );
-  return allCriterionProbs.filter(
-    (p) =>
-      (!market_id || p.market_id === market_id) &&
-      (!criterion_type || p.criterion_type === criterion_type),
-  );
+  cachedCriterionProbsLoading = false;
+  cachedCriterionProbsLoaded = true;
+  return cachedCriterionProbs.get(key) || null;
 }
 
 export async function getMarketScoresByQuestion(
