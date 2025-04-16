@@ -1,10 +1,6 @@
 ---
 import Base from "@layouts/base.astro";
 import CalibrationBase from "@components/charts/calibration-base.astro";
-import CalibrationVarySelection from "@components/charts/calibration-vary-selection.astro";
-import CalibrationVaryCategory from "@components/charts/calibration-vary-category.astro";
-import CalibrationVaryPrediction from "@components/charts/calibration-vary-criterion.astro";
-import CalibrationVaryWeight from "@components/charts/calibration-vary-weight.astro";
 import { getMarkets, getPlatforms, getCategories } from "@lib/api";
 
 // Download markets and platforms
@@ -164,7 +160,75 @@ const categories = await getCategories();
         probability or a fixed point in time?
       </div>
     </div>
-    <CalibrationVaryPrediction />
+    <CalibrationBase
+      plotId="criterion"
+      platforms={platforms}
+      options={[
+        {
+          icon: null,
+          description: "Probability at midpoint (default)",
+          axisTitleX: "Prediction (Midpoint)",
+          axisTitleY: null,
+          markets: markets,
+          criterion: "midpoint",
+          weight: null,
+        },
+        {
+          icon: null,
+          description: "Time-weighted average probability",
+          axisTitleX: "Prediction (Average)",
+          axisTitleY: null,
+          markets: markets,
+          criterion: "time-average",
+          weight: null,
+        },
+        {
+          icon: null,
+          description: "Probability 24 hours before resolution",
+          axisTitleX: "Prediction (24h before resolution)",
+          axisTitleY: null,
+          markets: markets.filter((market) => market.duration_days > 2),
+          criterion: "before-close-hours-24",
+          weight: null,
+        },
+        {
+          icon: null,
+          description: "Probability 30 days before resolution",
+          axisTitleX: "Prediction (30d before resolution)",
+          axisTitleY: null,
+          markets: markets.filter((market) => market.duration_days > 31),
+          criterion: "before-close-days-30",
+          weight: null,
+        },
+        {
+          icon: null,
+          description: "Probability 90 days before resolution",
+          axisTitleX: "Prediction (90d before resolution)",
+          axisTitleY: null,
+          markets: markets.filter((market) => market.duration_days > 91),
+          criterion: "before-close-days-90",
+          weight: null,
+        },
+        {
+          icon: null,
+          description: "Probability 365 days before resolution",
+          axisTitleX: "Prediction (one year before resolution)",
+          axisTitleY: null,
+          markets: markets.filter((market) => market.duration_days > 366),
+          criterion: "before-close-days-365",
+          weight: null,
+        },
+        {
+          icon: null,
+          description: "Probability 24 hours after open",
+          axisTitleX: "Prediction (24h after open)",
+          axisTitleY: null,
+          markets: markets.filter((market) => market.duration_days > 2),
+          criterion: "after-start-hours-24",
+          weight: null,
+        },
+      ]}
+    />
   </div>
 
   <div class="p-4 m-2">
@@ -173,9 +237,65 @@ const categories = await getCategories();
       <div class="my-2">
         Typically all markets are trated equally with a raw average. What if we
         used a weighted average instead? For instance, markets with $100 in
-        trade volume might be weighted 10 times as heavily as one with $10.
+        trade volume might be weighted 10 times as heavily as one with $10. This
+        allows us to prioritize markets that have properties we think are
+        beneficial without ignoring others.
       </div>
     </div>
-    <CalibrationVaryWeight />
+    <CalibrationBase
+      plotId="weight"
+      platforms={platforms}
+      options={[
+        {
+          icon: null,
+          description: "Unweighted",
+          axisTitleX: null,
+          axisTitleY: "Resolution, unweighted",
+          markets: markets,
+          criterion: null,
+          weight: null,
+        },
+        {
+          icon: null,
+          description: "Weight market by trade volume",
+          axisTitleX: null,
+          axisTitleY: "Resolution, weighted by volume",
+          markets: markets.filter(
+            (market) => market.volume_usd && market.volume_usd > 0,
+          ),
+          criterion: null,
+          weight: "volume_usd",
+        },
+        {
+          icon: null,
+          description: "Weight market by number of traders",
+          axisTitleX: null,
+          axisTitleY: "Resolution, weighted by traders",
+          markets: markets.filter(
+            (market) => market.traders_count && market.traders_count > 0,
+          ),
+          criterion: null,
+          weight: "traders_count",
+        },
+        {
+          icon: null,
+          description: "Weight market by market duration",
+          axisTitleX: null,
+          axisTitleY: "Resolution, weighted by duration",
+          markets: markets.filter((market) => market.duration_days > 0),
+          criterion: null,
+          weight: "duration_days",
+        },
+        {
+          icon: null,
+          description: "Weight market by recency",
+          axisTitleX: null,
+          axisTitleY: "Resolution, weighted by recency",
+          markets: markets,
+          criterion: null,
+          weight: "recency",
+        },
+      ]}
+    />
   </div>
 </Base>

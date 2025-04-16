@@ -223,7 +223,7 @@ const optionsCalculated = await Promise.all(
     updatePlot(plotElement, getSelectedOption(options, radios));
 
     // Set the callbacks for future changes
-    radios.forEach((radio, i) => {
+    radios.forEach((radio) => {
       radio.addEventListener("change", () => {
         const selectedOption = getSelectedOption(options, radios);
         updatePlot(plotElement, selectedOption);
