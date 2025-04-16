@@ -25,7 +25,11 @@ categories.map((category) =>
 );
 const filtersOutput = await Promise.all(
   filtersInput.map(async (filter) => {
-    const points = await calculateCalibrationPoints(filter.markets, "midpoint");
+    const points = await calculateCalibrationPoints(
+      filter.markets,
+      "midpoint",
+      null,
+    );
     return {
       description: filter.description,
       icon: filter.icon,

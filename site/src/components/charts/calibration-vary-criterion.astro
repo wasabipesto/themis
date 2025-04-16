@@ -56,6 +56,7 @@ const filtersOutput = await Promise.all(
     const points = await calculateCalibrationPoints(
       filter.markets,
       filter.criterion,
+      null,
     );
     return {
       description: filter.description,
