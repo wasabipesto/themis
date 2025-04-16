@@ -180,6 +180,13 @@ export interface DailyProbabilityDetails {
   prob: number;
 }
 
+/** Probability point used for calibration plot binning. **/
+export interface CriterionProbability {
+  market_id: string;
+  criterion_type: string;
+  prob: number;
+}
+
 /** Single point on a calibration plot. */
 export interface CalibrationPoint {
   platform_slug: string;

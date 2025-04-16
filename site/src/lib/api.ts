@@ -1,5 +1,6 @@
 import type {
   CategoryDetails,
+  CriterionProbability,
   DailyProbabilityDetails,
   MarketDetails,
   MarketScoreDetails,
@@ -216,6 +217,40 @@ export async function getMarkets(): Promise<MarketDetails[]> {
   }
   cachedMarkets = allMarkets;
   return allMarkets;
+}
+
+let cachedCriterionProbs: CriterionProbability[] | null = null;
+export async function getCriterionProbs(
+  market_id: string | null,
+): Promise<CriterionProbability[]> {
+  if (cachedCriterionProbs) {
+    if (market_id) {
+      return cachedCriterionProbs.filter((p) => p.market_id == market_id);
+    } else {
+      return cachedCriterionProbs;
+    }
+  }
+
+  const batchSize = 10000;
+  let allCriterionProbs: CriterionProbability[] = [];
+  let offset = 0;
+  let hasMoreResults = true;
+
+  while (hasMoreResults) {
+    let url = `/criterion_probabilities?order=market_id&limit=${batchSize}&offset=${offset}`;
+    const batch = await fetchFromAPI<CriterionProbability[]>(url);
+    allCriterionProbs = [...allCriterionProbs, ...batch];
+    offset += batchSize;
+    if (batch.length < batchSize) {
+      hasMoreResults = false;
+    }
+  }
+  cachedCriterionProbs = allCriterionProbs;
+  if (market_id) {
+    return cachedCriterionProbs.filter((p) => p.market_id == market_id);
+  } else {
+    return cachedCriterionProbs;
+  }
 }
 
 export async function getMarketScoresByQuestion(

@@ -1,11 +1,12 @@
 ---
-import { getMarkets, getPlatforms, getCategories } from "@lib/api";
+import { getMarkets, getPlatforms, getCriterionProbs } from "@lib/api";
 import { calculateCalibrationPoints } from "@lib/calibration";
 import { Icon } from "astro-icon/components";
 
 // Download markets and platforms
 const markets = await getMarkets();
 const platforms = await getPlatforms();
+const criterionProbs = await getCriterionProbs(null);
 
 // Filters and descriptions
 const filtersInput = [
@@ -56,7 +57,11 @@ const filtersOutput = filtersInput.map((filter) => ({
   description: filter.description,
   axisTitle: filter.axisTitle,
   numMarkets: filter.markets.length,
-  points: calculateCalibrationPoints(filter.markets, filter.criterion),
+  points: calculateCalibrationPoints(
+    filter.markets,
+    criterionProbs,
+    filter.criterion,
+  ),
 }));
 ---
 

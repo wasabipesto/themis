@@ -1,4 +1,8 @@
-import type { CalibrationPoint, MarketDetails } from "@types";
+import type {
+  CalibrationPoint,
+  CriterionProbability,
+  MarketDetails,
+} from "@types";
 
 export interface PlatformData {
   sum: number;
@@ -24,6 +28,7 @@ export interface Bucket {
  */
 export function calculateCalibrationPoints(
   markets: MarketDetails[],
+  criterionProbs: CriterionProbability[],
   criterion: string,
 ): CalibrationPoint[] {
   // Set bucket width
@@ -64,8 +69,16 @@ export function calculateCalibrationPoints(
 
   // Choose the appropriate probability metric
   const getPrediction = (market: MarketDetails) => {
-    // TODO
-    return 0.5;
+    const prediction = criterionProbs.find(
+      (p) => p.market_id == market.id && p.criterion_type == criterion,
+    );
+    if (prediction) {
+      return prediction.prob;
+    } else {
+      throw new Error(
+        `Could not find criterion probability for ${market.id}/${criterion}`,
+      );
+    }
   };
 
   // Categorize markets into buckets by chosen probability and market.platform_slug
