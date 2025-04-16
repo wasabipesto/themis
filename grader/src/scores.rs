@@ -103,7 +103,7 @@ impl AbsoluteScoreType {
     pub fn score_market(
         &self,
         market: &Market,
-        criteron_probs: &[&CriterionProbabilityPoint],
+        criteron_probs: &[CriterionProbabilityPoint],
     ) -> Result<MarketScore> {
         let score = self.get_score(market, criteron_probs)?;
         let grade = self.get_grade(&score);
@@ -118,7 +118,7 @@ impl AbsoluteScoreType {
     pub fn get_score(
         &self,
         market: &Market,
-        criteron_probs: &[&CriterionProbabilityPoint],
+        criteron_probs: &[CriterionProbabilityPoint],
     ) -> Result<f32> {
         let prob_midpoint =
             helpers::get_first_probability(criteron_probs, "midpoint").context(format!(
@@ -458,30 +458,39 @@ pub struct OtherScore {
 /// Calculate and return all absolute scores for a market.
 pub fn calculate_absolute_scores(
     markets: &[Market],
-    criteron_probs: &[CriterionProbabilityPoint],
+    criterion_probs: Vec<CriterionProbabilityPoint>,
 ) -> Result<Vec<MarketScore>> {
+    // Index the criterion probabilities by market ID to optimize lookup times.
+    let mut crit_prob_map = HashMap::with_capacity(criterion_probs.len());
+    for prob in criterion_probs {
+        crit_prob_map
+            .entry(prob.market_id.to_owned())
+            .or_insert_with(Vec::new)
+            .push(prob);
+    }
+
     let score_types = AbsoluteScoreType::all();
     let mut scores = Vec::with_capacity(markets.len() * score_types.len());
 
     for market in markets {
-        let market_criteron_probs: Vec<&CriterionProbabilityPoint> = criteron_probs
-            .iter()
-            .filter(|prob| prob.market_id == market.id)
-            .collect();
-        if market_criteron_probs.is_empty() {
-            warn!("No criterion probabilities found for market {}", market.id,);
-            continue;
-        }
-        for score_type in &score_types {
-            match score_type.score_market(market, &market_criteron_probs) {
-                Ok(market_score) => scores.push(market_score),
-                Err(e) => error!(
-                    "Error calculating absolute scores for market {}: {e}",
-                    market.id
-                ),
+        log::trace!("Calculating absolute scores for market {}", market.id);
+
+        // Retrieve criterion probabilities associated with the current market ID.
+        if let Some(market_criterion_probs) = crit_prob_map.get(&market.id) {
+            for score_type in &score_types {
+                match score_type.score_market(market, market_criterion_probs) {
+                    Ok(market_score) => scores.push(market_score),
+                    Err(e) => error!(
+                        "Error calculating absolute scores for market {}: {}",
+                        market.id, e
+                    ),
+                }
             }
+        } else {
+            warn!("No criterion probabilities found for market {}", market.id);
         }
     }
+
     Ok(scores)
 }
 
@@ -495,6 +504,8 @@ pub fn calculate_relative_scores(
     let mut scores = Vec::with_capacity(markets.len() * score_types.len());
 
     for question in questions {
+        log::trace!("Calculating relative scores for question {}", question.id);
+
         // Filter to markets for the current question
         let question_markets: Vec<Market> = markets
             .iter()

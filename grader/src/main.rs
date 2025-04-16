@@ -90,17 +90,19 @@ fn main() -> Result<()> {
     );
 
     // Calculate absolute scores.
-    info!("Calculating market scores...");
-    let absolute_scores = scores::calculate_absolute_scores(&markets, &criterion_probs)?;
+    info!("Calculating absolute market scores...");
+    let absolute_scores = scores::calculate_absolute_scores(&markets, criterion_probs)?;
+    info!("Calculating relative market scores...");
     let relative_scores =
         scores::calculate_relative_scores(&questions, &linked_markets, &linked_market_probs)?;
     let all_market_scores = [absolute_scores, relative_scores].concat();
+    info!("Uploading market scores...");
     api::wipe_market_scores(&client, &postgrest_params)?;
     api::upload_market_scores(&client, &postgrest_params, &all_market_scores)?;
     info!("{} market scores uploaded.", all_market_scores.len());
 
     // Average market scores into platform-category scores.
-    info!("Aggregating market scores overall scores...");
+    info!("Aggregating market scores across platforms, categories, and questions...");
     let (platform_category_scores, other_scores) = scores::aggregate_platform_category_scores(
         &platforms,
         &categories,

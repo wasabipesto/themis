@@ -16,7 +16,7 @@ pub fn median(values: &[f32]) -> f32 {
 }
 
 pub fn get_first_probability(
-    criteria_probs: &[&CriterionProbabilityPoint],
+    criteria_probs: &[CriterionProbabilityPoint],
     criterion_type: &str,
 ) -> Result<f32> {
     criteria_probs
