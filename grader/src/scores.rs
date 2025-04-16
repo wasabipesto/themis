@@ -1,16 +1,16 @@
 //! Module containing score types and their implementations.
 
+use anyhow::{anyhow, Context, Result};
+use chrono::{DateTime, Duration, Utc};
+use log::{error, warn};
+use serde::{Serialize, Serializer};
 use std::collections::{HashMap, HashSet};
+use std::fmt::{self, Display};
 
 use crate::{
-    helpers, Category, DailyProbabilityPoint, Market, MarketWithProbability, Platform, Question,
+    helpers, Category, CriterionProbabilityPoint, DailyProbabilityPoint, Market, MarketWithProbs,
+    Platform, Question,
 };
-
-use anyhow::{anyhow, Result};
-use chrono::{DateTime, Duration, Utc};
-use log::error;
-use serde::{Serialize, Serializer};
-use std::fmt::{self, Display};
 
 pub mod brier;
 pub mod logarithmic;
@@ -100,8 +100,12 @@ impl AbsoluteScoreType {
         ]
     }
     /// Score a market using this absolute score type.
-    pub fn score_market(&self, market: &Market) -> Result<MarketScore> {
-        let score = self.get_score(market);
+    pub fn score_market(
+        &self,
+        market: &Market,
+        criteron_probs: &[&CriterionProbabilityPoint],
+    ) -> Result<MarketScore> {
+        let score = self.get_score(market, criteron_probs)?;
         let grade = self.get_grade(&score);
         Ok(MarketScore {
             market_id: market.id.clone(),
@@ -111,19 +115,33 @@ impl AbsoluteScoreType {
         })
     }
     /// Get the score for a market using this absolute score type.
-    pub fn get_score(&self, market: &Market) -> f32 {
+    pub fn get_score(
+        &self,
+        market: &Market,
+        criteron_probs: &[&CriterionProbabilityPoint],
+    ) -> Result<f32> {
+        let prob_midpoint =
+            helpers::get_first_probability(criteron_probs, "midpoint").context(format!(
+                "Failed to retrieve midpoint probability from criteron_probs {:?}",
+                criteron_probs
+            ))?;
+        let prob_time_average = helpers::get_first_probability(criteron_probs, "time-average")
+            .context(format!(
+                "Failed to retrieve time-average probability from criteron_probs {:?}",
+                criteron_probs
+            ))?;
         match self {
             AbsoluteScoreType::BrierAverage => {
-                brier::brier_score(market.prob_time_avg, market.resolution)
+                Ok(brier::brier_score(prob_time_average, market.resolution))
             }
             AbsoluteScoreType::BrierMidpoint => {
-                brier::brier_score(market.prob_at_midpoint, market.resolution)
+                Ok(brier::brier_score(prob_midpoint, market.resolution))
             }
             AbsoluteScoreType::LogarithmicAverage => {
-                logarithmic::log_score(market.prob_time_avg, market.resolution)
+                Ok(logarithmic::log_score(prob_time_average, market.resolution))
             }
             AbsoluteScoreType::LogarithmicMidpoint => {
-                logarithmic::log_score(market.prob_at_midpoint, market.resolution)
+                Ok(logarithmic::log_score(prob_midpoint, market.resolution))
             }
         }
     }
@@ -229,27 +247,27 @@ impl RelativeScoreType {
             .map(|date| date.and_hms_opt(0, 0, 0).unwrap().and_utc() + Duration::days(1));
 
         // Connect probs to markets and sort by date
-        let markets_with_probs: Vec<MarketWithProbability> = markets
+        let markets_with_probs: Vec<MarketWithProbs> = markets
             .iter()
             .map(|market| {
                 // Filter out probabilities for this market
-                let mut market_probs: Vec<DailyProbabilityPoint> = probs
+                let mut daily_probs: Vec<DailyProbabilityPoint> = probs
                     .iter()
                     .filter(|p| p.market_id == market.id)
                     .cloned()
                     .collect();
-                let prob_count_unfiltered = market_probs.len();
+                let prob_count_unfiltered = daily_probs.len();
 
                 // Filter out probability points outside of override bounds
                 if let Some(start_date) = start_date_override {
-                    market_probs.retain(|p| p.date >= start_date);
+                    daily_probs.retain(|p| p.date >= start_date);
                 }
                 if let Some(end_date) = end_date_override {
-                    market_probs.retain(|p| p.date <= end_date);
+                    daily_probs.retain(|p| p.date <= end_date);
                 }
 
                 // Confirm that there are probabilities for this market
-                if market_probs.is_empty() {
+                if daily_probs.is_empty() {
                     if prob_count_unfiltered == 0 {
                         return Err(anyhow!("No probabilities found for market {}", market.id));
                     } else {
@@ -261,11 +279,12 @@ impl RelativeScoreType {
                 }
 
                 // Sort probabilities by date
-                market_probs.sort_by(|a, b| a.date.cmp(&b.date));
+                daily_probs.sort_by(|a, b| a.date.cmp(&b.date));
 
-                Ok(MarketWithProbability {
+                Ok(MarketWithProbs {
                     market: market.clone(),
-                    probs: market_probs,
+                    daily_probs,
+                    criterion_probs: Vec::new(),
                 })
             })
             .collect::<Result<Vec<_>>>()?;
@@ -273,11 +292,11 @@ impl RelativeScoreType {
         // Collect start & end dates from each market
         let mut start_dates: Vec<DateTime<Utc>> = markets_with_probs
             .iter()
-            .map(|m| m.probs.first().unwrap().date)
+            .map(|m| m.daily_probs.first().unwrap().date)
             .collect();
         let mut end_dates: Vec<DateTime<Utc>> = markets_with_probs
             .iter()
-            .map(|m| m.probs.last().unwrap().date)
+            .map(|m| m.daily_probs.last().unwrap().date)
             .collect();
 
         // Start scoring after the second market starts
@@ -437,13 +456,24 @@ pub struct OtherScore {
 }
 
 /// Calculate and return all absolute scores for a market.
-pub fn calculate_absolute_scores(markets: &[Market]) -> Result<Vec<MarketScore>> {
+pub fn calculate_absolute_scores(
+    markets: &[Market],
+    criteron_probs: &[CriterionProbabilityPoint],
+) -> Result<Vec<MarketScore>> {
     let score_types = AbsoluteScoreType::all();
     let mut scores = Vec::with_capacity(markets.len() * score_types.len());
 
     for market in markets {
+        let market_criteron_probs: Vec<&CriterionProbabilityPoint> = criteron_probs
+            .iter()
+            .filter(|prob| prob.market_id == market.id)
+            .collect();
+        if market_criteron_probs.is_empty() {
+            warn!("No criterion probabilities found for market {}", market.id,);
+            continue;
+        }
         for score_type in &score_types {
-            match score_type.score_market(market) {
+            match score_type.score_market(market, &market_criteron_probs) {
                 Ok(market_score) => scores.push(market_score),
                 Err(e) => error!(
                     "Error calculating absolute scores for market {}: {e}",

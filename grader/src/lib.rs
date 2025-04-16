@@ -40,8 +40,6 @@ pub struct Market {
     pub traders_count: Option<u32>,
     pub volume_usd: Option<f32>,
     pub duration_days: u32,
-    pub prob_at_midpoint: f32,
-    pub prob_time_avg: f32,
     pub resolution: f32,
 }
 
@@ -53,11 +51,20 @@ pub struct DailyProbabilityPoint {
     pub prob: f32,
 }
 
+/// Daily probability point.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CriterionProbabilityPoint {
+    pub market_id: String,
+    pub criterion_type: String,
+    pub prob: f32,
+}
+
 /// Market with probability.
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct MarketWithProbability {
+pub struct MarketWithProbs {
     pub market: Market,
-    pub probs: Vec<DailyProbabilityPoint>,
+    pub daily_probs: Vec<DailyProbabilityPoint>,
+    pub criterion_probs: Vec<CriterionProbabilityPoint>,
 }
 
 /// Question information.

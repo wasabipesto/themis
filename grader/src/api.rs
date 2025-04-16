@@ -2,7 +2,7 @@
 
 use crate::{
     scores::{MarketScore, OtherScore, PlatformCategoryScore},
-    Category, DailyProbabilityPoint, Platform, Question,
+    Category, CriterionProbabilityPoint, DailyProbabilityPoint, Platform, Question,
 };
 
 use super::PostgrestParams;
@@ -152,6 +152,33 @@ pub fn get_all_markets(client: &Client, params: &PostgrestParams) -> Result<Vec<
     }
 
     Ok(markets)
+}
+
+/// Downloads all markets from the database.
+/// Paginates through the PostgREST endpoint until all are downloaded.
+pub fn get_all_criterion_probs(
+    client: &Client,
+    params: &PostgrestParams,
+) -> Result<Vec<CriterionProbabilityPoint>> {
+    let limit = 10000;
+    let mut offset = 0;
+    let mut probs = Vec::new();
+    let criterion_type_query = "criterion_type=in.(midpoint,time-average)";
+
+    loop {
+        let endpoint = format!(
+            "/criterion_probabilities?{}&order=market_id&limit={}&offset={}",
+            criterion_type_query, limit, offset
+        );
+        let body: Vec<CriterionProbabilityPoint> = make_get_request(client, params, &endpoint)?;
+        if body.is_empty() {
+            break;
+        }
+        probs.extend(body);
+        offset += limit;
+    }
+
+    Ok(probs)
 }
 
 /// Downloads all platforms from the database.

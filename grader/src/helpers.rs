@@ -1,5 +1,8 @@
 //! Helper functions for the grader.
 
+use crate::CriterionProbabilityPoint;
+use anyhow::Result;
+
 /// Simple function to get median from a list.
 pub fn median(values: &[f32]) -> f32 {
     let mut sorted = values.to_vec();
@@ -10,4 +13,20 @@ pub fn median(values: &[f32]) -> f32 {
     } else {
         sorted[mid]
     }
+}
+
+pub fn get_first_probability(
+    criteria_probs: &[&CriterionProbabilityPoint],
+    criterion_type: &str,
+) -> Result<f32> {
+    criteria_probs
+        .iter()
+        .filter(|prob| prob.criterion_type == criterion_type)
+        .cloned()
+        .collect::<Vec<_>>()
+        .first()
+        .ok_or_else(|| {
+            anyhow::anyhow!("No matching probability found for type: {}", criterion_type)
+        })
+        .map(|p| p.prob)
 }

@@ -63,9 +63,15 @@ fn main() -> Result<()> {
     info!("Downloading markets and questions...");
     let markets = api::get_all_markets(&client, &postgrest_params)?;
     let questions = api::get_questions(&client, &postgrest_params)?;
+    info!(
+        "{} markets and {} questions downloaded.",
+        markets.len(),
+        questions.len(),
+    );
 
     // Get probabilities for linked markets.
-    info!("Downloading probabilities for linked markets...");
+    info!("Downloading probabilities...");
+    let criterion_probs = api::get_all_criterion_probs(&client, &postgrest_params)?;
     let linked_markets: Vec<Market> = markets
         .iter()
         .filter(|market| market.question_id.is_some())
@@ -78,15 +84,14 @@ fn main() -> Result<()> {
     let linked_market_probs =
         api::get_market_probs(&client, &postgrest_params, &linked_market_ids)?;
     info!(
-        "{} markets, {} questions, {} probabilities downloaded.",
-        markets.len(),
-        questions.len(),
-        linked_market_probs.len()
+        "{} criterion probabilities and {} daily probabilities downloaded.",
+        criterion_probs.len(),
+        linked_market_probs.len(),
     );
 
     // Calculate absolute scores.
     info!("Calculating market scores...");
-    let absolute_scores = scores::calculate_absolute_scores(&markets)?;
+    let absolute_scores = scores::calculate_absolute_scores(&markets, &criterion_probs)?;
     let relative_scores =
         scores::calculate_relative_scores(&questions, &linked_markets, &linked_market_probs)?;
     let all_market_scores = [absolute_scores, relative_scores].concat();
