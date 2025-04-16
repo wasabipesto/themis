@@ -31,6 +31,13 @@ const items = [
     description:
       "See all of the charts that wouldn't fit anywhere else, plus some experimental visualizations.",
   },
+  {
+    title: "Custom",
+    icon: "mdi:tools",
+    link: "/charts/custom",
+    description:
+      "Want to see a calibration plot with only markets mentioning global temperature? Want to see how the median log score changes with market duration? Go ahead and build it yourself.",
+  },
 ];
 ---
 
@@ -42,7 +49,7 @@ const items = [
   <div class="grid grid-cols-1 md:grid-cols-2">
     {
       items.map((i) => (
-        <a href={i.link} class="block">
+        <a href={i.link} class="block md:last:col-span-2">
           <div class="p-4 m-3 bg-base-light text-crust rounded-md drop-shadow-sm transition-all duration-200 hover:bg-selection hover:translate-y-[-2px] hover:shadow-md cursor-pointer">
             <h2 class="text-xl font-bold">
               <Icon name={i.icon} class="inline mr-1 mb-1" />
