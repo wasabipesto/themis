@@ -4,6 +4,8 @@ import type {
   MarketDetails,
 } from "@types";
 
+import { getCriterionProbs } from "@lib/api";
+
 export interface PlatformData {
   sum: number;
   count: number;
@@ -18,19 +20,11 @@ export interface Bucket {
   };
 }
 
-/**
- * Creates calibration points from market data for visualization
- *
- * @param markets - Array of market details from the API
- * @param bucketWidth - Width of each probability bucket (default: 0.05)
- * @param metricType - Type of metric to use ("midpoint" or "average") (default: "midpoint")
- * @returns Array of calibration points ready for plotting
- */
-export function calculateCalibrationPoints(
+// Creates calibration points from market data for visualization
+export async function calculateCalibrationPoints(
   markets: MarketDetails[],
-  criterionProbs: CriterionProbability[],
-  criterion: string,
-): CalibrationPoint[] {
+  criterion_type: string,
+): Promise<CalibrationPoint[]> {
   // Set bucket width
   const bucketWidth = 0.05;
 
@@ -67,23 +61,10 @@ export function calculateCalibrationPoints(
     });
   }
 
-  // Choose the appropriate probability metric
-  const getPrediction = (market: MarketDetails) => {
-    const prediction = criterionProbs.find(
-      (p) => p.market_id == market.id && p.criterion_type == criterion,
-    );
-    if (prediction) {
-      return prediction.prob;
-    } else {
-      throw new Error(
-        `Could not find criterion probability for ${market.id}/${criterion}`,
-      );
-    }
-  };
-
   // Categorize markets into buckets by chosen probability and market.platform_slug
-  markets.forEach((market) => {
-    const prediction = getPrediction(market);
+  for (const market of markets) {
+    const criterionProbs = await getCriterionProbs(market.id, criterion_type);
+    const prediction = criterionProbs[0].prob;
     if (prediction !== null && market.resolution !== null) {
       const bucketIndex = Math.min(
         Math.floor(prediction / bucketWidth),
@@ -95,7 +76,7 @@ export function calculateCalibrationPoints(
         buckets[bucketIndex].platforms[market.platform_name].count += 1;
       }
     }
-  });
+  }
 
   // Create points where y_center is average of market.resolution for all markets in that bucket
   let points: CalibrationPoint[] = [];

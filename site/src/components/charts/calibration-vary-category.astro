@@ -12,7 +12,6 @@ import { Icon } from "astro-icon/components";
 const markets = await getMarkets();
 const platforms = await getPlatforms();
 const categories = await getCategories();
-const criterionProbs = await getCriterionProbs(null);
 
 // Filters and descriptions
 const filtersInput = [
@@ -33,11 +32,7 @@ const filtersOutput = filtersInput.map((filter) => ({
   description: filter.description,
   icon: filter.icon,
   numMarkets: filter.markets.length,
-  points: calculateCalibrationPoints(
-    filter.markets,
-    criterionProbs,
-    "midpoint",
-  ),
+  points: calculateCalibrationPoints(filter.markets, "midpoint"),
 }));
 ---
 

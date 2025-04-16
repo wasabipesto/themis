@@ -123,6 +123,7 @@ export async function getPlatforms(): Promise<PlatformDetails[]> {
   if (cachedPlatforms) {
     return cachedPlatforms;
   }
+  console.log("Refreshing platform cache.");
   const platforms = await fetchFromAPI<PlatformDetails[]>(
     "/platform_details?order=slug",
   );
@@ -135,6 +136,7 @@ export async function getCategories(): Promise<CategoryDetails[]> {
   if (cachedCategories) {
     return cachedCategories;
   }
+  console.log("Refreshing category cache.");
   const categories = await fetchFromAPI<CategoryDetails[]>(
     "/category_details?order=slug",
   );
@@ -201,6 +203,7 @@ export async function getMarkets(): Promise<MarketDetails[]> {
     return cachedMarkets;
   }
 
+  console.log("Refreshing market cache.");
   const batchSize = 10000;
   let allMarkets: MarketDetails[] = [];
   let offset = 0;
@@ -219,19 +222,36 @@ export async function getMarkets(): Promise<MarketDetails[]> {
   return allMarkets;
 }
 
+let cachedCriterionProbsLoading = false;
 let cachedCriterionProbs: CriterionProbability[] | null = null;
 export async function getCriterionProbs(
   market_id: string | null,
+  criterion_type: string | null,
 ): Promise<CriterionProbability[]> {
+  if (cachedCriterionProbsLoading) {
+    console.log("Waiting for criterion probability cache to refresh...");
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    return getCriterionProbs(market_id, criterion_type);
+  }
   if (cachedCriterionProbs) {
-    if (market_id) {
-      return cachedCriterionProbs.filter((p) => p.market_id == market_id);
+    console.log("Doing lookups for cachedCriterionProbs...");
+    let criterionProbsFiltered = cachedCriterionProbs.filter(
+      (p) =>
+        (!market_id || p.market_id === market_id) &&
+        (!criterion_type || p.criterion_type === criterion_type),
+    );
+    if (criterionProbsFiltered.length > 0) {
+      return criterionProbsFiltered;
     } else {
-      return cachedCriterionProbs;
+      throw new Error(
+        `Could not find criterion probability for ${market_id}/${criterion_type}`,
+      );
     }
   }
 
-  const batchSize = 10000;
+  console.log("Refreshing criterion probability cache.");
+  cachedCriterionProbsLoading = true;
+  const batchSize = 100000;
   let allCriterionProbs: CriterionProbability[] = [];
   let offset = 0;
   let hasMoreResults = true;
@@ -246,11 +266,15 @@ export async function getCriterionProbs(
     }
   }
   cachedCriterionProbs = allCriterionProbs;
-  if (market_id) {
-    return cachedCriterionProbs.filter((p) => p.market_id == market_id);
-  } else {
-    return cachedCriterionProbs;
-  }
+  cachedCriterionProbsLoading = false;
+  console.log(
+    `Finished downloading cachedCriterionProbs, ${cachedCriterionProbs.length} items`,
+  );
+  return allCriterionProbs.filter(
+    (p) =>
+      (!market_id || p.market_id === market_id) &&
+      (!criterion_type || p.criterion_type === criterion_type),
+  );
 }
 
 export async function getMarketScoresByQuestion(

@@ -5,7 +5,6 @@ import { calculateCalibrationPoints } from "@lib/calibration";
 // Download markets and platforms
 const markets = await getMarkets();
 const platforms = await getPlatforms();
-const criterionProbs = await getCriterionProbs(null);
 
 // Filters and descriptions
 const filtersInput = [
@@ -62,11 +61,7 @@ const filtersInput = [
 const filtersOutput = filtersInput.map((filter) => ({
   description: filter.description,
   numMarkets: filter.markets.length,
-  points: calculateCalibrationPoints(
-    filter.markets,
-    criterionProbs,
-    "midpoint",
-  ),
+  points: calculateCalibrationPoints(filter.markets, "midpoint"),
 }));
 ---
 
