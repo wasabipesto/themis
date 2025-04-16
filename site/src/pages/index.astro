@@ -6,6 +6,8 @@ import SeeMoreLink from "@components/see-more-link.astro";
 import PlatformCard from "@components/platform-card.astro";
 import CalibrationDefault from "@components/charts/calibration-default.astro";
 import RelScoreExplainer from "@components/charts/index-relscore-explainer.astro";
+import type { CategoryDetails, MarketDetails, PlatformDetails } from "@types";
+import { getCollection } from "astro:content";
 import {
   getMarkets,
   getPlatforms,
@@ -17,9 +19,15 @@ import {
 
 let scoreType = "brier-relative";
 
-const platforms = await getPlatforms();
-const categories = await getCategories();
-const markets = await getMarkets();
+const platforms: PlatformDetails[] = (await getCollection("platforms")).map(
+  (i: any) => i.data,
+);
+const categories: CategoryDetails[] = (await getCollection("categories")).map(
+  (i: any) => i.data,
+);
+const markets: MarketDetails[] = (await getCollection("markets")).map(
+  (i: any) => i.data,
+);
 const platformCategoryScores = await getPlatformCategoryScores(scoreType);
 const platformOverallScores = await getPlatformOverallScores();
 const featuredQuestions = await getFeaturedQuestions(4);

@@ -1,6 +1,5 @@
 import type {
   CategoryDetails,
-  CriterionProbability,
   DailyProbabilityDetails,
   MarketDetails,
   MarketScoreDetails,
@@ -220,62 +219,6 @@ export async function getMarkets(): Promise<MarketDetails[]> {
   }
   cachedMarkets = allMarkets;
   return allMarkets;
-}
-
-let cachedCriterionProbs: Map<string, CriterionProbability> = new Map();
-let cachedCriterionProbsLoading = false;
-let cachedCriterionProbsLoaded = false;
-export async function getCriterionProb(
-  market_id: string,
-  criterion_type: string,
-): Promise<CriterionProbability | null> {
-  if (cachedCriterionProbsLoading) {
-    console.log("Waiting for criterion probability cache to refresh...");
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return getCriterionProb(market_id, criterion_type);
-  }
-
-  const key = `${market_id}/${criterion_type}`;
-  if (cachedCriterionProbsLoaded) {
-    return cachedCriterionProbs.get(key) || null;
-  }
-
-  console.log("Refreshing criterion probability cache.");
-  cachedCriterionProbsLoading = true;
-
-  const batchSize = 100000;
-  let allCriterionProbs: CriterionProbability[] = [];
-  let offset = 0;
-  let hasMoreResults = true;
-
-  while (hasMoreResults) {
-    let url = `/criterion_probabilities?order=market_id&limit=${batchSize}&offset=${offset}`;
-    const batch = await fetchFromAPI<CriterionProbability[]>(url);
-    allCriterionProbs = [...allCriterionProbs, ...batch];
-    offset += batchSize;
-    if (batch.length < batchSize) {
-      hasMoreResults = false;
-    }
-  }
-
-  // Pre-filter and cache data into maps for quick access
-  const filteredMap: Map<string, CriterionProbability> = new Map();
-  allCriterionProbs.forEach((prob) => {
-    const criterionKey = `${prob.market_id}/${prob.criterion_type}`;
-    filteredMap.set(criterionKey, prob);
-  });
-
-  // Cache all pre-filtered results
-  filteredMap.forEach((prob, key) => {
-    cachedCriterionProbs.set(key, prob);
-  });
-
-  console.log(
-    `Finished downloading cached criterion probabilities, ${allCriterionProbs.length} items`,
-  );
-  cachedCriterionProbsLoading = false;
-  cachedCriterionProbsLoaded = true;
-  return cachedCriterionProbs.get(key) || null;
 }
 
 export async function getMarketScoresByQuestion(

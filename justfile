@@ -85,16 +85,19 @@ db-refresh-quick:
 # Start the main site dev server
 [working-directory: 'site']
 site-dev:
+    NODE_OPTIONS=--max_old_space_size=8192 \
     npx astro dev
 
 # Check the main site for errors
 [working-directory: 'site']
 site-test:
+    NODE_OPTIONS=--max_old_space_size=8192 \
     npx astro check
 
 # Build the main site
 [working-directory: 'site']
 site-build:
+    NODE_OPTIONS=--max_old_space_size=8192 \
     npx astro build
 
 # Push the main site with rclone
