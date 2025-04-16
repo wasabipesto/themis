@@ -1,6 +1,6 @@
 ---
 import Base from "@layouts/base.astro";
-import CalibrationBase from "@components/charts/calibration-base.astro";
+import CalibrationPointSelect from "@components/charts/calibration-point-select.astro";
 import { getMarkets, getPlatforms, getCategories } from "@lib/api";
 
 // Download markets and platforms
@@ -23,7 +23,7 @@ const categories = await getCategories();
         Alternatively, pick from a few other selection criteria.
       </div>
     </div>
-    <CalibrationBase
+    <CalibrationPointSelect
       plotId="basic"
       platforms={platforms}
       options={[
@@ -97,7 +97,7 @@ const categories = await getCategories();
         supported yet.
       </div>
     </div>
-    <CalibrationBase
+    <CalibrationPointSelect
       plotId="category"
       platforms={platforms}
       options={[
@@ -130,7 +130,7 @@ const categories = await getCategories();
         probability or a fixed point in time?
       </div>
     </div>
-    <CalibrationBase
+    <CalibrationPointSelect
       plotId="criterion"
       platforms={platforms}
       options={[
@@ -199,7 +199,7 @@ const categories = await getCategories();
         beneficial without ignoring others.
       </div>
     </div>
-    <CalibrationBase
+    <CalibrationPointSelect
       plotId="weight"
       platforms={platforms}
       options={[
