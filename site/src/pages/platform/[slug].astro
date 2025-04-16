@@ -1,18 +1,17 @@
 ---
 import Base from "@layouts/base.astro";
+import CalibrationDefault from "@components/charts/calibration-default.astro";
 import CategoryReportCard from "@components/category-report-card.astro";
 import LinkButton from "@components/link-button.astro";
 import SeeMoreLink from "@components/see-more-link.astro";
 import LongText from "@atoms/long-text.astro";
-import Grade from "@atoms/grade.astro";
-import ScoreAbs from "@atoms/score-abs.astro";
 import QuestionCard from "@components/question-card.astro";
 import Traders from "@atoms/traders.astro";
 import Volume from "@atoms/volume.astro";
 import Markets from "@atoms/num-markets.astro";
-import Star from "@icons/star.svg";
 import {
   getPlatforms,
+  getMarkets,
   getCategories,
   getFeaturedQuestions,
   getMarketScoresByQuestion,
@@ -33,6 +32,10 @@ const { platform } = Astro.props;
 const scoreType = "brier-relative";
 
 const categories = await getCategories();
+const markets = await getMarkets();
+const platformMarkets = markets.filter(
+  (market) => market.platform_slug === platform.slug,
+);
 const platformCategoryScores = await getPlatformCategoryScores(null);
 const platformOverallScores = await getPlatformOverallScores();
 const featuredQuestions = await getFeaturedQuestions(6);
@@ -92,37 +95,10 @@ const marketScores = await getMarketScoresByQuestion(
     </div>
   </div>
   <div class="p-2 m-2">
-    <h1 class="text-2xl font-bold">Top Categories</h1>
+    <h1 class="text-2xl font-bold">Charts</h1>
   </div>
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-    {
-      platformCategoryScores
-        .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
-        .slice(0, 4)
-        .map((score, index) => (
-          <div class="bg-base-light text-crust p-4 m-2 rounded-lg first:border-4 first:border-amber-600/60 relative">
-            {index === 0 && (
-              <div class="absolute top-2 right-2 text-amber-600/60">
-                <Star height={24} fill="currentColor" />
-              </div>
-            )}
-            <div class="flex justify-between items-center">
-              <h3 class="text-lg font-semibold">{score.category_name}</h3>
-              <span class="text-xl font-semibold w-20">
-                <Grade grade={score.grade} />
-              </span>
-            </div>
-            <ul class="flex justify-between items-baseline p-2">
-              <li>
-                <Markets num={score.num_markets} />
-              </li>
-              <li>
-                <ScoreAbs num={score.score} />
-              </li>
-            </ul>
-          </div>
-        ))
-    }
+  <div class="grid grid-cols-1 lg:grid-cols-2">
+    <CalibrationDefault platforms={[platform]} markets={platformMarkets} />
   </div>
   <div class="p-2 m-2">
     <h1 class="text-2xl font-bold">Top-Performing Questions</h1>

@@ -1,10 +1,12 @@
 ---
-import { getMarkets, getPlatforms } from "@lib/api";
+import type { MarketDetails, PlatformDetails } from "@types";
 import { calculateCalibrationPoints } from "@lib/calibration";
 
-// Download markets and platforms
-const markets = await getMarkets();
-const platforms = await getPlatforms();
+interface Props {
+  platforms: PlatformDetails[];
+  markets: MarketDetails[];
+}
+const { platforms, markets } = Astro.props;
 
 // Calculate calibration points
 const points = await calculateCalibrationPoints(markets, "midpoint", null);
@@ -43,12 +45,13 @@ const points = await calculateCalibrationPoints(markets, "midpoint", null);
     ) as PlatformDetails[];
     const points = JSON.parse(plotElement.dataset.points) as CalibrationPoint[];
 
-    const width = parseInt(window.getComputedStyle(plotElement).width);
+    const plotWidth = parseInt(window.getComputedStyle(plotElement).width);
+    const pointSizeRange = [plotWidth * 0.01, plotWidth * 0.02];
 
     const plot = Plot.plot({
       title: "Calibration Plot",
       subtitle: "All resolved binary and multiple choice markets.",
-      width: width,
+      width: plotWidth,
       aspectRatio: 2,
       x: {
         domain: [0, 100],
@@ -56,9 +59,9 @@ const points = await calculateCalibrationPoints(markets, "midpoint", null);
         label: "Prediction (Midpoint)",
       },
       y: { domain: [0, 100], grid: true, percent: true, label: "Resolution" },
-      r: { range: [10, 20], label: "Scale" },
+      r: { range: pointSizeRange, label: "Scale" },
       color: {
-        legend: true,
+        legend: platforms.length > 1,
         label: "Platform",
         domain: platforms.map((p) => p.name),
         range: platforms.map((p) => p.color_primary),

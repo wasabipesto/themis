@@ -120,6 +120,7 @@ const optionsCalculated = await Promise.all(
       plotElement.dataset.platforms,
     ) as PlatformDetails[];
     const plotWidth = parseInt(window.getComputedStyle(plotElement).width);
+    const pointSizeRange = [plotWidth * 0.01, plotWidth * 0.02];
 
     // Build the plot with the selected option data
     const plot = Plot.plot({
@@ -137,7 +138,7 @@ const optionsCalculated = await Promise.all(
         percent: true,
         label: option.axisTitleY,
       },
-      r: { range: [8, 15], label: "Scale" },
+      r: { range: pointSizeRange, label: "Scale" },
       color: {
         legend: true,
         label: "Platform",
