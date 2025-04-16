@@ -1,0 +1,198 @@
+---
+import { calculateCalibrationPoints } from "@lib/calibration";
+import type { MarketDetails, PlatformDetails } from "@types";
+import { Icon } from "astro-icon/components";
+
+interface Props {
+  plotId: string;
+  platforms: PlatformDetails[];
+  options: Array<{
+    icon: string | null;
+    description: string;
+    axisTitleX: string | null;
+    axisTitleY: string | null;
+    markets: MarketDetails[];
+    criterion: string | null;
+    weight: string | null;
+  }>;
+}
+const { plotId, platforms, options } = Astro.props;
+
+const optionsCalculated = await Promise.all(
+  options.map(async (opt) => {
+    const points = await calculateCalibrationPoints(
+      opt.markets,
+      opt.criterion || "midpoint",
+      opt.weight || null,
+    );
+    if (points.length == 0) {
+      throw new Error(`Calibration points are empty for option ${opt}.`);
+    }
+    return {
+      icon: opt.icon || null,
+      description: opt.description,
+      axisTitleX: opt.axisTitleX || "Prediction (midpoint)",
+      axisTitleY: opt.axisTitleY || "Resolution",
+      numMarkets: opt.markets.length,
+      points: points,
+    };
+  }),
+);
+---
+
+<div class="grid gap-2 grid-cols-1 md:grid-cols-3">
+  <div class="flex-col space-y-2">
+    {
+      optionsCalculated.map((opt, index) => (
+        <div class="bg-base-light text-crust rounded-md drop-shadow-sm px-4 py-2">
+          <div class="flex items-center">
+            <input
+              type="radio"
+              id={`calibration-option-${plotId}-${index}`}
+              name={`calibration-option-${plotId}`}
+              value={index}
+              class="w-5 h-5 mr-4 text-mantle calibration-option"
+            />
+            <label for={`calibration-option-${plotId}-${index}`} class="w-full">
+              <span>
+                {opt.icon && <Icon name={opt.icon} class="inline mb-1 mr-1" />}
+                {opt.description}
+              </span>
+              <div class="text-xs text-right">
+                n={opt.numMarkets.toLocaleString()}
+              </div>
+            </label>
+          </div>
+        </div>
+      ))
+    }
+  </div>
+  <div class="col-span-2">
+    <div
+      class="bg-base-light [&_h2]:text-2xl text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
+    >
+      <div
+        id={`calibration-plot-${plotId}`}
+        class="calibration-plot"
+        data-platforms={JSON.stringify(platforms)}
+        data-options={JSON.stringify(optionsCalculated)}
+      >
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import * as Plot from "@observablehq/plot";
+  import type { CalibrationPoint, PlatformDetails } from "@types";
+
+  // Types for the type god
+  interface CalibrationPlotElement extends HTMLElement {
+    dataset: {
+      platforms: string;
+      options: string;
+    };
+  }
+  interface OptionData {
+    description: string;
+    axisTitleX: string;
+    axisTitleY: string;
+    points: CalibrationPoint[];
+  }
+
+  // This script will be loaded and run once even if there are many plots on the page.
+  // We will find all relevant plots and update them together.
+  const plotElements = document.querySelectorAll(
+    "calibration-plot",
+  ) as NodeListOf<CalibrationPlotElement>;
+
+  // Update the given plot when called
+  function updatePlot(plotElement: CalibrationPlotElement) {
+    if (!plotElement) {
+      throw new Error("Could not find plot element.");
+    }
+    // Get data embedded in plot element
+    const platforms = JSON.parse(
+      plotElement.dataset.platforms,
+    ) as PlatformDetails[];
+    const options = JSON.parse(plotElement.dataset.options) as OptionData[];
+
+    // Get selected option from list
+    const option = {}; // TODO
+
+    // Get plot width for reactivcity
+    const plotWidth = parseInt(window.getComputedStyle(plotElement).width);
+
+    // Build the plot
+    const plot = Plot.plot({
+      title: "Calibration Plot",
+      width: plotWidth,
+      aspectRatio: 2,
+      x: {
+        domain: [0, 100],
+        percent: true,
+        label: option.axisTitleY,
+      },
+      y: {
+        domain: [0, 100],
+        grid: true,
+        percent: true,
+        label: option.axisTitleX,
+      },
+      r: { range: [8, 15], label: "Scale" },
+      color: {
+        legend: true,
+        label: "Platform",
+        domain: platforms.map((p) => p.name),
+        range: platforms.map((p) => p.color_primary),
+      },
+      marks: [
+        Plot.dot(option.points, {
+          x: "x_center",
+          y: "y_center",
+          r: "count",
+          fill: "platform_slug",
+          stroke: "platform_slug",
+          fillOpacity: 0.5,
+          channels: {
+            Prediction: (i: CalibrationPoint) =>
+              (i.x_start * 100).toFixed(0) +
+              "-" +
+              (i.x_end * 100).toFixed(0) +
+              "%",
+            Resolution: (i: CalibrationPoint) =>
+              (i.y_center * 100).toFixed(1) + "%",
+            Markets: "count",
+          },
+          tip: {
+            format: {
+              x: null,
+              y: null,
+              r: null,
+            },
+          },
+        }),
+        Plot.ruleX([0]),
+        Plot.ruleY([0]),
+        Plot.lineY(
+          [
+            { x: 0, y: 0 },
+            { x: 1, y: 1 },
+          ],
+          { x: "x", y: "y" },
+        ),
+      ],
+    });
+
+    // Remove existing plot
+    while (plotElement.firstChild) {
+      plotElement.removeChild(plotElement.firstChild);
+    }
+    plotElement.appendChild(plot);
+  }
+
+  // Initial render with default values
+  plotElements.forEach((plotElement) => {
+    updatePlot(plotElement);
+  });
+</script>
