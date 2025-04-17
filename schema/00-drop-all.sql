@@ -8,7 +8,7 @@ DROP TABLE IF EXISTS criterion_probabilities CASCADE;
 
 DROP TABLE IF EXISTS market_scores CASCADE;
 
-DROP TABLE IF EXISTS platform_scores CASCADE;
+DROP TABLE IF EXISTS platform_category_scores CASCADE;
 
 DROP TABLE IF EXISTS market_questions CASCADE;
 
