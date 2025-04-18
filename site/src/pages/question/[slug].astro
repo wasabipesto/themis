@@ -17,11 +17,13 @@ import {
 } from "@lib/api";
 
 // Generate routes for all items
+// Note: rendering still takes a while due to the question prob card
 export async function getStaticPaths() {
   const categories = await getCategories();
   const questions = await getQuestions();
   const marketsAll = await getMarkets();
   const marketScoresAll = await getMarketScores();
+  const questionScoresAll = await getQuestionOverallScores(null);
   return questions.map((question) => {
     const markets = marketsAll.filter(
       (market) => market.question_id === question.id,
@@ -29,13 +31,17 @@ export async function getStaticPaths() {
     const marketScores = marketScoresAll.filter(
       (score) => score.question_id === question.id,
     );
+    const questionScores = questionScoresAll.filter(
+      (score) => score.item_id === question.id.toString(),
+    );
     return {
       params: { slug: question.slug },
-      props: { categories, question, markets, marketScores },
+      props: { categories, question, markets, marketScores, questionScores },
     };
   });
 }
-const { categories, question, markets, marketScores } = Astro.props;
+const { categories, question, markets, marketScores, questionScores } =
+  Astro.props;
 
 // Listed score types
 // TODO: Put this in the database
@@ -55,9 +61,6 @@ const scoreLayout = [
     relative_score_key: "logarithmic-relative",
   },
 ];
-
-// Download scores
-const questionScores = await getQuestionOverallScores(question.id);
 
 // Select category
 const category = categories.find(
