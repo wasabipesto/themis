@@ -9,24 +9,33 @@ import ScoreRel from "@atoms/score-rel.astro";
 import ScoreAbs from "@atoms/score-abs.astro";
 import { Icon } from "astro-icon/components";
 import {
-  getMarketsByQuestion,
+  getMarkets,
   getQuestions,
-  getMarketScoresByQuestion,
+  getMarketScores,
   getQuestionOverallScores,
   getCategories,
 } from "@lib/api";
 
 // Generate routes for all items
 export async function getStaticPaths() {
+  const categories = await getCategories();
   const questions = await getQuestions();
+  const marketsAll = await getMarkets();
+  const marketScoresAll = await getMarketScores();
   return questions.map((question) => {
+    const markets = marketsAll.filter(
+      (market) => market.question_id === question.id,
+    );
+    const marketScores = marketScoresAll.filter(
+      (score) => score.question_id === question.id,
+    );
     return {
       params: { slug: question.slug },
-      props: { question },
+      props: { categories, question, markets, marketScores },
     };
   });
 }
-const { question } = Astro.props;
+const { categories, question, markets, marketScores } = Astro.props;
 
 // Listed score types
 // TODO: Put this in the database
@@ -47,11 +56,9 @@ const scoreLayout = [
   },
 ];
 
-// Download market and scores
-const markets = await getMarketsByQuestion(question.id);
-const categories = await getCategories();
-const marketScores = await getMarketScoresByQuestion([question.id], null);
+// Download scores
 const questionScores = await getQuestionOverallScores(question.id);
+//console.log(marketScores);
 
 // Select category
 const category = categories.find(
