@@ -1,33 +1,70 @@
 ---
-import type { MarketDetails, PlatformDetails } from "@types";
+import type { MarketScoreDetails, PlatformDetails } from "@types";
 
 interface Props {
   platforms: PlatformDetails[];
-  markets: MarketDetails[];
+  marketScores: MarketScoreDetails[];
 }
-const { platforms, markets } = Astro.props;
+const { platforms, marketScores } = Astro.props;
+
+const filter = {
+  score_type: "brier-midpoint",
+};
+// pre-sort scores for easier percentile calculations
+const sortedScores = [...marketScores].sort((a, b) => a.score - b.score);
 
 export interface AccuracyDatapoint {
   platform: string;
   colorPrimary: string;
   colorAccent: string;
-  extStart: number;
+  whiskerStart: number;
   boxStart: number;
   boxCenter: number;
   boxEnd: number;
-  extEnd: number;
+  whiskerEnd: number;
 }
 
-const points: AccuracyDatapoint[] = platforms.map((p) => ({
-  platform: p.name,
-  colorPrimary: p.color_primary,
-  colorAccent: p.color_accent,
-  extStart: 0.1 + Math.random() * 0.1,
-  boxStart: 0.25 + Math.random() * 0.1,
-  boxCenter: 0.5 + Math.random() * 0.1,
-  boxEnd: 0.75 + Math.random() * 0.1,
-  extEnd: 0.9 + Math.random() * 0.1,
-}));
+function getPercentile(arr: MarketScoreDetails[], percentile: number): number {
+  const index = percentile * (arr.length - 1);
+
+  if (Number.isInteger(index)) {
+    return arr[index].score;
+  } else {
+    // interpolate to get percentile between points
+    const lowerIndex = Math.floor(index);
+    const upperIndex = Math.ceil(index);
+    return (
+      arr[lowerIndex].score +
+      (index - lowerIndex) * (arr[upperIndex].score - arr[lowerIndex].score)
+    );
+  }
+}
+
+const points: AccuracyDatapoint[] = platforms.map((p) => {
+  const filteredScores = sortedScores.filter(
+    (ms) => ms.platform_slug == p.slug && ms.score_type == filter.score_type,
+  );
+  const numScores = filteredScores.length;
+  const min = filteredScores[0].score;
+  const q1 = getPercentile(filteredScores, 0.25);
+  const median = getPercentile(filteredScores, 0.5);
+  const q3 = getPercentile(filteredScores, 0.75);
+  const max = filteredScores[numScores - 1].score;
+  const iqr = q3 - q1;
+  const whiskerStart = Math.max(q1 - 1.5 * iqr, min);
+  const whiskerEnd = Math.min(q3 + 1.5 * iqr, max);
+  return {
+    platform: p.name,
+    colorPrimary: p.color_primary,
+    colorAccent: p.color_accent,
+    whiskerStart: whiskerStart,
+    boxStart: q1,
+    boxCenter: median,
+    boxEnd: q3,
+    whiskerEnd: whiskerEnd,
+  };
+});
+//console.log(points);
 ---
 
 <div
@@ -77,7 +114,7 @@ const points: AccuracyDatapoint[] = platforms.map((p) => ({
       marks: [
         Plot.ruleX(points, {
           x: "platform",
-          y1: "extStart",
+          y1: "whiskerStart",
           y2: "boxStart",
           stroke: "colorAccent",
         }),
@@ -92,7 +129,7 @@ const points: AccuracyDatapoint[] = platforms.map((p) => ({
         Plot.ruleX(points, {
           x: "platform",
           y1: "boxEnd",
-          y2: "extEnd",
+          y2: "whiskerEnd",
           stroke: "colorAccent",
         }),
         Plot.tickY(points, {

@@ -200,6 +200,7 @@ export async function getMarkets(): Promise<MarketDetails[]> {
       hasMoreResults = false;
     }
   }
+  console.log(`Finished downloading markets, ${allMarkets.length} items`);
   cachedMarkets = allMarkets;
   return allMarkets;
 }
@@ -249,11 +250,38 @@ export async function getCriterionProb(
   });
 
   console.log(
-    `Finished downloading cached criterion probabilities, ${allCriterionProbs.length} items`,
+    `Finished downloading criterion probabilities, ${allCriterionProbs.length} items`,
   );
   cachedCriterionProbsLoading = false;
   cachedCriterionProbsLoaded = true;
   return cachedCriterionProbs.get(key) || null;
+}
+
+let cachedMarketScores: MarketScoreDetails[] | null = null;
+export async function getMarketScores(): Promise<MarketScoreDetails[]> {
+  if (cachedMarketScores) {
+    return cachedMarketScores;
+  }
+  console.log("Refreshing market scores cache.");
+  cachedCriterionProbsLoading = true;
+  const batchSize = 100000;
+  let allMarketScores: MarketScoreDetails[] = [];
+  let offset = 0;
+  let hasMoreResults = true;
+  while (hasMoreResults) {
+    let url = `/market_scores_details?order=platform_slug&limit=${batchSize}&offset=${offset}`;
+    const batch = await fetchFromAPI<MarketScoreDetails[]>(url);
+    allMarketScores = [...allMarketScores, ...batch];
+    offset += batchSize;
+    if (batch.length < batchSize) {
+      hasMoreResults = false;
+    }
+  }
+  console.log(
+    `Finished downloading market scores, ${allMarketScores.length} items`,
+  );
+  cachedMarketScores = allMarketScores;
+  return allMarketScores;
 }
 
 export async function getMarketScoresByQuestion(

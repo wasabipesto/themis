@@ -1,17 +1,23 @@
 ---
 import Base from "@layouts/base.astro";
 import AccuracyBoxSelect from "@components/charts/accuracy-box-select.astro";
-import { getMarkets, getPlatforms, getCategories } from "@lib/api";
+import {
+  getMarkets,
+  getPlatforms,
+  getCategories,
+  getMarketScores,
+} from "@lib/api";
 
 // Download data
 const markets = await getMarkets();
 const platforms = await getPlatforms();
 const categories = await getCategories();
+const marketScores = await getMarketScores();
 ---
 
 <Base title="Accuracy Charts">
   <div class="p-4 m-2">
-    <h1 class="text-4xl font-bold">Calibration Charts</h1>
+    <h1 class="text-4xl font-bold">Accuracy Charts</h1>
   </div>
 
   <div class="p-4 m-2">
@@ -23,6 +29,6 @@ const categories = await getCategories();
         alternative scoring methods.
       </div>
     </div>
-    <AccuracyBoxSelect platforms={platforms} markets={markets} />
+    <AccuracyBoxSelect platforms={platforms} marketScores={marketScores} />
   </div>
 </Base>
