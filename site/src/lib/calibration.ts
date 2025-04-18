@@ -3,7 +3,7 @@ import type {
   CriterionProbability,
   MarketDetails,
 } from "@types";
-import { getEntry } from "astro:content";
+import { getCriterionProb } from "@lib/api";
 
 export interface PlatformData {
   sum: number;
@@ -83,11 +83,10 @@ export async function calculateCalibrationPoints(
 
   // Categorize markets into buckets by chosen probability and market.platform_slug
   for (const market of markets) {
-    const criterionProb: { data: CriterionProbability } | undefined =
-      await getEntry("criterionProbs", `${market.id}/${criterion_type}`);
+    const criterionProb = await getCriterionProb(market.id, criterion_type);
     const weight_value = getWeight(market, weight_type);
     if (criterionProb && weight_value) {
-      const prediction = criterionProb.data.prob;
+      const prediction = criterionProb.prob;
       const bucketIndex = Math.min(
         Math.floor(prediction / bucketWidth),
         buckets.length - 1,
