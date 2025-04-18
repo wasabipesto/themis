@@ -221,6 +221,7 @@ export async function getCriterionProb(
   if (cachedCriterionProbsLoaded) {
     return cachedCriterionProbs.get(key) || null;
   }
+
   console.log("Refreshing criterion probability cache.");
   cachedCriterionProbsLoading = true;
   const batchSize = 100000;
@@ -262,8 +263,8 @@ export async function getMarketScores(): Promise<MarketScoreDetails[]> {
   if (cachedMarketScores) {
     return cachedMarketScores;
   }
+
   console.log("Refreshing market scores cache.");
-  cachedCriterionProbsLoading = true;
   const batchSize = 100000;
   let allMarketScores: MarketScoreDetails[] = [];
   let offset = 0;
@@ -277,6 +278,7 @@ export async function getMarketScores(): Promise<MarketScoreDetails[]> {
       hasMoreResults = false;
     }
   }
+
   console.log(
     `Finished downloading market scores, ${allMarketScores.length} items`,
   );
