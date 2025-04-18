@@ -270,7 +270,7 @@ export async function getMarketScores(): Promise<MarketScoreDetails[]> {
   let offset = 0;
   let hasMoreResults = true;
   while (hasMoreResults) {
-    let url = `/market_scores_details?order=platform_slug.asc&limit=${batchSize}&offset=${offset}`;
+    let url = `/market_scores_details?order=market_id,score_type&limit=${batchSize}&offset=${offset}`;
     const batch = await fetchFromAPI<MarketScoreDetails[]>(url);
     allMarketScores = [...allMarketScores, ...batch];
     offset += batchSize;
