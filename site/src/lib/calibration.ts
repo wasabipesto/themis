@@ -1,8 +1,4 @@
-import type {
-  CalibrationPoint,
-  CriterionProbability,
-  MarketDetails,
-} from "@types";
+import type { CalibrationPoint, MarketDetails } from "@types";
 import { getCriterionProb } from "@lib/api";
 
 export interface PlatformData {

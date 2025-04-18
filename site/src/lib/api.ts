@@ -213,8 +213,8 @@ export async function getCriterionProb(
   criterion_type: string,
 ): Promise<CriterionProbability | null> {
   if (cachedCriterionProbsLoading) {
-    console.log("Waiting for criterion probability cache to refresh...");
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    //console.log("Waiting for criterion probability cache to refresh...");
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     return getCriterionProb(market_id, criterion_type);
   }
   const key = `${market_id}/${criterion_type}`;

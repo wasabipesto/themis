@@ -70,22 +70,15 @@ const points: AccuracyDatapoint[] = platforms.map((p) => {
 <div
   class="bg-base-light [&_h2]:text-2xl [&_figcaption]:text-xs text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
 >
-  <div
-    id="accuracy-plot-default"
-    data-platforms={JSON.stringify(platforms)}
-    data-points={JSON.stringify(points)}
-  >
-  </div>
+  <div id="accuracy-plot-default" data-points={JSON.stringify(points)}></div>
 </div>
 
 <script>
   import * as Plot from "@observablehq/plot";
-  import type { CalibrationPoint, PlatformDetails } from "@types";
   import type { AccuracyDatapoint } from "./accuracy-box-select.astro";
 
   interface CalibrationPlotElement extends HTMLElement {
     dataset: {
-      platforms: string;
       points: string;
     };
   }
@@ -96,9 +89,6 @@ const points: AccuracyDatapoint[] = platforms.map((p) => {
   ) as CalibrationPlotElement | null;
 
   if (plotElement) {
-    const platforms = JSON.parse(
-      plotElement.dataset.platforms,
-    ) as PlatformDetails[];
     const points = JSON.parse(
       plotElement.dataset.points,
     ) as AccuracyDatapoint[];

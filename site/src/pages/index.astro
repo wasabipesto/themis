@@ -89,10 +89,10 @@ const featuredQuestions = await getFeaturedQuestions(4);
       direct comparison difficult.
     </p>
     <p class="mt-2">
-      In order to address this, we calculate a relative score by scoring every
-      market on every day that it's open. This is the relative score - it's
-      grading that market's performance relative to the other markets on each
-      day and rewarding those that were correct earliest. Check out the <a
+      In order to address this, we start by scoring every market on every day
+      that it's open. Then we aggregate them into a relative score - grading
+      that market's performance relative to the other linked markets on each day
+      and rewarding those that were correct earliest. Check out the <a
         href="#scoring"
         class="text-lavender">scoring section</a
       > for details about the system.
