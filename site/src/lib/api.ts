@@ -29,7 +29,7 @@ class APIError extends Error {
 export async function fetchFromAPI<T>(
   endpoint: string,
   options: RequestInit = {},
-  timeout: number = 10000,
+  timeout: number = 10_000,
 ): Promise<T> {
   if (!PGRST_URL) {
     throw new Error("API URL is not configured");
@@ -186,7 +186,7 @@ export async function getMarkets(): Promise<MarketDetails[]> {
   }
 
   console.log("Refreshing market cache.");
-  const batchSize = 10000;
+  const batchSize = 10_000;
   let allMarkets: MarketDetails[] = [];
   let offset = 0;
   let hasMoreResults = true;
@@ -224,7 +224,7 @@ export async function getCriterionProb(
 
   console.log("Refreshing criterion probability cache.");
   cachedCriterionProbsLoading = true;
-  const batchSize = 100000;
+  const batchSize = 100_000;
   let allCriterionProbs: CriterionProbability[] = [];
   let offset = 0;
   let hasMoreResults = true;
@@ -265,12 +265,12 @@ export async function getMarketScores(): Promise<MarketScoreDetails[]> {
   }
 
   console.log("Refreshing market scores cache.");
-  const batchSize = 100000;
+  const batchSize = 100_000;
   let allMarketScores: MarketScoreDetails[] = [];
   let offset = 0;
   let hasMoreResults = true;
   while (hasMoreResults) {
-    let url = `/market_scores_details?order=platform_slug&limit=${batchSize}&offset=${offset}`;
+    let url = `/market_scores_details?order=platform_slug.asc&limit=${batchSize}&offset=${offset}`;
     const batch = await fetchFromAPI<MarketScoreDetails[]>(url);
     allMarketScores = [...allMarketScores, ...batch];
     offset += batchSize;
