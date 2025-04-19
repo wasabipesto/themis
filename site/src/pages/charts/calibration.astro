@@ -10,8 +10,17 @@ const categories = await getCategories();
 ---
 
 <Base title="Calibration Charts">
-  <div class="p-4 m-2">
+  <div class="p-4 m-2 pb-0 mb-0">
     <h1 class="text-4xl font-bold">Calibration Charts</h1>
+    <div class="mt-2">
+      Calibration is a very simple metric at its core. If a market's listed
+      probability is at 70%, we should expect it to resolve YES about 70% of the
+      time. For all past markets, we can look at the market's midpoint
+      probability and compare it to the end result. If those numbers match, we
+      say the platform is well-calibrated. If they don't, there may be some
+      systemic reason why forecasters routinely under- or over-estimate the
+      odds.
+    </div>
   </div>
 
   <div class="p-4 m-2">

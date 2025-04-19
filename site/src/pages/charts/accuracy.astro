@@ -14,8 +14,16 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
 ---
 
 <Base title="Accuracy Charts">
-  <div class="p-4 m-2">
+  <div class="p-4 m-2 pb-0 mb-0">
     <h1 class="text-4xl font-bold">Accuracy Charts</h1>
+    <div class="mt-2">
+      While calibration is focused on how your predictions match reality,
+      accuracy is focused on how often you were correct. The main accuracy score
+      we use here is the Brier score, which compares the prediction (usually at
+      the market's midpoint) with the resolution at the end of the market. The
+      thing to remember is that the Brier score meausres how far off you are,
+      meaning that a lower score is actaully better!
+    </div>
   </div>
 
   <div class="p-4 m-2">
