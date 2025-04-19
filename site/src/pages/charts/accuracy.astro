@@ -178,7 +178,6 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
       platforms={platforms}
       options={[
         {
-          icon: "mdi:all-inclusive-box",
           description: "Show all resolved markets.",
           values: scores
             .filter((ms) => ms.score_type == "brier-midpoint")
@@ -199,7 +198,28 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
           rangeStart: 0,
           rangeEnd: 1,
         },
-      ]}
+      ].concat(
+        platforms.map((platform) => ({
+          description: `Markets from ${platform.name}`,
+          values: scores
+            .filter(
+              (ms) =>
+                ms.score_type == "brier-midpoint" &&
+                ms.platform_slug == platform.slug,
+            )
+            .map((ms) => {
+              return {
+                value: ms.score,
+                series: platform.slug,
+                color: platform.color_primary,
+              };
+            }),
+          plotTitle: "Histogram of Scores",
+          axisTitleX: "Midpoint Brier score",
+          rangeStart: 0,
+          rangeEnd: 1,
+        })),
+      )}
       series={platforms.map((platform) => ({
         key: platform.slug,
         name: platform.name,
