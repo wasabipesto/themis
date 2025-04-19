@@ -47,17 +47,19 @@ function getPercentile(arr: MarketScoreDetails[], percentile: number): number {
 }
 
 const optionsCalculated = options.map((option) => {
+  const filteredScoresType = marketScores.filter(
+    (ms) => ms.score_type == option.scoreType,
+  );
   const points: AccuracyBoxDatapoint[] = platforms.map((platform) => {
-    const filteredScores = marketScores.filter(
-      (ms) =>
-        ms.platform_slug == platform.slug && ms.score_type == option.scoreType,
+    const filteredScoresPlatform = filteredScoresType.filter(
+      (ms) => ms.platform_slug == platform.slug,
     );
-    const numScores = filteredScores.length;
-    const min = filteredScores[0].score;
-    const q1 = getPercentile(filteredScores, 0.25);
-    const median = getPercentile(filteredScores, 0.5);
-    const q3 = getPercentile(filteredScores, 0.75);
-    const max = filteredScores[numScores - 1].score;
+    const numScores = filteredScoresPlatform.length;
+    const min = filteredScoresPlatform[0].score;
+    const q1 = getPercentile(filteredScoresPlatform, 0.25);
+    const median = getPercentile(filteredScoresPlatform, 0.5);
+    const q3 = getPercentile(filteredScoresPlatform, 0.75);
+    const max = filteredScoresPlatform[numScores - 1].score;
     const iqr = q3 - q1;
     const whiskerStart = Math.max(q1 - 1.5 * iqr, min);
     const whiskerEnd = Math.min(q3 + 1.5 * iqr, max);
@@ -75,7 +77,7 @@ const optionsCalculated = options.map((option) => {
   return {
     icon: option.icon,
     description: option.description,
-    numMarkets: 0,
+    numMarkets: filteredScoresType.length,
     axisTitleX: option.axisTitleX || "Platform",
     axisTitleY: option.axisTitleY || "Market score",
     plotRangeStart: option.plotRangeStart,
