@@ -8,7 +8,10 @@ interface Props {
   options: Array<{
     icon?: string | null;
     description: string;
-    values: number[];
+    values: Array<{
+      value: number;
+      series: string;
+    }>;
     plotTitle: string;
     axisTitleX: string;
     axisTitleY?: string | null;
@@ -19,6 +22,8 @@ interface Props {
 const { plotId, platforms, options } = Astro.props;
 
 export interface HistogramDatapoint {
+  seriesName: string;
+  seriesColor: string;
   startX: number;
   endX: number;
   count: number;
@@ -31,19 +36,36 @@ const optionsCalculated = options.map((option) => {
   const maxValue = option.rangeEnd;
   const binWidth = (maxValue - minValue) / numBins;
 
-  const bins = Array(numBins).fill(0);
-  values.forEach((value) => {
+  // Create a nested array to count bins per series
+  const bins: { [seriesName: string]: number[] } = {};
+
+  values.forEach((v) => {
+    if (!bins[v.series]) {
+      bins[v.series] = Array(numBins).fill(0);
+    }
     const binIndex = Math.min(
       numBins - 1,
-      Math.floor((value - minValue) / binWidth),
+      Math.floor((v.value - minValue) / binWidth),
     );
-    bins[binIndex]++;
+    bins[v.series][binIndex]++;
   });
-  const points: HistogramDatapoint[] = bins.map((count, index) => {
-    const startX = minValue + index * binWidth;
-    const endX = startX + binWidth;
-    return { startX, endX, count };
-  });
+
+  const points: HistogramDatapoint[] = [];
+  for (const [series, seriesBins] of Object.entries(bins)) {
+    seriesBins.forEach((count, index) => {
+      if (count > 0) {
+        const startX = minValue + index * binWidth;
+        const endX = startX + binWidth;
+        points.push({
+          seriesName: series,
+          seriesColor: series,
+          startX,
+          endX,
+          count,
+        });
+      }
+    });
+  }
 
   return {
     icon: option.icon,
@@ -148,7 +170,9 @@ const optionsCalculated = options.map((option) => {
           x1: "startX",
           x2: "endX",
           y: "count",
-          inset: 1,
+          fill: "seriesName",
+          insetLeft: 1,
+          insetRight: 1,
           tip: true,
         }),
       ],
