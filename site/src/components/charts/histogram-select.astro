@@ -18,8 +18,13 @@ interface Props {
     rangeStart: number;
     rangeEnd: number;
   }>;
+  series: Array<{
+    key: string;
+    name: string;
+    color: string;
+  }>;
 }
-const { plotId, platforms, options } = Astro.props;
+const { plotId, platforms, options, series } = Astro.props;
 
 export interface HistogramDatapoint {
   seriesName: string;
@@ -51,14 +56,16 @@ const optionsCalculated = options.map((option) => {
   });
 
   const points: HistogramDatapoint[] = [];
-  for (const [series, seriesBins] of Object.entries(bins)) {
+  for (const [seriesKey, seriesBins] of Object.entries(bins)) {
     seriesBins.forEach((count, index) => {
       if (count > 0) {
+        const seriesInfo = series.find((s) => s.key == seriesKey);
+        if (!seriesInfo) throw new Error(`Series not found: ${seriesKey}`);
         const startX = minValue + index * binWidth;
         const endX = startX + binWidth;
         points.push({
-          seriesName: series,
-          seriesColor: series,
+          seriesName: seriesInfo.name,
+          seriesColor: seriesInfo.color,
           startX,
           endX,
           count,
@@ -170,7 +177,10 @@ const optionsCalculated = options.map((option) => {
           x1: "startX",
           x2: "endX",
           y: "count",
-          fill: "seriesName",
+          fill: "seriesColor",
+          channels: {
+            Platform: "seriesName",
+          },
           insetLeft: 1,
           insetRight: 1,
           tip: true,

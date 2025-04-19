@@ -190,7 +190,7 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
                 throw new Error(`Platform not found: ${ms.platform_slug}`);
               return {
                 value: ms.score,
-                series: platform.name,
+                series: platform.slug,
                 color: platform.color_primary,
               };
             }),
@@ -200,6 +200,11 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
           rangeEnd: 1,
         },
       ]}
+      series={platforms.map((platform) => ({
+        key: platform.slug,
+        name: platform.name,
+        color: platform.color_primary,
+      }))}
     />
   </div>
   <hr class="my-2" />
