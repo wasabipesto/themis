@@ -1,20 +1,21 @@
 ---
 import type { MarketScoreDetails, PlatformDetails } from "@types";
+import { Icon } from "astro-icon/components";
 
 interface Props {
+  plotId: string;
   platforms: PlatformDetails[];
   marketScores: MarketScoreDetails[];
+  options: Array<{
+    icon?: string | null;
+    description: string;
+    score_type: string;
+  }>;
 }
-const { platforms, marketScores } = Astro.props;
+const { plotId, platforms, marketScores, options } = Astro.props;
 
-const filter = {
-  score_type: "brier-midpoint",
-};
-// pre-sort scores for easier percentile calculations
-const sortedScores = [...marketScores].sort((a, b) => a.score - b.score);
-
-export interface AccuracyDatapoint {
-  platform: string;
+export interface AccuracyBoxDatapoint {
+  platformName: string;
   colorPrimary: string;
   colorAccent: string;
   whiskerStart: number;
@@ -25,6 +26,7 @@ export interface AccuracyDatapoint {
 }
 
 function getPercentile(arr: MarketScoreDetails[], percentile: number): number {
+  // assumes the scores are pre-sorted
   const index = percentile * (arr.length - 1);
 
   if (Number.isInteger(index)) {
@@ -40,9 +42,13 @@ function getPercentile(arr: MarketScoreDetails[], percentile: number): number {
   }
 }
 
-const points: AccuracyDatapoint[] = platforms.map((p) => {
-  const filteredScores = sortedScores.filter(
-    (ms) => ms.platform_slug == p.slug && ms.score_type == filter.score_type,
+function getAccBoxPoint(
+  platform: PlatformDetails,
+  score_type: string,
+  scores: MarketScoreDetails[],
+): AccuracyBoxDatapoint {
+  const filteredScores = marketScores.filter(
+    (ms) => ms.platform_slug == platform.slug && ms.score_type == score_type,
   );
   const numScores = filteredScores.length;
   const min = filteredScores[0].score;
@@ -54,44 +60,91 @@ const points: AccuracyDatapoint[] = platforms.map((p) => {
   const whiskerStart = Math.max(q1 - 1.5 * iqr, min);
   const whiskerEnd = Math.min(q3 + 1.5 * iqr, max);
   return {
-    platform: p.name,
-    colorPrimary: p.color_primary,
-    colorAccent: p.color_accent,
+    platformName: platform.name,
+    colorPrimary: platform.color_primary,
+    colorAccent: platform.color_accent,
     whiskerStart: whiskerStart,
     boxStart: q1,
     boxCenter: median,
     boxEnd: q3,
     whiskerEnd: whiskerEnd,
   };
+}
+
+const optionsCalculated = options.map((opt) => {
+  const points: AccuracyBoxDatapoint[] = platforms.map((platform) =>
+    getAccBoxPoint(platform, opt.score_type, marketScores),
+  );
+  return {
+    icon: opt.icon,
+    description: opt.description,
+    numMarkets: 0,
+    points: points,
+  };
 });
-//console.log(points);
 ---
 
-<div
-  class="bg-base-light [&_h2]:text-2xl [&_figcaption]:text-xs text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
->
-  <div id="accuracy-plot-default" data-points={JSON.stringify(points)}></div>
+<div class="grid gap-2 grid-cols-1 md:grid-cols-3">
+  <div class="flex-col space-y-2">
+    {
+      optionsCalculated.map((opt, index) => (
+        <div class="bg-base-light text-crust rounded-md drop-shadow-sm px-4 py-2">
+          <div class="flex items-center">
+            <input
+              type="radio"
+              id={`accuracy-option-${plotId}-${index}`}
+              name={`accuracy-option-${plotId}`}
+              value={index}
+              class={`w-5 h-5 mr-4 text-mantle accuracy-option-${plotId}`}
+            />
+            <label for={`accuracy-option-${plotId}-${index}`} class="w-full">
+              <span>
+                {opt.icon && <Icon name={opt.icon} class="inline mb-1 mr-1" />}
+                {opt.description}
+              </span>
+              <div class="text-xs text-right">
+                n={opt.numMarkets.toLocaleString()}
+              </div>
+            </label>
+          </div>
+        </div>
+      ))
+    }
+  </div>
+  <div class="col-span-2">
+    <div
+      class="bg-base-light [&_h2]:text-2xl [&_figcaption]:text-xs text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
+    >
+      <div
+        id="accuracy-plot-default"
+        data-options={JSON.stringify(optionsCalculated)}
+      >
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
   import * as Plot from "@observablehq/plot";
-  import type { AccuracyDatapoint } from "./accuracy-box-select.astro";
+  import type { AccuracyBoxDatapoint } from "./accuracy-box-select.astro";
 
-  interface CalibrationPlotElement extends HTMLElement {
+  interface AccuracyPlotElement extends HTMLElement {
     dataset: {
-      points: string;
+      options: string;
     };
+  }
+  interface OptionData {
+    points: AccuracyBoxDatapoint[];
   }
 
   // Get a reference to the plot element using ID
   const plotElement = document.getElementById(
     "accuracy-plot-default",
-  ) as CalibrationPlotElement | null;
+  ) as AccuracyPlotElement | null;
 
   if (plotElement) {
-    const points = JSON.parse(
-      plotElement.dataset.points,
-    ) as AccuracyDatapoint[];
+    const options = JSON.parse(plotElement.dataset.options) as OptionData[];
+    const points = options[0].points;
 
     const plotWidth = parseInt(window.getComputedStyle(plotElement).width);
 
@@ -103,13 +156,13 @@ const points: AccuracyDatapoint[] = platforms.map((p) => {
       y: { domain: [0, 1], grid: true, label: "Score" },
       marks: [
         Plot.ruleX(points, {
-          x: "platform",
+          x: "platformName",
           y1: "whiskerStart",
           y2: "boxStart",
           stroke: "colorAccent",
         }),
         Plot.barY(points, {
-          x: "platform",
+          x: "platformName",
           y1: "boxStart",
           y2: "boxEnd",
           fill: "colorPrimary",
@@ -117,13 +170,13 @@ const points: AccuracyDatapoint[] = platforms.map((p) => {
           strokeWidth: 2,
         }),
         Plot.ruleX(points, {
-          x: "platform",
+          x: "platformName",
           y1: "boxEnd",
           y2: "whiskerEnd",
           stroke: "colorAccent",
         }),
         Plot.tickY(points, {
-          x: "platform",
+          x: "platformName",
           y: "boxCenter",
           stroke: "colorAccent",
           strokeWidth: 2,

@@ -13,6 +13,9 @@ const markets = await getMarkets();
 const platforms = await getPlatforms();
 const categories = await getCategories();
 const marketScores = await getMarketScores();
+
+// pre-sort scores for easier percentile calculations
+const sortedScores = [...marketScores].sort((a, b) => a.score - b.score);
 ---
 
 <Base title="Accuracy Charts">
@@ -29,6 +32,20 @@ const marketScores = await getMarketScores();
         alternative scoring methods.
       </div>
     </div>
-    <AccuracyBoxSelect platforms={platforms} marketScores={marketScores} />
+    <AccuracyBoxSelect
+      plotId="scoreTypeBox"
+      platforms={platforms}
+      marketScores={sortedScores}
+      options={[
+        {
+          score_type: "brier-midpoint",
+          description: "Brier score at market midpoint",
+        },
+        {
+          score_type: "brier-relative",
+          description: "Relative brier score",
+        },
+      ]}
+    />
   </div>
 </Base>
