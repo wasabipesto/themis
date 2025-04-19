@@ -7,9 +7,13 @@ interface Props {
   platforms: PlatformDetails[];
   marketScores: MarketScoreDetails[];
   options: Array<{
+    scoreType: string;
     icon?: string | null;
     description: string;
-    score_type: string;
+    axisTitleX?: string | null;
+    axisTitleY?: string | null;
+    plotRangeStart: number;
+    plotRangeEnd: number;
   }>;
 }
 const { plotId, platforms, marketScores, options } = Astro.props;
@@ -42,43 +46,40 @@ function getPercentile(arr: MarketScoreDetails[], percentile: number): number {
   }
 }
 
-function getAccBoxPoint(
-  platform: PlatformDetails,
-  score_type: string,
-  scores: MarketScoreDetails[],
-): AccuracyBoxDatapoint {
-  const filteredScores = marketScores.filter(
-    (ms) => ms.platform_slug == platform.slug && ms.score_type == score_type,
-  );
-  const numScores = filteredScores.length;
-  const min = filteredScores[0].score;
-  const q1 = getPercentile(filteredScores, 0.25);
-  const median = getPercentile(filteredScores, 0.5);
-  const q3 = getPercentile(filteredScores, 0.75);
-  const max = filteredScores[numScores - 1].score;
-  const iqr = q3 - q1;
-  const whiskerStart = Math.max(q1 - 1.5 * iqr, min);
-  const whiskerEnd = Math.min(q3 + 1.5 * iqr, max);
+const optionsCalculated = options.map((option) => {
+  const points: AccuracyBoxDatapoint[] = platforms.map((platform) => {
+    const filteredScores = marketScores.filter(
+      (ms) =>
+        ms.platform_slug == platform.slug && ms.score_type == option.scoreType,
+    );
+    const numScores = filteredScores.length;
+    const min = filteredScores[0].score;
+    const q1 = getPercentile(filteredScores, 0.25);
+    const median = getPercentile(filteredScores, 0.5);
+    const q3 = getPercentile(filteredScores, 0.75);
+    const max = filteredScores[numScores - 1].score;
+    const iqr = q3 - q1;
+    const whiskerStart = Math.max(q1 - 1.5 * iqr, min);
+    const whiskerEnd = Math.min(q3 + 1.5 * iqr, max);
+    return {
+      platformName: platform.name,
+      colorPrimary: platform.color_primary,
+      colorAccent: platform.color_accent,
+      whiskerStart: whiskerStart,
+      boxStart: q1,
+      boxCenter: median,
+      boxEnd: q3,
+      whiskerEnd: whiskerEnd,
+    };
+  });
   return {
-    platformName: platform.name,
-    colorPrimary: platform.color_primary,
-    colorAccent: platform.color_accent,
-    whiskerStart: whiskerStart,
-    boxStart: q1,
-    boxCenter: median,
-    boxEnd: q3,
-    whiskerEnd: whiskerEnd,
-  };
-}
-
-const optionsCalculated = options.map((opt) => {
-  const points: AccuracyBoxDatapoint[] = platforms.map((platform) =>
-    getAccBoxPoint(platform, opt.score_type, marketScores),
-  );
-  return {
-    icon: opt.icon,
-    description: opt.description,
+    icon: option.icon,
+    description: option.description,
     numMarkets: 0,
+    axisTitleX: option.axisTitleX || "Platform",
+    axisTitleY: option.axisTitleY || "Market score",
+    plotRangeStart: option.plotRangeStart,
+    plotRangeEnd: option.plotRangeEnd,
     points: points,
   };
 });
@@ -116,7 +117,8 @@ const optionsCalculated = options.map((opt) => {
       class="bg-base-light [&_h2]:text-2xl [&_figcaption]:text-xs text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
     >
       <div
-        id="accuracy-plot-default"
+        id={`accuracy-plot-${plotId}`}
+        class="accuracy-plot"
         data-options={JSON.stringify(optionsCalculated)}
       >
       </div>
@@ -134,34 +136,51 @@ const optionsCalculated = options.map((opt) => {
     };
   }
   interface OptionData {
+    description: string;
+    axisTitleX: string;
+    axisTitleY: string;
+    plotRangeStart: number;
+    plotRangeEnd: number;
     points: AccuracyBoxDatapoint[];
   }
 
-  // Get a reference to the plot element using ID
-  const plotElement = document.getElementById(
-    "accuracy-plot-default",
-  ) as AccuracyPlotElement | null;
+  // Function to get the selected option based on user input
+  function getSelectedOption(
+    options: OptionData[],
+    radios: HTMLInputElement[],
+  ) {
+    for (let i = 0; i < radios.length; i++) {
+      if (radios[i].checked) {
+        return options[i];
+      }
+    }
+    // Default to first option if none are selected
+    return options[0];
+  }
 
-  if (plotElement) {
-    const options = JSON.parse(plotElement.dataset.options) as OptionData[];
-    const points = options[0].points;
-
+  // Update the given plot when called
+  function updatePlot(plotElement: AccuracyPlotElement, option: OptionData) {
     const plotWidth = parseInt(window.getComputedStyle(plotElement).width);
+    console.log("Updating plot...");
 
     const plot = Plot.plot({
       title: "Accuracy By Platform",
       width: plotWidth,
       //aspectRatio: 2,
-      x: { label: "Platform" },
-      y: { domain: [0, 1], grid: true, label: "Score" },
+      x: { label: option.axisTitleX },
+      y: {
+        domain: [option.plotRangeStart, option.plotRangeEnd],
+        grid: true,
+        label: option.axisTitleY,
+      },
       marks: [
-        Plot.ruleX(points, {
+        Plot.ruleX(option.points, {
           x: "platformName",
           y1: "whiskerStart",
           y2: "boxStart",
           stroke: "colorAccent",
         }),
-        Plot.barY(points, {
+        Plot.barY(option.points, {
           x: "platformName",
           y1: "boxStart",
           y2: "boxEnd",
@@ -169,13 +188,13 @@ const optionsCalculated = options.map((opt) => {
           stroke: "colorAccent",
           strokeWidth: 2,
         }),
-        Plot.ruleX(points, {
+        Plot.ruleX(option.points, {
           x: "platformName",
           y1: "boxEnd",
           y2: "whiskerEnd",
           stroke: "colorAccent",
         }),
-        Plot.tickY(points, {
+        Plot.tickY(option.points, {
           x: "platformName",
           y: "boxCenter",
           stroke: "colorAccent",
@@ -184,8 +203,52 @@ const optionsCalculated = options.map((opt) => {
       ],
     });
 
-    plotElement.append(plot);
-  } else {
-    throw new Error("Could not find plot element.");
+    // Wipe the existing plot and add the new one
+    while (plotElement.firstChild) {
+      plotElement.removeChild(plotElement.firstChild);
+    }
+    plotElement.appendChild(plot);
   }
+
+  // Get all matching plot elements
+  const plotElements = document.querySelectorAll(
+    ".accuracy-plot",
+  ) as NodeListOf<AccuracyPlotElement>;
+
+  // Set up each plot
+  plotElements.forEach((plotElement) => {
+    // Extract options
+    const options = JSON.parse(plotElement.dataset.options) as OptionData[];
+
+    // Extract plot ID
+    let plotId = "";
+    const regex = /accuracy-plot-(.*)$/;
+    const match = plotElement.id.match(regex);
+    if (match && match.length > 1) {
+      plotId = match[1];
+    } else {
+      throw new Error(`Invalid plot ID: ${plotElement.id}`);
+    }
+
+    // Find options that match the plot ID
+    const radios = [
+      ...document.querySelectorAll(`.accuracy-option-${plotId}`),
+    ] as HTMLInputElement[];
+
+    // Set the first radio button to checked by default
+    if (radios.length > 0) {
+      radios[0].checked = true;
+    }
+
+    // Update the plot with initial values
+    updatePlot(plotElement, getSelectedOption(options, radios));
+
+    // Set the callbacks for future changes
+    radios.forEach((radio) => {
+      radio.addEventListener("change", () => {
+        const selectedOption = getSelectedOption(options, radios);
+        updatePlot(plotElement, selectedOption);
+      });
+    });
+  });
 </script>

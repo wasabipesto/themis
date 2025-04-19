@@ -25,7 +25,7 @@ const sortedScores = [...marketScores].sort((a, b) => a.score - b.score);
 
   <div class="p-4 m-2">
     <div class="my-4">
-      <h2 class="font-bold text-2xl" id="vary-selection">Basic Filtering</h2>
+      <h2 class="font-bold text-2xl" id="vary-selection">Pick a Score</h2>
       <div class="my-2">
         We use the Brier score by default in most plots, but we calculate many
         more. Take a look at how the platforms compare when using these
@@ -38,12 +38,47 @@ const sortedScores = [...marketScores].sort((a, b) => a.score - b.score);
       marketScores={sortedScores}
       options={[
         {
-          score_type: "brier-midpoint",
-          description: "Brier score at market midpoint",
+          scoreType: "brier-midpoint",
+          description:
+            "Market Brier score, calculated with midpoint probability",
+          axisTitleY: "Midpoint Brier score",
+          plotRangeStart: 0,
+          plotRangeEnd: 1,
         },
         {
-          score_type: "brier-relative",
-          description: "Relative brier score",
+          scoreType: "brier-average",
+          description: "Market Brier score, averaged over the entire market",
+          axisTitleY: "Average Brier score",
+          plotRangeStart: 0,
+          plotRangeEnd: 1,
+        },
+        {
+          scoreType: "brier-relative",
+          description: "Relative Brier score, calculated for linked markets",
+          axisTitleY: "Relative Brier score",
+          plotRangeStart: -0.1,
+          plotRangeEnd: 0.1,
+        },
+        {
+          scoreType: "logarithmic-midpoint",
+          description: "Market log score, calculated with midpoint probability",
+          axisTitleY: "Midpoint log score",
+          plotRangeStart: -3,
+          plotRangeEnd: 0,
+        },
+        {
+          scoreType: "logarithmic-average",
+          description: "Market log score, averaged over the entire market",
+          axisTitleY: "Average log score",
+          plotRangeStart: -3,
+          plotRangeEnd: 0,
+        },
+        {
+          scoreType: "logarithmic-relative",
+          description: "Relative log score, calculated for linked markets",
+          axisTitleY: "Relative log score",
+          plotRangeStart: -0.25,
+          plotRangeEnd: 0.25,
         },
       ]}
     />
