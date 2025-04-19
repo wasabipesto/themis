@@ -1,6 +1,7 @@
 ---
 import Base from "@layouts/base.astro";
 import CalibrationDefault from "@components/charts/calibration-default.astro";
+import HistogramDefault from "@components/charts/histogram-default.astro";
 import CategoryReportCard from "@components/category-report-card.astro";
 import LinkButton from "@components/link-button.astro";
 import SeeMoreLink from "@components/see-more-link.astro";
@@ -14,7 +15,7 @@ import {
   getMarkets,
   getCategories,
   getFeaturedQuestions,
-  getMarketScoresByQuestion,
+  getMarketScores,
   getPlatformCategoryScores,
   getPlatformOverallScores,
 } from "@lib/api";
@@ -29,8 +30,6 @@ export async function getStaticPaths() {
 }
 const { platform } = Astro.props;
 
-const scoreType = "brier-relative";
-
 const categories = await getCategories();
 const markets = await getMarkets();
 const platformMarkets = markets.filter(
@@ -39,10 +38,7 @@ const platformMarkets = markets.filter(
 const platformCategoryScores = await getPlatformCategoryScores(null);
 const platformOverallScores = await getPlatformOverallScores();
 const featuredQuestions = await getFeaturedQuestions(6);
-const marketScores = await getMarketScoresByQuestion(
-  featuredQuestions.map((q) => q.id),
-  scoreType,
-);
+const marketScores = await getMarketScores();
 ---
 
 <Base title={platform.name}>
@@ -97,9 +93,38 @@ const marketScores = await getMarketScoresByQuestion(
   <div class="p-2 m-2">
     <h1 class="text-2xl font-bold">Charts</h1>
   </div>
-  <div class="grid grid-cols-1 lg:grid-cols-2">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
     <CalibrationDefault platforms={[platform]} markets={platformMarkets} />
+    <HistogramDefault
+      option={{
+        values: marketScores
+          .filter(
+            (ms) =>
+              ms.score_type == "brier-midpoint" &&
+              ms.platform_slug == platform.slug,
+          )
+          .map((ms) => {
+            return {
+              value: ms.score,
+              series: platform.slug,
+              color: platform.color_primary,
+            };
+          }),
+        plotTitle: "Histogram of Scores",
+        axisTitleX: "Midpoint Brier score",
+        rangeStart: 0,
+        rangeEnd: 1,
+      }}
+      series={[
+        {
+          key: platform.slug,
+          name: platform.name,
+          color: platform.color_primary,
+        },
+      ]}
+    />
   </div>
+  <SeeMoreLink link={"/charts"} text={`See all charts`} />
   <div class="p-2 m-2">
     <h1 class="text-2xl font-bold">Top-Performing Questions</h1>
   </div>
