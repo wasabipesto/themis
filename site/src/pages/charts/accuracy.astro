@@ -1,6 +1,7 @@
 ---
 import Base from "@layouts/base.astro";
 import AccuracyBoxSelect from "@components/charts/accuracy-box-select.astro";
+import HistogramSelect from "@components/charts/histogram-select.astro";
 import {
   getMarkets,
   getPlatforms,
@@ -157,6 +158,35 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
           axisTitleY: "Relative log score",
           plotRangeStart: -0.2,
           plotRangeEnd: 0.2,
+        },
+      ]}
+    />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h2 class="font-bold text-2xl" id="vary-selection">Accuracy Histogram</h2>
+      <div class="my-2">
+        Are there significant spikes or outliers in the accuracy distribution?
+        For instance, a spike around 0.25 would indicate lots of markets that
+        rested at 50% probability.
+      </div>
+    </div>
+    <HistogramSelect
+      plotId="basic"
+      platforms={platforms}
+      options={[
+        {
+          icon: "mdi:all-inclusive-box",
+          description: "Show all resolved markets.",
+          values: scores
+            .filter((ms) => ms.score_type == "brier-midpoint")
+            .map((ms) => ms.score),
+          plotTitle: "Histogram of Scores",
+          axisTitleX: "Midpoint Brier score",
+          rangeStart: 0,
+          rangeEnd: 1,
         },
       ]}
     />

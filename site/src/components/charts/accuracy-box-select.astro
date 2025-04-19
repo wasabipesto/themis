@@ -172,7 +172,6 @@ const optionsCalculated = options.map((option) => {
   // Update the given plot when called
   function updatePlot(plotElement: AccuracyPlotElement, option: OptionData) {
     const plotWidth = parseInt(window.getComputedStyle(plotElement).width);
-    console.log("Updating plot...");
 
     const plot = Plot.plot({
       title: "Accuracy By Platform",
