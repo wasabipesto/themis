@@ -186,7 +186,7 @@ export async function getMarkets(): Promise<MarketDetails[]> {
   }
 
   console.log("Refreshing market cache.");
-  const batchSize = 10_000;
+  const batchSize = 100_000;
   let allMarkets: MarketDetails[] = [];
   let offset = 0;
   let hasMoreResults = true;
