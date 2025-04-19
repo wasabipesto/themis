@@ -5,18 +5,18 @@ import { Icon } from "astro-icon/components";
 interface Props {
   plotId: string;
   platforms: PlatformDetails[];
-  marketScores: MarketScoreDetails[];
   options: Array<{
-    scoreType: string;
     icon?: string | null;
     description: string;
+    scores: MarketScoreDetails[];
+    scoreType?: string | null;
     axisTitleX?: string | null;
     axisTitleY?: string | null;
-    plotRangeStart: number;
-    plotRangeEnd: number;
+    plotRangeStart?: number | null;
+    plotRangeEnd?: number | null;
   }>;
 }
-const { plotId, platforms, marketScores, options } = Astro.props;
+const { plotId, platforms, options } = Astro.props;
 
 export interface AccuracyBoxDatapoint {
   platformName: string;
@@ -47,42 +47,47 @@ function getPercentile(arr: MarketScoreDetails[], percentile: number): number {
 }
 
 const optionsCalculated = options.map((option) => {
-  const filteredScoresType = marketScores.filter(
-    (ms) => ms.score_type == option.scoreType,
+  const scoreType = option.scoreType || "brier-midpoint";
+  const filteredScoresType = option.scores.filter(
+    (ms) => ms.score_type == scoreType,
   );
-  const points: AccuracyBoxDatapoint[] = platforms.map((platform) => {
+
+  const platformPoints: AccuracyBoxDatapoint[] = platforms.reduce<
+    AccuracyBoxDatapoint[]
+  >((acc, platform) => {
     const filteredScoresPlatform = filteredScoresType.filter(
       (ms) => ms.platform_slug == platform.slug,
     );
-    const numScores = filteredScoresPlatform.length;
+    if (filteredScoresPlatform.length === 0) {
+      return acc;
+    }
     const min = filteredScoresPlatform[0].score;
     const q1 = getPercentile(filteredScoresPlatform, 0.25);
-    const median = getPercentile(filteredScoresPlatform, 0.5);
     const q3 = getPercentile(filteredScoresPlatform, 0.75);
-    const max = filteredScoresPlatform[numScores - 1].score;
+    const max = filteredScoresPlatform[filteredScoresPlatform.length - 1].score;
     const iqr = q3 - q1;
-    const whiskerStart = Math.max(q1 - 1.5 * iqr, min);
-    const whiskerEnd = Math.min(q3 + 1.5 * iqr, max);
-    return {
+    acc.push({
       platformName: platform.name,
       colorPrimary: platform.color_primary,
       colorAccent: platform.color_accent,
-      whiskerStart: whiskerStart,
+      whiskerStart: Math.max(q1 - 1.5 * iqr, min),
       boxStart: q1,
-      boxCenter: median,
+      boxCenter: getPercentile(filteredScoresPlatform, 0.5),
       boxEnd: q3,
-      whiskerEnd: whiskerEnd,
-    };
-  });
+      whiskerEnd: Math.min(q3 + 1.5 * iqr, max),
+    });
+    return acc;
+  }, []);
+
   return {
     icon: option.icon,
     description: option.description,
     numMarkets: filteredScoresType.length,
     axisTitleX: option.axisTitleX || "Platform",
     axisTitleY: option.axisTitleY || "Market score",
-    plotRangeStart: option.plotRangeStart,
-    plotRangeEnd: option.plotRangeEnd,
-    points: points,
+    plotRangeStart: option.plotRangeStart || 0,
+    plotRangeEnd: option.plotRangeEnd || 1,
+    points: platformPoints,
   };
 });
 ---
@@ -201,6 +206,10 @@ const optionsCalculated = options.map((option) => {
           y: "boxCenter",
           stroke: "colorAccent",
           strokeWidth: 2,
+          channels: {
+            Point: () => "Median",
+          },
+          tip: true,
         }),
       ],
     });
