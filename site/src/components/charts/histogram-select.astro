@@ -1,10 +1,8 @@
 ---
-import type { MarketScoreDetails, PlatformDetails } from "@types";
 import { Icon } from "astro-icon/components";
 
 interface Props {
   plotId: string;
-  platforms: PlatformDetails[];
   options: Array<{
     icon?: string | null;
     description: string;
@@ -24,7 +22,7 @@ interface Props {
     color: string;
   }>;
 }
-const { plotId, platforms, options, series } = Astro.props;
+const { plotId, options, series } = Astro.props;
 
 export interface HistogramDatapoint {
   seriesName: string;

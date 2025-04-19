@@ -134,6 +134,7 @@ export interface MarketScoreDetails {
   market_title: string;
   market_url: string;
   platform_slug: string;
+  platform_name: string;
   category_slug: string | null;
   question_id: number | null;
   open_datetime: string;

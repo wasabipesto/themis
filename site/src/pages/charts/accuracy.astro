@@ -2,15 +2,9 @@
 import Base from "@layouts/base.astro";
 import AccuracyBoxSelect from "@components/charts/accuracy-box-select.astro";
 import HistogramSelect from "@components/charts/histogram-select.astro";
-import {
-  getMarkets,
-  getPlatforms,
-  getCategories,
-  getMarketScores,
-} from "@lib/api";
+import { getPlatforms, getCategories, getMarketScores } from "@lib/api";
 
 // Download data
-const markets = await getMarkets();
 const platforms = await getPlatforms();
 const categories = await getCategories();
 const marketScores = await getMarketScores();
@@ -174,8 +168,7 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
       </div>
     </div>
     <HistogramSelect
-      plotId="basic"
-      platforms={platforms}
+      plotId="histogram-platform"
       options={[
         {
           description: "Show all resolved markets.",

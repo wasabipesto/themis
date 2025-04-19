@@ -65,6 +65,7 @@ SELECT
     m.title AS market_title,
     m.url AS market_url,
     m.platform_slug,
+    p.name AS platform_name,
     m.category_slug,
     mq.question_id AS question_id,
     m.open_datetime,
@@ -79,6 +80,7 @@ SELECT
 FROM
     market_scores ms
     JOIN markets m ON ms.market_id = m.id
+    JOIN platforms p ON m.platform_slug = p.slug
     LEFT JOIN market_questions mq ON m.id = mq.market_id;
 CREATE UNIQUE INDEX market_scores_details_qms_idx ON market_scores_details (question_id, market_id, score_type);
 
