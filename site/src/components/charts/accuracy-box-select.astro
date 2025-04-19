@@ -79,14 +79,19 @@ const optionsCalculated = options.map((option) => {
     return acc;
   }, []);
 
+  let plotRange = [];
+  if (option.plotRangeEnd == null) {
+    plotRange = [option.plotRangeStart || 0, 0.8];
+  } else {
+    plotRange = [option.plotRangeStart || 0, option.plotRangeEnd];
+  }
   return {
     icon: option.icon,
     description: option.description,
     numMarkets: filteredScoresType.length,
     axisTitleX: option.axisTitleX || "Platform",
     axisTitleY: option.axisTitleY || "Market score",
-    plotRangeStart: option.plotRangeStart || 0,
-    plotRangeEnd: option.plotRangeEnd || 1,
+    plotRangeY: plotRange,
     points: platformPoints,
   };
 });
@@ -146,8 +151,7 @@ const optionsCalculated = options.map((option) => {
     description: string;
     axisTitleX: string;
     axisTitleY: string;
-    plotRangeStart: number;
-    plotRangeEnd: number;
+    plotRangeY: number[];
     points: AccuracyBoxDatapoint[];
   }
 
@@ -176,7 +180,7 @@ const optionsCalculated = options.map((option) => {
       //aspectRatio: 2,
       x: { label: option.axisTitleX },
       y: {
-        domain: [option.plotRangeStart, option.plotRangeEnd],
+        domain: option.plotRangeY,
         grid: true,
         label: option.axisTitleY,
       },

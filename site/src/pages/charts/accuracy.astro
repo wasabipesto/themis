@@ -23,75 +23,77 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
     <h1 class="text-4xl font-bold">Accuracy Charts</h1>
   </div>
 
-  <div class="my-4">
-    <h2 class="font-bold text-2xl" id="vary-selection">Basic Filtering</h2>
-    <div class="my-2">
-      Select markets to include based on key attributes, such as number of
-      traders, market volume, and duration. Alternatively, pick from a few other
-      selection criteria.
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h2 class="font-bold text-2xl" id="vary-selection">Basic Filtering</h2>
+      <div class="my-2">
+        Select markets to include based on key attributes, such as number of
+        traders, market volume, and duration. Alternatively, pick from a few
+        other selection criteria.
+      </div>
     </div>
+    <AccuracyBoxSelect
+      plotId="basic"
+      platforms={platforms}
+      options={[
+        {
+          icon: "mdi:all-inclusive-box",
+          description: "Show all resolved markets.",
+          scores: scores,
+        },
+        {
+          icon: "mdi:alpha-a-box",
+          description:
+            "Filter to at least 10 traders or $100 in trade volume, and open for at least 2 days.",
+          scores: scores.filter((ms) => {
+            return (
+              ((ms.traders_count !== null && ms.traders_count >= 10) ||
+                (ms.volume_usd !== null && ms.volume_usd >= 100)) &&
+              ms.duration_days >= 2
+            );
+          }),
+        },
+        {
+          icon: "mdi:alpha-b-box",
+          description:
+            "Filter to at least 100 traders or $1000 in trade volume, and open for at least 14 days.",
+          scores: scores.filter((ms) => {
+            return (
+              ((ms.traders_count !== null && ms.traders_count >= 100) ||
+                (ms.volume_usd !== null && ms.volume_usd >= 1000)) &&
+              ms.duration_days >= 14
+            );
+          }),
+        },
+        {
+          icon: "mdi:alpha-c-box",
+          description:
+            "Filter to at least 1000 traders or $10,000 in trade volume, and open for at least 30 days.",
+          scores: scores.filter((ms) => {
+            return (
+              ((ms.traders_count !== null && ms.traders_count >= 1000) ||
+                (ms.volume_usd !== null && ms.volume_usd >= 10000)) &&
+              ms.duration_days >= 30
+            );
+          }),
+        },
+        {
+          icon: "mdi:calendar-check",
+          description: "Filter to markets resolved in the past 12 months.",
+          scores: scores.filter(
+            (ms) =>
+              new Date(ms.close_datetime).getTime() >=
+              new Date().getTime() - 365 * 24 * 60 * 60 * 1000,
+          ),
+        },
+        {
+          icon: "mdi:check-decagram",
+          description: "Filter to markets that have been linked in questions.",
+          scores: scores.filter((ms) => ms.question_id),
+        },
+      ]}
+    />
   </div>
-  <AccuracyBoxSelect
-    plotId="basic"
-    platforms={platforms}
-    options={[
-      {
-        icon: "mdi:all-inclusive-box",
-        description: "Show all resolved markets.",
-        scores: scores,
-      },
-      {
-        icon: "mdi:alpha-a-box",
-        description:
-          "Filter to at least 10 traders or $100 in trade volume, and open for at least 2 days.",
-        scores: scores.filter((ms) => {
-          return (
-            ((ms.traders_count !== null && ms.traders_count >= 10) ||
-              (ms.volume_usd !== null && ms.volume_usd >= 100)) &&
-            ms.duration_days >= 2
-          );
-        }),
-      },
-      {
-        icon: "mdi:alpha-b-box",
-        description:
-          "Filter to at least 100 traders or $1000 in trade volume, and open for at least 14 days.",
-        scores: scores.filter((ms) => {
-          return (
-            ((ms.traders_count !== null && ms.traders_count >= 100) ||
-              (ms.volume_usd !== null && ms.volume_usd >= 1000)) &&
-            ms.duration_days >= 14
-          );
-        }),
-      },
-      {
-        icon: "mdi:alpha-c-box",
-        description:
-          "Filter to at least 1000 traders or $10,000 in trade volume, and open for at least 30 days.",
-        scores: scores.filter((ms) => {
-          return (
-            ((ms.traders_count !== null && ms.traders_count >= 1000) ||
-              (ms.volume_usd !== null && ms.volume_usd >= 10000)) &&
-            ms.duration_days >= 30
-          );
-        }),
-      },
-      {
-        icon: "mdi:calendar-check",
-        description: "Filter to markets resolved in the past 12 months.",
-        scores: scores.filter(
-          (ms) =>
-            new Date(ms.close_datetime).getTime() >=
-            new Date().getTime() - 365 * 24 * 60 * 60 * 1000,
-        ),
-      },
-      {
-        icon: "mdi:check-decagram",
-        description: "Filter to markets that have been linked in questions.",
-        scores: scores.filter((ms) => ms.question_id),
-      },
-    ]}
-  />
   <hr class="my-2" />
 
   <div class="p-4 m-2">
@@ -114,7 +116,7 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
             "Market Brier score, calculated with midpoint probability",
           axisTitleY: "Midpoint Brier score",
           plotRangeStart: 0,
-          plotRangeEnd: 1,
+          plotRangeEnd: 0.8,
         },
         {
           scoreType: "brier-average",
@@ -122,22 +124,22 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
           description: "Market Brier score, averaged over the entire market",
           axisTitleY: "Average Brier score",
           plotRangeStart: 0,
-          plotRangeEnd: 1,
+          plotRangeEnd: 0.8,
         },
         {
           scoreType: "brier-relative",
           scores: scores,
           description: "Relative Brier score, calculated for linked markets",
           axisTitleY: "Relative Brier score",
-          plotRangeStart: -0.1,
-          plotRangeEnd: 0.1,
+          plotRangeStart: -0.08,
+          plotRangeEnd: 0.08,
         },
         {
           scoreType: "logarithmic-midpoint",
           scores: scores,
           description: "Market log score, calculated with midpoint probability",
           axisTitleY: "Midpoint log score",
-          plotRangeStart: -3,
+          plotRangeStart: -2,
           plotRangeEnd: 0,
         },
         {
@@ -145,7 +147,7 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
           scores: scores,
           description: "Market log score, averaged over the entire market",
           axisTitleY: "Average log score",
-          plotRangeStart: -3,
+          plotRangeStart: -2,
           plotRangeEnd: 0,
         },
         {
@@ -153,8 +155,8 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
           scores: scores,
           description: "Relative log score, calculated for linked markets",
           axisTitleY: "Relative log score",
-          plotRangeStart: -0.25,
-          plotRangeEnd: 0.25,
+          plotRangeStart: -0.2,
+          plotRangeEnd: 0.2,
         },
       ]}
     />
@@ -186,6 +188,51 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
           scores: scores.filter((ms) => ms.category_slug == category.slug),
         })),
       )}
+    />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h2 class="font-bold text-2xl" id="vary-selection">Resolution</h2>
+      <div class="my-2">
+        At a glance, you might think the resolution of a market shouldn't affect
+        the accuracy much. However, there tend to be distinct types of markets
+        on most platforms (often in the form of "Will X event happen by Y
+        date?"). If you believe that <a
+          href="https://knowyourmeme.com/memes/nothing-ever-happens"
+          class="text-lavender">nothing ever happens</a
+        >, then you might expect that betting NO a lot will make you pretty
+        accurate.
+      </div>
+    </div>
+    <AccuracyBoxSelect
+      plotId="resolution"
+      platforms={platforms}
+      options={[
+        {
+          icon: "mdi:all-inclusive-box",
+          description: "All markets, regardless of resolution",
+          scores: scores,
+        },
+        {
+          icon: "mdi:numeric-1-circle",
+          description: "Only markets that resolved YES",
+          scores: scores.filter((ms) => ms.resolution == 1),
+        },
+        {
+          icon: "mdi:numeric-0-circle",
+          description: "Only markets that resolved NO",
+          scores: scores.filter((ms) => ms.resolution == 0),
+        },
+        {
+          icon: "mdi:help-circle",
+          description: "Only markets that resolved to something inbetween",
+          scores: scores.filter(
+            (ms) => ms.resolution != 0 && ms.resolution != 1,
+          ),
+        },
+      ]}
     />
   </div>
 </Base>
