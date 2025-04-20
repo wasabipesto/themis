@@ -76,7 +76,7 @@ const optionsCalculated = options.map((option) => {
         const endX = startX + binWidth;
         points.push({
           platformName: platformDetails.name,
-          colorPrimary: platformDetails.color_accent,
+          colorPrimary: platformDetails.color_primary,
           colorAccent: platformDetails.color_accent,
           startX,
           endX,
@@ -206,11 +206,12 @@ const optionsCalculated = options.map((option) => {
           x2: "endX",
           y: "percent",
           fy: "platformName",
-          fill: "colorPrimary",
+          fill: "colorAccent",
           insetLeft: 1,
           insetRight: 1,
           tip: true,
         }),
+        Plot.ruleY([0]),
       ],
     });
 

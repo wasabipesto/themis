@@ -50,7 +50,7 @@ const markets = await getMarkets();
               platformSlug: mkt.platform_slug,
             })),
           plotTitle: "Histogram of Traders",
-          axisTitleX: "Traders",
+          axisTitleX: "Trader count",
         },
         {
           description: "Market distribution by total duration.",
@@ -60,6 +60,34 @@ const markets = await getMarkets();
           })),
           plotTitle: "Histogram of Duration",
           axisTitleX: "Duration (days)",
+        },
+        {
+          description: "Market distribution by title length.",
+          items: markets.map((mkt) => ({
+            value: mkt.title.length,
+            platformSlug: mkt.platform_slug,
+          })),
+          plotTitle: "Histogram of Title Length",
+          axisTitleX: "Length (chatacters)",
+          rangeEnd: 200,
+        },
+        {
+          description: "Market distribution by total description length.",
+          items: markets.map((mkt) => ({
+            value: mkt.description.length,
+            platformSlug: mkt.platform_slug,
+          })),
+          plotTitle: "Histogram of Description Length",
+          axisTitleX: "Length (chatacters)",
+        },
+        {
+          description: "Market distribution by resolution value.",
+          items: markets.map((mkt) => ({
+            value: mkt.resolution,
+            platformSlug: mkt.platform_slug,
+          })),
+          plotTitle: "Histogram of Description Length",
+          axisTitleX: "Length (chatacters)",
         },
       ]}
     />
