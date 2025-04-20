@@ -177,23 +177,16 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
     </div>
     <HistogramSelect
       plotId="histogram-platform"
+      platforms={platforms}
       options={[
         {
           description: "Show all resolved markets.",
           values: scores
             .filter((ms) => ms.score_type == "brier-midpoint")
-            .map((ms) => {
-              const platform = platforms.find(
-                (p) => p.slug == ms.platform_slug,
-              );
-              if (!platform)
-                throw new Error(`Platform not found: ${ms.platform_slug}`);
-              return {
-                value: ms.score,
-                series: platform.slug,
-                color: platform.color_primary,
-              };
-            }),
+            .map((ms) => ({
+              value: ms.score,
+              platformSlug: ms.platform_slug,
+            })),
           plotTitle: "Histogram of Scores",
           axisTitleX: "Midpoint Brier score",
           rangeStart: 0,
@@ -211,8 +204,7 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
             .map((ms) => {
               return {
                 value: ms.score,
-                series: platform.slug,
-                color: platform.color_primary,
+                platformSlug: ms.platform_slug,
               };
             }),
           plotTitle: "Histogram of Scores",
@@ -221,11 +213,6 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
           rangeEnd: 1,
         })),
       )}
-      series={platforms.map((platform) => ({
-        key: platform.slug,
-        name: platform.name,
-        color: platform.color_primary,
-      }))}
     />
   </div>
   <hr class="my-2" />

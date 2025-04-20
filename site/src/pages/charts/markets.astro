@@ -1,0 +1,63 @@
+---
+import Base from "@layouts/base.astro";
+import HistogramSelect from "@components/charts/histogram-select.astro";
+import { getPlatforms, getCategories, getMarkets } from "@lib/api";
+
+// Download data
+const platforms = await getPlatforms();
+const categories = await getCategories();
+const markets = await getMarkets();
+---
+
+<Base title="Market Charts">
+  <div class="p-4 m-2 pb-0 mb-0">
+    <h1 class="text-4xl font-bold">Market Charts</h1>
+    <div class="mt-2">What is a market, really?</div>
+  </div>
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h2 class="font-bold text-2xl" id="vary-selection">
+        Histograms of Attributes
+      </h2>
+      <div class="my-2">
+        How much trade volume do these markets typically see? How many traders
+        participate on markets on each platform? How long are they typically
+        open?
+      </div>
+    </div>
+    <HistogramSelect
+      plotId="histogram-trait"
+      platforms={platforms}
+      options={[
+        {
+          description: "Market distribution by trade volume.",
+          values: markets
+            .filter((mkt) => mkt.volume_usd && mkt.volume_usd > 0)
+            .map((mkt) => ({
+              value: mkt.volume_usd || 0,
+              platformSlug: mkt.platform_slug,
+            })),
+          plotTitle: "Histogram of Volume",
+          axisTitleX: "Volume (USD)",
+          rangeStart: 0,
+          rangeEnd: 10_000,
+        },
+        {
+          description: "Market distribution by number of traders.",
+          values: markets
+            .filter((mkt) => mkt.traders_count && mkt.traders_count > 0)
+            .map((mkt) => ({
+              value: mkt.traders_count || 0,
+              platformSlug: mkt.platform_slug,
+            })),
+          plotTitle: "Histogram of Traders",
+          axisTitleX: "Traders",
+          rangeStart: 0,
+          rangeEnd: 100,
+        },
+      ]}
+    />
+  </div>
+  <hr class="my-2" />
+</Base>

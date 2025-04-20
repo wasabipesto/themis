@@ -1,14 +1,16 @@
 ---
+import type { PlatformDetails } from "@types";
 import { Icon } from "astro-icon/components";
 
 interface Props {
   plotId: string;
+  platforms: PlatformDetails[];
   options: Array<{
     icon?: string | null;
     description: string;
     values: Array<{
       value: number;
-      series: string;
+      platformSlug: string;
     }>;
     plotTitle: string;
     axisTitleX: string;
@@ -16,20 +18,17 @@ interface Props {
     rangeStart: number;
     rangeEnd: number;
   }>;
-  series: Array<{
-    key: string;
-    name: string;
-    color: string;
-  }>;
 }
-const { plotId, options, series } = Astro.props;
+const { plotId, platforms, options } = Astro.props;
 
 export interface HistogramDatapoint {
-  seriesName: string;
-  seriesColor: string;
+  platformName: string;
+  colorPrimary: string;
+  colorAccent: string;
   startX: number;
   endX: number;
   count: number;
+  percent: number;
 }
 
 const numBins = 20;
@@ -39,34 +38,45 @@ const optionsCalculated = options.map((option) => {
   const maxValue = option.rangeEnd;
   const binWidth = (maxValue - minValue) / numBins;
 
-  // Create a nested array to count bins per series
-  const bins: { [seriesName: string]: number[] } = {};
+  // Create a nested array to count bins per platform
+  const bins: { [platformSlug: string]: number[] } = {};
 
-  values.forEach((v) => {
-    if (!bins[v.series]) {
-      bins[v.series] = Array(numBins).fill(0);
+  const valuesInRange = values.filter(
+    (v) => v.value >= minValue && v.value <= maxValue,
+  );
+
+  valuesInRange.forEach((v) => {
+    if (!bins[v.platformSlug]) {
+      bins[v.platformSlug] = Array(numBins).fill(0);
     }
     const binIndex = Math.min(
       numBins - 1,
       Math.floor((v.value - minValue) / binWidth),
     );
-    bins[v.series][binIndex]++;
+    bins[v.platformSlug][binIndex]++;
   });
 
   const points: HistogramDatapoint[] = [];
-  for (const [seriesKey, seriesBins] of Object.entries(bins)) {
-    seriesBins.forEach((count, index) => {
+  for (const [platformSlug, platformBins] of Object.entries(bins)) {
+    const platformDetails = platforms.find((p) => p.slug === platformSlug);
+    if (!platformDetails)
+      throw new Error(`Platform not found: ${platformSlug}`);
+    const platformNumItems = valuesInRange.filter(
+      (v) => v.platformSlug === platformSlug,
+    ).length;
+
+    platformBins.forEach((count, index) => {
       if (count > 0) {
-        const seriesInfo = series.find((s) => s.key == seriesKey);
-        if (!seriesInfo) throw new Error(`Series not found: ${seriesKey}`);
         const startX = minValue + index * binWidth;
         const endX = startX + binWidth;
         points.push({
-          seriesName: seriesInfo.name,
-          seriesColor: seriesInfo.color,
+          platformName: platformDetails.name,
+          colorPrimary: platformDetails.color_accent,
+          colorAccent: platformDetails.color_accent,
           startX,
           endX,
           count,
+          percent: count / platformNumItems,
         });
       }
     });
@@ -75,7 +85,7 @@ const optionsCalculated = options.map((option) => {
   return {
     icon: option.icon,
     description: option.description,
-    count: option.values.length,
+    count: valuesInRange.length,
     plotTitle: option.plotTitle,
     axisTitleX: option.axisTitleX,
     axisTitleY: option.axisTitleY || "Count",
@@ -118,6 +128,7 @@ const optionsCalculated = options.map((option) => {
       <div
         id={`histogram-plot-${plotId}`}
         class="histogram-plot"
+        data-platforms={JSON.stringify(platforms)}
         data-options={JSON.stringify(optionsCalculated)}
       >
       </div>
@@ -128,9 +139,11 @@ const optionsCalculated = options.map((option) => {
 <script>
   import * as Plot from "@observablehq/plot";
   import type { HistogramDatapoint } from "./histogram-select.astro";
+  import type { PlatformDetails } from "@types";
 
   interface HistogramPlotElement extends HTMLElement {
     dataset: {
+      platforms: string;
       options: string;
     };
   }
@@ -158,6 +171,9 @@ const optionsCalculated = options.map((option) => {
 
   // Update the given plot when called
   function updatePlot(plotElement: HistogramPlotElement, option: OptionData) {
+    const platforms = JSON.parse(
+      plotElement.dataset.platforms,
+    ) as PlatformDetails[];
     const plotWidth = parseInt(window.getComputedStyle(plotElement).width);
 
     const plot = Plot.plot({
@@ -165,20 +181,27 @@ const optionsCalculated = options.map((option) => {
       width: plotWidth,
       //aspectRatio: 2,
       marginLeft: 50,
+      marginRight: 80,
       x: { label: option.axisTitleX },
       y: {
         grid: true,
-        label: option.axisTitleY,
+        percent: true,
+        label: "Percent",
+      },
+      fy: {
+        label: "Platform",
+        axis: null,
+      },
+      color: {
+        label: null,
       },
       marks: [
         Plot.rectY(option.points, {
           x1: "startX",
           x2: "endX",
-          y: "count",
-          fill: "seriesColor",
-          channels: {
-            Platform: "seriesName",
-          },
+          y: "percent",
+          fy: "platformName",
+          fill: "colorPrimary",
           insetLeft: 1,
           insetRight: 1,
           tip: true,
