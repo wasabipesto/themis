@@ -14,59 +14,82 @@ export interface DateBarDatapoint {
   startXMs: number;
   endXDate: string;
   endXMs: number;
-  count: number;
-  percent: number;
+  countClosed: number;
+  percentClosed: number;
+  countOpen: number;
+  percentOpen: number;
 }
 
 const numBins = 100;
-const minValue = new Date("2020-01-01").getTime(); // Convert to milliseconds
-const maxValue = new Date().getTime(); // Convert to milliseconds
-const binWidth = (maxValue - minValue) / numBins; // Now both sides are numbers
+const minValue = new Date("2021-01-01").getTime();
+const maxValue = new Date().getTime();
+const binWidth = (maxValue - minValue) / numBins;
 
-// Create a nested array to count bins per series
-const bins: { [seriesName: string]: number[] } = {};
+const binsClosed: { [seriesName: string]: number[] } = {};
+const binsOpen: { [seriesName: string]: number[] } = {};
 
+// Initialize bins for closed markets
 markets.forEach((mkt) => {
   const marketCloseTime = new Date(mkt.close_datetime).getTime();
-  if (!bins[mkt.platform_slug]) {
-    bins[mkt.platform_slug] = Array(numBins).fill(0);
+  if (!binsClosed[mkt.platform_slug]) {
+    binsClosed[mkt.platform_slug] = Array(numBins).fill(0);
   }
-  const binIndex = Math.min(
+  const binIndexClose = Math.min(
     numBins - 1,
     Math.floor((marketCloseTime - minValue) / binWidth),
   );
-  bins[mkt.platform_slug][binIndex]++;
+  binsClosed[mkt.platform_slug][binIndexClose]++;
+});
+
+// Initialize bins for open markets
+markets.forEach((mkt) => {
+  const marketOpenTime = new Date(mkt.open_datetime).getTime();
+  if (!binsOpen[mkt.platform_slug]) {
+    binsOpen[mkt.platform_slug] = Array(numBins).fill(0);
+  }
+  const binIndexOpen = Math.min(
+    numBins - 1,
+    Math.floor((marketOpenTime - minValue) / binWidth),
+  );
+  binsOpen[mkt.platform_slug][binIndexOpen]++;
 });
 
 const points: DateBarDatapoint[] = [];
-for (const [platformSlug, seriesBins] of Object.entries(bins)) {
+for (const [platformSlug, seriesBinsClosed] of Object.entries(binsClosed)) {
   const platformNumItems = markets.filter(
     (mkt) => mkt.platform_slug === platformSlug,
   ).length;
-  seriesBins.forEach((count, index) => {
-    if (count > 0) {
+
+  for (let index = 0; index < numBins; index++) {
+    if (seriesBinsClosed[index] > 0 || binsOpen[platformSlug][index] > 0) {
+      const startXMs = minValue + index * binWidth;
+      const endXMs = startXMs + binWidth;
+
+      const countClosed = seriesBinsClosed[index] * -1;
+      const percentClosed = countClosed / platformNumItems;
+      const countOpen = binsOpen[platformSlug]?.[index] ?? 0;
+      const percentOpen = countOpen / platformNumItems;
+
       const platformDetails = platforms.find(
-        (platform) => platform.slug == platformSlug,
+        (platform) => platform.slug === platformSlug,
       );
       if (!platformDetails)
         throw new Error(`Series not found: ${platformSlug}`);
 
-      const startX = minValue + index * binWidth;
-      const endX = startX + binWidth;
-
-      // Convert milliseconds back to Date for plotting
       points.push({
         platformName: platformDetails.name,
         color: platformDetails.color_accent,
-        startXDate: new Date(startX).toISOString(),
-        startXMs: startX,
-        endXDate: new Date(endX).toISOString(),
-        endXMs: endX,
-        count,
-        percent: count / platformNumItems,
+        startXDate: new Date(startXMs).toISOString(),
+        startXMs,
+        endXDate: new Date(endXMs).toISOString(),
+        endXMs,
+        countClosed,
+        percentClosed,
+        countOpen,
+        percentOpen,
       });
     }
-  });
+  }
 }
 
 const optionCalculated = {
@@ -113,7 +136,8 @@ const optionCalculated = {
     const plotWidth = parseInt(window.getComputedStyle(plotElement).width);
 
     const plot = Plot.plot({
-      title: option.plotTitle,
+      title: "Market Open and Close Dates",
+      subtitle: "Markets opened (positive) and closed (ngeative) over time",
       width: plotWidth,
       marginLeft: 40,
       marginRight: 80,
@@ -133,12 +157,20 @@ const optionCalculated = {
         Plot.rectY(option.points, {
           x1: "startXDate",
           x2: "endXDate",
-          y: "percent",
+          y: "percentOpen",
           fy: "platformName",
           fill: "color",
           insetLeft: 1,
           insetRight: 1,
-          tip: true,
+        }),
+        Plot.rectY(option.points, {
+          x1: "startXDate",
+          x2: "endXDate",
+          y: "percentClosed",
+          fy: "platformName",
+          fill: "color",
+          insetLeft: 1,
+          insetRight: 1,
         }),
         Plot.ruleY([0]),
       ],
