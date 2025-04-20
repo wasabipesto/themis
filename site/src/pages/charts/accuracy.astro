@@ -172,7 +172,8 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
       <div class="my-2">
         Are there significant spikes or outliers in the accuracy distribution?
         For instance, a spike around 0.25 would indicate lots of markets that
-        rested at 50% probability.
+        rested at 50% probability. We'll look at the same scores as above, but
+        showing the distribution in a histogram.
       </div>
     </div>
     <HistogramSelect
@@ -180,39 +181,85 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
       platforms={platforms}
       options={[
         {
-          description: "Show all resolved markets.",
+          description:
+            "Market Brier score, calculated with midpoint probability",
           values: scores
-            .filter((ms) => ms.score_type == "brier-midpoint")
-            .map((ms) => ({
-              value: ms.score,
-              platformSlug: ms.platform_slug,
+            .filter((score) => score.score_type === "brier-midpoint")
+            .map((score) => ({
+              value: score.score,
+              platformSlug: score.platform_slug,
             })),
           plotTitle: "Histogram of Scores",
           axisTitleX: "Midpoint Brier score",
           rangeStart: 0,
           rangeEnd: 1,
         },
-      ].concat(
-        platforms.map((platform) => ({
-          description: `Markets from ${platform.name}`,
+        {
+          description: "Market Brier score, averaged over the entire market",
           values: scores
-            .filter(
-              (ms) =>
-                ms.score_type == "brier-midpoint" &&
-                ms.platform_slug == platform.slug,
-            )
-            .map((ms) => {
-              return {
-                value: ms.score,
-                platformSlug: ms.platform_slug,
-              };
-            }),
+            .filter((score) => score.score_type === "brier-average")
+            .map((score) => ({
+              value: score.score,
+              platformSlug: score.platform_slug,
+            })),
           plotTitle: "Histogram of Scores",
-          axisTitleX: "Midpoint Brier score",
+          axisTitleX: "Average Brier score",
           rangeStart: 0,
           rangeEnd: 1,
-        })),
-      )}
+        },
+        {
+          description: "Relative Brier score, calculated for linked markets",
+          values: scores
+            .filter((score) => score.score_type === "brier-relative")
+            .map((score) => ({
+              value: score.score,
+              platformSlug: score.platform_slug,
+            })),
+          plotTitle: "Histogram of Scores",
+          axisTitleX: "Relative Brier score",
+          rangeStart: -0.1,
+          rangeEnd: 0.1,
+        },
+        {
+          description: "Market log score, calculated with midpoint probability",
+          values: scores
+            .filter((score) => score.score_type === "logarithmic-midpoint")
+            .map((score) => ({
+              value: score.score,
+              platformSlug: score.platform_slug,
+            })),
+          plotTitle: "Histogram of Scores",
+          axisTitleX: "Midpoint log score",
+          rangeStart: -3,
+          rangeEnd: 0,
+        },
+        {
+          description: "Market log score, averaged over the entire market",
+          values: scores
+            .filter((score) => score.score_type === "logarithmic-average")
+            .map((score) => ({
+              value: score.score,
+              platformSlug: score.platform_slug,
+            })),
+          plotTitle: "Histogram of Scores",
+          axisTitleX: "Average log score",
+          rangeStart: -3,
+          rangeEnd: 0,
+        },
+        {
+          description: "Relative log score, calculated for linked markets",
+          values: scores
+            .filter((score) => score.score_type === "logarithmic-relative")
+            .map((score) => ({
+              value: score.score,
+              platformSlug: score.platform_slug,
+            })),
+          plotTitle: "Histogram of Scores",
+          axisTitleX: "Relative log score",
+          rangeStart: -0.25,
+          rangeEnd: 0.25,
+        },
+      ]}
     />
   </div>
   <hr class="my-2" />
