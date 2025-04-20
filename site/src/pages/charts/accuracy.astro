@@ -183,7 +183,7 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
         {
           description:
             "Market Brier score, calculated with midpoint probability",
-          values: scores
+          items: scores
             .filter((score) => score.score_type === "brier-midpoint")
             .map((score) => ({
               value: score.score,
@@ -196,7 +196,7 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
         },
         {
           description: "Market Brier score, averaged over the entire market",
-          values: scores
+          items: scores
             .filter((score) => score.score_type === "brier-average")
             .map((score) => ({
               value: score.score,
@@ -209,7 +209,7 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
         },
         {
           description: "Relative Brier score, calculated for linked markets",
-          values: scores
+          items: scores
             .filter((score) => score.score_type === "brier-relative")
             .map((score) => ({
               value: score.score,
@@ -222,7 +222,7 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
         },
         {
           description: "Market log score, calculated with midpoint probability",
-          values: scores
+          items: scores
             .filter((score) => score.score_type === "logarithmic-midpoint")
             .map((score) => ({
               value: score.score,
@@ -235,7 +235,7 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
         },
         {
           description: "Market log score, averaged over the entire market",
-          values: scores
+          items: scores
             .filter((score) => score.score_type === "logarithmic-average")
             .map((score) => ({
               value: score.score,
@@ -248,7 +248,7 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
         },
         {
           description: "Relative log score, calculated for linked markets",
-          values: scores
+          items: scores
             .filter((score) => score.score_type === "logarithmic-relative")
             .map((score) => ({
               value: score.score,

@@ -32,7 +32,7 @@ const markets = await getMarkets();
       options={[
         {
           description: "Market distribution by trade volume.",
-          values: markets
+          items: markets
             .filter((mkt) => mkt.volume_usd && mkt.volume_usd > 0)
             .map((mkt) => ({
               value: mkt.volume_usd || 0,
@@ -40,12 +40,10 @@ const markets = await getMarkets();
             })),
           plotTitle: "Histogram of Volume",
           axisTitleX: "Volume (USD)",
-          rangeStart: 0,
-          rangeEnd: 10_000,
         },
         {
           description: "Market distribution by number of traders.",
-          values: markets
+          items: markets
             .filter((mkt) => mkt.traders_count && mkt.traders_count > 0)
             .map((mkt) => ({
               value: mkt.traders_count || 0,
@@ -53,8 +51,15 @@ const markets = await getMarkets();
             })),
           plotTitle: "Histogram of Traders",
           axisTitleX: "Traders",
-          rangeStart: 0,
-          rangeEnd: 100,
+        },
+        {
+          description: "Market distribution by total duration.",
+          items: markets.map((mkt) => ({
+            value: mkt.duration_days,
+            platformSlug: mkt.platform_slug,
+          })),
+          plotTitle: "Histogram of Duration",
+          axisTitleX: "Duration (days)",
         },
       ]}
     />

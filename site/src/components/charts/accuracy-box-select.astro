@@ -1,5 +1,6 @@
 ---
 import type { MarketScoreDetails, PlatformDetails } from "@types";
+import { quartiles } from "@lib/stats";
 import { Icon } from "astro-icon/components";
 
 interface Props {
@@ -29,23 +30,6 @@ export interface AccuracyBoxDatapoint {
   whiskerEnd: number;
 }
 
-function getPercentile(arr: MarketScoreDetails[], percentile: number): number {
-  // assumes the scores are pre-sorted
-  const index = percentile * (arr.length - 1);
-
-  if (Number.isInteger(index)) {
-    return arr[index].score;
-  } else {
-    // interpolate to get percentile between points
-    const lowerIndex = Math.floor(index);
-    const upperIndex = Math.ceil(index);
-    return (
-      arr[lowerIndex].score +
-      (index - lowerIndex) * (arr[upperIndex].score - arr[lowerIndex].score)
-    );
-  }
-}
-
 const optionsCalculated = options.map((option) => {
   const scoreType = option.scoreType || "brier-midpoint";
   const filteredScoresType = option.scores.filter(
@@ -61,20 +45,17 @@ const optionsCalculated = options.map((option) => {
     if (filteredScoresPlatform.length === 0) {
       return acc;
     }
-    const min = filteredScoresPlatform[0].score;
-    const q1 = getPercentile(filteredScoresPlatform, 0.25);
-    const q3 = getPercentile(filteredScoresPlatform, 0.75);
-    const max = filteredScoresPlatform[filteredScoresPlatform.length - 1].score;
-    const iqr = q3 - q1;
+    const scores = filteredScoresPlatform.map((s) => s.score);
+    const { c1, q1, q2, q3, c3 } = quartiles(scores);
     acc.push({
       platformName: platform.name,
       colorPrimary: platform.color_primary,
       colorAccent: platform.color_accent,
-      whiskerStart: Math.max(q1 - 1.5 * iqr, min),
+      whiskerStart: c1,
       boxStart: q1,
-      boxCenter: getPercentile(filteredScoresPlatform, 0.5),
+      boxCenter: q2,
       boxEnd: q3,
-      whiskerEnd: Math.min(q3 + 1.5 * iqr, max),
+      whiskerEnd: c3,
     });
     return acc;
   }, []);

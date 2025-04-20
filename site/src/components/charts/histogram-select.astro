@@ -1,5 +1,6 @@
 ---
 import type { PlatformDetails } from "@types";
+import { quartiles, roundSF } from "@lib/stats";
 import { Icon } from "astro-icon/components";
 
 interface Props {
@@ -8,15 +9,15 @@ interface Props {
   options: Array<{
     icon?: string | null;
     description: string;
-    values: Array<{
+    items: Array<{
       value: number;
       platformSlug: string;
     }>;
     plotTitle: string;
     axisTitleX: string;
     axisTitleY?: string | null;
-    rangeStart: number;
-    rangeEnd: number;
+    rangeStart?: number | null;
+    rangeEnd?: number;
   }>;
 }
 const { plotId, platforms, options } = Astro.props;
@@ -33,27 +34,31 @@ export interface HistogramDatapoint {
 
 const numBins = 20;
 const optionsCalculated = options.map((option) => {
-  const values = option.values;
-  const minValue = option.rangeStart;
-  const maxValue = option.rangeEnd;
-  const binWidth = (maxValue - minValue) / numBins;
+  const items = option.items;
+  const valuesSorted = items.map((item) => item.value).sort((a, b) => a - b);
+  const { c9 } = quartiles(valuesSorted);
+  const c9Rounded = roundSF(c9, 2);
+
+  const rangeStart = option.rangeStart || 0;
+  const rangeEnd = option.rangeEnd || c9Rounded;
+  const binWidth = (rangeEnd - rangeStart) / numBins;
 
   // Create a nested array to count bins per platform
   const bins: { [platformSlug: string]: number[] } = {};
 
-  const valuesInRange = values.filter(
-    (v) => v.value >= minValue && v.value <= maxValue,
+  const itemsInRange = items.filter(
+    (i) => i.value >= rangeStart && i.value <= rangeEnd,
   );
 
-  valuesInRange.forEach((v) => {
-    if (!bins[v.platformSlug]) {
-      bins[v.platformSlug] = Array(numBins).fill(0);
+  itemsInRange.forEach((i) => {
+    if (!bins[i.platformSlug]) {
+      bins[i.platformSlug] = Array(numBins).fill(0);
     }
     const binIndex = Math.min(
       numBins - 1,
-      Math.floor((v.value - minValue) / binWidth),
+      Math.floor((i.value - rangeStart) / binWidth),
     );
-    bins[v.platformSlug][binIndex]++;
+    bins[i.platformSlug][binIndex]++;
   });
 
   const points: HistogramDatapoint[] = [];
@@ -61,13 +66,13 @@ const optionsCalculated = options.map((option) => {
     const platformDetails = platforms.find((p) => p.slug === platformSlug);
     if (!platformDetails)
       throw new Error(`Platform not found: ${platformSlug}`);
-    const platformNumItems = valuesInRange.filter(
+    const platformNumItems = itemsInRange.filter(
       (v) => v.platformSlug === platformSlug,
     ).length;
 
     platformBins.forEach((count, index) => {
       if (count > 0) {
-        const startX = minValue + index * binWidth;
+        const startX = rangeStart + index * binWidth;
         const endX = startX + binWidth;
         points.push({
           platformName: platformDetails.name,
@@ -85,7 +90,7 @@ const optionsCalculated = options.map((option) => {
   return {
     icon: option.icon,
     description: option.description,
-    count: valuesInRange.length,
+    count: itemsInRange.length,
     plotTitle: option.plotTitle,
     axisTitleX: option.axisTitleX,
     axisTitleY: option.axisTitleY || "Count",
