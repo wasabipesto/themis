@@ -1,6 +1,7 @@
 ---
 import Base from "@layouts/base.astro";
 import HistogramSelect from "@components/charts/histogram-select.astro";
+import BarCountOverTime from "@components/charts/bar-count-over-time.astro";
 import { getPlatforms, getCategories, getMarkets } from "@lib/api";
 
 // Download data
@@ -12,7 +13,17 @@ const markets = await getMarkets();
 <Base title="Market Charts">
   <div class="p-4 m-2 pb-0 mb-0">
     <h1 class="text-4xl font-bold">Market Charts</h1>
-    <div class="mt-2">What is a market, really?</div>
+    <div class="mt-2">
+      What is a market, really? They're similar under the hood - people trade on
+      different outcomes at different prices, leading to a consensus probability
+      whether that's with a limit order book, an automated market maker, or some
+      other mechanism. However, you can see how flexible they are by how the
+      different platforms leverage this mechanism.
+    </div>
+    <div class="mt-2">
+      Here, we'll look at some of the specific traits we measure on each market
+      to see how they compare across platforms.
+    </div>
   </div>
 
   <div class="p-4 m-2">
@@ -86,11 +97,23 @@ const markets = await getMarkets();
             value: mkt.resolution,
             platformSlug: mkt.platform_slug,
           })),
-          plotTitle: "Histogram of Description Length",
-          axisTitleX: "Length (chatacters)",
+          plotTitle: "Histogram of Resolution Value",
+          axisTitleX: "Probability",
         },
       ]}
     />
   </div>
   <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h2 class="font-bold text-2xl" id="vary-selection">Markets over Time</h2>
+      <div class="my-2">
+        How much trade volume do these markets typically see? How many traders
+        participate on markets on each platform? How long are they typically
+        open?
+      </div>
+    </div>
+    <BarCountOverTime platforms={platforms} markets={markets} />
+  </div>
 </Base>
