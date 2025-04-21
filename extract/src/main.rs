@@ -44,8 +44,7 @@ struct Args {
 
 /// Parameters that we need in order to upload items to the database.
 struct PostgrestParams {
-    postgrest_host: String,
-    postgrest_port: String,
+    postgrest_url: String,
     postgrest_api_key: String,
 }
 
@@ -69,16 +68,13 @@ fn main() -> Result<()> {
     dotenv().ok();
     let postgrest_params = match args.offline {
         false => PostgrestParams {
-            postgrest_host: env::var("PGRST_HOST")
-                .expect("Required environment variable PGRST_HOST not set."),
-            postgrest_port: env::var("PGRST_PORT")
-                .expect("Required environment variable PGRST_PORT not set."),
+            postgrest_url: env::var("PGRST_URL")
+                .expect("Required environment variable PGRST_URL not set."),
             postgrest_api_key: env::var("PGRST_APIKEY")
                 .expect("Required environment variable PGRST_APIKEY not set."),
         },
         true => PostgrestParams {
-            postgrest_host: env::var("PGRST_HOST").unwrap_or_default(),
-            postgrest_port: env::var("PGRST_PORT").unwrap_or_default(),
+            postgrest_url: env::var("PGRST_URL").unwrap_or_default(),
             postgrest_api_key: env::var("PGRST_APIKEY").unwrap_or_default(),
         },
     };
@@ -222,13 +218,11 @@ fn upload_batch(
     params: &PostgrestParams,
     market_batch: &[MarketAndProbs],
 ) -> Result<()> {
-    // Set base url
-    let postgrest_api_base = format!("http://{}:{}", params.postgrest_host, params.postgrest_port);
     // Upload markets batch
     debug!("Uploading batch of {} markets", market_batch.len());
     let markets: Vec<_> = market_batch.iter().map(|m| &m.market).collect();
     let market_response = client
-        .post(format!("{}/markets", postgrest_api_base))
+        .post(format!("{}/markets", params.postgrest_url))
         .bearer_auth(&params.postgrest_api_key)
         .header("Prefer", "resolution=merge-duplicates")
         .header("On-Conflict-Update", "*")
@@ -254,7 +248,7 @@ fn upload_batch(
 
     debug!("Uploading batch of {} probabilities", daily_probs.len());
     let probs_response = client
-        .post(format!("{}/daily_probabilities", postgrest_api_base))
+        .post(format!("{}/daily_probabilities", params.postgrest_url))
         .bearer_auth(&params.postgrest_api_key)
         .header("Prefer", "resolution=merge-duplicates")
         .header("On-Conflict-Update", "*")
@@ -280,7 +274,7 @@ fn upload_batch(
 
     debug!("Uploading batch of {} probabilities", criteria_probs.len());
     let probs_response = client
-        .post(format!("{}/criterion_probabilities", postgrest_api_base))
+        .post(format!("{}/criterion_probabilities", params.postgrest_url))
         .bearer_auth(&params.postgrest_api_key)
         .header("Prefer", "resolution=merge-duplicates")
         .header("On-Conflict-Update", "*")
@@ -305,9 +299,6 @@ fn upload_batch(
 /// Should be called after all data has been uploaded to ensure views are up-to-date.
 /// Uses a longer timeout since this operation can take around 60 seconds.
 fn refresh_materialized_views(params: &PostgrestParams) -> Result<()> {
-    // Set base url
-    let postgrest_api_base = format!("http://{}:{}", params.postgrest_host, params.postgrest_port);
-
     info!("Refreshing all materialized views (this may take up to 2 minutes)");
 
     // Create a new client with a longer timeout specifically for this operation
@@ -320,7 +311,7 @@ fn refresh_materialized_views(params: &PostgrestParams) -> Result<()> {
     let response = long_timeout_client
         .post(format!(
             "{}/rpc/refresh_all_materialized_views",
-            postgrest_api_base
+            params.postgrest_url
         ))
         .bearer_auth(&params.postgrest_api_key)
         .send()
