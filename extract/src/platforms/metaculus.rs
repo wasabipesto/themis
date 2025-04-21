@@ -1,6 +1,8 @@
 //! Tools to download and process markets from the Metaculus API.
 //! Metaculus API docs: https://www.metaculus.com/api/
 
+use std::collections::HashMap;
+
 use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
@@ -194,7 +196,7 @@ pub struct MetaculusProjects {
     #[serde(default)]
     pub category: Vec<MetaculusProjectInfo>,
     #[serde(default)]
-    pub tags: Vec<MetaculusProjectInfo>,
+    pub tag: Vec<MetaculusProjectInfo>,
 }
 
 /// What stage of the market life-cycle this is in.
@@ -381,6 +383,7 @@ fn standardize_single(
                 format_market_description(description, resolution_criteria, fine_print),
                 platform_slug,
                 &probs,
+                &details.projects,
                 details.nr_forecasters,
                 resolution_value,
             )?;
@@ -471,6 +474,7 @@ fn standardize_single(
                 format_market_description(description, resolution_criteria, fine_print),
                 platform_slug,
                 &probs,
+                &details.projects,
                 details.nr_forecasters,
                 resolution_value,
             )?;
@@ -512,6 +516,7 @@ fn create_standard_market(
     description: String,
     platform_slug: String,
     probs: &[ProbSegment],
+    projects: &MetaculusProjects,
     nr_forecasters: u32,
     resolution: f32,
 ) -> Result<StandardMarket, MarketError> {
@@ -525,7 +530,7 @@ fn create_standard_market(
         url,
         description,
         platform_slug,
-        category_slug: None, // TODO
+        category_slug: get_category(projects),
         open_datetime: start,
         close_datetime: end,
         traders_count: Some(nr_forecasters),
@@ -595,4 +600,50 @@ pub fn build_prob_segments(
         segments.push(ProbSegment { start, end, prob });
     }
     Ok(segments)
+}
+
+/// Manual mapping of group slugs to our standard categories.
+fn get_category(projects: &MetaculusProjects) -> Option<String> {
+    const CATEGORIES: [(&str, &str); 22] = [
+        ("2020-united-states-presidential-election", "politics"),
+        ("artificial-intelligence", "technology"),
+        ("computing-and-math", "science"),
+        ("cryptocurrencies", "economics"),
+        ("economy-business", "economics"),
+        ("elections", "politics"),
+        ("environment-climate", "science"),
+        ("democratic-party-united-states", "politics"),
+        ("donald-trump", "politics"),
+        ("foreign-policy-of-vladimir-putin", "politics"),
+        ("geopolitics", "politics"),
+        ("health-pandemics", "science"),
+        ("law", "politics"),
+        ("nasa", "science"),
+        ("natural-sciences", "science"),
+        ("nuclear", "science"),
+        ("politics", "politics"),
+        ("social-sciences", "science"),
+        ("space", "science"),
+        ("sports-entertainment", "sports"),
+        ("technology", "technology"),
+        ("uk-independence-party", "politics"),
+    ];
+
+    let category_map: HashMap<&str, &str> = CATEGORIES.iter().cloned().collect();
+
+    for item in &projects.category {
+        if let Some(slug) = &item.slug {
+            if let Some(category_name) = category_map.get(slug.as_str()) {
+                return Some(category_name.to_string());
+            }
+        }
+    }
+    for item in &projects.tag {
+        if let Some(slug) = &item.slug {
+            if let Some(category_name) = category_map.get(slug.as_str()) {
+                return Some(category_name.to_string());
+            }
+        }
+    }
+    None
 }
