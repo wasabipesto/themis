@@ -10,11 +10,9 @@ import os
 import subprocess
 
 load_dotenv()
-postgrest_host = os.environ.get('PGRST_HOST')
-postgrest_port = os.environ.get('PGRST_PORT')
-postgrest_base = f"http://{postgrest_host}:{postgrest_port}"
-if not postgrest_host or not postgrest_port:
-    raise ValueError("Missing required environment variables")
+postgrest_base = os.environ.get('PGRST_URL')
+if not postgrest_base:
+    raise ValueError("Missing required environment variable PGRST_URL")
 
 # %%
 # Get a random market with some criteria
