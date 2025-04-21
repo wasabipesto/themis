@@ -2,6 +2,7 @@
 
 use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Utc};
+use lazy_static::lazy_static;
 use log::{debug, error, trace, warn};
 use reqwest_middleware::ClientWithMiddleware;
 use serde::{Deserialize, Serialize};
@@ -9,6 +10,7 @@ use serde_json::Value;
 use serde_jsonlines::append_json_lines;
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use super::{IndexItem, Platform};
@@ -17,6 +19,14 @@ use crate::util::{display_progress, get_reqwest_client_ratelimited, send_request
 const KALSHI_API_BASE: &str = "https://api.elections.kalshi.com/trade-api/v2";
 const KALSHI_RATELIMIT: usize = 10;
 const KALSHI_RATELIMIT_MS: u64 = 1000;
+
+// cache maps
+lazy_static! {
+    static ref EVENT_CACHE: Arc<Mutex<HashMap<String, Value>>> =
+        Arc::new(Mutex::new(HashMap::new()));
+    static ref SERIES_CACHE: Arc<Mutex<HashMap<String, Value>>> =
+        Arc::new(Mutex::new(HashMap::new()));
+}
 
 /// Format of data saved to JSON
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,12 +47,27 @@ async fn get_event(client: &ClientWithMiddleware, market: &Value) -> Result<Valu
         .context("Expected 'event_ticker' field in market.")?
         .as_str()
         .context("Failed to interpret 'event_ticker' as string.")?;
+
+    // Check cache first
+    if let Some(cached_event) = EVENT_CACHE.lock().unwrap().get(event_ticker) {
+        trace!("Cache hit for event ticker: {}", event_ticker);
+        return Ok(cached_event.clone());
+    }
+
+    // If not in cache, download the event
     let api_url = format!("{KALSHI_API_BASE}/events/{event_ticker}");
     let response = send_request(client.get(&api_url)).await?;
-    response
+    let event = response
         .get("event")
-        .context("Expected 'event' field in /events response.")
-        .cloned()
+        .context("Expected 'event' field in /events response.")?
+        .clone();
+
+    // Add to cache
+    EVENT_CACHE
+        .lock()
+        .unwrap()
+        .insert(event_ticker.to_owned(), event.clone());
+    Ok(event)
 }
 
 /// Downloads the series data for this market.
@@ -55,12 +80,27 @@ async fn get_series(client: &ClientWithMiddleware, event: &Value) -> Result<Valu
         .context("Expected 'series_ticker' field in event.")?
         .as_str()
         .context("Failed to interpret 'series_ticker' as string.")?;
+
+    // Check cache first
+    if let Some(cached_series) = SERIES_CACHE.lock().unwrap().get(series_ticker) {
+        trace!("Cache hit for series ticker: {}", series_ticker);
+        return Ok(cached_series.clone());
+    }
+
+    // If not in cache, download the series
     let api_url = format!("{KALSHI_API_BASE}/series/{series_ticker}");
     let response = send_request(client.get(&api_url)).await?;
-    response
+    let series = response
         .get("series")
         .context("Expected 'series' field in /series response.")
-        .cloned()
+        .cloned()?;
+
+    // Add to cache
+    SERIES_CACHE
+        .lock()
+        .unwrap()
+        .insert(series_ticker.to_owned(), series.clone());
+    Ok(series)
 }
 
 /// Download extended data from the `/markets/trades` endpoint.
