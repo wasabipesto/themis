@@ -24,7 +24,43 @@ pub struct KalshiItem {
     id: String,
     last_updated: DateTime<Utc>,
     market: Value,
+    event: Value,
+    series: Value,
     history: Vec<Value>,
+}
+
+/// Downloads the event data for this market.
+/// An event usually contains multiple markets and has more information.
+async fn get_event(client: &ClientWithMiddleware, market: &Value) -> Result<Value> {
+    let event_ticker = market
+        .get("event_ticker")
+        .context("Expected 'event_ticker' field in market.")?
+        .as_str()
+        .context("Failed to interpret 'event_ticker' as string.")?;
+    let api_url = format!("{KALSHI_API_BASE}/events/{event_ticker}");
+    let response = send_request(client.get(&api_url)).await?;
+    response
+        .get("event")
+        .context("Expected 'event' field in /events response.")
+        .cloned()
+}
+
+/// Downloads the series data for this market.
+/// A series usually contains multiple events and has more information.
+/// You can usually guess the series ticker from the market ticker but there are a lot of gotchas.
+/// Instead, we get the series ticker from the event data, which we get from the event ticker from the market.
+async fn get_series(client: &ClientWithMiddleware, event: &Value) -> Result<Value> {
+    let series_ticker = event
+        .get("series_ticker")
+        .context("Expected 'series_ticker' field in event.")?
+        .as_str()
+        .context("Failed to interpret 'series_ticker' as string.")?;
+    let api_url = format!("{KALSHI_API_BASE}/series/{series_ticker}");
+    let response = send_request(client.get(&api_url)).await?;
+    response
+        .get("series")
+        .context("Expected 'series' field in /series response.")
+        .cloned()
 }
 
 /// Download extended data from the `/markets/trades` endpoint.
@@ -77,7 +113,7 @@ async fn get_trades(
 
         // warn if there seems like too many trades
         // I had an issue once where it just kept going until it OOM'd
-        if all_trades.len() > 500_000 && all_trades.len() % 10_000 == 0 {
+        if all_trades.len() > 500_000 && all_trades.len() % (limit * 10) == 0 {
             warn!(
                 "Kalshi market {ticker} has accumulated {} trades, something may be wrong. Curent cursor: {}. Last trade: {:?}",
                 all_trades.len(),
@@ -128,11 +164,17 @@ async fn get_data_and_build_item(
         .ok_or_else(|| anyhow!("Index missing market key {ticker}!"))?
         .data
         .clone();
+    // get event data...
+    let event = get_event(client, &market).await?;
+    // and series data...
+    let series = get_series(client, &event).await?;
     // return the row ready for writing
     Ok(KalshiItem {
         id: ticker.to_owned(),
         last_updated: Utc::now(),
         market: market.clone(),
+        event,
+        series,
         history: get_trades(client, &market, ticker).await?,
     })
 }
