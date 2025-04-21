@@ -6,7 +6,7 @@ use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_jsonlines::write_json_lines;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::path::Path;
 
@@ -53,6 +53,19 @@ impl Platform {
             Platform::Polymarket,
         ]
     }
+    /// Takes all items from the index and returns the IDs that need to be downloaded.
+    fn get_ids_to_download(
+        &self,
+        index_map: &HashMap<String, IndexItem>,
+        data_ids: &HashSet<String>,
+        _resolved_since: &Option<DateTime<Utc>>,
+    ) -> Vec<String> {
+        index_map
+            .keys()
+            .filter(|id| !data_ids.contains(*id))
+            .cloned()
+            .collect()
+    }
 }
 pub trait PlatformHandler {
     fn download(
@@ -60,7 +73,7 @@ pub trait PlatformHandler {
         output_dir: &Path,
         reset_index: &bool,
         reset_cache: &bool,
-        first: &Option<usize>,
+        resolved_since: &Option<DateTime<Utc>>,
     ) -> impl std::future::Future<Output = ()> + Send;
 }
 impl PlatformHandler for Platform {
@@ -69,7 +82,7 @@ impl PlatformHandler for Platform {
         output_dir: &Path,
         reset_index: &bool,
         reset_cache: &bool,
-        first: &Option<usize>,
+        resolved_since: &Option<DateTime<Utc>>,
     ) {
         // build file paths
         let index_file_path = output_dir.join(format!("{self}-index.jsonl").to_lowercase());
@@ -151,18 +164,7 @@ impl PlatformHandler for Platform {
 
         // get the IDs in index file that aren't in data file
         debug!("{self}: Getting IDs to download.");
-        let mut ids_to_download: Vec<String> = index_map
-            .keys()
-            .filter(|id| !data_ids.contains(*id))
-            .cloned()
-            .collect();
-        if let Some(n) = first {
-            info!(
-                "{self}: Identified {} items to download, only taking the first {n}.",
-                ids_to_download.len()
-            );
-            ids_to_download.truncate(n.to_owned());
-        }
+        let ids_to_download = self.get_ids_to_download(&index_map, &data_ids, resolved_since);
         let num_to_download = ids_to_download.len();
 
         // check if anything needs to be downloaded

@@ -1,6 +1,8 @@
 //! Themis fetch binary source.
 //! Be warned: running this with all platforms enabled takes a lot of memory and disk space!
 
+use chrono::DateTime;
+use chrono::Utc;
 use clap::Parser;
 use log::{debug, info};
 use std::env;
@@ -21,9 +23,9 @@ struct Args {
     #[arg(short, long, default_value = "../cache")]
     output_dir: PathBuf,
 
-    /// Only save the first n items
-    #[arg(short, long)]
-    first: Option<usize>,
+    /// Only download markets that resolved since this date/time (ISO 8601)
+    #[arg(long)]
+    resolved_since: Option<DateTime<Utc>>,
 
     /// Reset the index before resuming cache downloads to catch new items
     #[arg(long)]
@@ -84,7 +86,7 @@ async fn main() {
                             &output_dir,
                             &args.reset_index,
                             &args.reset_cache,
-                            &args.first,
+                            &args.resolved_since,
                         )
                         .await;
                 }
