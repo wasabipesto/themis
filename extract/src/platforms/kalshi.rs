@@ -20,8 +20,10 @@ pub struct KalshiData {
     pub last_updated: DateTime<Utc>,
     /// Values returned from the `/markets` endpoint.
     pub market: KalshiMarket,
+    // Values returned from the `/events` endpoint.
+    pub event: KalshiEventItem,
     // Values returned from the `/series` endpoint.
-    //pub series: Vec<KalshiSeriesItem>, // TODO
+    pub series: KalshiSeriesItem,
     /// Values returned from the `/trades` endpoint.
     pub history: Vec<KalshiHistoryItem>,
 }
@@ -84,6 +86,41 @@ pub enum YesNoBlank {
     No,
     #[serde(alias = "")]
     Blank,
+}
+
+/// Values returned from the `/events` endpoint.
+/// https://trading-api.readme.io/reference/getevent-1
+#[derive(Debug, Clone, Deserialize)]
+pub struct KalshiEventItem {
+    /// The unique ID of this event.
+    pub event_ticker: String,
+    /// The title for this event.
+    pub title: String,
+    /// The shortened title for this event.
+    pub sub_title: String,
+    /// True if only one market in this event can resolve YES.
+    pub mutually_exclusive: bool,
+    /// If the strike is a date, when the strike is.
+    pub strike_date: Option<DateTime<Utc>>,
+    /// If the strike is not a date, its description.
+    pub strike_period: Option<String>,
+}
+
+/// Values returned from the `/series` endpoint.
+/// https://trading-api.readme.io/reference/getseries-1
+#[derive(Debug, Clone, Deserialize)]
+pub struct KalshiSeriesItem {
+    /// The unique ID of this series.
+    pub ticker: String,
+    /// The title for this series.
+    pub title: String,
+    /// The category for this series and all markets within.
+    pub category: String,
+    /// The URL to the contract PDF for this series.
+    pub contract_url: String,
+    /// Human-readable text describing how markets in this series typically occur.
+    /// Examples: hourly, daily, weekly, monthly, annual, one-off, custom
+    pub frequency: String,
 }
 
 /// Values returned from the `/markets` endpoint.
