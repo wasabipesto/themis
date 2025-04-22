@@ -282,7 +282,7 @@ pub fn standardize(input: &KalshiData) -> MarketResult<Vec<MarketAndProbs>> {
                     input.market.rules_secondary.clone(),
                 ),
                 platform_slug,
-                category_slug: get_category(&input.market),
+                category_slug: get_category(&input.series.category),
                 open_datetime: start,
                 close_datetime: end,
                 traders_count: None, // Not available in API
@@ -394,9 +394,24 @@ fn get_url(series_ticker: &str) -> String {
     format!("https://kalshi.com/markets/{series_ticker}")
 }
 
-/// TODO: Get the series data and pull category.
-/// Categories used to be in the market item but they moved to the series level.
-/// It's not necessary but I'd like to have it for easy grouping and client-side charts later.
-fn get_category(_market: &KalshiMarket) -> Option<String> {
-    None
+/// Manual mapping of category names to our standard categories.
+fn get_category(category: &str) -> Option<String> {
+    const CATEGORIES: [(&str, &str); 13] = [
+        ("Climate and Weather", "science"),
+        ("Companies", "economics"),
+        ("Crypto", "economics"),
+        ("Economics", "economics"),
+        ("Elections", "politics"),
+        ("Entertainment", "culture"),
+        ("Financials", "economics"),
+        ("Health", "science"),
+        ("Politics", "politics"),
+        ("Science and Technology", "science"),
+        ("Sports", "sports"),
+        ("Transportation", "culture"),
+        ("World", "politics"),
+    ];
+
+    let category_map: HashMap<&str, &str> = CATEGORIES.iter().cloned().collect();
+    category_map.get(category).map(|&cat| cat.to_string())
 }

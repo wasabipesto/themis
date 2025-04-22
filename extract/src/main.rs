@@ -299,10 +299,10 @@ fn upload_batch(
 /// Should be called after all data has been uploaded to ensure views are up-to-date.
 /// Uses a longer timeout since this operation can take around 60 seconds.
 fn refresh_materialized_views(params: &PostgrestParams) -> Result<()> {
-    info!("Refreshing all materialized views (this may take up to 2 minutes)");
+    info!("Refreshing all materialized views (this may take up to 5 minutes)");
 
     // Create a new client with a longer timeout specifically for this operation
-    let timeout = Duration::from_secs(180); // 3 minute timeout
+    let timeout = Duration::from_secs(300);
     let long_timeout_client = Client::builder()
         .timeout(timeout)
         .build()
