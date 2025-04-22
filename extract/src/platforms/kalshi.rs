@@ -1,7 +1,6 @@
 //! Utilities for processing Kalshi market data.
 //! Kalshi API docs: https://trading-api.readme.io/
 
-use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -276,9 +275,7 @@ pub fn standardize(input: &KalshiData) -> MarketResult<Vec<MarketAndProbs>> {
             let market = StandardMarket {
                 id: market_id.to_owned(),
                 title,
-                url: get_url(&input.market.ticker).map_err(|e| {
-                    MarketError::ProcessingError(market_id.to_owned(), e.to_string())
-                })?,
+                url: get_url(&input.series.ticker),
                 description: format!(
                     "{}\n\n{}",
                     input.market.rules_primary.clone(),
@@ -387,16 +384,14 @@ pub fn build_prob_segments(
 ///   Event Ticker:  KXETHD-24DEC1721 (Ethereum price on Dec 17th 2024 at 21:00 EST)
 ///   Market Ticker: KXETHD-24DEC1721-T3939.99
 ///     (Ethereum price on Dec 17th 2024 at 21:00 EST is $3,940 or above.)
+/// There are some exceptions, since Kalshi can change the series ticker without changing
+/// the previous event and market tickers. So we have to check for each.
 /// Currently I'm not sure how to get the series_slug. That portion is not required
 /// for basic links but it is required to target a specific event.
 /// In this case the series URL is:
 ///   https://kalshi.com/markets/kxethd/ethereum-price-abovebelow#kxethd-24dec1721
-fn get_url(market_ticker: &str) -> Result<String> {
-    let mut ticker_parts = market_ticker.split('-');
-    let series_ticker = ticker_parts
-        .next()
-        .ok_or_else(|| anyhow!("Invalid ticker format (missing hyphen): {market_ticker}"))?;
-    Ok(format!("https://kalshi.com/markets/{series_ticker}"))
+fn get_url(series_ticker: &str) -> String {
+    format!("https://kalshi.com/markets/{series_ticker}")
 }
 
 /// TODO: Get the series data and pull category.
