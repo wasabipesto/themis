@@ -118,13 +118,11 @@ group:
 group-test:
     npx astro check
 
-# Run all tests
-test-all: download-test extract-test grade-test site-test group-test
-
 # Run nightly process
-nightly: test-all
-    just download --log-level warn --reset-cache
-    just download --log-level warn
+nightly: download-test extract-test grade-test
+    just download --log-level warn --resolved-since-days-ago 10 --reset-cache
+    just download --log-level warn --resolved-since-days-ago 10
     just extract --log-level warn
     just grade --log-level warn
+    just group-test site-test
     just site-build site-push
