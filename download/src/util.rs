@@ -294,7 +294,7 @@ pub fn display_progress(
     start_time: &Instant,
 ) {
     let n = match platform {
-        Platform::Kalshi => 2000,
+        Platform::Kalshi => 1000,
         Platform::Manifold => 500,
         Platform::Metaculus => 15,
         Platform::Polymarket => 250,

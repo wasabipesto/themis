@@ -53,18 +53,84 @@ impl Platform {
             Platform::Polymarket,
         ]
     }
+    fn get_close_datetime(&self, item: &IndexItem) -> Option<DateTime<Utc>> {
+        match self {
+            Platform::Kalshi => {
+                let date = item.data.get("close_time")?.as_str()?;
+                let date = DateTime::parse_from_rfc3339(date)
+                    .expect("Failed to parse Kalshi close_time")
+                    .with_timezone(&Utc);
+                Some(date)
+            }
+            Platform::Manifold => {
+                let date = item.data.get("resolutionTime")?.as_number()?.as_i64()?;
+                let date = DateTime::from_timestamp_millis(date)
+                    .expect("Failed to parse Manifold resolutionTime")
+                    .with_timezone(&Utc);
+                Some(date)
+            }
+            Platform::Metaculus => {
+                let date = item.data.get("actual_close_time")?.as_str()?;
+                let date = DateTime::parse_from_rfc3339(date)
+                    .expect("Failed to parse Metaculus actual_close_time")
+                    .with_timezone(&Utc);
+                Some(date)
+            }
+            Platform::Polymarket => {
+                let date = item.data.get("end_date_iso")?.as_str()?;
+                let date = DateTime::parse_from_rfc3339(date)
+                    .expect("Failed to parse Polymarket end_date_iso")
+                    .with_timezone(&Utc);
+                Some(date)
+            }
+        }
+    }
     /// Takes all items from the index and returns the IDs that need to be downloaded.
     fn get_ids_to_download(
         &self,
         index_map: &HashMap<String, IndexItem>,
         data_ids: &HashSet<String>,
-        _resolved_since: &Option<DateTime<Utc>>,
+        resolved_since: &Option<DateTime<Utc>>,
     ) -> Vec<String> {
-        index_map
-            .keys()
-            .filter(|id| !data_ids.contains(*id))
-            .cloned()
-            .collect()
+        let now = Utc::now();
+        let mut ids_to_download = Vec::with_capacity(index_map.len());
+
+        for (id, item) in index_map {
+            // Skip if already downloaded
+            if data_ids.contains(id) {
+                continue;
+            }
+
+            if let Some(cutoff_date) = resolved_since {
+                match self.get_close_datetime(item) {
+                    None => {
+                        // Skip if market is not resolved yet
+                        // Or if resolution date is just missing
+                        continue;
+                    }
+                    Some(resolved_at) => {
+                        // Skip if resolution date is before cutoff
+                        if &resolved_at < cutoff_date {
+                            continue;
+                        }
+                        // Skip if resolution date is in the future
+                        if now < resolved_at {
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            // Add item to the download list
+            ids_to_download.push(id.clone())
+        }
+
+        debug!(
+            "{self}: Selected {}/{} items to download",
+            ids_to_download.len(),
+            index_map.len(),
+        );
+        ids_to_download
     }
 }
 pub trait PlatformHandler {
