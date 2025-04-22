@@ -2,6 +2,7 @@
 //! Be warned: running this with all platforms enabled takes a lot of memory and disk space!
 
 use chrono::DateTime;
+use chrono::Duration;
 use chrono::Utc;
 use clap::Parser;
 use log::{debug, info};
@@ -26,6 +27,10 @@ struct Args {
     /// Only download markets that resolved since this date/time (ISO 8601)
     #[arg(long)]
     resolved_since: Option<DateTime<Utc>>,
+
+    /// Only download markets that resolved since this many days ago
+    #[arg(long)]
+    resolved_since_days_ago: Option<i64>,
 
     /// Reset the index before resuming cache downloads to catch new items
     #[arg(long)]
@@ -75,6 +80,10 @@ async fn main() {
     }
 
     // start the download for all platforms in parallel
+    let resolved_since = match args.resolved_since_days_ago {
+        Some(days_ago) => Some(Utc::now() - Duration::days(days_ago)),
+        None => args.resolved_since,
+    };
     let tasks: Vec<JoinHandle<()>> = platforms
         .into_iter()
         .map(|platform| {
@@ -86,7 +95,7 @@ async fn main() {
                             &output_dir,
                             &args.reset_index,
                             &args.reset_cache,
-                            &args.resolved_since,
+                            &resolved_since,
                         )
                         .await;
                 }
