@@ -2,7 +2,7 @@
 
 This is Project Themis, a suite of tools which powers the site [Calibration City](https://calibration.city/). The purpose of this project is to perform useful analysis of prediction market calibration and accuracy with data from each platform's public API.
 
-NOTE: This project is currently undergoing a rewrite, and not all components may be usable as-is.
+This project is in the middle of a rewrite. You can check out the latest build of the new site at [https://beta.predictionmetrics.org/](https://beta.predictionmetrics.org/). I hope to launch the new site sometime in early May.
 
 # How to run this yourself
 
@@ -23,7 +23,7 @@ Install any other dependencies:
 - For running tasks I have provided a `justfile`, which requires `just` to run. You can install that by following the instructions [here](https://just.systems/man/en/packages.html). The `justfile` is very simple, and you can just run the commands by hand if you don't want to install it.
 - The script for site deployment uses `rclone` and thus can be deployed to any target supported by that utility. You can install rclone by following the instructions [here](https://rclone.org/install/), or deploy the site some other way.
 - Some other optional utilities:
-  - There are a few Python scripts I use for development in the `scripts` folder. If you want to use these, ensure you have `uv` [installed](https://docs.astral.sh/uv/getting-started/installation/).
+  - There are a few Python scripts I use for development in the `scripts` folder. If you want to use these, ensure you have `python` and `uv` [installed](https://docs.astral.sh/uv/getting-started/installation/).
   - When testing API responses I use `jq` for filtering and general formatting. You can get that [here](https://jqlang.org/download/).
   - A couple scripts for debugging are written with `rust-script`. Installation instructions are [here](https://rust-script.org/#installation).
   - Some admin tools lean on an `ollama` API endpoint for extracting keywords, generating slugs, and more. You can find installation instructions [here](https://ollama.com/download). By default it expects that the service will be started and available on localhost.
@@ -36,7 +36,7 @@ Before downloading, make sure you have enough disk space, memory, and time:
 
 - By default the download program will download from all platforms in parallel to avoid getting bottle-necked by any one platform's API rate limit. In order to do this we first download the platform's bulk list as an index and load it into memory. If you are running in the default mode, expect to use around 6 GB of memory. If you run out of memory, you can run the platforms one at a time with the `--platform` option.
 - This program will download all relevant data from each platform's API to disk. We try to avoid reading or writing any more than necessary by buffering writes and appending data where possible. Still, a large amount of disk space will be required for this data. As of February 2025 it uses around 20 GB, but this will increase over time.
-- When run in parallel (default configuration), this utility takes around 8 hours to complete. It will first download the index and make a download plan. Then it will queue up batches of downloads that run asynchronously. If you interrupt the program or it runs into an error, simply restart it. It will look for an existing index file and attempt to resume the downloads automatically.
+- When run the first time, this utility takes a day or so to complete. It will first download each platform's index and make a download plan. Then it will queue up batches of downloads that run asynchronously. If you interrupt the program or it runs into an error, simply restart it. It will look for an existing index file and attempt to resume the downloads automatically.
 
 To run the downloader:
 
@@ -182,13 +182,17 @@ For now I am intentionally not documenting specific features of the admin tools 
 - While you have those searches open, look for other possible question groups in the same topic.
 - Once you have exhausted the markets in that topic, return to the top-level search and find another topic.
 
+## Step 5. Grading the markets
+
 When you have finished grouping markets, you can calculate all market scores by running the grader tool:
 
 ```bash
 just grade
 ```
 
-## Step 5. Generating site
+This tool will run through basically everything in the database and calculate some scores that are a little to compute-intensive to do at build time and refresh all the database views. This tool is non-destructive just like the others, you can run it over and over again and lose nothing but your time. Just make sure you re-run it every time you finish grouping markets before generating the site.
+
+## Step 6. Generating site
 
 The site is static and designed to be deployed behind any standard web server such as `nginx`. It could also be deployed to GitHub Pages, an AWS S3 bucket, or any other static site host.
 
@@ -212,24 +216,36 @@ Then, you can deploy the site at any time with this command:
 just deploy # build and deploy site to rclone target
 ```
 
-Note: If you're just developing on the site you don't actually need to use the download and extract tools. You can build the site against my public database that the main site builds from by changing the `PGRST_URL` variable in the `.env` environment file to `https://data.predictionmetrics.org`.
+### I just want to develop on the site
 
-## Step 6. Downloading new markets
+If you're just developing on the site you don't actually need to use the download and extract tools!
+
+You can build the site against my public database that the main site builds from by doing either of these:
+
+- Change the `PGRST_URL` variable in the `.env` environment file to `https://data.predictionmetrics.org`.
+- Run the site development server with `PGRST_URL="https://data.predictionmetrics.org" just site-dev`.
+
+First load of the dev site will be slow while it caches some of the Big Data™. Other than that the Astro project should be pretty straightforward.
+
+## Step 7. Downloading new markets
 
 Over time, new markets will be added and other markets will be updated. In order to update the database with the freshest data, you can re-run the download and extract programs to load the new data.
 
 The download program has two different arguments for resetting:
 
-- `--reset-index` will download and add _newly-added_ markets to the database but not ones downloaded previously that have since been updated. This is a simple top-up and probably not what you want for updating a database.
-- `--reset-cache` will re-download _everything,_ updating the database with 100% fresh data. Note that it will _not_ remove markets from the database if they have been removed from the platform.
+- `--reset-index` will re-download the platform index and then follow any rules set for what to download. This is good for catching markets that have been added since the last download but will not refresh markets that already existed but were resolved since the last download. This is usually not what you want for updating a database.
+- `--reset-cache` used by itself will re-download _everything,_ updating the database with 100% fresh data. Unfortunately this will take several days unless used with one of the filters below.
+- `--resolved-since` will filter the market download queue to just those resolved since the given date. Must be in the form of an ISO 8601 string.
+- `--resolved-since-days-ago` will do the exact same as the previous option, but with a duration supplied instead of a date. This is usually the best option for a scripted refresh.
 
-Both options make a backup of the previous data files in case you want to look at past data.
-
-To run a full refresh and import the data into the database:
+All `reset` options make a backup of the previous data files in case you want to look at past data.
 
 ```bash
-just download --reset-cache
-just extract
+# run a full refresh and add to the database
+just download --reset-cache && just extract
+
+# only download markets resolved recently and add to the database
+just download --reset-cache --resolved-since-days-ago 10 && just extract
 ```
 
 After the data is downloaded, you can add groups and edit data in the database as before. Then, build the site again and see the results.
