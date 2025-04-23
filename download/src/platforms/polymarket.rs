@@ -2,10 +2,10 @@
 
 use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Utc};
-use log::{debug, error, trace};
+use log::{debug, error, trace, warn};
 use reqwest_middleware::ClientWithMiddleware;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{json, Value};
 use serde_jsonlines::append_json_lines;
 use std::collections::HashMap;
 use std::path::Path;
@@ -15,6 +15,7 @@ use super::{IndexItem, Platform};
 use crate::util::{display_progress, get_reqwest_client_ratelimited, send_request};
 
 const POLYMARKET_CLOB_API_BASE: &str = "https://clob.polymarket.com";
+const POLYMARKET_DATA_API_BASE: &str = "https://data-api.polymarket.com";
 const POLYMARKET_GAMMA_API_BASE: &str = "https://gamma-api.polymarket.com";
 const POLYMARKET_RATELIMIT: usize = 20;
 const POLYMARKET_RATELIMIT_MS: u64 = 1000;
@@ -27,6 +28,7 @@ pub struct PolymarketItem {
     market: Value,
     prices_history_token: String,
     prices_history: Vec<Value>,
+    trades: Vec<Value>,
     market_gamma: Option<Value>,
 }
 
@@ -103,6 +105,81 @@ async fn get_prices_history(
     Ok((prices_history_token, prices_history))
 }
 
+/// Download all trade data from the Data API.
+async fn get_trades(client: &ClientWithMiddleware, market: &Value) -> Result<Vec<Value>> {
+    // get the ID to look up
+    let condition_id = market
+        .get("condition_id")
+        .context("Expected 'condition_id' field in market.")?
+        .as_str()
+        .expect("Failed to interpret condition_id as string");
+
+    let api_url = POLYMARKET_DATA_API_BASE.to_owned() + "/trades";
+    let limit = 1000;
+    let mut offset = 0;
+    let mut trades: Vec<Value> = Vec::new();
+
+    loop {
+        // send the request
+        let response = match send_request(
+            client
+                .get(&api_url)
+                .query(&[("market", condition_id)])
+                .query(&[("limit", &limit)])
+                .query(&[("offset", &offset)]),
+        )
+        .await
+        {
+            // if the response came through with no errors, pass along
+            Ok(resp) => resp,
+            // otherwise, pass an empty vec so we don't break processing
+            Err(err) => {
+                warn!("Failed to fetch trade data for condition ID {condition_id}: {err}");
+                trace!("Returning null JSON object instead.");
+                return Ok(vec![json!(null)]);
+            }
+        };
+
+        // format as an array
+        let trades_arr = response
+            .as_array()
+            .ok_or_else(|| {
+                anyhow!(
+                    "Could not format API response as array. Response: {:?}",
+                    response
+                )
+            })?
+            .to_owned();
+
+        // check the length of the returned array
+        // if the length is less than the limit, we've reached the end of the trades
+        if trades_arr.len() >= limit {
+            // update the cursor
+            offset += limit;
+            // save the trades
+            trades.extend(trades_arr);
+            // warn if we're downloading a lot
+            if offset > limit * 100 && offset % (limit * 10) == 0 {
+                warn!(
+                    "Downloaded {} trades for condition ID {}...",
+                    offset, condition_id
+                );
+            }
+        } else {
+            // save the trades
+            trades.extend(trades_arr);
+            // break out
+            break;
+        }
+    }
+    trace!(
+        "Downloaded {} trades for condition ID {}",
+        trades.len(),
+        condition_id
+    );
+    Ok(trades)
+}
+
 /// Download information from the Gamma API.
 async fn get_market_gamma(client: &ClientWithMiddleware, market: &Value) -> Result<Option<Value>> {
     let api_url = POLYMARKET_GAMMA_API_BASE.to_owned() + "/markets";
@@ -133,6 +210,7 @@ async fn get_data_and_build_item(
         .data
         .clone();
     let (prices_history_token, prices_history) = get_prices_history(client, &market).await?;
+    let trades = get_trades(client, &market).await?;
     let market_gamma = get_market_gamma(client, &market).await?;
 
     // return the row ready for writing
@@ -142,6 +220,7 @@ async fn get_data_and_build_item(
         market: market.clone(),
         prices_history_token,
         prices_history,
+        trades,
         market_gamma,
     })
 }
