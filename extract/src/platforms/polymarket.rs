@@ -4,7 +4,7 @@
 use chrono::serde::ts_seconds;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::criteria::{calculate_all_criteria, CriterionProbability};
 use crate::platforms::{MarketAndProbs, MarketResult};
@@ -23,6 +23,8 @@ pub struct PolymarketData {
     pub prices_history_token: String,
     /// Values returned from the `/prices-history` endpoint.
     pub prices_history: Vec<PolymarketPricePoint>,
+    /// Values returned from the `/trades` endpoint of the Data API.
+    pub trades: Vec<PolymarketTrade>,
     /// Values returned from the `/markets` endpoint of the Gamma API.
     /// Gamma API is not always up to date and may not have the requested market.
     pub market_gamma: Option<PolymarketGammaMarket>,
@@ -109,6 +111,43 @@ pub struct PolymarketPricePoint {
     pub t: DateTime<Utc>,
     /// Probability at the given timestamp.
     pub p: f32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum BuyOrSell {
+    Buy,
+    Sell,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub enum YesOrNo {
+    Yes,
+    No,
+}
+
+/// Values returned from the `/trades` endpoint of the Data API.
+/// This endpoint is undocumented.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PolymarketTrade {
+    /// The wallet that initiated this trade. We will use this as a trader's unique ID.
+    pub proxy_wallet: String,
+    /// Whether this trade is a buy or a sell.
+    pub side: BuyOrSell,
+    /// The number of shares this trade purchased.
+    pub size: f32,
+    /// The price that this trade executed at.
+    pub price: f32,
+    /// The timestamp for this trade.
+    #[serde(with = "ts_seconds")]
+    pub timestamp: DateTime<Utc>,
+    // The outcome that this bet was on Yes, No, Purdue, IU, etc.
+    pub outcome: String,
+    // This is 0 when corresponding to the first answer (usually Yes)
+    // and 1 when corresponding to the second answer.
+    // So far there has not been an index greater than 1.
+    pub outcome_index: u32,
 }
 
 /// Values returned from the Gamma API `/markets` endpoint.
@@ -237,7 +276,7 @@ pub fn standardize(input: &PolymarketData) -> MarketResult<Vec<MarketAndProbs>> 
         category_slug: get_category(&input.market.tags),
         open_datetime: start,
         close_datetime: end,
-        traders_count: None,
+        traders_count: Some(get_traders_count(&input.trades)),
         volume_usd: input.market_gamma.as_ref().map(|item| item.volume_num),
         duration_days: helpers::get_market_duration(start, end)
             .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?,
@@ -286,6 +325,15 @@ pub fn build_prob_segments(raw_history: &[PolymarketPricePoint]) -> Vec<ProbSegm
         segments.push(ProbSegment { start, end, prob });
     }
     segments
+}
+
+/// Get the number of unique traders by counting up the total number of proxy wallets.
+fn get_traders_count(trades: &[PolymarketTrade]) -> u32 {
+    trades
+        .iter()
+        .map(|trade| trade.proxy_wallet.clone())
+        .collect::<HashSet<_>>()
+        .len() as u32
 }
 
 /// Manual mapping of tags to our standard categories.
