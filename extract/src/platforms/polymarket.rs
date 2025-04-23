@@ -120,12 +120,6 @@ pub enum BuyOrSell {
     Sell,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub enum YesOrNo {
-    Yes,
-    No,
-}
-
 /// Values returned from the `/trades` endpoint of the Data API.
 /// This endpoint is undocumented.
 #[derive(Debug, Clone, Deserialize)]
