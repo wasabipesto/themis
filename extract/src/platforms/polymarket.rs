@@ -122,6 +122,8 @@ pub enum BuyOrSell {
 
 /// Values returned from the `/trades` endpoint of the Data API.
 /// This endpoint is undocumented.
+/// There is currently an issue with getting more than 10,000 items from this endpoint,
+/// so for now we can't guarantee that we actually have all trades.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PolymarketTrade {
@@ -136,11 +138,11 @@ pub struct PolymarketTrade {
     /// The timestamp for this trade.
     #[serde(with = "ts_seconds")]
     pub timestamp: DateTime<Utc>,
-    // The outcome that this bet was on Yes, No, Purdue, IU, etc.
+    /// The outcome that this bet was on Yes, No, Purdue, IU, etc.
     pub outcome: String,
-    // This is 0 when corresponding to the first answer (usually Yes)
-    // and 1 when corresponding to the second answer.
-    // So far there has not been an index greater than 1.
+    /// This is 0 when corresponding to the first answer (usually Yes)
+    /// and 1 when corresponding to the second answer.
+    /// So far there has not been an index greater than 1.
     pub outcome_index: u32,
 }
 
