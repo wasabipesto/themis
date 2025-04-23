@@ -38,6 +38,10 @@ def fetch_all_trades(market):
         if len(batch) < limit:
             break
         offset += limit
+        if offset > limit:
+            print("Been here a while... Offset:", offset)
+            print("Last hash:", all_items[-1]["transactionHash"])
+            # save_to_file(all_items, "progress.json")
 
     return all_items
 
@@ -62,22 +66,8 @@ def analyze_trades(trades):
     # Collect bet sizes
     bet_sizes = [trade["size"] for trade in trades]
     print(f"Min Bet Size: {min(bet_sizes)}")
-    print(f"Median Bet Size: {max(bet_sizes)}")
-    print(f"Max Bet Size: {statistics.median(bet_sizes)}")
-
-    # Check outcomes
-    outcome_issues_yes = [
-        trade
-        for trade in trades
-        if trade["outcome"] == "Yes" and trade["outcomeIndex"] != 0
-    ]
-    print(f"Number of Outcome Issues (Yes): {len(outcome_issues_yes)}")
-    outcome_issues_no = [
-        trade
-        for trade in trades
-        if trade["outcome"] == "No" and trade["outcomeIndex"] != 1
-    ]
-    print(f"Number of Outcome Issues (No): {len(outcome_issues_no)}")
+    print(f"Median Bet Size: {statistics.median(bet_sizes)}")
+    print(f"Max Bet Size: {max(bet_sizes)}")
 
     # Find the earliest/latest timestamps
     timestamps = [trade["timestamp"] for trade in trades]
@@ -97,6 +87,27 @@ def analyze_trades(trades):
     print(f"All Slugs Same: {'Yes' if len(all_slugs) == 1 else 'No'}")
     all_event_slugs = {trade["eventSlug"] for trade in trades}
     print(f"All EventSlugs Same: {'Yes' if len(all_event_slugs) == 1 else 'No'}")
+
+    # Check transaction hashes
+    unique_hashes = {t["transactionHash"] for t in trades}
+    print(f"All Hashes Unique: {'Yes' if len(unique_hashes) == len(trades) else 'No'}")
+
+
+def find_all_repeated_hashes(trades):
+    seen_hashes = {}
+    repeat_details = []
+
+    for index, trade in enumerate(trades):
+        transaction_hash = trade["transactionHash"]
+
+        if transaction_hash in seen_hashes:
+            # Append the first occurrence and current index to repeat details
+            repeat_details.append((seen_hashes[transaction_hash], index))
+        else:
+            # Store the index where this hash was first found
+            seen_hashes[transaction_hash] = index
+
+    return repeat_details
 
 
 def plot_price_over_time(trades, filename):
@@ -160,6 +171,16 @@ def main():
         parser.print_help()
 
     analyze_trades(all_items)
+
+    repeated_hashes_info = find_all_repeated_hashes(all_items)
+    if repeated_hashes_info:
+        for first_index, repeat_index in repeated_hashes_info:
+            print(
+                f"Hash repeated: First at index {first_index}, again at index {repeat_index}"
+            )
+    else:
+        print("No repeated transactionHashes found.")
+
     plot_price_over_time(all_items, args.plot_file)
     print("Price plot saved to", args.plot_file)
 
