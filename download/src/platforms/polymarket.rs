@@ -118,6 +118,7 @@ async fn get_trades(client: &ClientWithMiddleware, market: &Value) -> Result<Vec
     let limit = 1000;
     let mut offset = 0;
     let mut trades: Vec<Value> = Vec::new();
+    let mut prev_last_hash: Option<String> = None;
 
     loop {
         // send the request
@@ -126,7 +127,9 @@ async fn get_trades(client: &ClientWithMiddleware, market: &Value) -> Result<Vec
                 .get(&api_url)
                 .query(&[("market", condition_id)])
                 .query(&[("limit", &limit)])
-                .query(&[("offset", &offset)]),
+                .query(&[("offset", &offset)])
+                .query(&[("filterType", "CASH")])
+                .query(&[("filterAmount", 1)]),
         )
         .await
         {
@@ -151,6 +154,33 @@ async fn get_trades(client: &ClientWithMiddleware, market: &Value) -> Result<Vec
             })?
             .to_owned();
 
+        // check if we're running into repeating hashes
+        let last_hash = if !trades_arr.is_empty() {
+            trades_arr
+                .last()
+                .unwrap()
+                .get("transactionHash")
+                .unwrap()
+                .to_string()
+        } else {
+            break;
+        };
+        if let Some(plh) = prev_last_hash {
+            if plh == last_hash {
+                warn!(
+                    "Repeated hash {} at offset {} for condition ID {}. Breaking.",
+                    last_hash, offset, condition_id
+                );
+                break;
+            }
+        }
+        if offset > limit * 100 {
+            warn!(
+                "Downloading trades at offset {} for condition ID {}...",
+                offset, condition_id
+            );
+        }
+
         // check the length of the returned array
         // if the length is less than the limit, we've reached the end of the trades
         if trades_arr.len() >= limit {
@@ -158,13 +188,8 @@ async fn get_trades(client: &ClientWithMiddleware, market: &Value) -> Result<Vec
             offset += limit;
             // save the trades
             trades.extend(trades_arr);
-            // warn if we're downloading a lot
-            if offset > limit * 100 && offset % (limit * 10) == 0 {
-                warn!(
-                    "Downloaded {} trades for condition ID {}...",
-                    offset, condition_id
-                );
-            }
+            // save the previous last hash
+            prev_last_hash = Some(last_hash);
         } else {
             // save the trades
             trades.extend(trades_arr);
