@@ -134,7 +134,7 @@ export async function getFeaturedQuestions(
   limit: number,
 ): Promise<QuestionDetails[]> {
   return fetchFromAPI<QuestionDetails[]>(
-    `/question_details?order=total_volume.desc&limit=${limit}`,
+    `/question_details?order=hotness_score.desc&limit=${limit}`,
   );
 }
 
