@@ -132,9 +132,26 @@ export async function getQuestions(): Promise<QuestionDetails[]> {
 
 export async function getFeaturedQuestions(
   limit: number,
+  categorySlug?: string,
 ): Promise<QuestionDetails[]> {
-  return fetchFromAPI<QuestionDetails[]>(
-    `/question_details?order=hotness_score.desc&limit=${limit}`,
+  const url = `/question_details?order=hotness_score.desc&limit=${limit}`;
+  if (categorySlug) {
+    return fetchFromAPI<QuestionDetails[]>(
+      `${url}&category_slug=eq.${categorySlug}`,
+    );
+  }
+  return fetchFromAPI<QuestionDetails[]>(url);
+}
+
+export async function getTopQuestionsForPlatform(
+  limit: number,
+  platformSlug: string,
+): Promise<QuestionDetails[]> {
+  const scores = await fetchFromAPI<MarketScoreDetails[]>(
+    `/market_scores_details?limit=${limit}&platform_slug=eq.${platformSlug}&score_type=eq.brier-relative&order=score.asc`,
+  );
+  return await fetchFromAPI<QuestionDetails[]>(
+    `/question_details?order=hotness_score.desc&id=in.(${scores.map((s) => s.question_id).join(",")})`,
   );
 }
 

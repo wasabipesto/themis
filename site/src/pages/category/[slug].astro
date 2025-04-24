@@ -30,7 +30,7 @@ const scoreType = "brier-relative";
 const platforms = await getPlatforms();
 const platformCategoryScores = await getPlatformCategoryScores(null);
 const categoryOverallScores = await getCategoryOverallScores();
-const featuredQuestions = await getFeaturedQuestions(6);
+const featuredQuestions = await getFeaturedQuestions(6, category.slug);
 const marketScores = await getMarketScoresByQuestion(
   featuredQuestions.map((q) => q.id),
   scoreType,
@@ -67,6 +67,9 @@ const marketScores = await getMarketScoresByQuestion(
       overallScores={categoryOverallScores}
       pivot="platform"
     />
+  </div>
+  <div class="p-2 m-2">
+    <h1 class="text-2xl font-bold">Questions</h1>
   </div>
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
     {
