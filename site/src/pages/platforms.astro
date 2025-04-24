@@ -1,6 +1,5 @@
 ---
 import PlatformReportCard from "@components/category-report-card.astro";
-import QuestionCard from "@components/question-card.astro";
 import SeeMoreLink from "@components/see-more-link.astro";
 import LongText from "@atoms/long-text.astro";
 import Traders from "@atoms/traders.astro";
@@ -22,9 +21,31 @@ const platformCategoryScores = await getPlatformCategoryScores(null);
 const platformOverallScores = await getPlatformOverallScores();
 ---
 
-<Base title="Categories">
+<Base title="Platforms">
   <div class="p-4 m-2">
-    <h1 class="text-4xl font-bold">All Market Platforms</h1>
+    <h1 class="text-4xl font-bold">Prediction Market Platforms</h1>
+    <div class="my-2">
+      Prediction market platforms are the backbones of this entire endeavour.
+      These entities develop market mechanisms, fund web hosting, run community
+      management, provide dispute resolution, and do a thousand other little
+      things that keep prediction markets useful.
+    </div>
+    <div class="my-2">
+      With the wide responsibilities that these platforms carry, they have to
+      make certain decisions about how to focus their efforts. Taking into
+      account their users, goals, and long-term strategies, each platform has
+      eventually selected or settled into their own niches. For example, Kalshi
+      specializes in recurring CFTC-approved contracts, Manifold allows any user
+      to make any market (with play money), and Polymarket operates high-volume
+      contracts on blockchain networks.
+    </div>
+    <div class="my-2">
+      You may notice that Metaculus is not like the other platforms. Metaculus
+      is a platform focused on forecasting, not trading, and so their structure
+      is quite different. There are simply user predictions, that can be
+      changed, and aggregations. However, their goal is still to forecast the
+      future and we can still grade them on how well they accomplish that!
+    </div>
   </div>
 
   {
