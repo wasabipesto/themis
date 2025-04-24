@@ -6,4 +6,4 @@ interface Props {
 const { text } = Astro.props;
 ---
 
-<p class="whitespace-pre-wrap">{text}</p>
+{text.split("\\n").map((line) => <p class="my-1">{line}</p>)}
