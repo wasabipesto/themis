@@ -2,7 +2,7 @@
 -- LIVE-UPDATED VIEWS
 -- ==========================================
 
--- === DROP ALL VIEWS (NO DATA LOSS) ===
+-- === DROP ALL VIEWS AND FUNCTIONS (NO DATA LOSS) ===
 DROP MATERIALIZED VIEW IF EXISTS question_details;
 DROP MATERIALIZED VIEW IF EXISTS market_details;
 DROP MATERIALIZED VIEW IF EXISTS platform_category_scores_details;
@@ -10,6 +10,41 @@ DROP MATERIALIZED VIEW IF EXISTS daily_probability_details;
 DROP MATERIALIZED VIEW IF EXISTS market_scores_details;
 DROP MATERIALIZED VIEW IF EXISTS category_details;
 DROP MATERIALIZED VIEW IF EXISTS platform_details;
+
+-- Drop function with all possible parameter combinations for safety
+DROP FUNCTION IF EXISTS calculate_hotness_score(integer, integer, decimal, date, date, decimal, decimal, decimal, decimal, decimal);
+
+-- === HOTNESS SCORE CALCULATION ===
+CREATE OR REPLACE FUNCTION calculate_hotness_score(
+    market_count INTEGER,
+    total_traders INTEGER,
+    total_volume DECIMAL,
+    start_date DATE,
+    end_date DATE,
+    weight_market_count DECIMAL DEFAULT 20,
+    weight_traders DECIMAL DEFAULT 10,
+    weight_volume DECIMAL DEFAULT 5,
+    weight_duration DECIMAL DEFAULT 10,
+    weight_age DECIMAL DEFAULT -1
+) RETURNS DECIMAL AS $$
+DECLARE
+    duration_days INTEGER;
+    days_since_end INTEGER;
+    current_date DATE := CURRENT_DATE;
+BEGIN
+    -- Calculate duration and recency
+    duration_days := (end_date - start_date)::INTEGER;
+    days_since_end := (current_date - end_date)::INTEGER;
+
+    -- Normalize inputs to avoid extreme values
+    -- Log transformation for count-based metrics
+    RETURN (weight_market_count * COALESCE(LN(GREATEST(market_count, 1)), 0)) +
+           (weight_traders * COALESCE(LN(GREATEST(total_traders, 1)), 0)) +
+           (weight_volume * COALESCE(LN(GREATEST(total_volume, 1)), 0)) +
+           (weight_duration * COALESCE(LN(GREATEST(duration_days, 1)), 0)) +
+           (weight_age * COALESCE(LN(GREATEST(days_since_end, 1)), 0));
+END;
+$$ LANGUAGE plpgsql;
 
 -- === PLATFORM DETAILS ===
 CREATE MATERIALIZED VIEW platform_details AS
@@ -157,7 +192,18 @@ SELECT
     c.name AS category_name,
     COALESCE(stats.market_count, 0) AS market_count,
     COALESCE(stats.total_traders, 0) AS total_traders,
-    COALESCE(stats.total_volume, 0) AS total_volume
+    COALESCE(stats.total_volume, 0) AS total_volume,
+    COALESCE(q.start_date_override, stats.min_open_date::DATE) AS start_date_actual,
+    COALESCE(q.end_date_override, stats.max_close_date::DATE) AS end_date_actual,
+    (COALESCE(q.end_date_override, stats.max_close_date::DATE) -
+     COALESCE(q.start_date_override, stats.min_open_date::DATE))::INTEGER AS total_duration,
+    calculate_hotness_score(
+        COALESCE(stats.market_count, 0)::INTEGER,
+        COALESCE(stats.total_traders, 0)::INTEGER,
+        COALESCE(stats.total_volume, 0)::DECIMAL,
+        COALESCE(q.start_date_override, stats.min_open_date::DATE),
+        COALESCE(q.end_date_override, stats.max_close_date::DATE)
+    ) AS hotness_score
 FROM
     questions q
     LEFT JOIN categories c ON q.category_slug = c.slug
@@ -166,7 +212,9 @@ FROM
             question_id,
             COUNT(DISTINCT market_id) AS market_count,
             SUM(m.traders_count) AS total_traders,
-            SUM(m.volume_usd) AS total_volume
+            SUM(m.volume_usd) AS total_volume,
+            MIN(m.open_datetime) AS min_open_date,
+            MAX(m.close_datetime) AS max_close_date
         FROM
             market_questions mq
             JOIN markets m ON mq.market_id = m.id
@@ -174,6 +222,8 @@ FROM
             question_id
     ) stats ON q.id = stats.question_id;
 CREATE UNIQUE INDEX question_details_id_idx ON question_details (id);
+
+
 
 -- === REFRESH ALL VIEWS ===
 CREATE OR REPLACE FUNCTION refresh_all_materialized_views()

@@ -72,9 +72,13 @@ export interface QuestionDetails {
   category_name: string;
   start_date_override: string | null;
   end_date_override: string | null;
+  start_date_actual: string;
+  end_date_actual: string;
+  market_count: number;
   total_traders: number;
   total_volume: number;
   total_duration: number;
+  hotness_score: number;
 }
 
 /** Data for an individual market */
