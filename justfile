@@ -7,32 +7,32 @@ default:
 # Download new markets to cache
 [working-directory: 'download']
 download *args:
-    cargo run -r -- {{args}}
+    cargo run -qr -- {{args}}
 
 # Run download tests
 [working-directory: 'download']
 download-test:
-      cargo test
+      cargo test -q
 
 # Extract markets from cache
 [working-directory: 'extract']
 extract *args:
-    cargo run -r -- {{args}}
+    cargo run -qr -- {{args}}
 
 # Run extract tests
 [working-directory: 'extract']
 extract-test:
-    cargo test
+    cargo test -q
 
 # Grade markets
 [working-directory: 'grader']
 grade *args:
-  cargo run -r -- {{args}}
+  cargo run -qr -- {{args}}
 
 # Run grader tests
 [working-directory: 'grader']
 grade-test:
-  cargo test
+  cargo test -q
 
 # Start the database containers
 db-up:
@@ -90,12 +90,12 @@ site-dev:
 # Check the main site for errors
 [working-directory: 'site']
 site-test:
-    npx astro check
+    npx astro check --silent
 
 # Build the main site
 [working-directory: 'site']
 site-build:
-    npx astro build
+    npx astro build --silent
 
 # Push the main site with rclone
 site-push:
@@ -116,7 +116,7 @@ group:
 # Check the grouper site for errors
 [working-directory: 'grouper']
 group-test:
-    npx astro check
+    npx astro check --silent
 
 # Run nightly process
 nightly: download-test extract-test grade-test
