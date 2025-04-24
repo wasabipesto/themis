@@ -11,8 +11,6 @@ import {
   getPlatforms,
   getCategories,
   getPlatformCategoryScores,
-  getFeaturedQuestions,
-  getMarketScoresByQuestion,
   getPlatformOverallScores,
 } from "@lib/api";
 
@@ -22,11 +20,6 @@ const platforms = await getPlatforms();
 const categories = await getCategories();
 const platformCategoryScores = await getPlatformCategoryScores(null);
 const platformOverallScores = await getPlatformOverallScores();
-const featuredQuestions = await getFeaturedQuestions(6);
-const marketScores = await getMarketScoresByQuestion(
-  featuredQuestions.map((q) => q.id),
-  scoreType,
-);
 ---
 
 <Base title="Categories">
@@ -73,21 +66,9 @@ const marketScores = await getMarketScoresByQuestion(
             pivot="category"
           />
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {featuredQuestions.map((question) => {
-            return (
-              <QuestionCard
-                question={question}
-                scores={marketScores.filter(
-                  (score) => score.question_id === question.id,
-                )}
-              />
-            );
-          })}
-        </div>
         <SeeMoreLink
-          link={`/questions?platform=${platform.slug}`}
-          text={`See all ${platform.name} questions`}
+          link={`/platform/${platform.slug}`}
+          text={`See more about ${platform.name}`}
         />
       </div>
     ))
