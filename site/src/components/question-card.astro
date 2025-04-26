@@ -3,16 +3,30 @@ import Grade from "@atoms/grade.astro";
 import Volume from "@atoms/volume.astro";
 import Traders from "@atoms/traders.astro";
 import ScoreRel from "@atoms/score-rel.astro";
-import type { QuestionDetails, MarketScoreDetails } from "@types";
+import type {
+  QuestionDetails,
+  MarketScoreDetails,
+  CategoryDetails,
+} from "@types";
+import { Icon } from "astro-icon/components";
 
 interface Props {
   question: QuestionDetails;
+  categories: CategoryDetails[];
   scores: MarketScoreDetails[];
 }
-let { question, scores } = Astro.props;
+let { question, categories, scores } = Astro.props;
 
 const scoreType = "brier-relative";
 const filteredScores = scores.filter((s) => s.score_type == scoreType);
+
+// Find correct category for icon
+const category = categories.find(
+  (category) => category.slug === question.category_slug,
+);
+if (!category) {
+  throw new Error(`Category not found for slug: ${question.category_slug}`);
+}
 
 const resolution = filteredScores[0].question_invert
   ? !filteredScores[0].resolution
@@ -26,7 +40,7 @@ const resolution = filteredScores[0].question_invert
     </a>
   </div>
   <div class="text-sm mb-2">
-    <ul class="flex items-center space-x-4">
+    <ul class="flex items-center space-x-4 mb-1">
       <li>
         Resolved
         {
@@ -40,20 +54,21 @@ const resolution = filteredScores[0].question_invert
       <li>
         Category
         <span class="mx-1 px-2 rounded-sm bg-selection/20">
+          <Icon name={category.icon} class="inline mr-0 mb-1" />
           <a href={`/category/${question.category_slug}`}>
             {question.category_name}
           </a>
         </span>
       </li>
     </ul>
-  </div>
-  <div class="text-sm mb-2">
     <ul class="flex items-center space-x-4">
       <li><Traders num={question.total_traders} /></li>
       <li><Volume num={question.total_volume} /></li>
     </ul>
-
-    <table class="mt-2 table-auto text-sm w-full">
+  </div>
+  <hr />
+  <div class="text-sm my-2">
+    <table class="table-auto text-sm w-full">
       <tbody>
         {
           filteredScores.map((market_score) => (
