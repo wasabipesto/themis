@@ -81,13 +81,13 @@ const overallScoreRel = overallScores.find(
   (s) => s.score_type == `${scoreType}-${relScorePostfix}`,
 );
 if (!overallScoreRel) {
-  throw new Error(`Overall score not found!`);
+  throw new Error(`Overall score ${scoreType}-${relScorePostfix} not found!`);
 }
 const overallScoreAbs = overallScores.find(
   (s) => s.score_type == `${scoreType}-${absScorePostfix}`,
 );
 if (!overallScoreAbs) {
-  throw new Error(`Overall score not found!`);
+  throw new Error(`Overall score ${scoreType}-${absScorePostfix} not found!`);
 }
 
 const headerLabel = pivot === "platform" ? "Platform" : "Category";
@@ -101,9 +101,8 @@ const headerLabel = pivot === "platform" ? "Platform" : "Category";
       <tr class="border-b-2">
         <th class="text-left min-w-24 pb-1">{headerLabel}</th>
         <th class="text-center min-w-20 w-24 pb-1">Markets</th>
-        <th class="text-center min-w-20 w-24 pb-1">Grade</th>
-        <th class="text-center min-w-20 w-24 pb-1">Rel. Score</th>
-        <th class="text-center min-w-20 w-24 pb-1">Abs. Score</th>
+        <th colspan="2" class="text-center w-24 pb-1"> Midpoint Brier </th>
+        <th colspan="2" class="text-center w-24 pb-1"> Relative Score </th>
       </tr>
     </thead>
     <tbody>
@@ -112,7 +111,13 @@ const headerLabel = pivot === "platform" ? "Platform" : "Category";
           <tr class="last:border-t-2">
             <td class="px-2 py-1 text-left">{score.name}</td>
             <td class="px-2 py-1 text-center">
-              <Markets num={score.scoreRel.num_markets} />
+              <Markets num={score.scoreAbs.num_markets} align={true} />
+            </td>
+            <td class="px-2 py-1 text-center">
+              <Grade grade={score.scoreAbs.grade} />
+            </td>
+            <td class="px-2 py-1 text-center">
+              <ScoreAbs num={score.scoreAbs.score} />
             </td>
             <td class="px-2 py-1 text-center">
               <Grade grade={score.scoreRel.grade} />
@@ -120,22 +125,16 @@ const headerLabel = pivot === "platform" ? "Platform" : "Category";
             <td class="px-2 py-1 text-center">
               <ScoreRel num={score.scoreRel.score} />
             </td>
-            <td class="px-2 py-1 text-center">
-              <ScoreAbs num={score.scoreAbs.score} />
-            </td>
           </tr>
         ))
       }
       <tr class="last:border-t-2">
         <td class="px-2 py-1 text-left">Overall</td>
         <td class="px-2 py-1 text-center">
-          <Markets num={overallScoreRel.num_markets} />
+          <Markets num={overallScoreAbs.num_markets} align={true} />
         </td>
         <td class="px-2 py-1 text-center">
-          <Grade grade={overallScoreRel.grade} />
-        </td>
-        <td class="px-2 py-1 text-center">
-          <ScoreRel num={overallScoreRel.score} />
+          <Grade grade={overallScoreAbs.grade} />
         </td>
         <td class="px-2 py-1 text-center">
           <ScoreAbs num={overallScoreAbs.score} />

@@ -1,5 +1,5 @@
 ---
-import Money from "@icons/money.svg";
+import { Icon } from "astro-icon/components";
 
 interface Props {
   num: number | null;
@@ -9,7 +9,7 @@ const { num = null } = Astro.props;
 ---
 
 <div>
-  <Money height={18} fill="currentColor" class="inline" />
+  <Icon name="mdi:cash" class="inline mb-1" />
   {
     num?.toLocaleString("en-US", {
       style: "currency",

@@ -1,5 +1,5 @@
 ---
-import People from "@icons/people.svg";
+import { Icon } from "astro-icon/components";
 
 interface Props {
   num: number | null;
@@ -9,7 +9,7 @@ const { num = null } = Astro.props;
 ---
 
 <div>
-  <People height={18} fill="currentColor" class="inline" />
+  <Icon name="mdi:account-multiple" class="inline mb-1" />
   {
     num?.toLocaleString("en-US", {
       maximumFractionDigits: 0,
