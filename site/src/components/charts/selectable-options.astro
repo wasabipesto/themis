@@ -1,0 +1,45 @@
+---
+import { Icon } from "astro-icon/components";
+
+export interface SelectionOption {
+  id: string;
+  description: string;
+  icon?: string | null;
+  count?: number;
+}
+
+interface Props {
+  plotId: string;
+  /* CSS class for the options */
+  optionClass: string;
+  /* Options array */
+  options: SelectionOption[];
+}
+
+const { plotId, optionClass, options } = Astro.props;
+---
+
+<div class="flex-col space-y-2">
+  {options.map((opt, index) => (
+    <div class="bg-base-light text-crust rounded-md drop-shadow-sm px-4 py-2">
+      <div class="flex items-center">
+        <input
+          type="radio"
+          id={`${optionClass}-${plotId}-${index}`}
+          name={`${optionClass}-${plotId}`}
+          value={index}
+          class={`w-5 h-5 mr-4 text-mantle ${optionClass}-${plotId}`}
+        />
+        <label for={`${optionClass}-${plotId}-${index}`} class="w-full">
+          <span>
+            {opt.icon && <Icon name={opt.icon} class="inline mb-1 mr-1" />}
+            {opt.description}
+          </span>
+          {opt.count !== undefined && (
+            <div class="text-xs text-right">n={opt.count.toLocaleString()}</div>
+          )}
+        </label>
+      </div>
+    </div>
+  ))}
+</div>

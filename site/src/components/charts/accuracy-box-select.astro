@@ -1,7 +1,7 @@
 ---
 import type { MarketScoreDetails, PlatformDetails } from "@types";
 import { quartiles } from "@lib/stats";
-import { Icon } from "astro-icon/components";
+import SelectableOptions from "./selectable-options.astro";
 
 interface Props {
   plotId: string;
@@ -67,9 +67,10 @@ const optionsCalculated = options.map((option) => {
     plotRange = [option.plotRangeStart || 0, option.plotRangeEnd];
   }
   return {
+    id: `accuracy-option-${Math.random().toString(36).slice(2, 7)}`,
     icon: option.icon,
     description: option.description,
-    numMarkets: filteredScoresType.length,
+    count: filteredScoresType.length,
     axisTitleX: option.axisTitleX || "Platform",
     axisTitleY: option.axisTitleY || "Market score",
     plotRangeY: plotRange,
@@ -79,32 +80,11 @@ const optionsCalculated = options.map((option) => {
 ---
 
 <div class="grid gap-2 grid-cols-1 md:grid-cols-3">
-  <div class="flex-col space-y-2">
-    {
-      optionsCalculated.map((opt, index) => (
-        <div class="bg-base-light text-crust rounded-md drop-shadow-sm px-4 py-2">
-          <div class="flex items-center">
-            <input
-              type="radio"
-              id={`accuracy-option-${plotId}-${index}`}
-              name={`accuracy-option-${plotId}`}
-              value={index}
-              class={`w-5 h-5 mr-4 text-mantle accuracy-option-${plotId}`}
-            />
-            <label for={`accuracy-option-${plotId}-${index}`} class="w-full">
-              <span>
-                {opt.icon && <Icon name={opt.icon} class="inline mb-1 mr-1" />}
-                {opt.description}
-              </span>
-              <div class="text-xs text-right">
-                n={opt.numMarkets.toLocaleString()}
-              </div>
-            </label>
-          </div>
-        </div>
-      ))
-    }
-  </div>
+  <SelectableOptions 
+    plotId={plotId}
+    optionClass="accuracy-option"
+    options={optionsCalculated}
+  />
   <div class="col-span-2">
     <div
       class="bg-base-light [&_h2]:text-2xl [&_figcaption]:text-xs text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
@@ -122,15 +102,10 @@ const optionsCalculated = options.map((option) => {
 <script>
   import * as Plot from "@observablehq/plot";
   import type { AccuracyBoxDatapoint } from "./accuracy-box-select.astro";
-  import { updatePlotElement } from "@lib/charts/chart-manager";
+  import { initSelectableCharts, updatePlotElement } from "@lib/charts/selectable-option";
 
-  interface AccuracyPlotElement extends HTMLElement {
-    dataset: {
-      options: string;
-      [key: string]: string;
-    };
-  }
   interface OptionData {
+    id: string;
     description: string;
     axisTitleX: string;
     axisTitleY: string;
@@ -139,7 +114,7 @@ const optionsCalculated = options.map((option) => {
   }
 
   // Update the given plot when called
-  function updatePlot(plotElement: AccuracyPlotElement, option: OptionData) {
+  function updatePlot(plotElement: HTMLElement, option: OptionData) {
     const plotWidth = parseInt(window.getComputedStyle(plotElement).width);
 
     const plot = Plot.plot({
@@ -186,62 +161,16 @@ const optionsCalculated = options.map((option) => {
       ],
     });
 
-    updatePlotElement(plotElement, plot);
+    updatePlotElement(plotElement, plot as any);
   }
 
   // Initialize all accuracy plots
   document.addEventListener("DOMContentLoaded", () => {
-    const plotElements = document.querySelectorAll(".accuracy-plot");
-    if (plotElements.length === 0) return;
-    
-    // For each plotId, initialize selection
-    const plotIds = new Set<string>();
-    plotElements.forEach(element => {
-      const idMatch = element.id.match(/accuracy-plot-(.*)$/);
-      if (idMatch && idMatch[1]) {
-        plotIds.add(idMatch[1]);
-      }
-    });
-    
-    plotIds.forEach(plotId => {
-      // Get all matching plot elements
-      const plotElements = document.querySelectorAll(
-        `.accuracy-plot`,
-      ) as NodeListOf<AccuracyPlotElement>;
-      
-      // Find the specific plot element for this plotId
-      plotElements.forEach((plotElement) => {
-        if (!plotElement.id.includes(plotId)) return;
-        
-        // Extract options
-        const options = JSON.parse(plotElement.dataset.options) as OptionData[];
-        
-        // Find options that match the plot ID
-        const radios = [
-          ...document.querySelectorAll(`.accuracy-option-${plotId}`),
-        ] as HTMLInputElement[];
-        
-        // Set the first radio button to checked by default
-        if (radios.length > 0) {
-          radios[0].checked = true;
-        }
-        
-        // Update the plot with initial values
-        const selectedOption = radios.findIndex(r => r.checked) >= 0 
-          ? options[radios.findIndex(r => r.checked)]
-          : options[0];
-          
-        updatePlot(plotElement, selectedOption);
-        
-        // Set the callbacks for future changes
-        radios.forEach((radio, index) => {
-          radio.addEventListener("change", () => {
-            if (radio.checked) {
-              updatePlot(plotElement, options[index]);
-            }
-          });
-        });
-      });
-    });
+    initSelectableCharts<OptionData>(
+      "accuracy-plot",
+      "accuracy-option",
+      updatePlot,
+      (element) => JSON.parse((element as HTMLElement & { dataset: any }).dataset.options)
+    );
   });
 </script>

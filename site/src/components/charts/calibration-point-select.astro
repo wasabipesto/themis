@@ -1,7 +1,7 @@
 ---
 import { calculateCalibrationPoints } from "@lib/calibration";
 import type { MarketDetails, PlatformDetails } from "@types";
-import { Icon } from "astro-icon/components";
+import SelectableOptions from "./selectable-options.astro";
 
 interface Props {
   plotId: string;
@@ -29,11 +29,12 @@ const optionsCalculated = await Promise.all(
       throw new Error(`Calibration points are empty for option ${opt}.`);
     }
     return {
+      id: `calibration-option-${Math.random().toString(36).slice(2, 7)}`,
       icon: opt.icon || null,
       description: opt.description,
       axisTitleX: opt.axisTitleX || "Prediction (midpoint)",
       axisTitleY: opt.axisTitleY || "Resolution",
-      numMarkets: opt.markets.length,
+      count: opt.markets.length,
       points: points,
     };
   }),
@@ -41,32 +42,11 @@ const optionsCalculated = await Promise.all(
 ---
 
 <div class="grid gap-2 grid-cols-1 md:grid-cols-3">
-  <div class="flex-col space-y-2">
-    {
-      optionsCalculated.map((opt, index) => (
-        <div class="bg-base-light text-crust rounded-md drop-shadow-sm px-4 py-2">
-          <div class="flex items-center">
-            <input
-              type="radio"
-              id={`calibration-option-${plotId}-${index}`}
-              name={`calibration-option-${plotId}`}
-              value={index}
-              class={`w-5 h-5 mr-4 text-mantle calibration-option-${plotId}`}
-            />
-            <label for={`calibration-option-${plotId}-${index}`} class="w-full">
-              <span>
-                {opt.icon && <Icon name={opt.icon} class="inline mb-1 mr-1" />}
-                {opt.description}
-              </span>
-              <div class="text-xs text-right">
-                n={opt.numMarkets.toLocaleString()}
-              </div>
-            </label>
-          </div>
-        </div>
-      ))
-    }
-  </div>
+  <SelectableOptions 
+    plotId={plotId}
+    optionClass="calibration-option"
+    options={optionsCalculated}
+  />
   <div class="col-span-2">
     <div
       class="bg-base-light [&_h2]:text-2xl [&_figcaption]:text-xs text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
@@ -85,16 +65,11 @@ const optionsCalculated = await Promise.all(
 <script>
   import * as Plot from "@observablehq/plot";
   import type { CalibrationPoint, PlatformDetails } from "@types";
-  import { initializeChartSelection, updatePlotElement, type ChartElement } from "@lib/charts/chart-manager";
+  import { initSelectableCharts, updatePlotElement } from "@lib/charts/selectable-option";
 
   // Types for the type god
-  interface CalibrationPlotElement extends ChartElement {
-    dataset: {
-      platforms: string;
-      options: string;
-    };
-  }
   interface OptionData {
+    id: string;
     description: string;
     axisTitleX: string;
     axisTitleY: string;
@@ -102,10 +77,11 @@ const optionsCalculated = await Promise.all(
   }
 
   // Update the given plot when called
-  function updatePlot(plotElement: CalibrationPlotElement, option: OptionData) {
+  function updatePlot(plotElement: HTMLElement, option: OptionData) {
     const platforms = JSON.parse(
-      plotElement.dataset.platforms,
+      (plotElement as HTMLElement & { dataset: any }).dataset.platforms
     ) as PlatformDetails[];
+    
     const plotWidth = parseInt(window.getComputedStyle(plotElement).width);
     const pointSizeRange = [plotWidth * 0.01, plotWidth * 0.02];
 
@@ -170,30 +146,16 @@ const optionsCalculated = await Promise.all(
       ],
     });
 
-    updatePlotElement(plotElement, plot);
+    updatePlotElement(plotElement, plot as any);
   }
 
   // Initialize all calibration plots
   document.addEventListener("DOMContentLoaded", () => {
-    const plotElements = document.querySelectorAll(".calibration-plot");
-    if (plotElements.length === 0) return;
-    
-    // For each plotId, initialize selection
-    const plotIds = new Set<string>();
-    plotElements.forEach(element => {
-      const idMatch = element.id.match(/calibration-plot-(.*)$/);
-      if (idMatch && idMatch[1]) {
-        plotIds.add(idMatch[1]);
-      }
-    });
-    
-    plotIds.forEach(plotId => {
-      initializeChartSelection<OptionData, CalibrationPlotElement>(
-        plotId,
-        "calibration-plot",
-        "calibration-option",
-        updatePlot
-      );
-    });
+    initSelectableCharts<OptionData>(
+      "calibration-plot",
+      "calibration-option",
+      updatePlot,
+      (element) => JSON.parse((element as HTMLElement & { dataset: any }).dataset.options)
+    );
   });
 </script>
