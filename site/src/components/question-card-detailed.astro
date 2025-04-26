@@ -21,21 +21,21 @@ let { question, categories } = Astro.props;
 
 const marketScoreTypes = [
   {
-    score_key: "brier-average",
+    score_key: "brier-midpoint",
     score_type: "absolute",
     score_label: "Midpoint Brier score",
   },
   {
     score_key: "brier-relative",
     score_type: "relative",
-    score_label: "Relative to others",
+    score_label: "Relative score",
   },
 ];
 const questionScoreTypes = [
   {
-    score_key: "brier-average",
+    score_key: "brier-midpoint",
     score_type: "absolute",
-    score_label: "Average Brier score",
+    score_label: "Average Midpoint Brier score",
   },
 ];
 
