@@ -2,10 +2,17 @@
 import Base from "@layouts/base.astro";
 import { Icon } from "astro-icon/components";
 
+const stats = {
+  totalCharts: 42,
+  lastUpdated: new Date().toLocaleDateString(),
+  mostViewed: "Calibration Trends",
+};
+
 const items = [
   {
     title: "Calibration",
     icon: "mdi:chart-line",
+    num: 4,
     link: "/charts/calibration",
     description:
       "Compare predictions to resolutions. Identify over- and under-confidence in specific platforms and categories.",
@@ -13,6 +20,7 @@ const items = [
   {
     title: "Accuracy",
     icon: "mdi:chart-timeline",
+    num: 5,
     link: "/charts/accuracy",
     description:
       "Examine accuracy metrics such as Brier and logarithmic scores. See if higher volume really does make more accurate markets.",
@@ -20,6 +28,7 @@ const items = [
   {
     title: "Markets",
     icon: "mdi:sitemap",
+    num: 2,
     link: "/charts/markets",
     description:
       "Compare market statistics across all prediction platforms. See what kinds of markets each platform specializes in.",
@@ -27,35 +36,52 @@ const items = [
   {
     title: "Other",
     icon: "mdi:chart-arc",
+    num: 0,
     link: "/charts/other",
     description:
       "See all of the charts that wouldn't fit anywhere else, plus some experimental visualizations.",
-  },
-  {
-    title: "Custom",
-    icon: "mdi:tools",
-    link: "/charts/custom",
-    description:
-      "Want to see a calibration plot with only markets mentioning global temperature? Want to see how the median log score changes with market duration? Go ahead and build it yourself.",
   },
 ];
 ---
 
 <Base title="Charts">
   <div class="p-4 m-2">
-    <h1 class="text-4xl font-bold">All Charts</h1>
+    <h1 class="text-4xl font-bold">Chart Directory</h1>
+    <div class="mt-1">
+      <Icon name="mdi:clock-outline" class="inline mr-1 mb-1" />
+      Last Updated: {stats.lastUpdated}
+    </div>
+    <div class="my-4">
+      <p>
+        Numbers are great, but context is better. Compare calibration and
+        accuracy visually in order to get a better understanding of what's
+        really going on.
+      </p>
+    </div>
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-2">
     {
       items.map((i) => (
-        <a href={i.link} class="block md:last:col-span-2">
+        <a
+          href={i.link}
+          class="block"
+          style="text-decoration: none !important;"
+        >
           <div class="p-4 m-3 bg-base-light text-crust rounded-md drop-shadow-sm transition-all duration-200 hover:bg-selection hover:translate-y-[-2px] hover:shadow-md cursor-pointer">
-            <h2 class="text-xl font-bold">
-              <Icon name={i.icon} class="inline mr-1 mb-1" />
-              {i.title}
-            </h2>
-            <p class="m-1 italic">{i.description}</p>
+            <div class="flex items-center">
+              <h2 class="text-xl font-bold">
+                <Icon name={i.icon} class="inline mr-2" />
+                {i.title}
+              </h2>
+              <div class="ml-auto">
+                <span class="text-sm">
+                  <Icon name="mdi:chart-box" class="inline" />
+                  {i.num ? `${i.num} charts` : "Coming soon!"}
+                </span>
+              </div>
+            </div>
+            <p class="m-1 mt-3 italic">{i.description}</p>
           </div>
         </a>
       ))
