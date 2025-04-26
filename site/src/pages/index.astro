@@ -175,7 +175,7 @@ const featuredQuestions = await getFeaturedQuestions(4);
           As an example, let's look at the probability history for an actual set
           of markets.
         </p>
-        <ul class="list-disc pl-5 space-y-1">
+        <ul class="list-disc pl-5 space-y-1 mb-5">
           <li>
             Our first step is preprocessing - for every market we average the
             probability over each day to minimize transient spikes and normalize
@@ -218,12 +218,18 @@ const featuredQuestions = await getFeaturedQuestions(4);
             on each question card.
           </li>
         </ul>
+        <p class="my-2">
+          We calculate these scores for all linked markets, since we are
+          confident that they meet our standards for serious markets making real
+          predictions. We can average these scores together to get overall
+          scores for each platform, category, and combination therof.
+        </p>
       </div>
       <div>
         <RelScoreExplainer question={featuredQuestions[0]} />
       </div>
     </div>
-    <SeeMoreLink link={`/about#resources`} text="Learn more" />
+    <SeeMoreLink link={`/about#resources`} text="Sources & further reading" />
   </div>
   <hr class="my-2" />
   <div class="p-4 m-2" id="calibration">
@@ -250,6 +256,9 @@ const featuredQuestions = await getFeaturedQuestions(4);
     <div class="my-4">
       <CalibrationDefault platforms={platforms} markets={markets} />
     </div>
-    <SeeMoreLink link={`/charts`} text="See all charts" />
+    <SeeMoreLink
+      link={`/charts/calibration`}
+      text="See all calibration charts"
+    />
   </div>
 </Base>
