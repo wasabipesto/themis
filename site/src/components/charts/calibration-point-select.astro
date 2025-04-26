@@ -85,9 +85,10 @@ const optionsCalculated = await Promise.all(
 <script>
   import * as Plot from "@observablehq/plot";
   import type { CalibrationPoint, PlatformDetails } from "@types";
+  import { initializeChartSelection, updatePlotElement, type ChartElement } from "@lib/charts/chart-manager";
 
   // Types for the type god
-  interface CalibrationPlotElement extends HTMLElement {
+  interface CalibrationPlotElement extends ChartElement {
     dataset: {
       platforms: string;
       options: string;
@@ -98,20 +99,6 @@ const optionsCalculated = await Promise.all(
     axisTitleX: string;
     axisTitleY: string;
     points: CalibrationPoint[];
-  }
-
-  // Function to get the selected option based on user input
-  function getSelectedOption(
-    options: OptionData[],
-    radios: HTMLInputElement[],
-  ) {
-    for (let i = 0; i < radios.length; i++) {
-      if (radios[i].checked) {
-        return options[i];
-      }
-    }
-    // Default to first option if none are selected
-    return options[0];
   }
 
   // Update the given plot when called
@@ -183,52 +170,30 @@ const optionsCalculated = await Promise.all(
       ],
     });
 
-    // Wipe the existing plot and add the new one
-    while (plotElement.firstChild) {
-      plotElement.removeChild(plotElement.firstChild);
-    }
-    plotElement.appendChild(plot);
+    updatePlotElement(plotElement, plot);
   }
 
-  // Get all matching plot elements
-  const plotElements = document.querySelectorAll(
-    ".calibration-plot",
-  ) as NodeListOf<CalibrationPlotElement>;
-
-  // Set up each plot
-  plotElements.forEach((plotElement) => {
-    // Extract options
-    const options = JSON.parse(plotElement.dataset.options) as OptionData[];
-
-    // Extract plot ID
-    let plotId = "";
-    const regex = /calibration-plot-(.*)$/;
-    const match = plotElement.id.match(regex);
-    if (match && match.length > 1) {
-      plotId = match[1];
-    } else {
-      throw new Error(`Invalid plot ID: ${plotElement.id}`);
-    }
-
-    // Find options that match the plot ID
-    const radios = [
-      ...document.querySelectorAll(`.calibration-option-${plotId}`),
-    ] as HTMLInputElement[];
-
-    // Set the first radio button to checked by default
-    if (radios.length > 0) {
-      radios[0].checked = true;
-    }
-
-    // Update the plot with initial values
-    updatePlot(plotElement, getSelectedOption(options, radios));
-
-    // Set the callbacks for future changes
-    radios.forEach((radio) => {
-      radio.addEventListener("change", () => {
-        const selectedOption = getSelectedOption(options, radios);
-        updatePlot(plotElement, selectedOption);
-      });
+  // Initialize all calibration plots
+  document.addEventListener("DOMContentLoaded", () => {
+    const plotElements = document.querySelectorAll(".calibration-plot");
+    if (plotElements.length === 0) return;
+    
+    // For each plotId, initialize selection
+    const plotIds = new Set<string>();
+    plotElements.forEach(element => {
+      const idMatch = element.id.match(/calibration-plot-(.*)$/);
+      if (idMatch && idMatch[1]) {
+        plotIds.add(idMatch[1]);
+      }
+    });
+    
+    plotIds.forEach(plotId => {
+      initializeChartSelection<OptionData, CalibrationPlotElement>(
+        plotId,
+        "calibration-plot",
+        "calibration-option",
+        updatePlot
+      );
     });
   });
 </script>

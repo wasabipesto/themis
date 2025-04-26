@@ -122,10 +122,12 @@ const optionsCalculated = options.map((option) => {
 <script>
   import * as Plot from "@observablehq/plot";
   import type { AccuracyBoxDatapoint } from "./accuracy-box-select.astro";
+  import { updatePlotElement } from "@lib/charts/chart-manager";
 
   interface AccuracyPlotElement extends HTMLElement {
     dataset: {
       options: string;
+      [key: string]: string;
     };
   }
   interface OptionData {
@@ -134,20 +136,6 @@ const optionsCalculated = options.map((option) => {
     axisTitleY: string;
     plotRangeY: number[];
     points: AccuracyBoxDatapoint[];
-  }
-
-  // Function to get the selected option based on user input
-  function getSelectedOption(
-    options: OptionData[],
-    radios: HTMLInputElement[],
-  ) {
-    for (let i = 0; i < radios.length; i++) {
-      if (radios[i].checked) {
-        return options[i];
-      }
-    }
-    // Default to first option if none are selected
-    return options[0];
   }
 
   // Update the given plot when called
@@ -198,51 +186,61 @@ const optionsCalculated = options.map((option) => {
       ],
     });
 
-    // Wipe the existing plot and add the new one
-    while (plotElement.firstChild) {
-      plotElement.removeChild(plotElement.firstChild);
-    }
-    plotElement.appendChild(plot);
+    updatePlotElement(plotElement, plot);
   }
 
-  // Get all matching plot elements
-  const plotElements = document.querySelectorAll(
-    ".accuracy-plot",
-  ) as NodeListOf<AccuracyPlotElement>;
-
-  // Set up each plot
-  plotElements.forEach((plotElement) => {
-    // Extract options
-    const options = JSON.parse(plotElement.dataset.options) as OptionData[];
-
-    // Extract plot ID
-    let plotId = "";
-    const regex = /accuracy-plot-(.*)$/;
-    const match = plotElement.id.match(regex);
-    if (match && match.length > 1) {
-      plotId = match[1];
-    } else {
-      throw new Error(`Invalid plot ID: ${plotElement.id}`);
-    }
-
-    // Find options that match the plot ID
-    const radios = [
-      ...document.querySelectorAll(`.accuracy-option-${plotId}`),
-    ] as HTMLInputElement[];
-
-    // Set the first radio button to checked by default
-    if (radios.length > 0) {
-      radios[0].checked = true;
-    }
-
-    // Update the plot with initial values
-    updatePlot(plotElement, getSelectedOption(options, radios));
-
-    // Set the callbacks for future changes
-    radios.forEach((radio) => {
-      radio.addEventListener("change", () => {
-        const selectedOption = getSelectedOption(options, radios);
+  // Initialize all accuracy plots
+  document.addEventListener("DOMContentLoaded", () => {
+    const plotElements = document.querySelectorAll(".accuracy-plot");
+    if (plotElements.length === 0) return;
+    
+    // For each plotId, initialize selection
+    const plotIds = new Set<string>();
+    plotElements.forEach(element => {
+      const idMatch = element.id.match(/accuracy-plot-(.*)$/);
+      if (idMatch && idMatch[1]) {
+        plotIds.add(idMatch[1]);
+      }
+    });
+    
+    plotIds.forEach(plotId => {
+      // Get all matching plot elements
+      const plotElements = document.querySelectorAll(
+        `.accuracy-plot`,
+      ) as NodeListOf<AccuracyPlotElement>;
+      
+      // Find the specific plot element for this plotId
+      plotElements.forEach((plotElement) => {
+        if (!plotElement.id.includes(plotId)) return;
+        
+        // Extract options
+        const options = JSON.parse(plotElement.dataset.options) as OptionData[];
+        
+        // Find options that match the plot ID
+        const radios = [
+          ...document.querySelectorAll(`.accuracy-option-${plotId}`),
+        ] as HTMLInputElement[];
+        
+        // Set the first radio button to checked by default
+        if (radios.length > 0) {
+          radios[0].checked = true;
+        }
+        
+        // Update the plot with initial values
+        const selectedOption = radios.findIndex(r => r.checked) >= 0 
+          ? options[radios.findIndex(r => r.checked)]
+          : options[0];
+          
         updatePlot(plotElement, selectedOption);
+        
+        // Set the callbacks for future changes
+        radios.forEach((radio, index) => {
+          radio.addEventListener("change", () => {
+            if (radio.checked) {
+              updatePlot(plotElement, options[index]);
+            }
+          });
+        });
       });
     });
   });
