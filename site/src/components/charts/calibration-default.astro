@@ -25,7 +25,8 @@ const points = await calculateCalibrationPoints(markets, "midpoint", null);
 
 <script>
   import * as Plot from "@observablehq/plot";
-  import type { CalibrationPoint, PlatformDetails } from "@types";
+  import type { PlatformDetails } from "@types";
+  import type { CalibrationPoint } from "@lib/charts/types";
 
   interface CalibrationPlotElement extends HTMLElement {
     dataset: {

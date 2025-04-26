@@ -2,15 +2,13 @@
  * Standardized chart selection utilities
  */
 import * as Plot from "@observablehq/plot";
+import type { ChartOptionBase } from "./types";
 
 /**
  * Base interface for selectable options
+ * Extends the ChartOptionBase to ensure compatibility
  */
-export interface SelectableOption {
-  id: string;
-  description: string;
-  icon?: string | null;
-  count?: number;
+export interface SelectableOption extends ChartOptionBase {
   [key: string]: any;
 }
 

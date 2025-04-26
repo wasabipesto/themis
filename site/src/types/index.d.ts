@@ -191,13 +191,3 @@ export interface CriterionProbability {
   criterion_type: string;
   prob: number;
 }
-
-/** Single point on a calibration plot. */
-export interface CalibrationPoint {
-  platform_slug: string;
-  x_start: number;
-  x_center: number;
-  x_end: number;
-  y_center: number;
-  count: number;
-}

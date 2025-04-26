@@ -1,19 +1,13 @@
 ---
 import { Icon } from "astro-icon/components";
-
-export interface SelectionOption {
-  id: string;
-  description: string;
-  icon?: string | null;
-  count?: number;
-}
+import type { ChartOptionBase } from "@lib/charts/types";
 
 interface Props {
   plotId: string;
   /* CSS class for the options */
   optionClass: string;
   /* Options array */
-  options: SelectionOption[];
+  options: ChartOptionBase[];
 }
 
 const { plotId, optionClass, options } = Astro.props;

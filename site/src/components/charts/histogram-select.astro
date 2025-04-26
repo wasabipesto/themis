@@ -123,33 +123,24 @@ const optionsCalculated = options.map((option) => {
 
 <script>
   import * as Plot from "@observablehq/plot";
-  import type { HistogramDatapoint } from "./histogram-select.astro";
+  import type { HistogramOption } from "@lib/charts/types";
   import { initSelectableCharts, updatePlotElement } from "@lib/charts/selectable-option";
 
-  interface OptionData {
-    id: string;
-    description: string;
-    plotTitle: string;
-    axisTitleX: string;
-    axisTitleY: string;
-    points: HistogramDatapoint[];
-  }
-
   // Update the given plot when called
-  function updatePlot(plotElement: HTMLElement, option: OptionData) {
+  function updatePlot(plotElement: HTMLElement, option: HistogramOption) {
     const plotWidth = parseInt(window.getComputedStyle(plotElement).width);
 
     const plot = Plot.plot({
-      title: option.plotTitle,
+      title: option.config?.title || option.plotTitle || "Distribution",
       width: plotWidth,
       //aspectRatio: 2,
       marginLeft: 50,
       marginRight: 80,
-      x: { label: option.axisTitleX },
+      x: { label: option.config?.axisTitleX || option.axisTitleX },
       y: {
         grid: true,
         percent: true,
-        label: "Percent",
+        label: option.config?.axisTitleY || option.axisTitleY || "Percent",
       },
       fy: {
         label: "Platform",
@@ -159,7 +150,7 @@ const optionsCalculated = options.map((option) => {
         label: null,
       },
       marks: [
-        Plot.rectY(option.points, {
+        Plot.rectY(option.points || [], {
           x1: "startX",
           x2: "endX",
           y: "percent",
@@ -178,7 +169,7 @@ const optionsCalculated = options.map((option) => {
 
   // Initialize all histogram plots
   document.addEventListener("DOMContentLoaded", () => {
-    initSelectableCharts<OptionData>(
+    initSelectableCharts<HistogramOption>(
       "histogram-plot",
       "histogram-option",
       updatePlot,

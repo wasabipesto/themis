@@ -13,8 +13,6 @@ import {
   getPlatformOverallScores,
 } from "@lib/api";
 
-const scoreType = "brier-relative";
-
 const platforms = await getPlatforms();
 const categories = await getCategories();
 const platformCategoryScores = await getPlatformCategoryScores(null);

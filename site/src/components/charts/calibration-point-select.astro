@@ -64,20 +64,12 @@ const optionsCalculated = await Promise.all(
 
 <script>
   import * as Plot from "@observablehq/plot";
-  import type { CalibrationPoint, PlatformDetails } from "@types";
+  import type { CalibrationOption, CalibrationPoint } from "@lib/charts/types";
+  import type { PlatformDetails } from "@types";
   import { initSelectableCharts, updatePlotElement } from "@lib/charts/selectable-option";
 
-  // Types for the type god
-  interface OptionData {
-    id: string;
-    description: string;
-    axisTitleX: string;
-    axisTitleY: string;
-    points: CalibrationPoint[];
-  }
-
   // Update the given plot when called
-  function updatePlot(plotElement: HTMLElement, option: OptionData) {
+  function updatePlot(plotElement: HTMLElement, option: CalibrationOption) {
     const platforms = JSON.parse(
       (plotElement as HTMLElement & { dataset: any }).dataset.platforms
     ) as PlatformDetails[];
@@ -87,19 +79,19 @@ const optionsCalculated = await Promise.all(
 
     // Build the plot with the selected option data
     const plot = Plot.plot({
-      title: "Calibration Plot",
+      title: option.config?.title || "Calibration Plot",
       width: plotWidth,
       aspectRatio: 2,
       x: {
-        domain: [0, 100],
+        domain: option.config?.xDomain || [0, 100],
         percent: true,
-        label: option.axisTitleX,
+        label: option.config?.axisTitleX || option.axisTitleX || "Prediction (midpoint)",
       },
       y: {
-        domain: [0, 100],
+        domain: option.config?.yDomain || [0, 100],
         grid: true,
         percent: true,
-        label: option.axisTitleY,
+        label: option.config?.axisTitleY || option.axisTitleY || "Resolution",
       },
       r: { range: pointSizeRange, label: "Scale" },
       color: {
@@ -109,7 +101,7 @@ const optionsCalculated = await Promise.all(
         range: platforms.map((p) => p.color_primary),
       },
       marks: [
-        Plot.dot(option.points, {
+        Plot.dot(option.points || [], {
           x: "x_center",
           y: "y_center",
           r: "count",
@@ -151,7 +143,7 @@ const optionsCalculated = await Promise.all(
 
   // Initialize all calibration plots
   document.addEventListener("DOMContentLoaded", () => {
-    initSelectableCharts<OptionData>(
+    initSelectableCharts<CalibrationOption>(
       "calibration-plot",
       "calibration-option",
       updatePlot,
