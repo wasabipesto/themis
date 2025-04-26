@@ -77,7 +77,13 @@ const marketScores = await getMarketScoresByQuestion(
         const questionScores = marketScores.filter(
           (score) => score.question_id === question.id,
         );
-        return <QuestionCard question={question} scores={questionScores} />;
+        return (
+          <QuestionCard
+            question={question}
+            categories={[category]}
+            scores={questionScores}
+          />
+        );
       })
     }
   </div>
