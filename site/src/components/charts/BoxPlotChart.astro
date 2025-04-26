@@ -1,0 +1,175 @@
+---
+import type {
+  ChartSelectorOption,
+  ChartContext,
+  BoxPlotDataPoint,
+} from "@lib/charts/types";
+import type { MarketScoreDetails } from "@types";
+
+export interface Props {
+  id: string;
+  data: MarketScoreDetails[];
+  options: ChartSelectorOption<MarketScoreDetails, BoxPlotDataPoint>[];
+  context: ChartContext;
+}
+
+const { id, data, options, context } = Astro.props;
+
+// Process data for the initial option
+const initialOption = options[0];
+const initialProcessedData = initialOption
+  ? initialOption.dataSelector(data, context)
+  : [];
+
+const initialConfig = initialOption?.config || {};
+---
+
+<div
+  id={`box-plot-${id}`}
+  class="box-plot-chart"
+  data-options={JSON.stringify(options)}
+  data-initial-data={JSON.stringify(initialProcessedData)}
+  data-initial-config={JSON.stringify(initialConfig)}
+  data-raw-data={JSON.stringify(data)}
+  data-context={JSON.stringify(context)}
+>
+</div>
+
+<script>
+  import * as Plot from "@observablehq/plot";
+  import type { BoxPlotDataPoint } from "@lib/charts/types";
+  import { transformToBoxPlotData } from "@lib/charts/transformers";
+
+  interface BoxPlotChartElement extends HTMLElement {
+    dataset: {
+      options: string;
+      initialData: string;
+      initialConfig: string;
+      rawData: string;
+      context: string;
+    };
+  }
+
+  // Get all box plot chart elements
+  const boxPlotCharts = document.querySelectorAll(
+    ".box-plot-chart",
+  ) as NodeListOf<BoxPlotChartElement>;
+
+  // Render a box plot chart
+  function renderBoxPlot(
+    element: BoxPlotChartElement,
+    data: BoxPlotDataPoint[],
+    config: any,
+  ) {
+    try {
+      const plotWidth = parseInt(window.getComputedStyle(element).width) || 600;
+
+      const axisTitle = {
+        x: config.axisConfig?.x?.title || "Platform",
+        y: config.axisConfig?.y?.title || "Market score",
+      };
+
+      const yRange = config.axisConfig?.y?.range || [0, 0.8];
+
+      const plot = Plot.plot({
+        title: config.title || "Accuracy By Platform",
+        width: plotWidth,
+        x: { label: axisTitle.x },
+        y: {
+          domain: yRange,
+          grid: true,
+          label: axisTitle.y,
+        },
+        marks: [
+          Plot.ruleX(data, {
+            x: "platformName",
+            y1: "whiskerStart",
+            y2: "boxStart",
+            stroke: "colorAccent",
+          }),
+          Plot.barY(data, {
+            x: "platformName",
+            y1: "boxStart",
+            y2: "boxEnd",
+            fill: "colorPrimary",
+            stroke: "colorAccent",
+            strokeWidth: 2,
+          }),
+          Plot.ruleX(data, {
+            x: "platformName",
+            y1: "boxEnd",
+            y2: "whiskerEnd",
+            stroke: "colorAccent",
+          }),
+          Plot.tickY(data, {
+            x: "platformName",
+            y: "boxCenter",
+            stroke: "colorAccent",
+            strokeWidth: 2,
+            channels: {
+              Point: () => "Median",
+            },
+            tip: true,
+          }),
+        ],
+      });
+
+      // Clear existing content and add the plot
+      while (element.firstChild) {
+        element.removeChild(element.firstChild);
+      }
+      element.appendChild(plot);
+    } catch (error) {
+      console.error("Error rendering box plot:", error);
+    }
+  }
+
+  // Initialize each box plot chart
+  boxPlotCharts.forEach((chart) => {
+    try {
+      // Parse initial data and config
+      const initialData = JSON.parse(
+        chart.dataset.initialData,
+      ) as BoxPlotDataPoint[];
+      const initialConfig = JSON.parse(chart.dataset.initialConfig);
+
+      // Render the initial chart
+      renderBoxPlot(chart, initialData, initialConfig);
+
+      // Find the parent container and listen for option changes
+      const container = chart.closest(".chart-container");
+      if (container) {
+        container.addEventListener("optionchange", (event: Event) => {
+          const customEvent = event as CustomEvent;
+          const { option, context } = customEvent.detail;
+
+          // Get the raw data and apply the selector function
+          const rawData = JSON.parse(chart.dataset.rawData);
+          let selectedData;
+
+          try {
+            if (typeof option.dataSelector === "function") {
+              selectedData = option.dataSelector(rawData, context);
+            } else {
+              // If no selector function, try to use transformToBoxPlotData directly
+              const scoreType = option.config?.scoreType || "brier-midpoint";
+              selectedData = transformToBoxPlotData(
+                rawData,
+                context.platforms,
+                scoreType,
+              );
+            }
+          } catch (error) {
+            console.error("Error processing data:", error);
+            selectedData = [];
+          }
+
+          // Render the updated chart
+          renderBoxPlot(chart, selectedData, option.config || {});
+        });
+      }
+    } catch (error) {
+      console.error("Error initializing box plot chart:", error);
+    }
+  });
+</script>

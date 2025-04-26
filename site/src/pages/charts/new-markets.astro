@@ -1,0 +1,109 @@
+---
+import Base from "@layouts/base.astro";
+import Chart from "@components/charts/Chart.astro";
+import { getPlatforms, getMarkets } from "@lib/api";
+import type { ChartSelectorOption } from "@lib/charts/types";
+import { createMarketHistogramOptions } from "@lib/charts/presets";
+
+// Download data
+const platforms = await getPlatforms();
+// const categories = await getCategories(); // Uncomment if needed later
+const markets = await getMarkets();
+
+// Context for the charts
+const chartContext = { platforms };
+
+// Create histogram options for market attributes
+const histogramOptions = createMarketHistogramOptions(markets);
+
+// Create time bar options
+const timeBarOptions: ChartSelectorOption<any, any>[] = [
+  {
+    id: 'open-close',
+    description: 'Markets opened and closed over time',
+    dataSelector: (data: any) => data,
+    config: {
+      type: 'timebar',
+      title: 'Market Open and Close Dates',
+      subtitle: 'Markets opened (positive) and closed (negative) over time',
+      dateField: 'close_datetime',
+      axisConfig: {
+        x: { title: 'Date' },
+        y: { title: 'Percent' }
+      }
+    }
+  },
+  {
+    id: 'monthly',
+    description: 'Monthly view',
+    dataSelector: (data: any) => data,
+    config: {
+      type: 'timebar',
+      title: 'Monthly Market Activity',
+      dateField: 'close_datetime',
+      groupBy: 'month',
+      axisConfig: {
+        x: { title: 'Date' },
+        y: { title: 'Percent' }
+      }
+    }
+  },
+  {
+    id: 'yearly',
+    description: 'Yearly view',
+    dataSelector: (data: any) => data,
+    config: {
+      type: 'timebar',
+      title: 'Yearly Market Activity',
+      dateField: 'close_datetime',
+      groupBy: 'year',
+      axisConfig: {
+        x: { title: 'Date' },
+        y: { title: 'Percent' }
+      }
+    }
+  },
+];
+---
+
+<Base title="New Market Charts">
+  <div class="p-4 m-2 pb-0 mb-0">
+    <h1 class="text-4xl font-bold">New Market Charts</h1>
+    <div class="mt-2">
+      What is a market, really? They're similar under the hood - people trade on
+      different outcomes at different prices, leading to a consensus probability
+      whether that's with a limit order book, an automated market maker, or some
+      other mechanism. However, you can see how flexible they are by how the
+      different platforms leverage this mechanism.
+    </div>
+    <div class="mt-2">
+      Here, we'll look at some of the specific traits we measure on each market
+      to see how they compare across platforms.
+    </div>
+  </div>
+
+  <div class="p-4 m-2">
+    <Chart
+      id="histogram-trait"
+      type="histogram"
+      title="Histograms of Attributes"
+      description="How much trade volume do these markets typically see? How many traders participate on markets on each platform? How long are they typically open?"
+      data={markets}
+      options={histogramOptions}
+      context={chartContext}
+    />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <Chart
+      id="markets-over-time"
+      type="timebar"
+      title="Markets over Time"
+      description="Prediction markets have become more popular over time, but are there more markets to meet that increased demand? Have there been any particular spikes in market opens/closes?"
+      data={markets}
+      options={timeBarOptions}
+      context={chartContext}
+    />
+  </div>
+</Base>

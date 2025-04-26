@@ -85,6 +85,7 @@ db-refresh-quick:
 # Start the main site dev server
 [working-directory: 'site']
 site-dev:
+    NODE_OPTIONS=--max-old-space-size=51200 \
     npx astro dev
 
 # Check the main site for errors

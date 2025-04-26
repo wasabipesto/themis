@@ -176,9 +176,6 @@ const optionsCalculated = options.map((option) => {
 
   // Update the given plot when called
   function updatePlot(plotElement: HistogramPlotElement, option: OptionData) {
-    const platforms = JSON.parse(
-      plotElement.dataset.platforms,
-    ) as PlatformDetails[];
     const plotWidth = parseInt(window.getComputedStyle(plotElement).width);
 
     const plot = Plot.plot({

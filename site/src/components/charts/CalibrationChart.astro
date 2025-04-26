@@ -1,0 +1,201 @@
+---
+import type { ChartSelectorOption, ChartContext, CalibrationDataPoint, CalibrationOptions } from "@lib/charts/types";
+import type { MarketDetails } from "@types";
+import { calculateCalibrationPoints } from "@lib/calibration";
+
+export interface Props {
+  id: string;
+  data: MarketDetails[];
+  options: ChartSelectorOption<MarketDetails, CalibrationDataPoint>[];
+  context: ChartContext;
+}
+
+const { id, data, options, context } = Astro.props;
+
+// Process data for the initial option
+const initialOption = options[0];
+const initialData = initialOption ? 
+  initialOption.dataSelector(data, context) : [];
+
+// Calculate calibration points using the library function
+// The CalibrationDataPoint type is transformed to MarketDetails for the function call
+const initialPoints = initialData.length > 0 ? 
+  await calculateCalibrationPoints(
+    initialData as unknown as MarketDetails[], 
+    (initialOption?.config as CalibrationOptions)?.criterion || "midpoint",
+    (initialOption?.config as CalibrationOptions)?.weight || null
+  ) : [];
+
+const initialConfig = initialOption?.config || {};
+---
+
+<div
+  id={`calibration-chart-${id}`}
+  class="calibration-chart"
+  data-options={JSON.stringify(options)}
+  data-initial-points={JSON.stringify(initialPoints)}
+  data-initial-config={JSON.stringify(initialConfig)}
+  data-raw-data={JSON.stringify(data)}
+  data-context={JSON.stringify(context)}
+>
+</div>
+
+<script>
+  import * as Plot from "@observablehq/plot";
+  import type { CalibrationDataPoint, CalibrationOptions } from "@lib/charts/types";
+  import type { PlatformDetails, MarketDetails } from "@types";
+  
+  interface CalibrationChartElement extends HTMLElement {
+    dataset: {
+      options: string;
+      initialPoints: string;
+      initialConfig: string;
+      rawData: string;
+      context: string;
+    };
+  }
+  
+  // Dynamic import for the calculateCalibrationPoints function
+  // This is necessary because it's an async function used in the client-side code
+  async function loadCalibrationModule() {
+    const module = await import('@lib/calibration');
+    return module.calculateCalibrationPoints;
+  }
+  
+  let calculateCalibrationPointsPromise = loadCalibrationModule();
+  
+  // Get all calibration chart elements
+  const calibrationCharts = document.querySelectorAll(
+    ".calibration-chart"
+  ) as NodeListOf<CalibrationChartElement>;
+  
+  // Render a calibration chart
+  function renderCalibrationChart(element: CalibrationChartElement, points: any[], config: any, context: any) {
+    try {
+      const platforms = context.platforms as PlatformDetails[];
+      const plotWidth = parseInt(window.getComputedStyle(element).width) || 600;
+      const pointSizeRange = [plotWidth * 0.01, plotWidth * 0.02];
+      
+      const axisTitle = {
+        x: config.axisConfig?.x?.title || "Prediction (midpoint)",
+        y: config.axisConfig?.y?.title || "Resolution"
+      };
+      
+      // Build the plot with the data
+      const plot = Plot.plot({
+        title: config.title || "Calibration Plot",
+        width: plotWidth,
+        aspectRatio: 2,
+        x: {
+          domain: [0, 100],
+          percent: true,
+          label: axisTitle.x,
+        },
+        y: {
+          domain: [0, 100],
+          grid: true,
+          percent: true,
+          label: axisTitle.y,
+        },
+        r: { range: pointSizeRange, label: "Scale" },
+        color: {
+          legend: true,
+          label: "Platform",
+          domain: platforms.map((p) => p.name),
+          range: platforms.map((p) => p.color_primary),
+        },
+        marks: [
+          Plot.dot(points, {
+            x: "x_center",
+            y: "y_center",
+            r: "count",
+            fill: "platform_slug",
+            stroke: "platform_slug",
+            fillOpacity: 0.5,
+            channels: {
+              Prediction: (i: any) =>
+                (i.x_start * 100).toFixed(0) +
+                "-" +
+                (i.x_end * 100).toFixed(0) +
+                "%",
+              Resolution: (i: any) =>
+                (i.y_center * 100).toFixed(1) + "%",
+              Markets: "count",
+            },
+            tip: {
+              format: {
+                x: null,
+                y: null,
+                r: null,
+              },
+            },
+          }),
+          Plot.ruleX([0]),
+          Plot.ruleY([0]),
+          Plot.lineY(
+            [
+              { x: 0, y: 0 },
+              { x: 1, y: 1 },
+            ],
+            { x: "x", y: "y" },
+          ),
+        ],
+      });
+      
+      // Clear existing content and add the plot
+      while (element.firstChild) {
+        element.removeChild(element.firstChild);
+      }
+      element.appendChild(plot);
+    } catch (error) {
+      console.error("Error rendering calibration chart:", error);
+    }
+  }
+  
+  // Initialize each calibration chart
+  calibrationCharts.forEach((chart) => {
+    try {
+      // Parse initial data and config
+      const initialPoints = JSON.parse(chart.dataset.initialPoints);
+      const initialConfig = JSON.parse(chart.dataset.initialConfig);
+      const context = JSON.parse(chart.dataset.context);
+      
+      // Render the initial chart
+      renderCalibrationChart(chart, initialPoints, initialConfig, context);
+      
+      // Find the parent container and listen for option changes
+      const container = chart.closest('.chart-container');
+      if (container) {
+        container.addEventListener('optionchange', async (event: Event) => {
+          const customEvent = event as CustomEvent;
+          const { option } = customEvent.detail;
+          
+          // Get the raw data and apply the selector function
+          const rawData = JSON.parse(chart.dataset.rawData);
+          const context = JSON.parse(chart.dataset.context);
+          
+          try {
+            // Get the calculate function
+            const calculateCalibrationPoints = await calculateCalibrationPointsPromise;
+            
+            // Get filtered data using the option's data selector
+            const filteredData = typeof option.dataSelector === 'function' ?
+              option.dataSelector(rawData, context) : rawData;
+            
+            // Calculate calibration points
+            const criterion = (option.config as CalibrationOptions)?.criterion || "midpoint";
+            const weight = (option.config as CalibrationOptions)?.weight || null;
+            const points = await calculateCalibrationPoints(filteredData as unknown as MarketDetails[], criterion, weight);
+            
+            // Render the updated chart
+            renderCalibrationChart(chart, points, option.config || {}, context);
+          } catch (error) {
+            console.error("Error processing calibration data:", error);
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Error initializing calibration chart:", error);
+    }
+  });
+</script>

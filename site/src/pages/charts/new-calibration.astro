@@ -1,0 +1,130 @@
+---
+import Base from "@layouts/base.astro";
+import Chart from "@components/charts/Chart.astro";
+import { getMarkets, getPlatforms, getCategories } from "@lib/api";
+import { 
+  createCategoryFilterOptions,
+  createCalibrationCriterionOptions,
+  createCalibrationWeightOptions
+} from "@lib/charts/presets";
+import { createCommonFilterOptions } from "@lib/charts/factory";
+
+// Download markets and platforms
+const markets = await getMarkets();
+const platforms = await getPlatforms();
+const categories = await getCategories();
+
+// Context for the charts
+const chartContext = { platforms };
+
+// Create options for our charts
+const basicFilterOptions = createCommonFilterOptions(
+  markets,
+  (id: string, description: string, icon: string | null, filter: (data: any) => any) => ({
+    id,
+    description,
+    icon,
+    dataSelector: filter,
+    config: {
+      type: 'calibration',
+      criterion: 'midpoint',
+      axisConfig: {
+        x: { title: 'Prediction (midpoint)' },
+        y: { title: 'Resolution' }
+      }
+    }
+  })
+);
+
+// Create category filter options
+const categoryFilterOptions = createCategoryFilterOptions(
+  markets,
+  categories,
+  (id, description, icon, filter) => ({
+    id,
+    description,
+    icon,
+    dataSelector: filter,
+    config: {
+      type: 'calibration',
+      criterion: 'midpoint',
+      axisConfig: {
+        x: { title: 'Prediction (midpoint)' },
+        y: { title: 'Resolution' }
+      }
+    }
+  })
+);
+
+// Create criterion options
+const criterionOptions = createCalibrationCriterionOptions(markets);
+
+// Create weight options
+const weightOptions = createCalibrationWeightOptions(markets);
+---
+
+<Base title="New Calibration Charts">
+  <div class="p-4 m-2 pb-0 mb-0">
+    <h1 class="text-4xl font-bold">New Calibration Charts</h1>
+    <div class="mt-2">
+      Calibration is a very simple metric at its core. If a market's listed
+      probability is at 70%, we should expect it to resolve YES about 70% of the
+      time. For all past markets, we can look at the market's midpoint
+      probability and compare it to the end result. If those numbers match, we
+      say the platform is well-calibrated. If they don't, there may be some
+      systemic reason why forecasters routinely under- or over-estimate the
+      odds.
+    </div>
+  </div>
+
+  <div class="p-4 m-2">
+    <Chart
+      id="basic-filter"
+      type="calibration"
+      title="Basic Filtering"
+      description="Select markets to include in the calibration plot based on key attributes, such as number of traders, market volume, and duration. Alternatively, pick from a few other selection criteria."
+      data={markets}
+      options={basicFilterOptions}
+      context={chartContext}
+    />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <Chart
+      id="category"
+      type="calibration"
+      title="Category Filtering"
+      description="Group markets based on what category they're in. This is determined by how they are categorized on each platform, and not all platforms are supported yet."
+      data={markets}
+      options={categoryFilterOptions}
+      context={chartContext}
+    />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <Chart
+      id="criterion"
+      type="calibration"
+      title="Differing Predictions"
+      description="Up until this point we've used the midpoint of each market as the reference value. What if we used something else, such as the average probability or a fixed point in time?"
+      data={markets}
+      options={criterionOptions}
+      context={chartContext}
+    />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <Chart
+      id="weight"
+      type="calibration"
+      title="Weighted Averages"
+      description="Typically all markets are treated equally with a raw average. What if we used a weighted average instead? For instance, markets with $100 in trade volume might be weighted 10 times as heavily as one with $10. This allows us to prioritize markets that have properties we think are beneficial without ignoring others."
+      data={markets}
+      options={weightOptions}
+      context={chartContext}
+    />
+  </div>
+</Base>

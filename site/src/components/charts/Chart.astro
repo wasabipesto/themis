@@ -1,0 +1,57 @@
+---
+import ChartSelector from "./ChartSelector.astro";
+import BoxPlotChart from "./BoxPlotChart.astro";
+import HistogramChart from "./HistogramChart.astro";
+import CalibrationChart from "./CalibrationChart.astro";
+import TimeBarChart from "./TimeBarChart.astro";
+
+import type { ChartSelectorOption, ChartContext } from "@lib/charts/types";
+
+export interface Props {
+  id: string;
+  type: string;
+  title?: string;
+  description?: string;
+  data: any[];
+  options: ChartSelectorOption<any, any>[];
+  context: ChartContext;
+}
+
+const { id, type, title, description, data, options, context } = Astro.props;
+---
+
+<div class="chart-wrapper mb-6">
+  {title && <h2 class="text-2xl font-bold mb-2">{title}</h2>}
+  {description && <div class="mb-4">{description}</div>}
+
+  <ChartSelector id={id} options={options} context={context} />
+
+  {
+    type === "boxplot" && (
+      <BoxPlotChart id={id} data={data} options={options} context={context} />
+    )
+  }
+
+  {
+    type === "histogram" && (
+      <HistogramChart id={id} data={data} options={options} context={context} />
+    )
+  }
+
+  {
+    type === "calibration" && (
+      <CalibrationChart
+        id={id}
+        data={data}
+        options={options}
+        context={context}
+      />
+    )
+  }
+
+  {
+    type === "timebar" && (
+      <TimeBarChart id={id} data={data} options={options} context={context} />
+    )
+  }
+</div>

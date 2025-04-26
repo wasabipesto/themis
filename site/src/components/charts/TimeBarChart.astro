@@ -1,0 +1,175 @@
+---
+import type { ChartSelectorOption, ChartContext, TimeBarDataPoint } from "@lib/charts/types";
+import type { MarketDetails } from "@types";
+import { transformToTimeBarData } from "@lib/charts/transformers";
+
+export interface Props {
+  id: string;
+  data: MarketDetails[];
+  options: ChartSelectorOption<MarketDetails, TimeBarDataPoint>[];
+  context: ChartContext;
+}
+
+const { id, data, options, context } = Astro.props;
+
+// Process data for the initial configuration
+const initialData = transformToTimeBarData(data, context.platforms, {
+  dateField: 'close_datetime',
+});
+
+const initialConfig = options[0]?.config || {};
+---
+
+<div
+  id={`time-bar-chart-${id}`}
+  class="time-bar-chart"
+  data-options={JSON.stringify(options)}
+  data-initial-data={JSON.stringify(initialData)}
+  data-initial-config={JSON.stringify(initialConfig)}
+  data-raw-data={JSON.stringify(data)}
+  data-context={JSON.stringify(context)}
+>
+</div>
+
+<script>
+  import * as Plot from "@observablehq/plot";
+  import type { TimeBarDataPoint } from "@lib/charts/types";
+  
+  interface TimeBarChartElement extends HTMLElement {
+    dataset: {
+      options: string;
+      initialData: string;
+      initialConfig: string;
+      rawData: string;
+      context: string;
+    };
+  }
+  
+  // Get all time bar chart elements
+  const timeBarCharts = document.querySelectorAll(
+    ".time-bar-chart"
+  ) as NodeListOf<TimeBarChartElement>;
+  
+  // Import the transformer function
+  async function loadTransformerModule() {
+    const module = await import('@lib/charts/transformers');
+    return module.transformToTimeBarData;
+  }
+  
+  let transformerPromise = loadTransformerModule();
+  
+  // Render a time bar chart
+  function renderTimeBarChart(element: TimeBarChartElement, data: TimeBarDataPoint[], config: any) {
+    try {
+      const plotWidth = parseInt(window.getComputedStyle(element).width) || 600;
+      
+      const axisTitle = {
+        x: config.axisConfig?.x?.title || "Date",
+        y: config.axisConfig?.y?.title || "Percent"
+      };
+      
+      // Group data by platform for cumulative display
+      const groupedByPlatform: Record<string, TimeBarDataPoint[]> = {};
+      data.forEach(point => {
+        if (!groupedByPlatform[point.platformSlug]) {
+          groupedByPlatform[point.platformSlug] = [];
+        }
+        groupedByPlatform[point.platformSlug].push(point);
+      });
+      
+      const plot = Plot.plot({
+        title: config.title || "Market Activity Over Time",
+        subtitle: "Positive values indicate market openings, negative values indicate closures",
+        width: plotWidth,
+        marginLeft: 40,
+        marginRight: 80,
+        x: {
+          label: axisTitle.x,
+          type: "utc",
+        },
+        y: {
+          grid: true,
+          percent: true,
+          label: axisTitle.y,
+        },
+        fy: {
+          label: "Platform",
+        },
+        marks: [
+          Plot.rectY(data, {
+            x1: "startXDate",
+            x2: "endXDate",
+            y: "value",
+            fy: "platformName",
+            fill: "colorAccent",
+            insetLeft: 1,
+            insetRight: 1,
+            tip: true,
+          }),
+          Plot.ruleY([0]),
+        ],
+      });
+      
+      // Clear existing content and add the plot
+      while (element.firstChild) {
+        element.removeChild(element.firstChild);
+      }
+      element.appendChild(plot);
+    } catch (error) {
+      console.error("Error rendering time bar chart:", error);
+    }
+  }
+  
+  // Initialize each time bar chart
+  timeBarCharts.forEach((chart) => {
+    try {
+      // Parse initial data and config
+      const initialData = JSON.parse(chart.dataset.initialData) as TimeBarDataPoint[];
+      const initialConfig = JSON.parse(chart.dataset.initialConfig);
+      
+      // Render the initial chart
+      renderTimeBarChart(chart, initialData, initialConfig);
+      
+      // Find the parent container and listen for option changes
+      const container = chart.closest('.chart-container');
+      if (container) {
+        container.addEventListener('optionchange', async (event: Event) => {
+          const customEvent = event as CustomEvent;
+          const { option, context } = customEvent.detail;
+          
+          // Get the raw data
+          const rawData = JSON.parse(chart.dataset.rawData);
+          let filteredData = rawData;
+          
+          try {
+            // Apply data selector if available
+            if (typeof option.dataSelector === 'function') {
+              filteredData = option.dataSelector(rawData, context);
+            }
+            
+            // Get the transformer function
+            const transformToTimeBarData = await transformerPromise;
+            
+            // Transform data using the configuration
+            const transformOptions = {
+              dateField: option.config?.dateField || 'close_datetime',
+              groupBy: option.config?.groupBy || 'month',
+              startDate: option.config?.startDate ? new Date(option.config.startDate) : undefined,
+              endDate: option.config?.endDate ? new Date(option.config.endDate) : undefined,
+              numBins: option.config?.numBins || 100,
+            };
+            
+            const transformedData = transformToTimeBarData(filteredData, context.platforms, transformOptions);
+            
+            // Render the updated chart
+            renderTimeBarChart(chart, transformedData, option.config || {});
+          } catch (error) {
+            console.error("Error processing time bar data:", error);
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Error initializing time bar chart:", error);
+    }
+  });
+</script>

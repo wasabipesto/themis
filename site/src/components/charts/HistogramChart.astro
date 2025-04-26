@@ -1,0 +1,166 @@
+---
+import type {
+  ChartSelectorOption,
+  ChartContext,
+  HistogramDataPoint,
+} from "@lib/charts/types";
+
+export interface Props {
+  id: string;
+  data: Array<{ value: number; platformSlug: string }>;
+  options: ChartSelectorOption<any, HistogramDataPoint>[];
+  context: ChartContext;
+}
+
+const { id, data, options, context } = Astro.props;
+
+// Process data for the initial option
+const initialOption = options[0];
+const initialProcessedData = initialOption
+  ? initialOption.dataSelector(data, context)
+  : [];
+
+const initialConfig = initialOption?.config || {};
+---
+
+<div
+  id={`histogram-chart-${id}`}
+  class="histogram-chart"
+  data-options={JSON.stringify(options)}
+  data-initial-data={JSON.stringify(initialProcessedData)}
+  data-initial-config={JSON.stringify(initialConfig)}
+  data-raw-data={JSON.stringify(data)}
+  data-context={JSON.stringify(context)}
+>
+</div>
+
+<script>
+  import * as Plot from "@observablehq/plot";
+  import type { HistogramDataPoint } from "@lib/charts/types";
+  import { transformToHistogramData } from "@lib/charts/transformers";
+
+  interface HistogramChartElement extends HTMLElement {
+    dataset: {
+      options: string;
+      initialData: string;
+      initialConfig: string;
+      rawData: string;
+      context: string;
+    };
+  }
+
+  // Get all histogram chart elements
+  const histogramCharts = document.querySelectorAll(
+    ".histogram-chart",
+  ) as NodeListOf<HistogramChartElement>;
+
+  // Render a histogram chart
+  function renderHistogram(
+    element: HistogramChartElement,
+    data: HistogramDataPoint[],
+    config: any,
+  ) {
+    try {
+      const plotWidth = parseInt(window.getComputedStyle(element).width) || 600;
+
+      const axisTitle = {
+        x: config.axisConfig?.x?.title || "Value",
+        y: config.axisConfig?.y?.title || "Percent",
+      };
+
+      const plot = Plot.plot({
+        title: config.title || "Histogram",
+        width: plotWidth,
+        marginLeft: 50,
+        marginRight: 80,
+        x: { label: axisTitle.x },
+        y: {
+          grid: true,
+          percent: true,
+          label: axisTitle.y,
+        },
+        fy: {
+          label: "Platform",
+          axis: null,
+        },
+        color: {
+          label: null,
+        },
+        marks: [
+          Plot.rectY(data, {
+            x1: "startX",
+            x2: "endX",
+            y: "percent",
+            fy: "platformName",
+            fill: "colorAccent",
+            insetLeft: 1,
+            insetRight: 1,
+            tip: true,
+          }),
+          Plot.ruleY([0]),
+        ],
+      });
+
+      // Clear existing content and add the plot
+      while (element.firstChild) {
+        element.removeChild(element.firstChild);
+      }
+      element.appendChild(plot);
+    } catch (error) {
+      console.error("Error rendering histogram:", error);
+    }
+  }
+
+  // Initialize each histogram chart
+  histogramCharts.forEach((chart) => {
+    try {
+      // Parse initial data and config
+      const initialData = JSON.parse(
+        chart.dataset.initialData,
+      ) as HistogramDataPoint[];
+      const initialConfig = JSON.parse(chart.dataset.initialConfig);
+
+      // Render the initial chart
+      renderHistogram(chart, initialData, initialConfig);
+
+      // Find the parent container and listen for option changes
+      const container = chart.closest(".chart-container");
+      if (container) {
+        container.addEventListener("optionchange", (event: Event) => {
+          const customEvent = event as CustomEvent;
+          const { option, context } = customEvent.detail;
+
+          // Get the raw data and apply the selector function
+          const rawData = JSON.parse(chart.dataset.rawData);
+          let selectedData;
+
+          try {
+            if (typeof option.dataSelector === "function") {
+              selectedData = option.dataSelector(rawData, context);
+            } else {
+              // If no selector function, try to use transformToHistogramData directly
+              const histogramOptions = {
+                binCount: option.config?.binCount || 20,
+                rangeStart: option.config?.rangeStart,
+                rangeEnd: option.config?.rangeEnd,
+              };
+              selectedData = transformToHistogramData(
+                rawData,
+                context.platforms,
+                histogramOptions,
+              );
+            }
+          } catch (error) {
+            console.error("Error processing data:", error);
+            selectedData = [];
+          }
+
+          // Render the updated chart
+          renderHistogram(chart, selectedData, option.config || {});
+        });
+      }
+    } catch (error) {
+      console.error("Error initializing histogram chart:", error);
+    }
+  });
+</script>
