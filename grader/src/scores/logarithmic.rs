@@ -17,19 +17,19 @@ pub fn log_score(prediction: f32, outcome: f32) -> f32 {
 /// Convert a Logarithmic score to a letter grade.
 pub fn abs_log_letter_grade(score: &f32) -> String {
     match score {
-        x if *x > -0.00500 => "S".to_string(),
-        x if *x > -0.03013 => "A+".to_string(),
-        x if *x > -0.04091 => "A".to_string(),
-        x if *x > -0.04735 => "A-".to_string(),
-        x if *x > -0.05600 => "B+".to_string(),
-        x if *x > -0.06299 => "B".to_string(),
-        x if *x > -0.07578 => "B-".to_string(),
-        x if *x > -0.08933 => "C+".to_string(),
-        x if *x > -0.12052 => "C".to_string(),
-        x if *x > -0.16637 => "C-".to_string(),
-        x if *x > -0.24381 => "D+".to_string(),
-        x if *x > -0.39046 => "D".to_string(),
-        x if *x > -0.66730 => "D-".to_string(),
+        x if *x > -0.005 => "S".to_string(),
+        x if *x > -0.030 => "A+".to_string(),
+        x if *x > -0.041 => "A".to_string(),
+        x if *x > -0.048 => "A-".to_string(),
+        x if *x > -0.056 => "B+".to_string(),
+        x if *x > -0.063 => "B".to_string(),
+        x if *x > -0.076 => "B-".to_string(),
+        x if *x > -0.090 => "C+".to_string(),
+        x if *x > -0.121 => "C".to_string(),
+        x if *x > -0.167 => "C-".to_string(),
+        x if *x > -0.244 => "D+".to_string(),
+        x if *x > -0.391 => "D".to_string(),
+        x if *x > -0.668 => "D-".to_string(),
         _ => "F".to_string(),
     }
 }
