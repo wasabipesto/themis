@@ -2,7 +2,7 @@
 import Base from "@layouts/base.astro";
 import HistogramSelect from "@components/charts/histogram-select.astro";
 import BarCountOverTime from "@components/charts/bar-count-over-time.astro";
-import { getPlatforms, getCategories, getMarkets } from "@lib/api";
+import { getPlatforms, getMarkets } from "@lib/api";
 
 // Download data
 const platforms = await getPlatforms();

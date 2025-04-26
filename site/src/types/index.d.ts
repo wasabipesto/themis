@@ -166,6 +166,7 @@ export interface PlatformCategoryScoreDetails {
 
 /** Score data for platforms, categories, or questions. */
 export interface OtherScoreDetails {
+  item_type: string;
   item_id: string;
   score_type: string;
   num_markets: number;

@@ -81,13 +81,15 @@ const platformOverallScores = await getPlatformOverallScores();
             platformCategoryScores={platformCategoryScores.filter(
               (score) => score.platform_slug == platform.slug,
             )}
-            overallScores={platformOverallScores}
+            overallScores={platformOverallScores.filter(
+              (score) => score.item_id == platform.slug,
+            )}}
             pivot="category"
           />
         </div>
         <SeeMoreLink
           link={`/platform/${platform.slug}`}
-          text={`See more about ${platform.name}`}
+          text={`Additional ${platform.name} statistics`}
         />
       </div>
     ))

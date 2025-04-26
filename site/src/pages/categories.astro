@@ -22,7 +22,7 @@ const platforms = await getPlatforms();
 const categories = await getCategories();
 const platformCategoryScores = await getPlatformCategoryScores(null);
 const categoryOverallScores = await getCategoryOverallScores();
-const featuredQuestions = await getFeaturedQuestions(6);
+const featuredQuestions = await getFeaturedQuestions(200);
 const marketScores = await getMarketScoresByQuestion(
   featuredQuestions.map((q) => q.id),
   scoreType,
@@ -66,12 +66,14 @@ const marketScores = await getMarketScoresByQuestion(
             platformCategoryScores={platformCategoryScores.filter(
               (score) => score.category_slug == category.slug,
             )}
-            overallScores={categoryOverallScores}
+            overallScores={categoryOverallScores.filter(
+              (score) => score.item_id == category.slug,
+            )}}
             pivot="platform"
           />
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {featuredQuestions.map((question) => {
+          {featuredQuestions.filter((question) => question.category_slug == category.slug).slice(0, 6).map((question) => {
             return (
               <QuestionCard
                 question={question}
