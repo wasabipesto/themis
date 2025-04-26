@@ -1,7 +1,7 @@
 ---
 import type { PlatformDetails } from "@types";
 import { quartiles, roundSF } from "@lib/stats";
-import { Icon } from "astro-icon/components";
+import SelectableOptions from "./selectable-options.astro";
 
 interface Props {
   plotId: string;
@@ -88,6 +88,7 @@ const optionsCalculated = options.map((option) => {
   }
 
   return {
+    id: `histogram-option-${Math.random().toString(36).slice(2, 7)}`,
     icon: option.icon,
     description: option.description,
     count: itemsInRange.length,
@@ -100,32 +101,11 @@ const optionsCalculated = options.map((option) => {
 ---
 
 <div class="grid gap-2 grid-cols-1 md:grid-cols-3">
-  <div class="flex-col space-y-2">
-    {
-      optionsCalculated.map((opt, index) => (
-        <div class="bg-base-light text-crust rounded-md drop-shadow-sm px-4 py-2">
-          <div class="flex items-center">
-            <input
-              type="radio"
-              id={`histogram-option-${plotId}-${index}`}
-              name={`histogram-option-${plotId}`}
-              value={index}
-              class={`w-5 h-5 mr-4 text-mantle histogram-option-${plotId}`}
-            />
-            <label for={`histogram-option-${plotId}-${index}`} class="w-full">
-              <span>
-                {opt.icon && <Icon name={opt.icon} class="inline mb-1 mr-1" />}
-                {opt.description}
-              </span>
-              <div class="text-xs text-right">
-                n={opt.count.toLocaleString()}
-              </div>
-            </label>
-          </div>
-        </div>
-      ))
-    }
-  </div>
+  <SelectableOptions 
+    plotId={plotId}
+    optionClass="histogram-option"
+    options={optionsCalculated}
+  />
   <div class="col-span-2">
     <div
       class="bg-base-light [&_h2]:text-2xl [&_figcaption]:text-xs text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
@@ -143,55 +123,24 @@ const optionsCalculated = options.map((option) => {
 
 <script>
   import * as Plot from "@observablehq/plot";
-  import type { HistogramDatapoint } from "./histogram-select.astro";
-  import type { PlatformDetails } from "@types";
-
-  interface HistogramPlotElement extends HTMLElement {
-    dataset: {
-      platforms: string;
-      options: string;
-    };
-  }
-  interface OptionData {
-    description: string;
-    plotTitle: string;
-    axisTitleX: string;
-    axisTitleY: string;
-    points: HistogramDatapoint[];
-  }
-
-  // Function to get the selected option based on user input
-  function getSelectedOption(
-    options: OptionData[],
-    radios: HTMLInputElement[],
-  ) {
-    for (let i = 0; i < radios.length; i++) {
-      if (radios[i].checked) {
-        return options[i];
-      }
-    }
-    // Default to first option if none are selected
-    return options[0];
-  }
+  import type { HistogramOption } from "@lib/charts/types";
+  import { initSelectableCharts, updatePlotElement } from "@lib/charts/selectable-option";
 
   // Update the given plot when called
-  function updatePlot(plotElement: HistogramPlotElement, option: OptionData) {
-    const platforms = JSON.parse(
-      plotElement.dataset.platforms,
-    ) as PlatformDetails[];
+  function updatePlot(plotElement: HTMLElement, option: HistogramOption) {
     const plotWidth = parseInt(window.getComputedStyle(plotElement).width);
 
     const plot = Plot.plot({
-      title: option.plotTitle,
+      title: option.config?.title || option.plotTitle || "Distribution",
       width: plotWidth,
       //aspectRatio: 2,
       marginLeft: 50,
       marginRight: 80,
-      x: { label: option.axisTitleX },
+      x: { label: option.config?.axisTitleX || option.axisTitleX },
       y: {
         grid: true,
         percent: true,
-        label: "Percent",
+        label: option.config?.axisTitleY || option.axisTitleY || "Percent",
       },
       fy: {
         label: "Platform",
@@ -201,7 +150,7 @@ const optionsCalculated = options.map((option) => {
         label: null,
       },
       marks: [
-        Plot.rectY(option.points, {
+        Plot.rectY(option.points || [], {
           x1: "startX",
           x2: "endX",
           y: "percent",
@@ -215,52 +164,16 @@ const optionsCalculated = options.map((option) => {
       ],
     });
 
-    // Wipe the existing plot and add the new one
-    while (plotElement.firstChild) {
-      plotElement.removeChild(plotElement.firstChild);
-    }
-    plotElement.appendChild(plot);
+    updatePlotElement(plotElement, plot as any);
   }
 
-  // Get all matching plot elements
-  const plotElements = document.querySelectorAll(
-    ".histogram-plot",
-  ) as NodeListOf<HistogramPlotElement>;
-
-  // Set up each plot
-  plotElements.forEach((plotElement) => {
-    // Extract options
-    const options = JSON.parse(plotElement.dataset.options) as OptionData[];
-
-    // Extract plot ID
-    let plotId = "";
-    const regex = /histogram-plot-(.*)$/;
-    const match = plotElement.id.match(regex);
-    if (match && match.length > 1) {
-      plotId = match[1];
-    } else {
-      throw new Error(`Invalid plot ID: ${plotElement.id}`);
-    }
-
-    // Find options that match the plot ID
-    const radios = [
-      ...document.querySelectorAll(`.histogram-option-${plotId}`),
-    ] as HTMLInputElement[];
-
-    // Set the first radio button to checked by default
-    if (radios.length > 0) {
-      radios[0].checked = true;
-    }
-
-    // Update the plot with initial values
-    updatePlot(plotElement, getSelectedOption(options, radios));
-
-    // Set the callbacks for future changes
-    radios.forEach((radio) => {
-      radio.addEventListener("change", () => {
-        const selectedOption = getSelectedOption(options, radios);
-        updatePlot(plotElement, selectedOption);
-      });
-    });
+  // Initialize all histogram plots
+  document.addEventListener("DOMContentLoaded", () => {
+    initSelectableCharts<HistogramOption>(
+      "histogram-plot",
+      "histogram-option",
+      updatePlot,
+      (element) => JSON.parse((element as HTMLElement & { dataset: any }).dataset.options)
+    );
   });
 </script>
