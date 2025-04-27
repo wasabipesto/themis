@@ -101,7 +101,7 @@ const optionsCalculated = options.map((option) => {
 ---
 
 <div class="grid gap-2 grid-cols-1 md:grid-cols-3">
-  <SelectableOptions 
+  <SelectableOptions
     plotId={plotId}
     optionClass="histogram-option"
     options={optionsCalculated}
@@ -124,7 +124,10 @@ const optionsCalculated = options.map((option) => {
 <script>
   import * as Plot from "@observablehq/plot";
   import type { HistogramOption } from "@lib/charts/types";
-  import { initSelectableCharts, updatePlotElement } from "@lib/charts/selectable-option";
+  import {
+    initSelectableCharts,
+    updatePlotElement,
+  } from "@lib/charts/selectable-option";
 
   // Update the given plot when called
   function updatePlot(plotElement: HTMLElement, option: HistogramOption) {
@@ -144,7 +147,6 @@ const optionsCalculated = options.map((option) => {
       },
       fy: {
         label: "Platform",
-        axis: null,
       },
       color: {
         label: null,
@@ -173,7 +175,8 @@ const optionsCalculated = options.map((option) => {
       "histogram-plot",
       "histogram-option",
       updatePlot,
-      (element) => JSON.parse((element as HTMLElement & { dataset: any }).dataset.options)
+      (element) =>
+        JSON.parse((element as HTMLElement & { dataset: any }).dataset.options),
     );
   });
 </script>
