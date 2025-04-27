@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:${POSTGRES_VERSION:-17}
+    image: pgvector/pgvector:pg${POSTGRES_MAJOR:-17}
     container_name: postgres
     restart: always
     environment:
@@ -36,7 +36,7 @@ services:
         condition: service_healthy
 
   pgbackups:
-    image: prodrigestivill/postgres-backup-local:${POSTGRES_VERSION:-17}
+    image: prodrigestivill/postgres-backup-local:${POSTGRES_MAJOR:-17}
     container_name: pgbackups
     restart: always
     environment:
