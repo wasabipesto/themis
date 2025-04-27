@@ -1,6 +1,6 @@
 /**
  * Chart Manager
- * 
+ *
  * Provides unified handling of chart initialization, rendering, and selection management.
  */
 import * as Plot from "@observablehq/plot";
@@ -27,21 +27,24 @@ export interface ChartElement extends HTMLElement {
 
 /**
  * Initialize selection behavior for a chart
- * 
+ *
  * @param plotId Unique identifier for the plot
  * @param chartClass CSS class for chart elements
  * @param optionClass CSS class for option elements
  * @param updateFn Function to update the chart when selection changes
  */
-export function initializeChartSelection<T extends ChartOption, E extends ChartElement>(
+export function initializeChartSelection<
+  T extends ChartOption,
+  E extends ChartElement,
+>(
   plotId: string,
   chartClass: string,
   optionClass: string,
-  updateFn: (plotElement: E, option: T) => void
+  updateFn: (plotElement: E, option: T) => void,
 ): void {
   // Get all matching plot elements
   const plotElements = document.querySelectorAll(
-    `.${chartClass}`
+    `.${chartClass}`,
   ) as NodeListOf<E>;
 
   // Set up each plot
@@ -97,24 +100,21 @@ export function getSelectedOption<T>(
 export function createBasicPlot(
   title: string,
   element: HTMLElement,
-  config: any
+  config: any,
 ): Plot.Plot {
   const plotWidth = parseInt(window.getComputedStyle(element).width);
-  
+
   return Plot.plot({
     title: title,
     width: plotWidth,
-    ...config
+    ...config,
   });
 }
 
 /**
  * Replace the contents of a plot element with a new plot
  */
-export function updatePlotElement(
-  element: HTMLElement,
-  plot: Plot.Plot
-): void {
+export function updatePlotElement(element: HTMLElement, plot: Plot.Plot): void {
   // Wipe the existing plot and add the new one
   while (element.firstChild) {
     element.removeChild(element.firstChild);

@@ -48,33 +48,33 @@ export function getSelectedOption<T extends SelectableOption>(
  * Setup a selectable chart
  */
 export function setupSelectableChart<T extends SelectableOption>(
-  config: SelectableChartConfig<T>
+  config: SelectableChartConfig<T>,
 ): void {
   const { plotId, chartClass, optionClass, options, updateFn } = config;
-  
+
   // Get the chart element
   const chartElement = document.getElementById(`${chartClass}-${plotId}`);
   if (!chartElement) {
     console.warn(`Chart element not found: ${chartClass}-${plotId}`);
     return;
   }
-  
+
   // Find the options that match the plot ID
   const radios = [
     ...document.querySelectorAll(`.${optionClass}-${plotId}`),
   ] as HTMLInputElement[];
-  
+
   // Set the first radio button to checked by default
-  if (radios.length > 0 && !radios.some(r => r.checked)) {
+  if (radios.length > 0 && !radios.some((r) => r.checked)) {
     radios[0].checked = true;
   }
-  
+
   // Get the initially selected option
   const selectedOption = getSelectedOption(options, radios);
-  
+
   // Update the chart with initial values
   updateFn(chartElement, selectedOption);
-  
+
   // Set up event listeners for selection changes
   radios.forEach((radio, index) => {
     radio.addEventListener("change", () => {
@@ -92,29 +92,29 @@ export function initSelectableCharts<T extends SelectableOption>(
   chartClass: string,
   optionClass: string,
   updateFn: (element: HTMLElement, option: T) => void,
-  getOptions: (element: HTMLElement) => T[]
+  getOptions: (element: HTMLElement) => T[],
 ): void {
   // Get all chart elements
   const chartElements = document.querySelectorAll(`.${chartClass}`);
-  
-  chartElements.forEach(element => {
+
+  chartElements.forEach((element) => {
     // Extract plot ID from element ID
     const idMatch = element.id.match(new RegExp(`${chartClass}-(.*)$`));
     if (!idMatch || !idMatch[1]) {
       console.warn(`Invalid chart ID format: ${element.id}`);
       return;
     }
-    
+
     const plotId = idMatch[1];
     const options = getOptions(element as HTMLElement);
-    
+
     // Set up the selectable chart
     setupSelectableChart({
       plotId,
       chartClass,
       optionClass,
       options,
-      updateFn
+      updateFn,
     });
   });
 }
@@ -122,10 +122,7 @@ export function initSelectableCharts<T extends SelectableOption>(
 /**
  * Replace the contents of a plot element with a new plot
  */
-export function updatePlotElement(
-  element: HTMLElement,
-  plot: Plot.Plot
-): void {
+export function updatePlotElement(element: HTMLElement, plot: Plot.Plot): void {
   // Wipe the existing plot and add the new one
   while (element.firstChild) {
     element.removeChild(element.firstChild);
