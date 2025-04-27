@@ -11,6 +11,7 @@ use crate::{
 };
 
 pub mod brier;
+pub mod lettergrade;
 pub mod logarithmic;
 pub mod relative;
 pub mod spherical;
@@ -54,7 +55,7 @@ impl ScoreType {
         score_types
     }
     /// Get the grade for a market using this score type.
-    pub fn get_grade(&self, score: &f32) -> String {
+    pub fn get_grade(&self, score: f32) -> String {
         match self {
             ScoreType::Absolute(absolute_score_type) => absolute_score_type.get_grade(score),
             ScoreType::Relative(relative_score_type) => relative_score_type.get_grade(score),
@@ -112,7 +113,7 @@ impl AbsoluteScoreType {
         criteron_probs: &[CriterionProbabilityPoint],
     ) -> Result<MarketScore> {
         let score = self.get_score(market, criteron_probs)?;
-        let grade = self.get_grade(&score);
+        let grade = self.get_grade(score);
         Ok(MarketScore {
             market_id: market.id.clone(),
             score_type: ScoreType::Absolute(self.clone()),
@@ -159,15 +160,8 @@ impl AbsoluteScoreType {
         }
     }
     /// Get the grade for a market using this absolute score type.
-    pub fn get_grade(&self, score: &f32) -> String {
-        match self {
-            AbsoluteScoreType::BrierAverage => brier::abs_brier_letter_grade(score),
-            AbsoluteScoreType::BrierMidpoint => brier::abs_brier_letter_grade(score),
-            AbsoluteScoreType::LogarithmicAverage => logarithmic::abs_log_letter_grade(score),
-            AbsoluteScoreType::LogarithmicMidpoint => logarithmic::abs_log_letter_grade(score),
-            AbsoluteScoreType::SphericalAverage => spherical::abs_spherical_letter_grade(score),
-            AbsoluteScoreType::SphericalMidpoint => spherical::abs_spherical_letter_grade(score),
-        }
+    pub fn get_grade(&self, score: f32) -> String {
+        lettergrade::absolute_letter_grade(self, score)
     }
 }
 
@@ -223,12 +217,8 @@ impl RelativeScoreType {
         }
     }
     /// Get the grade for a market using this relative score type.
-    pub fn get_grade(&self, score: &f32) -> String {
-        match self {
-            RelativeScoreType::BrierRelative => brier::rel_brier_letter_grade(score),
-            RelativeScoreType::LogarithmicRelative => logarithmic::rel_log_letter_grade(score),
-            RelativeScoreType::SphericalRelative => spherical::rel_spherical_letter_grade(score),
-        }
+    pub fn get_grade(&self, score: f32) -> String {
+        lettergrade::relative_letter_grade(self, score)
     }
 }
 
@@ -361,7 +351,7 @@ fn average_platform_category_scores(
             score_type: score_type.clone(),
             num_markets: market_scores.len(),
             score: Some(average_score),
-            grade: Some(score_type.get_grade(&average_score)),
+            grade: Some(score_type.get_grade(average_score)),
         }
     } else {
         PlatformCategoryScore {
@@ -391,7 +381,7 @@ fn average_other_scores(
             score_type: score_type.clone(),
             num_markets: market_scores.len(),
             score: Some(average_score),
-            grade: Some(score_type.get_grade(&average_score)),
+            grade: Some(score_type.get_grade(average_score)),
         }
     } else {
         OtherScore {

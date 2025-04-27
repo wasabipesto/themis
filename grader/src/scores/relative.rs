@@ -231,7 +231,7 @@ pub fn score_market(
             market_id: market_id.clone(),
             score_type: ScoreType::Relative(score_type.clone()),
             score: *score,
-            grade: score_type.get_grade(score),
+            grade: score_type.get_grade(*score),
         })
         .collect();
 

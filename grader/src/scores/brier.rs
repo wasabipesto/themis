@@ -9,48 +9,6 @@ pub fn brier_score(prediction: f32, outcome: f32) -> f32 {
     (prediction - outcome).powi(2)
 }
 
-/// Convert a Brier score to a letter grade.
-pub fn abs_brier_letter_grade(score: &f32) -> String {
-    match score {
-        x if *x < 0.00005 => "S".to_string(),
-        x if *x < 0.0009 => "A+".to_string(),
-        x if *x < 0.0018 => "A".to_string(),
-        x if *x < 0.0022 => "A-".to_string(),
-        x if *x < 0.0030 => "B+".to_string(),
-        x if *x < 0.0040 => "B".to_string(),
-        x if *x < 0.0055 => "B-".to_string(),
-        x if *x < 0.0075 => "C+".to_string(),
-        x if *x < 0.013 => "C".to_string(),
-        x if *x < 0.024 => "C-".to_string(),
-        x if *x < 0.047 => "D+".to_string(),
-        x if *x < 0.106 => "D".to_string(),
-        x if *x < 0.237 => "D-".to_string(),
-        x if *x <= 1.0 => "F".to_string(),
-        _ => "ERROR".to_string(),
-    }
-}
-
-/// Convert a Brier score to a letter grade.
-pub fn rel_brier_letter_grade(score: &f32) -> String {
-    match score {
-        x if *x < -0.075 => "S".to_string(),
-        x if *x < -0.040 => "A+".to_string(),
-        x if *x < -0.015 => "A".to_string(),
-        x if *x < -0.010 => "A-".to_string(),
-        x if *x < -0.008 => "B+".to_string(),
-        x if *x < -0.004 => "B".to_string(),
-        x if *x < -0.002 => "B-".to_string(),
-        x if *x < 0.000 => "C+".to_string(),
-        x if *x < 0.002 => "C".to_string(),
-        x if *x < 0.004 => "C-".to_string(),
-        x if *x < 0.008 => "D+".to_string(),
-        x if *x < 0.015 => "D".to_string(),
-        x if *x < 0.025 => "D-".to_string(),
-        x if *x <= 1.0 => "F".to_string(),
-        _ => "ERROR".to_string(),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

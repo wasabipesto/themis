@@ -31,44 +31,16 @@ pub fn log_score(prediction: f32, outcome: f32) -> f32 {
     score.max(f32::MIN)
 }
 
-/// Convert a Logarithmic score to a letter grade.
-pub fn abs_log_letter_grade(score: &f32) -> String {
-    match score {
-        x if *x > -0.005 => "S".to_string(),
-        x if *x > -0.030 => "A+".to_string(),
-        x if *x > -0.041 => "A".to_string(),
-        x if *x > -0.048 => "A-".to_string(),
-        x if *x > -0.056 => "B+".to_string(),
-        x if *x > -0.063 => "B".to_string(),
-        x if *x > -0.076 => "B-".to_string(),
-        x if *x > -0.090 => "C+".to_string(),
-        x if *x > -0.121 => "C".to_string(),
-        x if *x > -0.167 => "C-".to_string(),
-        x if *x > -0.244 => "D+".to_string(),
-        x if *x > -0.391 => "D".to_string(),
-        x if *x > -0.668 => "D-".to_string(),
-        _ => "F".to_string(),
-    }
-}
-
-/// Convert a Logarithmic score to a letter grade.
-pub fn rel_log_letter_grade(score: &f32) -> String {
-    match score {
-        x if *x > 0.200 => "S".to_string(),
-        x if *x > 0.060 => "A+".to_string(),
-        x if *x > 0.030 => "A".to_string(),
-        x if *x > 0.015 => "A-".to_string(),
-        x if *x > 0.010 => "B+".to_string(),
-        x if *x > 0.004 => "B".to_string(),
-        x if *x > 0.002 => "B-".to_string(),
-        x if *x > 0.000 => "C+".to_string(),
-        x if *x > -0.004 => "C".to_string(),
-        x if *x > -0.006 => "C-".to_string(),
-        x if *x > -0.010 => "D+".to_string(),
-        x if *x > -0.040 => "D".to_string(),
-        x if *x > -0.085 => "D-".to_string(),
-        _ => "F".to_string(),
-    }
+/// Given a log score, and assuming that the resolution is 1, recreate the
+/// probability of the event.
+///
+/// When outcome is 1, score = ln(prob)
+/// To solve for prob, prob = e ^ score
+///
+/// We use this to generate letter grades, since we use Brier scores as the basis.
+///
+pub fn invert_log_score(score: f32) -> f32 {
+    score.exp()
 }
 
 #[cfg(test)]
@@ -131,5 +103,16 @@ mod tests {
         assert_approx_eq(log_score(0.3, 0.7), expected_score);
         let expected_score = 0.3 * 0.7_f32.ln() + 0.7 * 0.3_f32.ln();
         assert_approx_eq(log_score(0.7, 0.3), expected_score);
+    }
+
+    #[test]
+    /// Test that the score inverts back to the original probability
+    fn test_inversion() {
+        for i in 0..1000 {
+            let prediction = i as f32 / 1000.0;
+            let outcome = 1.0;
+            let score = log_score(prediction, outcome);
+            assert_approx_eq(invert_log_score(score), prediction);
+        }
     }
 }
