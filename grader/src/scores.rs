@@ -14,6 +14,7 @@ use crate::{
 
 pub mod brier;
 pub mod logarithmic;
+pub mod spherical;
 
 /// Possible absolute score types.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -69,6 +70,8 @@ pub enum AbsoluteScoreType {
     BrierMidpoint,
     LogarithmicAverage,
     LogarithmicMidpoint,
+    SphericalAverage,
+    SphericalMidpoint,
 }
 impl Display for AbsoluteScoreType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -77,6 +80,8 @@ impl Display for AbsoluteScoreType {
             AbsoluteScoreType::BrierMidpoint => "brier-midpoint",
             AbsoluteScoreType::LogarithmicAverage => "logarithmic-average",
             AbsoluteScoreType::LogarithmicMidpoint => "logarithmic-midpoint",
+            AbsoluteScoreType::SphericalAverage => "spherical-average",
+            AbsoluteScoreType::SphericalMidpoint => "spherical-midpoint",
         };
         write!(f, "{}", s)
     }
@@ -97,6 +102,8 @@ impl AbsoluteScoreType {
             AbsoluteScoreType::BrierMidpoint,
             AbsoluteScoreType::LogarithmicAverage,
             AbsoluteScoreType::LogarithmicMidpoint,
+            AbsoluteScoreType::SphericalAverage,
+            AbsoluteScoreType::SphericalMidpoint,
         ]
     }
     /// Score a market using this absolute score type.
@@ -143,6 +150,13 @@ impl AbsoluteScoreType {
             AbsoluteScoreType::LogarithmicMidpoint => {
                 Ok(logarithmic::log_score(prob_midpoint, market.resolution))
             }
+            AbsoluteScoreType::SphericalAverage => Ok(spherical::spherical_score(
+                prob_time_average,
+                market.resolution,
+            )),
+            AbsoluteScoreType::SphericalMidpoint => {
+                Ok(spherical::spherical_score(prob_midpoint, market.resolution))
+            }
         }
     }
     /// Get the grade for a market using this absolute score type.
@@ -152,6 +166,8 @@ impl AbsoluteScoreType {
             AbsoluteScoreType::BrierMidpoint => brier::abs_brier_letter_grade(score),
             AbsoluteScoreType::LogarithmicAverage => logarithmic::abs_log_letter_grade(score),
             AbsoluteScoreType::LogarithmicMidpoint => logarithmic::abs_log_letter_grade(score),
+            AbsoluteScoreType::SphericalAverage => spherical::abs_spherical_letter_grade(score),
+            AbsoluteScoreType::SphericalMidpoint => spherical::abs_spherical_letter_grade(score),
         }
     }
 }
@@ -161,12 +177,14 @@ impl AbsoluteScoreType {
 pub enum RelativeScoreType {
     BrierRelative,
     LogarithmicRelative,
+    SphericalRelative,
 }
 impl Display for RelativeScoreType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
             RelativeScoreType::BrierRelative => "brier-relative",
             RelativeScoreType::LogarithmicRelative => "logarithmic-relative",
+            RelativeScoreType::SphericalRelative => "spherical-relative",
         };
         write!(f, "{}", s)
     }
@@ -185,6 +203,7 @@ impl RelativeScoreType {
         vec![
             RelativeScoreType::BrierRelative,
             RelativeScoreType::LogarithmicRelative,
+            RelativeScoreType::SphericalRelative,
         ]
     }
     /// Score a market using this relative score type.
@@ -413,6 +432,7 @@ impl RelativeScoreType {
         match self {
             RelativeScoreType::BrierRelative => brier::brier_score(prediction, outcome),
             RelativeScoreType::LogarithmicRelative => logarithmic::log_score(prediction, outcome),
+            RelativeScoreType::SphericalRelative => spherical::spherical_score(prediction, outcome),
         }
     }
     /// Get the grade for a market using this relative score type.
@@ -420,6 +440,7 @@ impl RelativeScoreType {
         match self {
             RelativeScoreType::BrierRelative => brier::rel_brier_letter_grade(score),
             RelativeScoreType::LogarithmicRelative => logarithmic::rel_log_letter_grade(score),
+            RelativeScoreType::SphericalRelative => spherical::rel_spherical_letter_grade(score),
         }
     }
 }
