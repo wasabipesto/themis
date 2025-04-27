@@ -14,6 +14,7 @@ import {
   getPlatformCategoryScores,
   getFeaturedQuestions,
   getPlatformOverallScores,
+  getQuestionCount,
 } from "@lib/api";
 
 let scoreType = "brier-relative";
@@ -24,6 +25,7 @@ const markets: MarketDetails[] = await getMarkets();
 const platformCategoryScores = await getPlatformCategoryScores(scoreType);
 const platformOverallScores = await getPlatformOverallScores();
 const featuredQuestions = await getFeaturedQuestions(4);
+const { numQuestions, numLinkedMarkets } = await getQuestionCount();
 ---
 
 <Base title="Home">
@@ -72,13 +74,15 @@ const featuredQuestions = await getFeaturedQuestions(4);
       Each card here asks a general question that several prediction market
       platforms have indepenently tried to predict. We find and link markets
       when they resolve in order to judge all platforms on an even playing
-      field.
+      field. As of {new Date().toLocaleDateString()} we have {
+        numLinkedMarkets.toLocaleString()
+      } linked markets across
+      {numQuestions.toLocaleString()} unique questions.
     </p>
     <p class="mt-2">
       A traditional accuracy analysis would look at a single point in time,
-      usually midway through the market or 30 days prior to resolution. We
-      calculate our absolute scores in this way, and show it below as the
-      midpoint Brier score.
+      usually midway through the market. We calculate our absolute scores in
+      this way, and show it below as the midpoint Brier score.
     </p>
     <p class="mt-2">
       However, that form of scoring often misses a lot of important information.

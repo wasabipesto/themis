@@ -328,3 +328,20 @@ export async function getDailyProbabilitiesByQuestion(
   }
   return fetchFromAPI<DailyProbabilityDetails[]>(url);
 }
+
+export async function getQuestionCount(): Promise<{
+  numQuestions: number;
+  numLinkedMarkets: number;
+}> {
+  const numQuestions = await fetchFromAPI<[{ count: number }]>(
+    "/question_details?select=count",
+  );
+  const numLinkedMarkets = await fetchFromAPI<[{ count: number }]>(
+    "/market_details?question_id=not.is.null&select=count",
+  );
+
+  return {
+    numQuestions: numQuestions[0].count,
+    numLinkedMarkets: numLinkedMarkets[0].count,
+  };
+}
