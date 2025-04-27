@@ -52,12 +52,20 @@ const marketScores = await getMarketScores();
           <li>
             <Markets num={platform.total_markets} />
           </li>
-          <li>
-            <Traders num={platform.total_traders} />
-          </li>
-          <li>
-            <Volume num={platform.total_volume} />
-          </li>
+          {
+            platform.total_traders && (
+              <li>
+                <Traders num={platform.total_traders} />
+              </li>
+            )
+          }
+          {
+            platform.total_volume && (
+              <li>
+                <Volume num={platform.total_volume} />
+              </li>
+            )
+          }
         </ul>
       </div>
       <LongText text={platform.long_description} />
