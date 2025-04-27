@@ -5,6 +5,7 @@ import Volume from "@atoms/volume.astro";
 import Grade from "@atoms/grade.astro";
 import ScoreAbs from "@atoms/score-abs.astro";
 import { getQuestions, getQuestionOverallScores } from "@lib/api";
+import Duration from "@atoms/duration.astro";
 
 // Set score type
 const scoreType = "brier-midpoint";
@@ -53,35 +54,42 @@ questions.sort((a, b) => b.total_volume - a.total_volume);
       <thead>
         <tr class="border-b-2">
           <th
-            class="text-left py-3 px-4 cursor-pointer hover:text-lavender"
+            class="text-left py-3 px-2 cursor-pointer hover:text-lavender"
             data-sort="title"
           >
             Question
             <span class="sort-indicator"></span>
           </th>
           <th
-            class="text-left py-3 px-4 w-30 cursor-pointer hover:text-lavender"
+            class="text-left py-3 px-2 w-25 cursor-pointer hover:text-lavender"
             data-sort="category"
           >
             Category
             <span class="sort-indicator"></span>
           </th>
           <th
-            class="text-center py-3 px-4 w-30 cursor-pointer hover:text-lavender"
+            class="text-center py-3 px-2 w-25 cursor-pointer hover:text-lavender"
+            data-sort="duration"
+          >
+            Duration
+            <span class="sort-indicator"></span>
+          </th>
+          <th
+            class="text-center py-3 px-2 w-25 cursor-pointer hover:text-lavender"
             data-sort="traders"
           >
             Traders
             <span class="sort-indicator"></span>
           </th>
           <th
-            class="text-center py-3 px-4 w-40 cursor-pointer hover:text-lavender"
+            class="text-center py-3 px-2 w-40 cursor-pointer hover:text-lavender"
             data-sort="volume"
           >
             Volume
             <span class="sort-indicator"></span>
           </th>
           <th
-            class="text-center py-3 px-4 w-75 cursor-pointer hover:text-lavender"
+            class="text-center py-3 px-4 w-85 cursor-pointer hover:text-lavender"
             data-sort="score"
             colspan="2"
           >
@@ -97,6 +105,7 @@ questions.sort((a, b) => b.total_volume - a.total_volume);
               class="border-b question-row"
               data-title={question.title.toLowerCase()}
               data-category={question.category_slug}
+              data-duration={question.total_duration}
               data-traders={question.total_traders}
               data-volume={question.total_volume}
               data-grade={score.grade}
@@ -110,7 +119,7 @@ questions.sort((a, b) => b.total_volume - a.total_volume);
                   {question.title}
                 </a>
               </td>
-              <td class="py-3 px-4">
+              <td class="py-3 px-2">
                 <a
                   href={`/category/${question.category_slug}`}
                   class="hover:text-lavender"
@@ -118,10 +127,13 @@ questions.sort((a, b) => b.total_volume - a.total_volume);
                   {question.category_name}
                 </a>
               </td>
-              <td class="py-3 px-4 text-center">
+              <td class="py-3 px-2 text-center">
+                <Duration num={question.total_duration} />
+              </td>
+              <td class="py-3 px-2 text-center">
                 <Traders num={question.total_traders} />
               </td>
-              <td class="py-3 px-4 text-center">
+              <td class="py-3 px-2 text-center">
                 <Volume num={question.total_volume} />
               </td>
               <td class="py-3 pl-4 text-center">
