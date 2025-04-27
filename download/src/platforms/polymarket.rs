@@ -197,6 +197,10 @@ async fn get_trades(client: &ClientWithMiddleware, market: &Value) -> Result<Vec
             break;
         }
     }
+
+    // sometimes returns null instead of a trade, remove those
+    trades.retain(|trade| !trade.is_null());
+
     trace!(
         "Downloaded {} trades for condition ID {}",
         trades.len(),
