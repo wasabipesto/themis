@@ -93,7 +93,7 @@ impl Platform {
     }
 
     /// Find the appropriate data file based on platform name, then load and deserialize all lines.
-    pub fn load_data(&self, base_dir: &Path) -> Result<Vec<PlatformData>> {
+    pub fn load_data(&self, base_dir: &Path, fail_fast: &bool) -> Result<Vec<PlatformData>> {
         let file_name = format!("{}-data.jsonl", self).to_lowercase();
         let data_file_path = base_dir.join(file_name);
 
@@ -101,23 +101,30 @@ impl Platform {
             .with_context(|| format!("Failed to open file: {}", data_file_path.display()))?;
         let reader = BufReader::new(file);
 
-        Ok(reader
-            .lines()
-            .enumerate()
-            .filter_map(move |(line_number, line)| match line {
+        let mut result = Vec::new();
+        for (line_number, line) in reader.lines().enumerate() {
+            match line {
                 Ok(line_content) => match self.deserialize_line(&line_content) {
-                    Ok(item) => Some(item),
+                    Ok(item) => {
+                        result.push(item);
+                    }
                     Err(err) => {
-                        log::error!("Failed to deserialize line {}: {}", line_number + 1, err);
-                        None
+                        let err =
+                            format!("Failed to deserialize line {}: {}", line_number + 1, err);
+                        log::error!("{}", err);
+                        if *fail_fast {
+                            anyhow::bail!(err);
+                        }
                     }
                 },
                 Err(err) => {
-                    log::error!("Failed to read line {}: {}", line_number + 1, err);
-                    None
+                    let err = format!("Failed to deserialize line {}: {}", line_number + 1, err);
+                    log::error!("{}", err);
+                    anyhow::bail!(err);
                 }
-            })
-            .collect())
+            }
+        }
+        Ok(result)
     }
 
     /// Call each platform's standardize function.

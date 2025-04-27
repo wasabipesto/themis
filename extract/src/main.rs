@@ -1,7 +1,7 @@
 //! Themis extract binary source.
 //! Pulls all markets from cache files and standardizes them
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use dotenvy::dotenv;
 use log::{debug, info};
@@ -40,6 +40,10 @@ struct Args {
     /// Only load and convert items, do not upload to database.
     #[arg(short, long)]
     offline: bool,
+
+    /// Fail fast and exit early when encountering errors.
+    #[arg(long)]
+    halt_catch_fire: bool,
 }
 
 /// Parameters that we need in order to upload items to the database.
@@ -95,7 +99,7 @@ fn main() -> Result<()> {
 
     for platform in platforms {
         info!("{platform}: Loading data from disk.");
-        let lines = platform.load_data(&args.directory)?;
+        let lines = platform.load_data(&args.directory, &args.halt_catch_fire)?;
         let num_input = lines.len();
         if args.schema_only {
             info!(
@@ -150,6 +154,9 @@ fn main() -> Result<()> {
                         | MarketError::DataInvalid(_, _)
                         | MarketError::ProcessingError(_, _) => {
                             log::error!("{err}");
+                            if args.halt_catch_fire {
+                                anyhow::bail!("{err}");
+                            }
                         }
                     }
 
@@ -233,7 +240,7 @@ fn upload_batch(
     let market_status = market_response.status();
     if !market_status.is_success() {
         let market_body = market_response.text()?;
-        return Err(anyhow::anyhow!(
+        return Err(anyhow!(
             "Markets batch upload failed with status {} and body: {}",
             market_status,
             market_body
@@ -259,7 +266,7 @@ fn upload_batch(
     let probs_status = probs_response.status();
     if !probs_status.is_success() {
         let probs_body = probs_response.text()?;
-        return Err(anyhow::anyhow!(
+        return Err(anyhow!(
             "Daily probability batch upload failed with status {} and body: {}",
             probs_status,
             probs_body
@@ -285,7 +292,7 @@ fn upload_batch(
     let probs_status = probs_response.status();
     if !probs_status.is_success() {
         let probs_body = probs_response.text()?;
-        return Err(anyhow::anyhow!(
+        return Err(anyhow!(
             "Criterion probability batch upload failed with status {} and body: {}",
             probs_status,
             probs_body
@@ -320,7 +327,7 @@ fn refresh_materialized_views(params: &PostgrestParams) -> Result<()> {
     let status = response.status();
     if !status.is_success() {
         let body = response.text()?;
-        return Err(anyhow::anyhow!(
+        return Err(anyhow!(
             "Refresh materialized views failed with status {} and body: {}",
             status,
             body
