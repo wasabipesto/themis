@@ -47,18 +47,64 @@ const { categories, question, markets, marketScores, questionScores } =
 // TODO: Put this in the database
 const scoreLayout = [
   {
-    row_title: "Brier score:",
-    absolute_score_label: "Midpoint:",
-    absolute_score_key: "brier-average",
-    relative_score_label: "Relative:",
-    relative_score_key: "brier-relative",
+    row_title: "Brier/Quadratic score:",
+    items: [
+      {
+        label: "Midpoint:",
+        key: "brier-midpoint",
+        type: "absolute"
+      },
+      {
+        label: "Average:",
+        key: "brier-average",
+        type: "absolute"
+      },
+      {
+        label: "Relative:",
+        key: "brier-relative",
+        type: "relative"
+      },
+    ],
   },
   {
     row_title: "Logarithmic score:",
-    absolute_score_label: "Midpoint:",
-    absolute_score_key: "logarithmic-average",
-    relative_score_label: "Relative:",
-    relative_score_key: "logarithmic-relative",
+    items: [
+      {
+        label: "Midpoint:",
+        key: "logarithmic-midpoint",
+        type: "absolute"
+      },
+      {
+        label: "Average:",
+        key: "logarithmic-average",
+        type: "absolute"
+      },
+      {
+        label: "Relative:",
+        key: "logarithmic-relative",
+        type: "relative"
+      },
+    ],
+  },
+  {
+    row_title: "Spherical score:",
+    items: [
+      {
+        label: "Midpoint:",
+        key: "spherical-midpoint",
+        type: "absolute"
+      },
+      {
+        label: "Average:",
+        key: "spherical-average",
+        type: "absolute"
+      },
+      {
+        label: "Relative:",
+        key: "spherical-relative",
+        type: "relative"
+      },
+    ],
   },
 ];
 
@@ -68,6 +114,25 @@ const category = categories.find(
 );
 if (!category) {
   throw new Error(`Category not found for slug ${question.category_slug}`);
+}
+
+function getMarketScore(market_id: string, score_key: string) {
+  const score = marketScores.find(
+    (s) => s.market_id == market_id && s.score_type == score_key,
+  );
+  if (!score) {
+    throw new Error(`Market score ${market_id}/${score_key} not found`);
+  }
+  return score;
+}
+function getQuestionScore(score_key: string) {
+  const score = questionScores.find(
+    (s) => s.item_id == question.id.toString() && s.score_type == score_key,
+  );
+  if (!score) {
+    throw new Error(`Question score ${question.id}/${score_key} not found`);
+  }
+  return score;
 }
 
 // Get resolution from market
@@ -80,7 +145,7 @@ const resolution = markets[0].question_invert
   <div class="grid grid-cols-1 md:grid-cols-2 pt-4">
     <div class="p-4 m-2">
       <div class="text-2xl mb-2">{question.title}</div>
-      <ul class="flex flex-wrap items-center gap-3 mb-4">
+      <ul class="flex flex-wrap items-center gap-3 my-2">
         <li>
           Resolved
           {
@@ -100,6 +165,9 @@ const resolution = markets[0].question_invert
             </a>
           </span>
         </li>
+      </ul>
+      <ul class="flex flex-wrap items-center gap-3 my-2">
+        <li><Duration num={question.total_duration} /></li>
         <li><Traders num={question.total_traders} /></li>
         <li><Volume num={question.total_volume} /></li>
       </ul>
@@ -122,6 +190,7 @@ const resolution = markets[0].question_invert
     {
       markets.map((market) => (
         <div class="mb-6">
+          <!-- Platform/Market Header -->
           <div class="border-b-1">
             <ul class="flex flex-wrap items-center gap-x-3">
               <li class="font-bold text-lg">{market.platform_name}</li>
@@ -139,77 +208,56 @@ const resolution = markets[0].question_invert
                 </li>
               )}
             </ul>
-          </div>
-          <div>
             <h3 class="italic">
-              <a href={market.url} target="_blank" class="">
+              <a href={market.url} target="_blank" class="text-lavender">
                 {market.title}
+                {market.question_invert ? "| Inverted" : ""}
                 <Icon name="mdi:open-in-new" class="inline mb-1 ml-1" />
               </a>
             </h3>
           </div>
-          {scoreLayout.map((row) => {
-            const relScore = marketScores.find(
-              (s) =>
-                s.market_id == market.id &&
-                s.score_type == row.relative_score_key,
-            );
-            if (!relScore) {
-              throw new Error(
-                `Score not found for market ${market.id}/${row.relative_score_key}`,
-              );
-            }
-            const absScore = marketScores.find(
-              (s) =>
-                s.market_id == market.id &&
-                s.score_type == row.absolute_score_key,
-            );
-            if (!absScore) {
-              throw new Error(
-                `Score not found for market ${market.id}/${row.absolute_score_key}`,
-              );
-            }
-            return (
-              <div class="md:ml-10 my-2">
-                <div class="grid gap-x-4 grid-cols-1 md:grid-cols-3">
-                  <div class="ml-4">
-                    <span class="">{row.row_title}</span>
-                  </div>
-                  <div class="ml-8 md:ml-0">
-                    <span class="inline-block w-20 mx-2 text-right">
-                      {row.absolute_score_label}
-                    </span>
-                    <span class="inline-block w-20 text-right">
-                      <Grade grade={absScore.grade} />
-                    </span>
-                    <span class="inline-block w-20 text-right">
-                      <ScoreAbs num={absScore.score} />
-                    </span>
-                  </div>
-                  <div class="ml-8 md:ml-0">
-                    <span class="inline-block w-20 mx-2 text-right">
-                      {row.relative_score_label}
-                    </span>
-                    <span class="inline-block w-20 text-right">
-                      <Grade grade={relScore.grade} />
-                    </span>
-                    <span class="inline-block w-20 text-right">
-                      <ScoreRel num={relScore.score} />
-                    </span>
-                  </div>
+
+          <!-- Score Details -->
+          <div class="grid grid-cols-1 md:grid-cols-3">
+            {scoreLayout.map((scoreRow) => {
+                return (
+                <div class="my-2">
+                    <div class="ml-4">
+                        <span class="">{scoreRow.row_title}</span>
+                    </div>
+                    {scoreRow.items.map((item) => {
+                    const score = getMarketScore(market.id, item.key);
+                    return (
+                        <div class="ml-8">
+                            <span class="inline-block w-20 mx-2 text-right">
+                                {item.label}
+                            </span>
+                            <span class="inline-block w-20 text-right">
+                                <Grade grade={score.grade} />
+                            </span>
+                            <span class="inline-block w-20 text-right">
+                                {item.type == "absolute" ? (<ScoreAbs num={score.score} />) : (<ScoreRel num={score.score} />)}
+                            </span>
+                        </div>
+                    )})}
                 </div>
-              </div>
-            );
-          })}
+                );
+            })}
+          </div>
         </div>
       ))
     }
+
+    <!-- Overall Header -->
     <div>
       <div
         class="flex space-x-4 border-b-1 flex-col sm:flex-row self-baseline sm:self-center"
       >
         <ul class="flex flex-wrap items-center gap-x-3">
-          <li class="font-bold">Overall</li>
+          <li class="font-bold text-lg">Overall</li>
+          <li>
+            <Duration num={question.total_duration} />
+          </li>
           <li>
             <Traders num={question.total_traders} />
           </li>
@@ -218,38 +266,34 @@ const resolution = markets[0].question_invert
           </li>
         </ul>
       </div>
-      {
-        scoreLayout.map((row) => {
-          const absScore = questionScores.find(
-            (s) => s.score_type == row.absolute_score_key,
-          );
-          if (!absScore) {
-            throw new Error(
-              `Score not found for question ${question.id}/${row.absolute_score_key}`,
-            );
-          }
-          return (
-            <div class="md:ml-10 my-2">
-              <div class="grid gap-x-4 grid-cols-1 md:grid-cols-3">
+
+      <!-- Overall Score Details -->
+      <div class="grid grid-cols-1 md:grid-cols-3">
+        {scoreLayout.map((scoreRow) => {
+            return (
+            <div class="my-2">
                 <div class="ml-4">
-                  <span class="">{row.row_title}</span>
+                    <span class="">{scoreRow.row_title}</span>
                 </div>
-                <div class="ml-8 md:ml-0">
-                  <span class="inline-block w-20 mx-2 text-right">
-                    {row.absolute_score_label}
-                  </span>
-                  <span class="inline-block w-20 text-right">
-                    <Grade grade={absScore.grade} />
-                  </span>
-                  <span class="inline-block w-20 text-right">
-                    <ScoreAbs num={absScore.score} />
-                  </span>
-                </div>
-              </div>
+                {scoreRow.items.filter((item) => item.type == "absolute").map((item) => {
+                const score = getQuestionScore(item.key);
+                return (
+                    <div class="ml-8">
+                        <span class="inline-block w-20 mx-2 text-right">
+                            {item.label}
+                        </span>
+                        <span class="inline-block w-20 text-right">
+                            <Grade grade={score.grade} />
+                        </span>
+                        <span class="inline-block w-20 text-right">
+                            {item.type == "absolute" ? (<ScoreAbs num={score.score} />) : (<ScoreRel num={score.score} />)}
+                        </span>
+                    </div>
+                )})}
             </div>
-          );
-        })
-      }
+            );
+        })}
+      </div>
     </div>
   </div>
 </Base>
