@@ -51,12 +51,13 @@ const plotId = `plot-probs-${question.slug}`;
         Plot.line(points, {
           x: "date",
           y: (i) => (i.question_invert ? 1 - i.prob : i.prob),
-          stroke: "platform_name",
+          stroke: (i) => i.platform_name,
           curve: "step",
           tip: {
             format: {
-              platform_name: null,
+              x: (i) => new Date(i).toLocaleDateString(),
               y: (i) => i.toFixed(0) + "%",
+              z: false,
             },
           },
         }),
