@@ -42,7 +42,7 @@ const optionsCalculated = await Promise.all(
 ---
 
 <div class="grid gap-2 grid-cols-1 md:grid-cols-3">
-  <SelectableOptions 
+  <SelectableOptions
     plotId={plotId}
     optionClass="calibration-option"
     options={optionsCalculated}
@@ -66,14 +66,17 @@ const optionsCalculated = await Promise.all(
   import * as Plot from "@observablehq/plot";
   import type { CalibrationOption, CalibrationPoint } from "@lib/charts/types";
   import type { PlatformDetails } from "@types";
-  import { initSelectableCharts, updatePlotElement } from "@lib/charts/selectable-option";
+  import {
+    initSelectableCharts,
+    updatePlotElement,
+  } from "@lib/charts/selectable-option";
 
   // Update the given plot when called
   function updatePlot(plotElement: HTMLElement, option: CalibrationOption) {
     const platforms = JSON.parse(
-      (plotElement as HTMLElement & { dataset: any }).dataset.platforms
+      (plotElement as HTMLElement & { dataset: any }).dataset.platforms,
     ) as PlatformDetails[];
-    
+
     const plotWidth = parseInt(window.getComputedStyle(plotElement).width);
     const pointSizeRange = [plotWidth * 0.01, plotWidth * 0.02];
 
@@ -85,7 +88,10 @@ const optionsCalculated = await Promise.all(
       x: {
         domain: option.config?.xDomain || [0, 100],
         percent: true,
-        label: option.config?.axisTitleX || option.axisTitleX || "Prediction (midpoint)",
+        label:
+          option.config?.axisTitleX ||
+          option.axisTitleX ||
+          "Prediction (midpoint)",
       },
       y: {
         domain: option.config?.yDomain || [0, 100],
@@ -126,6 +132,12 @@ const optionsCalculated = await Promise.all(
             },
           },
         }),
+        Plot.line(option.points || [], {
+          x: "x_center",
+          y: "y_center",
+          stroke: "platform_slug",
+          strokeOpacity: 0.5,
+        }),
         Plot.ruleX([0]),
         Plot.ruleY([0]),
         Plot.lineY(
@@ -147,7 +159,8 @@ const optionsCalculated = await Promise.all(
       "calibration-plot",
       "calibration-option",
       updatePlot,
-      (element) => JSON.parse((element as HTMLElement & { dataset: any }).dataset.options)
+      (element) =>
+        JSON.parse((element as HTMLElement & { dataset: any }).dataset.options),
     );
   });
 </script>

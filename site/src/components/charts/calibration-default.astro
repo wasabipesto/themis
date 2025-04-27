@@ -93,6 +93,12 @@ const points = await calculateCalibrationPoints(markets, "midpoint", null);
             },
           },
         }),
+        Plot.line(points || [], {
+          x: "x_center",
+          y: "y_center",
+          stroke: "platform_slug",
+          strokeOpacity: 0.5,
+        }),
         Plot.ruleX([0]),
         Plot.ruleY([0]),
         Plot.lineY(
