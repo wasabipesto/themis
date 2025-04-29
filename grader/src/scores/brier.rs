@@ -9,6 +9,16 @@ pub fn brier_score(prediction: f32, outcome: f32) -> f32 {
     (prediction - outcome).powi(2)
 }
 
+/// Given a Brier score, and assuming that the resolution is 1, recreate the
+/// probability of the event.
+///
+/// Originally: score = (p - r) ^ 2
+/// Inverted:   p = 1 - sqrt(s)
+///
+pub fn invert_brier_score(score: f32) -> f32 {
+    1.0 - score.sqrt()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -80,6 +90,17 @@ mod tests {
             let p_complement = 1.0 - p;
             let o_complement = 1.0 - o;
             assert_approx_eq(brier_score(p, o), brier_score(p_complement, o_complement));
+        }
+    }
+
+    #[test]
+    /// Test that the score inverts back to the original probability
+    fn test_inversion() {
+        for i in 0..1000 {
+            let prediction = i as f32 / 1000.0;
+            let outcome = 1.0;
+            let score = brier_score(prediction, outcome);
+            assert_approx_eq(invert_brier_score(score), prediction);
         }
     }
 }
