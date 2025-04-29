@@ -50,9 +50,36 @@ const scoreCols = [
   { title: "Spherical", key: "spherical" },
 ];
 const scoreRows = [
-  { title: "At Market Midpoint", key: "midpoint", type: "absolute" },
-  { title: "Time-Weighted Average", key: "average", type: "absolute" },
-  { title: "Relative Score", key: "relative", type: "relative" },
+  {
+    title: "At Market Midpoint",
+    key: "midpoint",
+    type: "absolute",
+    optional: false,
+  },
+  {
+    title: "Time-Weighted Average",
+    key: "average",
+    type: "absolute",
+    optional: false,
+  },
+  {
+    title: "30 Days Before Close",
+    key: "before-close-days-30",
+    type: "absolute",
+    optional: true,
+  },
+  {
+    title: "7 Days Before Close",
+    key: "before-close-days-7",
+    type: "absolute",
+    optional: true,
+  },
+  {
+    title: "Relative Score",
+    key: "relative",
+    type: "relative",
+    optional: false,
+  },
 ];
 
 // Select category
@@ -63,26 +90,15 @@ if (!category) {
   throw new Error(`Category not found for slug ${question.category_slug}`);
 }
 
-function getMarketScoreOpt(market_id: string, score_key: string) {
+function getMarketScore(market_id: string, score_key: string) {
   return marketScores.find(
     (s) => s.market_id == market_id && s.score_type == score_key,
   );
 }
-function getMarketScore(market_id: string, score_key: string) {
-  const score = getMarketScoreOpt(market_id, score_key);
-  if (!score) {
-    throw new Error(`Market score ${market_id}/${score_key} not found`);
-  }
-  return score;
-}
 function getQuestionScore(score_key: string) {
-  const score = questionScores.find(
+  return questionScores.find(
     (s) => s.item_id == question.id.toString() && s.score_type == score_key,
   );
-  if (!score) {
-    throw new Error(`Question score ${question.id}/${score_key} not found`);
-  }
-  return score;
 }
 
 // Get resolution from market
@@ -189,6 +205,13 @@ const resolution = markets[0].question_invert
                   market.id,
                   `brier-${row.key}`,
                 );
+                if (!scoreForGrade) {
+                  if (row.optional) {
+                    return null;
+                  } else {
+                    throw new Error(`Market score brier/${row.key} not found`);
+                  }
+                }
                 return (
                   <tr class="odd:bg-selection/10 py-5">
                     <td class="px-10 text-left">{row.title}</td>
@@ -202,6 +225,15 @@ const resolution = markets[0].question_invert
                         market.id,
                         `${col.key}-${row.key}`,
                       );
+                      if (!score) {
+                        if (row.optional) {
+                          return null;
+                        } else {
+                          throw new Error(
+                            `Market score ${col.key}/${row.key} not found`,
+                          );
+                        }
+                      }
                       return (
                         <td class="px-5 mr-5 text-right">
                           {row.type == "absolute" ? (
@@ -255,6 +287,17 @@ const resolution = markets[0].question_invert
           scoreRows.map((row) => {
             if (row.type === "relative") return null;
             const scoreForGrade = getQuestionScore(`brier-${row.key}`);
+            console.log(scoreForGrade);
+            if (!scoreForGrade) {
+              if (row.optional) {
+                return null;
+              } else {
+                throw new Error(`Question score brier/${row.key} not found`);
+              }
+            }
+            if (scoreForGrade.grade == null) {
+              return null;
+            }
             return (
               <tr class="odd:bg-selection/10 py-5">
                 <td class="px-10 text-left">{row.title}</td>
@@ -265,6 +308,15 @@ const resolution = markets[0].question_invert
                 </td>
                 {scoreCols.map((col) => {
                   const score = getQuestionScore(`${col.key}-${row.key}`);
+                  if (!score) {
+                    if (row.optional) {
+                      return null;
+                    } else {
+                      throw new Error(
+                        `Question score ${col.key}/${row.key} not found`,
+                      );
+                    }
+                  }
                   return (
                     <td class="px-5 mr-5 text-right">
                       {row.type == "absolute" ? (
