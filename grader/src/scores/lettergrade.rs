@@ -27,16 +27,23 @@ pub fn absolute_letter_grade(score_type: &AbsoluteScoreType, score: f32) -> Stri
     let brier_score = match score_type {
         AbsoluteScoreType::BrierAverage => score,
         AbsoluteScoreType::BrierMidpoint => score,
+        AbsoluteScoreType::BrierBeforeClose30d => score,
         AbsoluteScoreType::LogarithmicAverage => {
             brier::brier_score(logarithmic::invert_log_score(score), 1.0)
         }
         AbsoluteScoreType::LogarithmicMidpoint => {
             brier::brier_score(logarithmic::invert_log_score(score), 1.0)
         }
+        AbsoluteScoreType::LogarithmicBeforeClose30d => {
+            brier::brier_score(logarithmic::invert_log_score(score), 1.0)
+        }
         AbsoluteScoreType::SphericalAverage => {
             brier::brier_score(spherical::invert_spherical_score(score), 1.0)
         }
         AbsoluteScoreType::SphericalMidpoint => {
+            brier::brier_score(spherical::invert_spherical_score(score), 1.0)
+        }
+        AbsoluteScoreType::SphericalBeforeClose30d => {
             brier::brier_score(spherical::invert_spherical_score(score), 1.0)
         }
     };

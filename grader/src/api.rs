@@ -163,7 +163,7 @@ pub fn get_all_criterion_probs(
     let limit = 10000;
     let mut offset = 0;
     let mut probs = Vec::new();
-    let criterion_type_query = "criterion_type=in.(midpoint,time-average)";
+    let criterion_type_query = "criterion_type=in.(midpoint,time-average,before-close-days-30)";
 
     loop {
         let endpoint = format!(
