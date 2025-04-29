@@ -1,6 +1,6 @@
 //! Module containing score types and their implementations.
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Result};
 use log::{error, warn};
 use serde::{Serialize, Serializer};
 use std::collections::HashMap;
@@ -68,12 +68,15 @@ impl ScoreType {
 pub enum AbsoluteScoreType {
     BrierAverage,
     BrierMidpoint,
+    BrierBeforeClose7d,
     BrierBeforeClose30d,
     LogarithmicAverage,
     LogarithmicMidpoint,
+    LogarithmicBeforeClose7d,
     LogarithmicBeforeClose30d,
     SphericalAverage,
     SphericalMidpoint,
+    SphericalBeforeClose7d,
     SphericalBeforeClose30d,
 }
 impl Display for AbsoluteScoreType {
@@ -81,12 +84,15 @@ impl Display for AbsoluteScoreType {
         let s = match self {
             AbsoluteScoreType::BrierAverage => "brier-average",
             AbsoluteScoreType::BrierMidpoint => "brier-midpoint",
+            AbsoluteScoreType::BrierBeforeClose7d => "brier-before-close-days-7",
             AbsoluteScoreType::BrierBeforeClose30d => "brier-before-close-days-30",
             AbsoluteScoreType::LogarithmicAverage => "logarithmic-average",
             AbsoluteScoreType::LogarithmicMidpoint => "logarithmic-midpoint",
+            AbsoluteScoreType::LogarithmicBeforeClose7d => "logarithmic-before-close-days-7",
             AbsoluteScoreType::LogarithmicBeforeClose30d => "logarithmic-before-close-days-30",
             AbsoluteScoreType::SphericalAverage => "spherical-average",
             AbsoluteScoreType::SphericalMidpoint => "spherical-midpoint",
+            AbsoluteScoreType::SphericalBeforeClose7d => "spherical-before-close-days-7",
             AbsoluteScoreType::SphericalBeforeClose30d => "spherical-before-close-days-30",
         };
         write!(f, "{}", s)
@@ -106,14 +112,88 @@ impl AbsoluteScoreType {
         vec![
             AbsoluteScoreType::BrierAverage,
             AbsoluteScoreType::BrierMidpoint,
+            AbsoluteScoreType::BrierBeforeClose7d,
             AbsoluteScoreType::BrierBeforeClose30d,
             AbsoluteScoreType::LogarithmicAverage,
             AbsoluteScoreType::LogarithmicMidpoint,
+            AbsoluteScoreType::LogarithmicBeforeClose7d,
             AbsoluteScoreType::LogarithmicBeforeClose30d,
             AbsoluteScoreType::SphericalAverage,
             AbsoluteScoreType::SphericalMidpoint,
+            AbsoluteScoreType::SphericalBeforeClose7d,
             AbsoluteScoreType::SphericalBeforeClose30d,
         ]
+    }
+    /// Whether this score type is optional or not.
+    fn is_optional(&self) -> bool {
+        matches!(
+            self,
+            AbsoluteScoreType::BrierBeforeClose7d
+                | AbsoluteScoreType::BrierBeforeClose30d
+                | AbsoluteScoreType::LogarithmicBeforeClose7d
+                | AbsoluteScoreType::LogarithmicBeforeClose30d
+                | AbsoluteScoreType::SphericalBeforeClose7d
+                | AbsoluteScoreType::SphericalBeforeClose30d
+        )
+    }
+    /// Get the criterion probability (prediction metric) to use for this score type.
+    /// Returns None if the score is not found.
+    pub fn get_criterion_prob(&self, criteron_probs: &[CriterionProbabilityPoint]) -> Option<f32> {
+        match self {
+            AbsoluteScoreType::BrierAverage
+            | AbsoluteScoreType::LogarithmicAverage
+            | AbsoluteScoreType::SphericalAverage => {
+                helpers::get_first_probability(criteron_probs, "time-average").map(|p| p.prob)
+            }
+            AbsoluteScoreType::BrierMidpoint
+            | AbsoluteScoreType::LogarithmicMidpoint
+            | AbsoluteScoreType::SphericalMidpoint => {
+                helpers::get_first_probability(criteron_probs, "midpoint").map(|p| p.prob)
+            }
+            AbsoluteScoreType::BrierBeforeClose7d
+            | AbsoluteScoreType::LogarithmicBeforeClose7d
+            | AbsoluteScoreType::SphericalBeforeClose7d => {
+                helpers::get_first_probability(criteron_probs, "before-close-days-7")
+                    .map(|p| p.prob)
+            }
+            AbsoluteScoreType::BrierBeforeClose30d
+            | AbsoluteScoreType::LogarithmicBeforeClose30d
+            | AbsoluteScoreType::SphericalBeforeClose30d => {
+                helpers::get_first_probability(criteron_probs, "before-close-days-30")
+                    .map(|p| p.prob)
+            }
+        }
+    }
+    /// Get the score for a market using this absolute score type.
+    /// Returns None if the score is not found.
+    pub fn get_score(
+        &self,
+        market: &Market,
+        criteron_probs: &[CriterionProbabilityPoint],
+    ) -> Option<f32> {
+        match self {
+            AbsoluteScoreType::BrierAverage
+            | AbsoluteScoreType::BrierMidpoint
+            | AbsoluteScoreType::BrierBeforeClose7d
+            | AbsoluteScoreType::BrierBeforeClose30d => Some(brier::brier_score(
+                self.get_criterion_prob(criteron_probs)?,
+                market.resolution,
+            )),
+            AbsoluteScoreType::LogarithmicAverage
+            | AbsoluteScoreType::LogarithmicMidpoint
+            | AbsoluteScoreType::LogarithmicBeforeClose7d
+            | AbsoluteScoreType::LogarithmicBeforeClose30d => Some(brier::brier_score(
+                self.get_criterion_prob(criteron_probs)?,
+                market.resolution,
+            )),
+            AbsoluteScoreType::SphericalAverage
+            | AbsoluteScoreType::SphericalMidpoint
+            | AbsoluteScoreType::SphericalBeforeClose7d
+            | AbsoluteScoreType::SphericalBeforeClose30d => Some(brier::brier_score(
+                self.get_criterion_prob(criteron_probs)?,
+                market.resolution,
+            )),
+        }
     }
     /// Score a market using this absolute score type.
     pub fn score_market(
@@ -121,75 +201,18 @@ impl AbsoluteScoreType {
         market: &Market,
         criteron_probs: &[CriterionProbabilityPoint],
     ) -> Result<Option<MarketScore>> {
-        if let Some(score) = self.get_score(market, criteron_probs)? {
-            let grade = self.get_grade(score);
-            Ok(Some(MarketScore {
-                market_id: market.id.clone(),
-                score_type: ScoreType::Absolute(self.clone()),
-                score,
-                grade,
-            }))
-        } else {
-            Ok(None)
-        }
-    }
-    /// Get the score for a market using this absolute score type.
-    pub fn get_score(
-        &self,
-        market: &Market,
-        criteron_probs: &[CriterionProbabilityPoint],
-    ) -> Result<Option<f32>> {
-        let prob_midpoint =
-            helpers::get_first_probability(criteron_probs, "midpoint").context(format!(
-                "Failed to retrieve midpoint probability from criteron_probs {:?}",
-                criteron_probs
-            ))?;
-        let prob_time_average = helpers::get_first_probability(criteron_probs, "time-average")
-            .context(format!(
-                "Failed to retrieve time-average probability from criteron_probs {:?}",
-                criteron_probs
-            ))?;
-        let prob_before_close_30d =
-            match helpers::get_first_probability(criteron_probs, "before-close-days-30") {
-                Ok(prob) => prob,
-                Err(_) => return Ok(None),
-            };
-        match self {
-            AbsoluteScoreType::BrierAverage => Ok(Some(brier::brier_score(
-                prob_time_average,
-                market.resolution,
-            ))),
-            AbsoluteScoreType::BrierMidpoint => {
-                Ok(Some(brier::brier_score(prob_midpoint, market.resolution)))
+        match (self.get_score(market, criteron_probs), self.is_optional()) {
+            (Some(score), _) => {
+                let grade = self.get_grade(score);
+                Ok(Some(MarketScore {
+                    market_id: market.id.clone(),
+                    score_type: ScoreType::Absolute(self.clone()),
+                    score,
+                    grade,
+                }))
             }
-            AbsoluteScoreType::BrierBeforeClose30d => Ok(Some(brier::brier_score(
-                prob_before_close_30d,
-                market.resolution,
-            ))),
-            AbsoluteScoreType::LogarithmicAverage => Ok(Some(logarithmic::log_score(
-                prob_time_average,
-                market.resolution,
-            ))),
-            AbsoluteScoreType::LogarithmicMidpoint => Ok(Some(logarithmic::log_score(
-                prob_midpoint,
-                market.resolution,
-            ))),
-            AbsoluteScoreType::LogarithmicBeforeClose30d => Ok(Some(logarithmic::log_score(
-                prob_before_close_30d,
-                market.resolution,
-            ))),
-            AbsoluteScoreType::SphericalAverage => Ok(Some(spherical::spherical_score(
-                prob_time_average,
-                market.resolution,
-            ))),
-            AbsoluteScoreType::SphericalMidpoint => Ok(Some(spherical::spherical_score(
-                prob_midpoint,
-                market.resolution,
-            ))),
-            AbsoluteScoreType::SphericalBeforeClose30d => Ok(Some(spherical::spherical_score(
-                prob_before_close_30d,
-                market.resolution,
-            ))),
+            (None, true) => Ok(None),
+            (None, false) => Err(anyhow!("criterion probability {self} missing")),
         }
     }
     /// Get the grade for a market using this absolute score type.

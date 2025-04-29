@@ -25,25 +25,20 @@ use super::AbsoluteScoreType;
 ///
 pub fn absolute_letter_grade(score_type: &AbsoluteScoreType, score: f32) -> String {
     let brier_score = match score_type {
-        AbsoluteScoreType::BrierAverage => score,
-        AbsoluteScoreType::BrierMidpoint => score,
-        AbsoluteScoreType::BrierBeforeClose30d => score,
-        AbsoluteScoreType::LogarithmicAverage => {
+        AbsoluteScoreType::BrierAverage
+        | AbsoluteScoreType::BrierMidpoint
+        | AbsoluteScoreType::BrierBeforeClose7d
+        | AbsoluteScoreType::BrierBeforeClose30d => score,
+        AbsoluteScoreType::LogarithmicAverage
+        | AbsoluteScoreType::LogarithmicMidpoint
+        | AbsoluteScoreType::LogarithmicBeforeClose7d
+        | AbsoluteScoreType::LogarithmicBeforeClose30d => {
             brier::brier_score(logarithmic::invert_log_score(score), 1.0)
         }
-        AbsoluteScoreType::LogarithmicMidpoint => {
-            brier::brier_score(logarithmic::invert_log_score(score), 1.0)
-        }
-        AbsoluteScoreType::LogarithmicBeforeClose30d => {
-            brier::brier_score(logarithmic::invert_log_score(score), 1.0)
-        }
-        AbsoluteScoreType::SphericalAverage => {
-            brier::brier_score(spherical::invert_spherical_score(score), 1.0)
-        }
-        AbsoluteScoreType::SphericalMidpoint => {
-            brier::brier_score(spherical::invert_spherical_score(score), 1.0)
-        }
-        AbsoluteScoreType::SphericalBeforeClose30d => {
+        AbsoluteScoreType::SphericalAverage
+        | AbsoluteScoreType::SphericalMidpoint
+        | AbsoluteScoreType::SphericalBeforeClose7d
+        | AbsoluteScoreType::SphericalBeforeClose30d => {
             brier::brier_score(spherical::invert_spherical_score(score), 1.0)
         }
     };

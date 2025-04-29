@@ -1,7 +1,6 @@
 //! Helper functions for the grader.
 
 use crate::CriterionProbabilityPoint;
-use anyhow::Result;
 
 /// Simple function to get median from a list.
 pub fn median(values: &[f32]) -> f32 {
@@ -15,18 +14,17 @@ pub fn median(values: &[f32]) -> f32 {
     }
 }
 
+/// Get the first probability in the list that matches the criterion type.
+/// Assumes that the list has been filtered to the correct market.
 pub fn get_first_probability(
     criteria_probs: &[CriterionProbabilityPoint],
     criterion_type: &str,
-) -> Result<f32> {
+) -> Option<CriterionProbabilityPoint> {
     criteria_probs
         .iter()
         .filter(|prob| prob.criterion_type == criterion_type)
         .cloned()
         .collect::<Vec<_>>()
         .first()
-        .ok_or_else(|| {
-            anyhow::anyhow!("No matching probability found for type: {}", criterion_type)
-        })
-        .map(|p| p.prob)
+        .cloned()
 }
