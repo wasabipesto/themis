@@ -1,5 +1,26 @@
 ---
 import Base from "@layouts/base.astro";
+import Grade from "@atoms/grade.astro";
+import gradeCutoffs from "./grade_cutoffs.json";
+
+const scoreTypes = [
+  {
+    key: "brier",
+    name: "Brier Score",
+  },
+  {
+    key: "logarithmic",
+    name: "Logarithmic Score",
+  },
+  {
+    key: "spherical",
+    name: "Spherical Score",
+  },
+  {
+    key: "probability",
+    name: "Probability Margin",
+  },
+];
 ---
 
 <style>
@@ -61,7 +82,69 @@ import Base from "@layouts/base.astro";
   <hr class="my-2" />
 
   <div class="p-4 m-2">
-    <h2 class="text-3xl font-bold">Contact</h2>
+    <h2 class="text-3xl font-bold" id="faq">Frequently Asked Questions</h2>
+    <div class="grid my-2">
+      <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
+        <h3 class="text-xl font-bold">How are the letter grades calculated?</h3>
+        <p class="my-2">
+          The letter grades are intended to be an easy-to-read, intuitive
+          representation of how well the market has performed on a specific
+          axis. Each score (e.g. Brier score at market midpoint, spherical score
+          one month before close, etc.) has a corresponding letter grade, which
+          is determined by comparing the score to a set of predefined
+          thresholds.
+        </p>
+        <p class="my-2">The thresholds for absolute scores are:</p>
+        <table class="table-fixed w-full">
+          <thead>
+            <tr>
+              <th>Grade</th>
+              {scoreTypes.map((st) => <th>{st.name}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {
+              gradeCutoffs.map((g) => (
+                <tr class="odd:bg-selection/10 text-center">
+                  <td class="py-1 px-2">
+                    <div class="w-30 mx-auto">
+                      <Grade grade={g.grade} />
+                    </div>
+                  </td>
+                  {g.scores.map((score) => (
+                    <td class="font-mono">
+                      {score.min.toFixed(4)} to {score.max.toFixed(4)}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+        <div class="my-4"></div>
+        <p class="my-2">
+          The thresholds for relative scores are a little different. The
+          relative scoring algorithm we use results in a lot of scores very
+          close to zero with a sharp dropoff and roughly-symmetrical curve on
+          either side. We calculate our grade cutoffs so that C+ is centered at
+          zero, with widths based on the deviations of the scores.
+        </p>
+        <p class="my-2">
+          The thresholds for relative scores can be <a
+            href="https://github.com/wasabipesto/themis/blob/main/grader/src/scores/lettergrade.rs"
+            class="text-lavender"
+          >
+            found on GitHub
+          </a>
+          for now while we continue to add questions and tweak the grades in response.
+        </p>
+      </div>
+    </div>
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <h2 class="text-3xl font-bold" id="contact">Contact</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 my-2">
       <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
         <h3 class="text-xl font-bold">Suggest a New Connection</h3>
