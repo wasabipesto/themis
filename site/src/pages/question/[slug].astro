@@ -287,7 +287,6 @@ const resolution = markets[0].question_invert
           scoreRows.map((row) => {
             if (row.type === "relative") return null;
             const scoreForGrade = getQuestionScore(`brier-${row.key}`);
-            console.log(scoreForGrade);
             if (!scoreForGrade) {
               if (row.optional) {
                 return null;
