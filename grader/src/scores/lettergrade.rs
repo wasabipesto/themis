@@ -5,12 +5,25 @@
 //! which is not intuitive for many people. Logarithmic scores can have extreme
 //! values without necessarily representing extreme underperformance.
 
-use crate::scores::brier;
-use crate::scores::logarithmic;
-use crate::scores::spherical;
-use crate::scores::RelativeScoreType;
+use crate::scores::{brier, logarithmic, spherical, AbsoluteScoreType, RelativeScoreType};
 
-use super::AbsoluteScoreType;
+/// Brier score cutoffs and their corresponding letter grades
+pub const BRIER_SCORE_GRADES: [(f32, &str); 14] = [
+    (0.0001, "S"),
+    (0.0009, "A+"),
+    (0.0018, "A"),
+    (0.0022, "A-"),
+    (0.0030, "B+"),
+    (0.0045, "B"),
+    (0.0055, "B-"),
+    (0.0075, "C+"),
+    (0.015, "C"),
+    (0.025, "C-"),
+    (0.050, "D+"),
+    (0.110, "D"),
+    (0.250, "D-"),
+    (1.000, "F"),
+];
 
 /// Calculate the letter grade for the absolute market score given the prediction
 /// and outcome. All absolute score types will have the same letter grade.
@@ -43,23 +56,12 @@ pub fn absolute_letter_grade(score_type: &AbsoluteScoreType, score: f32) -> Stri
         }
     };
 
-    match brier_score {
-        x if x < 0.0001 => "S".to_string(),
-        x if x < 0.0009 => "A+".to_string(),
-        x if x < 0.0018 => "A".to_string(),
-        x if x < 0.0022 => "A-".to_string(),
-        x if x < 0.0030 => "B+".to_string(),
-        x if x < 0.0045 => "B".to_string(),
-        x if x < 0.0055 => "B-".to_string(),
-        x if x < 0.0075 => "C+".to_string(),
-        x if x < 0.015 => "C".to_string(),
-        x if x < 0.025 => "C-".to_string(),
-        x if x < 0.050 => "D+".to_string(),
-        x if x < 0.110 => "D".to_string(),
-        x if x < 0.250 => "D-".to_string(),
-        x if x <= 1.0 => "F".to_string(),
-        _ => "ERROR".to_string(),
+    for &(cutoff, grade) in BRIER_SCORE_GRADES.iter() {
+        if brier_score <= cutoff {
+            return grade.to_string();
+        }
     }
+    "ERROR".to_string()
 }
 
 /// Calculate the letter grade for the relative market score.
