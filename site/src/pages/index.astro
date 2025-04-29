@@ -6,26 +6,41 @@ import SeeMoreLink from "@components/see-more-link.astro";
 import PlatformCard from "@components/platform-card.astro";
 import CalibrationDefault from "@components/charts/calibration-default.astro";
 import RelScoreExplainer from "@components/charts/index-relscore-explainer.astro";
-import type { CategoryDetails, MarketDetails, PlatformDetails } from "@types";
 import {
   getMarkets,
   getPlatforms,
   getCategories,
+  getMarketScores,
   getPlatformCategoryScores,
   getFeaturedQuestions,
   getPlatformOverallScores,
-  getQuestionCount,
+  getQuestionStats,
 } from "@lib/api";
+import { getScoreStats } from "@lib/stats";
 
 let scoreType = "brier-relative";
 
-const platforms: PlatformDetails[] = await getPlatforms();
-const categories: CategoryDetails[] = await getCategories();
-const markets: MarketDetails[] = await getMarkets();
+// get raw data
+const platforms = await getPlatforms();
+const categories = await getCategories();
+const markets = await getMarkets();
+const marketScores = await getMarketScores();
 const platformCategoryScores = await getPlatformCategoryScores(scoreType);
 const platformOverallScores = await getPlatformOverallScores();
 const featuredQuestions = await getFeaturedQuestions(4);
-const { numQuestions, numLinkedMarkets } = await getQuestionCount();
+
+// get numbers for the text
+const {
+  numMatchingType: numScoresMonth,
+  numMatchingCutoff: numScoresMonthWithin30pct,
+} = getScoreStats(marketScores, "brier-before-close-days-30", null, 0.09);
+const pctScoresMonthWithin30pct = (
+  (numScoresMonthWithin30pct / numScoresMonth) *
+  100
+).toFixed(0);
+const { numMatchingType: numScoresMidpoint, medianScore: medianMidpointBrier } =
+  getScoreStats(marketScores, "brier-midpoint", null, null);
+const { numQuestions, numLinkedMarkets } = await getQuestionStats();
 ---
 
 <Base title="Home">
@@ -33,16 +48,27 @@ const { numQuestions, numLinkedMarkets } = await getQuestionCount();
     <div class="p-4 m-2">
       <h1 class="text-4xl font-bold">How accurate are prediction markets?</h1>
       <p class="my-2">
-        In the past it's been hard to measure the accuracy of prediction markets
-        since question difficulty can vary so drastically. You can't compare
-        apples to oranges!
+        Using API data from each platform, we can calculate scores for each
+        market and check how often they were correct.
       </p>
       <p class="my-2">
-        In order to solve that problem we've matched markets across platforms
-        and curated a collection of predictive questions that are actually
-        comparable. Using those matches, we can generate a score for each
-        platform in each category that rewards whichever market was correct
-        earliest.
+        The results: One month before close, {pctScoresMonthWithin30pct}% of
+        markets were already within 30% of the correct resolution, representing
+        a Brier score of 0.09 (n={numScoresMonth.toLocaleString()}). The median
+        Brier score at market midpoint was {medianMidpointBrier.toFixed(4)} (n={
+          numScoresMidpoint.toLocaleString()
+        }).
+      </p>
+      <p class="my-2">
+        Additionally, we've matched markets across platforms in a curated
+        collection of questions. Using those matches, we can generate scores for
+        each platform that rewards markets that are correct, confident, and
+        early.
+      </p>
+      <p class="my-2">
+        Those results indicate that each platform's performance is similar on
+        average. However, each platform outperforms the others in certain
+        categories. See the chart to the right for those scores.
       </p>
       <ul class="list-disc px-4">
         <li>

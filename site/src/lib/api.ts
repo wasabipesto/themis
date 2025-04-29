@@ -329,7 +329,7 @@ export async function getDailyProbabilitiesByQuestion(
   return fetchFromAPI<DailyProbabilityDetails[]>(url);
 }
 
-export async function getQuestionCount(): Promise<{
+export async function getQuestionStats(): Promise<{
   numQuestions: number;
   numLinkedMarkets: number;
 }> {

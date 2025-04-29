@@ -1,5 +1,8 @@
 // Takes an array of numbers and a percentile value
 // Returns the value at that percentile of the array
+
+import type { MarketScoreDetails } from "@types";
+
 // Assumes the scores are pre-sorted
 export function percentile(arr: number[], percentile: number): number {
   const index = percentile * (arr.length - 1);
@@ -65,4 +68,44 @@ export function roundSF(num: number, sigfigs: number): number {
   const roundedNum = Math.round(num * scale) / scale;
 
   return roundedNum;
+}
+
+// Get some stats around market scores for the index page
+export function getScoreStats(
+  scores: MarketScoreDetails[],
+  scoreType: string,
+  scoreCutoffMin: number | null,
+  scoreCutoffMax: number | null,
+): {
+  numMatchingType: number;
+  numMatchingCutoff: number;
+  medianScore: number;
+} {
+  const scoresMatchingType = scores.filter((s) => s.score_type == scoreType);
+  const numMatchingType = scoresMatchingType.length;
+  if (numMatchingType === 0) {
+    throw new Error(`No scores matched filter for ${scoreType}`);
+  }
+
+  const scoresMatchingCutoff = scoresMatchingType.filter(
+    (s) =>
+      (scoreCutoffMin === null || s.score >= scoreCutoffMin) &&
+      (scoreCutoffMax === null || s.score <= scoreCutoffMax),
+  );
+  const numMatchingCutoff = scoresMatchingCutoff.length;
+  if (numMatchingCutoff === 0) {
+    throw new Error(`No scores matched filter for ${scoreType}`);
+  }
+
+  const scoreValuesSorted = sort(scoresMatchingType.map((p) => p.score));
+  const medianScore = percentile(scoreValuesSorted, 0.5);
+  if (isNaN(medianScore)) {
+    throw new Error(`No scores matched filter for ${scoreType}`);
+  }
+
+  return {
+    numMatchingType,
+    numMatchingCutoff,
+    medianScore,
+  };
 }
