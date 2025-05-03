@@ -436,13 +436,11 @@
         type="button"
         on:click={async () => {
           if (question) {
-            let oldDescription = question.description;
             let newDescription = await llmSummarizeDescriptions(
               question,
               markets,
             );
             question.description = newDescription;
-            console.log(oldDescription, newDescription, question.description);
           }
         }}
         class="px-4 py-2 bg-pink/50 text-text rounded-md hover:bg-blue transition-colors"
