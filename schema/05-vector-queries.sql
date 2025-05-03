@@ -3,12 +3,31 @@
 -- ==========================================
 
 -- === FIND MARKETS SIMILAR TO TARGET ===
+DROP FUNCTION find_similar_markets_by_id(text,double precision,integer);
 CREATE OR REPLACE FUNCTION find_similar_markets_by_id(
     target_market_id TEXT,
     threshold FLOAT DEFAULT 0.3,
-    limit_count INTEGER DEFAULT 10
+    limit_count INTEGER DEFAULT 1000
 )
-RETURNS TABLE(market_id TEXT, cosine_distance FLOAT) AS $$
+RETURNS TABLE(
+    id TEXT,
+    title TEXT,
+    url TEXT,
+    platform_slug TEXT,
+    platform_name TEXT,
+    category_slug TEXT,
+    category_name TEXT,
+    question_id INTEGER,
+    question_invert BOOLEAN,
+    question_dismissed INTEGER,
+    open_datetime TIMESTAMPTZ,
+    close_datetime TIMESTAMPTZ,
+    traders_count INTEGER,
+    volume_usd DECIMAL,
+    duration_days INTEGER,
+    resolution DECIMAL,
+    cosine_distance FLOAT
+) AS $$
 DECLARE
     input_embedding VECTOR(768);
 BEGIN
@@ -23,8 +42,26 @@ BEGIN
 
     -- Perform similarity search using the fetched embedding
     RETURN QUERY
-    SELECT me.market_id, (input_embedding <=> me.embedding) AS cosine_distance
+    SELECT
+        m.id,
+        m.title,
+        m.url,
+        m.platform_slug,
+        m.platform_name,
+        m.category_slug,
+        m.category_name,
+        m.question_id,
+        m.question_invert,
+        m.question_dismissed,
+        m.open_datetime,
+        m.close_datetime,
+        m.traders_count,
+        m.volume_usd,
+        m.duration_days,
+        m.resolution,
+        (input_embedding <=> me.embedding) AS cosine_distance
     FROM market_embeddings me
+    JOIN market_details m ON me.market_id = m.id
     WHERE me.market_id != target_market_id AND
           (input_embedding <=> me.embedding) <= threshold
     ORDER BY cosine_distance ASC
@@ -51,7 +88,7 @@ $$ LANGUAGE plpgsql STABLE;
 CREATE OR REPLACE FUNCTION find_similar_questions_by_id(
     target_question_id INTEGER,
     threshold FLOAT DEFAULT 0.3,
-    limit_count INTEGER DEFAULT 10
+    limit_count INTEGER DEFAULT 100
 )
 RETURNS TABLE(question_id INTEGER, cosine_distance FLOAT) AS $$
 DECLARE

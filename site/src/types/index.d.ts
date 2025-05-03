@@ -80,6 +80,10 @@ export interface QuestionDetails {
   total_duration: number;
   hotness_score: number;
 }
+export interface SimilarQuestions {
+  question_id: number;
+  cosine_distance: number;
+}
 
 /** Data for an individual market */
 export interface Market {
@@ -116,6 +120,25 @@ export interface MarketDetails {
   volume_usd: number | null;
   duration_days: number;
   resolution: number;
+}
+export interface SimilarMarkets {
+  id: string;
+  title: string;
+  url: string;
+  platform_slug: string;
+  platform_name: string;
+  category_slug: string | null;
+  category_name: string | null;
+  question_id: number | null;
+  question_invert: boolean;
+  question_dismissed: number;
+  open_datetime: string;
+  close_datetime: string;
+  traders_count: number | null;
+  volume_usd: number | null;
+  duration_days: number;
+  resolution: number;
+  cosine_distance: number;
 }
 
 /** Market links to questions. **/
