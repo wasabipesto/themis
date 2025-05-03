@@ -9,9 +9,9 @@
 
 import argparse
 import json
+import itertools
 import os
 from pathlib import Path
-
 import requests
 from dotenv import load_dotenv
 
@@ -53,43 +53,54 @@ def setup_postgrest_connection():
 
 def get_data(endpoint, headers=None, params=None):
     """Get data from a PostgREST endpoint and handle the response."""
-    response = requests.get(endpoint, headers=headers, params=params)
 
-    if response.ok:
-        data = response.json()
-        if len(data) > 0:
-            return data
+    limit = 100_000
+    result = []
+    while True:
+        params["limit"] = limit
+        params["offset"] = len(result)
+        response = requests.get(endpoint, headers=headers, params=params)
+        if response.ok:
+            data = response.json()
+            if len(data) > 0:
+                result += data
+            if len(data) < limit:
+                break
         else:
-            raise ValueError(f"No items returned from {endpoint}.")
-    else:
-        print(f"Download returned code {response.status_code} for {endpoint}")
-        try:
-            error_data = response.json()
-            print(json.dumps(error_data, indent=2), "\n")
-        except Exception as e:
-            print("Could not parse JSON response:", e)
-            print("Raw response:", response.text, "\n")
+            print(f"Download returned code {response.status_code} for {endpoint}")
+            try:
+                error_data = response.json()
+                print(json.dumps(error_data, indent=2), "\n")
+            except Exception as e:
+                print("Could not parse JSON response:", e)
+                print("Raw response:", response.text, "\n")
+            return False
+
+    if len(result) == 0:
+        print(f"No data found at {endpoint}")
         return False
+    else:
+        return result
 
 
 def post_data(endpoint, data, headers=None, params=None):
     """Post data to a PostgREST endpoint and handle the response."""
-    response = requests.post(endpoint, headers=headers, json=data, params=params)
 
-    if response.ok:
-        print(f"Data uploaded successfully to {endpoint.split('/')[-1]}.")
-        return True
-    else:
-        print(
-            f"Upload returned code {response.status_code} for {endpoint.split('/')[-1]}"
-        )
-        try:
-            error_data = response.json()
-            print(json.dumps(error_data, indent=2), "\n")
-        except Exception as e:
-            print("Could not parse JSON response:", e)
-            print("Raw response:", response.text, "\n")
-        return False
+    for batch in itertools.batched(data, 100):
+        response = requests.post(endpoint, headers=headers, json=batch, params=params)
+        if not response.ok:
+            print(
+                f"Upload returned code {response.status_code} for {endpoint.split('/')[-1]}"
+            )
+            try:
+                error_data = response.json()
+                print(json.dumps(error_data, indent=2), "\n")
+            except Exception as e:
+                print("Could not parse JSON response:", e)
+                print("Raw response:", response.text, "\n")
+            return False
+
+    print(f"{len(data)} items uploaded successfully to {endpoint.split('/')[-1]}.")
 
 
 def load_json_file(filename):
