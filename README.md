@@ -172,6 +172,12 @@ just group
 
 This will launch the site in Astro's dev mode, which will be enough for anything you need to do. The site can also be compiled statically and served in the same way as the main site, but I recommend against doing this since it will have your database admin credentials baked in.
 
+If you want to use embeddings to find similar markets, you can generate them with the following script:
+
+```bash
+uv run scripts/update-embeddings.py
+```
+
 For now I am intentionally not documenting specific features of the admin tools since they are not user-facing and I am constantly changing them to suit my needs better. The method I have found that works best for me is:
 
 - Sort all markets by volume, number of traders, or duration. Find one that seems interesting.
@@ -184,7 +190,7 @@ For now I am intentionally not documenting specific features of the admin tools 
 - While you have those searches open, look for other possible question groups in the same topic.
 - Once you have exhausted the markets in that topic, return to the top-level search and find another topic.
 
-## Step 5. Grading the markets
+## Step 5. Site preprocessing
 
 When you have finished grouping markets, you can calculate all market scores by running the grader tool:
 
@@ -193,6 +199,17 @@ just grade
 ```
 
 This tool will run through basically everything in the database and calculate some scores that are a little to compute-intensive to do at build time and refresh all the database views. This tool is non-destructive just like the others, you can run it over and over again and lose nothing but your time. Just make sure you re-run it every time you finish grouping markets before generating the site.
+
+You will also need to generate embeddings for related questions. You can generate those with the following script:
+
+```bash
+# just generate embeddings for questions
+uv run scripts/update-embeddings.py --questions-only
+
+# regenerate embeddings for all items
+uv run scripts/update-embeddings.py --all
+```
+
 
 ## Step 6. Generating site
 
