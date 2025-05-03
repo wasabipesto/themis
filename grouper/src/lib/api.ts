@@ -72,7 +72,7 @@ export async function refreshViewsQuick(): Promise<any> {
 
 export async function deleteItem(
   endpoint: string,
-  attr: "ID" | "slug",
+  attr: "id" | "slug",
   value: string,
 ): Promise<any> {
   await fetchFromAPI(`${endpoint}?${attr}=eq.${value}`, {

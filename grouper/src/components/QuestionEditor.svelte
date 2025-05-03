@@ -18,6 +18,7 @@
     getMarketsByQuestion,
     getMarketProbs,
     getCategories,
+    deleteItem,
   } from "@lib/api";
   import { llmSummarizeDescriptions } from "@lib/ai";
   import * as Plot from "@observablehq/plot";
@@ -235,6 +236,39 @@
         err instanceof Error
           ? `Failed to invert market link: ${err.message}`
           : "Failed to invert market link due to an unknown error",
+      );
+    }
+  }
+
+  async function handleDeleteQuestion() {
+    // Confirm deletion
+    if (!question || !question.id) {
+      throw new Error("Question ID not found");
+    }
+    if (
+      !confirm(
+        "Are you sure you want to delete this question? This will also unlink all associated markets.",
+      )
+    ) {
+      return;
+    }
+    // Double-check with another confirmation
+    if (!confirm("This action cannot be undone. Are you REALLY sure?")) {
+      return;
+    }
+
+    try {
+      loading = true;
+      markets.forEach(async (market) => {
+        await unlinkMarket(market.id);
+      });
+      await deleteItem("questions", "id", question.id.toString());
+      window.location.href = "/questions";
+    } catch (err: unknown) {
+      alert(
+        err instanceof Error
+          ? `Failed to delete question: ${err.message}`
+          : "Failed to delete question due to an unknown error",
       );
     }
   }
@@ -472,6 +506,13 @@
           class="px-4 py-2 bg-blue/50 text-white rounded-md hover:bg-blue transition-colors"
         >
           Clone Question
+        </button>
+        <button
+          type="button"
+          on:click={handleDeleteQuestion}
+          class="px-4 py-2 bg-red/50 text-white rounded-md hover:bg-red transition-colors"
+        >
+          Delete Question
         </button>
       {/if}
       <button
