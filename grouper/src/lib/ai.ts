@@ -2,7 +2,7 @@ const OLLAMA_URL = import.meta.env.PUBLIC_OLLAMA_URL;
 const OLLAMA_MODEL = import.meta.env.PUBLIC_OLLAMA_MODEL;
 
 import { getCategories, getQuestions } from "@lib/api";
-import type { MarketDetails } from "@types";
+import type { MarketDetails, QuestionDetails } from "@types";
 
 export async function queryOllama(prompt: string): Promise<string> {
   try {
@@ -73,6 +73,20 @@ export async function llmSlugify(market: MarketDetails): Promise<string> {
 
   const response = await queryOllama(
     `Generate a slug from the provided text similar to the given examples. Do not include any other text. Examples: ${questionSlugs.join(", ")}. Text input: ${market.title}`,
+  );
+  return response;
+}
+
+export async function llmSummarizeDescriptions(
+  question: QuestionDetails,
+  markets: MarketDetails[],
+): Promise<string> {
+  const items = markets.map((market) => ({
+    title: market.title,
+    description: market.description,
+  }));
+  const response = await queryOllama(
+    `The following items are titles and descriptions for equivalent prediction markets on different platforms. They have been created to predict the high-level question: ${question.title} Since they all refer to the same past event, generate a summarized description that captures the spirit of the markets in 5 sentences. Include details from the market descriptions such as the resolution criteria. Don't preface your response, editorialize, or include any additional information. Don't mention prediction markets, stick to the subject matter. Text input: ${JSON.stringify(items)}`,
   );
   return response;
 }

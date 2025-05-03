@@ -19,6 +19,7 @@
     getMarketProbs,
     getCategories,
   } from "@lib/api";
+  import { llmSummarizeDescriptions } from "@lib/ai";
   import * as Plot from "@observablehq/plot";
 
   // Question editor state
@@ -357,7 +358,7 @@
       <textarea
         id="description"
         name="description"
-        rows="3"
+        rows="7"
         class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue focus:border-indigo-500"
         >{question?.description || ""}</textarea
       >
@@ -431,12 +432,23 @@
     {/if}
 
     <div class="flex justify-end space-x-4 mt-6">
-      <a
-        href="/questions"
-        class="px-4 py-2 bg-blue/50 text-text rounded-md hover:bg-blue transition-colors"
+      <button
+        type="button"
+        on:click={async () => {
+          if (question) {
+            let oldDescription = question.description;
+            let newDescription = await llmSummarizeDescriptions(
+              question,
+              markets,
+            );
+            question.description = newDescription;
+            console.log(oldDescription, newDescription, question.description);
+          }
+        }}
+        class="px-4 py-2 bg-pink/50 text-text rounded-md hover:bg-blue transition-colors"
       >
-        Cancel
-      </a>
+        Generate Description
+      </button>
       {#if !isNew}
         <button
           type="button"
@@ -472,7 +484,7 @@
         {formLoading
           ? "Saving..."
           : question && Object.keys(question).length > 0 && !isNew
-            ? "Update"
+            ? "Save"
             : "Create"} Question
       </button>
     </div>
