@@ -68,7 +68,10 @@ const { numQuestions, numLinkedMarkets } = await getQuestionStats();
       <p class="my-2">
         Those results indicate that each platform's performance is similar on
         average. However, each platform outperforms the others in certain
-        categories. See the chart to the right for those scores.
+        categories. See the chart <span class="hidden md:inline">
+          to the right
+        </span>
+        <span class="inline md:hidden"> below </span> for those scores.
       </p>
       <ul class="list-disc px-4">
         <li>
@@ -84,13 +87,15 @@ const { numQuestions, numLinkedMarkets } = await getQuestionStats();
         </li>
       </ul>
     </div>
-    <div class="">
-      <ReportCard
-        platforms={platforms}
-        categories={categories}
-        platformCategoryScores={platformCategoryScores}
-        platformOverallScores={platformOverallScores}
-      />
+    <div class="h-full md:flex">
+      <div class="my-auto pb-10">
+        <ReportCard
+          platforms={platforms}
+          categories={categories}
+          platformCategoryScores={platformCategoryScores}
+          platformOverallScores={platformOverallScores}
+        />
+      </div>
     </div>
   </div>
   <hr class="my-2" />
