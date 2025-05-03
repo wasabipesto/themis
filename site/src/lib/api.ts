@@ -158,10 +158,19 @@ export async function getTopQuestionsForPlatform(
 
 export async function getSimilarQuestions(
   questionId: number,
-): Promise<SimilarQuestions[]> {
-  return fetchFromAPI(
-    `/rpc/find_similar_questions_by_id?target_question_id=eq.${questionId}`,
+  limit: number,
+): Promise<QuestionDetails[]> {
+  const similarItems = await fetchFromAPI<SimilarQuestions[]>(
+    `/rpc/find_similar_questions_by_id?target_question_id=${questionId}&threshold=1&limit=${limit}`,
   );
+  let result: QuestionDetails[] = [];
+  for (const item of similarItems) {
+    const details = await fetchFromAPI<QuestionDetails[]>(
+      `/question_details?id=eq.${item.question_id}`,
+    );
+    result.push(details[0]);
+  }
+  return result;
 }
 
 export async function getPlatformCategoryScores(
