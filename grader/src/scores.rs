@@ -182,14 +182,14 @@ impl AbsoluteScoreType {
             AbsoluteScoreType::LogarithmicAverage
             | AbsoluteScoreType::LogarithmicMidpoint
             | AbsoluteScoreType::LogarithmicBeforeClose7d
-            | AbsoluteScoreType::LogarithmicBeforeClose30d => Some(brier::brier_score(
+            | AbsoluteScoreType::LogarithmicBeforeClose30d => Some(logarithmic::log_score(
                 self.get_criterion_prob(criteron_probs)?,
                 market.resolution,
             )),
             AbsoluteScoreType::SphericalAverage
             | AbsoluteScoreType::SphericalMidpoint
             | AbsoluteScoreType::SphericalBeforeClose7d
-            | AbsoluteScoreType::SphericalBeforeClose30d => Some(brier::brier_score(
+            | AbsoluteScoreType::SphericalBeforeClose30d => Some(spherical::spherical_score(
                 self.get_criterion_prob(criteron_probs)?,
                 market.resolution,
             )),

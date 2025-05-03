@@ -26,7 +26,8 @@ pub const BRIER_SCORE_GRADES: [(f32, &str); 14] = [
 ];
 
 /// Calculate the letter grade for the absolute market score given the prediction
-/// and outcome. All absolute score types will have the same letter grade.
+/// and outcome. The same prediction/resolution pair will have the same letter grade
+/// no matter what score type is used.
 ///
 /// I used to have separate bounds for each score type, basing each score cutoff
 /// on the Nth percentile value for that score, but then the letter grades all
@@ -94,8 +95,7 @@ pub fn relative_letter_grade(score_type: &RelativeScoreType, score: f32) -> Stri
             x if x > -4.0 * width => "D+".to_string(),
             x if x > -8.0 * width => "D".to_string(),
             x if x > -12.0 * width => "D-".to_string(),
-            x if x >= -100.0 * width => "F".to_string(),
-            _ => "ERROR".to_string(),
+            _ => "F".to_string(),
         },
         true => match score {
             x if x < -35.0 * width => "S".to_string(),
@@ -111,8 +111,7 @@ pub fn relative_letter_grade(score_type: &RelativeScoreType, score: f32) -> Stri
             x if x < 4.0 * width => "D+".to_string(),
             x if x < 8.0 * width => "D".to_string(),
             x if x < 12.0 * width => "D-".to_string(),
-            x if x <= 100.0 * width => "F".to_string(),
-            _ => "ERROR".to_string(),
+            _ => "F".to_string(),
         },
     }
 }
