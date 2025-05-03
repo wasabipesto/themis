@@ -163,6 +163,18 @@ def import_data(cache_dir, postgrest_base, postgrest_apikey):
     else:
         print(f"Warning: {markets_file} not found")
 
+    # Upload Market Embeddings
+    market_embeddings_file = cache_dir / "market_embeddings.json"
+    if market_embeddings_file.exists():
+        market_embeddings = load_json_file(market_embeddings_file)
+        post_data(
+            f"{postgrest_base}/market_embeddings",
+            market_embeddings,
+            headers=default_headers,
+        )
+    else:
+        print(f"Warning: {market_embeddings_file} not found")
+
 
 def export_data(cache_dir, postgrest_base, postgrest_apikey):
     """Export data from PostgREST to JSON files."""
