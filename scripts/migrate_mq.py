@@ -51,6 +51,27 @@ def setup_postgrest_connection():
     return postgrest_base, postgrest_apikey
 
 
+def get_data(endpoint, headers=None, params=None):
+    """Get data from a PostgREST endpoint and handle the response."""
+    response = requests.get(endpoint, headers=headers, params=params)
+
+    if response.ok:
+        data = response.json()
+        if len(data) > 0:
+            return data
+        else:
+            raise ValueError(f"No items returned from {endpoint}.")
+    else:
+        print(f"Download returned code {response.status_code} for {endpoint}")
+        try:
+            error_data = response.json()
+            print(json.dumps(error_data, indent=2), "\n")
+        except Exception as e:
+            print("Could not parse JSON response:", e)
+            print("Raw response:", response.text, "\n")
+        return False
+
+
 def post_data(endpoint, data, headers=None, params=None):
     """Post data to a PostgREST endpoint and handle the response."""
     response = requests.post(endpoint, headers=headers, json=data, params=params)
@@ -149,46 +170,43 @@ def export_data(cache_dir, postgrest_base, postgrest_apikey):
     cache_dir.mkdir(exist_ok=True)
 
     # Export Questions
-    response = requests.get(
+    questions = get_data(
         f"{postgrest_base}/questions",
         params={
             "order": "slug.asc",
             "select": "title,slug,description,category_slug,start_date_override,end_date_override",
         },
     )
-    if response.ok:
-        data = response.json()
-        if len(data) > 0:
-            output_file = cache_dir / "questions.json"
-            with open(output_file, "w") as f:
-                json.dump(data, f, indent=2)
-            print(f"Exported {len(data)} questions to {output_file}")
-        else:
-            print("No questions found.")
-    else:
-        print(f"Failed to export questions: {response.status_code}")
-        print(json.dumps(response.json(), indent=2), "\n")
+    output_file = cache_dir / "questions.json"
+    with open(output_file, "w") as f:
+        json.dump(questions, f, indent=2)
+    print(f"Exported {len(questions)} questions to {output_file}")
 
     # Export Markets
-    response = requests.get(
+    markets = get_data(
         f"{postgrest_base}/market_details",
         params={
             "or": "(question_slug.not.is.null,question_dismissed.gt.0)",
+            "order": "id.asc",
             "select": "market_id:id,question_slug,question_invert,question_dismissed",
         },
     )
-    if response.ok:
-        data = response.json()
-        if len(data) > 0:
-            output_file = cache_dir / "markets.json"
-            with open(output_file, "w") as f:
-                json.dump(data, f, indent=2)
-            print(f"Exported {len(data)} markets to {output_file}")
-        else:
-            print("No markets found.")
-    else:
-        print(f"Failed to export markets: {response.status_code}")
-        print(json.dumps(response.json(), indent=2), "\n")
+    output_file = cache_dir / "markets.json"
+    with open(output_file, "w") as f:
+        json.dump(markets, f, indent=2)
+    print(f"Exported {len(markets)} markets to {output_file}")
+
+    # Export Market Embeddings
+    market_embeddings = get_data(
+        f"{postgrest_base}/market_embeddings",
+        params={
+            "order": "market_id.asc",
+        },
+    )
+    output_file = cache_dir / "market_embeddings.json"
+    with open(output_file, "w") as f:
+        json.dump(market_embeddings, f, indent=2)
+    print(f"Exported {len(market_embeddings)} market embeddings to {output_file}")
 
 
 def main():
