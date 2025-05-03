@@ -33,12 +33,6 @@ const getPlatCatScore = (
   return scoreMap.get(`${platformSlug}-${categorySlug}`);
 };
 
-const getPlatformScore = (
-  platformSlug: string,
-): OtherScoreDetails | undefined => {
-  return platformOverallScores.find((s) => s.item_id == platformSlug);
-};
-
 // Process data for mobile view
 const categoryData = categories.map((cat) => ({
   name: cat.name,
@@ -52,10 +46,6 @@ const categoryData = categories.map((cat) => ({
       score: score?.score || 0,
     };
   }),
-  overall: {
-    grade: getPlatformScore(platforms[0].slug)?.grade || "-",
-    score: getPlatformScore(platforms[0].slug)?.score || 0,
-  },
 }));
 ---
 
@@ -96,21 +86,6 @@ const categoryData = categories.map((cat) => ({
             </tr>
           ))
         }
-        <tr class="border-t-2">
-          <td class="text-left">
-            <Icon name="mdi:compass-rose" class="inline mr-1" /> Overall
-          </td>
-          {
-            platforms.map((platform) => {
-              const score = getPlatformScore(platform.slug);
-              return (
-                <td class="text-center px-2 py-1.5">
-                  <Grade grade={score?.grade || "-"} />
-                </td>
-              );
-            })
-          }
-        </tr>
       </tbody>
     </table>
     <div class="text-xs mt-2">
