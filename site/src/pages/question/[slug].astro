@@ -24,14 +24,11 @@ export async function getStaticPaths() {
   const categories = await getCategories();
   const questions = await getQuestions();
   const marketsAll = await getMarkets();
-  const marketScoresAll = await getMarketScores();
+  const marketScores = await getMarketScores();
   const questionScoresAll = await getQuestionOverallScores(null);
   return questions.map((question) => {
     const markets = marketsAll.filter(
       (market) => market.question_id === question.id,
-    );
-    const marketScoresQuestion = marketScoresAll.filter(
-      (score) => score.question_id === question.id,
     );
     const questionScores = questionScoresAll.filter(
       (score) => score.item_id === question.id.toString(),
@@ -42,21 +39,14 @@ export async function getStaticPaths() {
         categories,
         question,
         markets,
-        marketScoresAll,
-        marketScoresQuestion,
+        marketScores,
         questionScores,
       },
     };
   });
 }
-const {
-  categories,
-  question,
-  markets,
-  marketScoresAll,
-  marketScoresQuestion,
-  questionScores,
-} = Astro.props;
+const { categories, question, markets, marketScores, questionScores } =
+  Astro.props;
 
 // Listed score types
 const scoreCols = [
@@ -115,7 +105,7 @@ const similarQuestions = await getSimilarQuestions(question.id, 6);
 
 // Utility functions
 function getMarketScore(market_id: string, score_key: string) {
-  return marketScoresQuestion.find(
+  return marketScores.find(
     (s) => s.market_id == market_id && s.score_type == score_key,
   );
 }
@@ -356,14 +346,14 @@ function getQuestionScore(score_key: string) {
   <div class="p-2 m-2">
     <h1 class="text-2xl font-bold">Similar Questions</h1>
   </div>
-  <div class="p-4 m-2">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
     {
       similarQuestions.map((question) => {
         return (
           <QuestionCard
             question={question}
             categories={categories}
-            scores={marketScoresAll.filter(
+            scores={marketScores.filter(
               (score) => score.question_id === question.id,
             )}
           />
