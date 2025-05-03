@@ -96,8 +96,10 @@ Import the schema, roles, and some basic data by running the following SQL files
 just db-run-sql schema/01-roles.sql
 just db-run-sql schema/02-schema.sql
 just db-run-sql schema/03-views.sql
-just db-run-sql schema/04-platforms.sql
-just db-run-sql schema/05-categories.sql
+just db-run-sql schema/04-vector-tables.sql
+just db-run-sql schema/05-vector-queries.sql
+just db-run-sql schema/10-platforms.sql
+just db-run-sql schema/11-categories.sql
 ```
 
 Reload PostgREST for it to see the new schema:
@@ -272,8 +274,10 @@ just db-up
 just db-run-sql schema/01-roles.sql
 just db-run-sql schema/02-schema.sql
 just db-run-sql schema/03-views.sql
-just db-run-sql schema/04-platforms.sql
-just db-run-sql schema/05-categories.sql
+just db-run-sql schema/04-vector-tables.sql
+just db-run-sql schema/05-vector-queries.sql
+just db-run-sql schema/10-platforms.sql
+just db-run-sql schema/11-categories.sql
 
 # reload the schema cache
 docker kill -s SIGUSR1 postgrest
