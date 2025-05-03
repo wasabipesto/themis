@@ -78,7 +78,7 @@ export async function llmSlugify(market: MarketDetails): Promise<string> {
 }
 
 export async function llmSummarizeDescriptions(
-  question: QuestionDetails,
+  question: { title: string },
   markets: MarketDetails[],
 ): Promise<string> {
   const items = markets.map((market) => ({

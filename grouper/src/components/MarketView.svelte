@@ -34,7 +34,12 @@
     linkMarketNoRefresh,
     refreshViewsQuick,
   } from "@lib/api";
-  import { llmGetKeywords, llmGetCategory, llmSlugify } from "@lib/ai";
+  import {
+    llmGetKeywords,
+    llmGetCategory,
+    llmSlugify,
+    llmSummarizeDescriptions,
+  } from "@lib/ai";
 
   // Market view
   let marketId: string | null = null;
@@ -292,7 +297,10 @@
       const newQuestion: NewQuestion = {
         title: firstMarket.title,
         slug: await llmSlugify(firstMarket),
-        description: "",
+        description: await llmSummarizeDescriptions(
+          { title: firstMarket.title },
+          stagedMarkets,
+        ),
         category_slug:
           firstMarket.category_slug ||
           (await llmGetCategory(firstMarket.title)) ||
