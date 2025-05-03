@@ -21,8 +21,6 @@
     { value: "volume_usd.asc.nullslast", label: "Lowest volume" },
     { value: "duration_days.desc", label: "Longest duration" },
     { value: "duration_days.asc", label: "Shortest duration" },
-    { value: "prob_time_avg.desc", label: "Highest average prob" },
-    { value: "prob_time_avg.asc", label: "Lowest average prob" },
   ];
 </script>
 
