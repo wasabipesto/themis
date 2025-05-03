@@ -7,7 +7,7 @@
     "paths": {
       "@atoms/*": ["src/components/atoms/*"],
       "@components/*": ["src/components/*"],
-      "@icons/*": ["src/icons/*"],
+      "@data/*": ["src/data/*"],
       "@layouts/*": ["src/layouts/*"],
       "@styles/*": ["src/styles/*"],
       "@types": ["src/types/index.d.ts"],
