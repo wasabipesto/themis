@@ -8,6 +8,7 @@ import type {
   PlatformCategoryScoreDetails,
   PlatformDetails,
   QuestionDetails,
+  SimilarQuestions,
 } from "@types";
 
 const PGRST_URL = import.meta.env.PGRST_URL;
@@ -152,6 +153,14 @@ export async function getTopQuestionsForPlatform(
   );
   return await fetchFromAPI<QuestionDetails[]>(
     `/question_details?order=hotness_score.desc&id=in.(${scores.map((s) => s.question_id).join(",")})`,
+  );
+}
+
+export async function getSimilarQuestions(
+  questionId: number,
+): Promise<SimilarQuestions[]> {
+  return fetchFromAPI(
+    `/rpc/find_similar_questions_by_id?target_question_id=eq.${questionId}`,
   );
 }
 

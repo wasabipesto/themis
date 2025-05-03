@@ -8,6 +8,7 @@ import type {
   NewQuestion,
   Question,
   QuestionDetails,
+  SimilarMarkets,
 } from "@types";
 
 const PGRST_URL = import.meta.env.PUBLIC_PGRST_URL;
@@ -218,6 +219,14 @@ export async function getMarketsByQuestion(
   const order = "platform_slug.asc";
   return fetchFromAPI(
     `market_details?question_id=eq.${questionId}&order=${order}`,
+  );
+}
+
+export async function getSimilarMarkets(
+  marketId: string,
+): Promise<SimilarMarkets[]> {
+  return fetchFromAPI(
+    `rpc/find_similar_markets_by_id?target_market_id=eq.${marketId}`,
   );
 }
 
