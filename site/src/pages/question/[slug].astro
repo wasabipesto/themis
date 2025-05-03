@@ -1,5 +1,6 @@
 ---
 import Base from "@layouts/base.astro";
+import QuestionCard from "@components/question-card.astro";
 import QuestionProbChart from "@components/charts/question-probs.astro";
 import Traders from "@atoms/traders.astro";
 import Volume from "@atoms/volume.astro";
@@ -14,6 +15,7 @@ import {
   getMarketScores,
   getQuestionOverallScores,
   getCategories,
+  getSimilarQuestions,
 } from "@lib/api";
 
 // Generate routes for all items
@@ -28,7 +30,7 @@ export async function getStaticPaths() {
     const markets = marketsAll.filter(
       (market) => market.question_id === question.id,
     );
-    const marketScores = marketScoresAll.filter(
+    const marketScoresQuestion = marketScoresAll.filter(
       (score) => score.question_id === question.id,
     );
     const questionScores = questionScoresAll.filter(
@@ -36,12 +38,25 @@ export async function getStaticPaths() {
     );
     return {
       params: { slug: question.slug },
-      props: { categories, question, markets, marketScores, questionScores },
+      props: {
+        categories,
+        question,
+        markets,
+        marketScoresAll,
+        marketScoresQuestion,
+        questionScores,
+      },
     };
   });
 }
-const { categories, question, markets, marketScores, questionScores } =
-  Astro.props;
+const {
+  categories,
+  question,
+  markets,
+  marketScoresAll,
+  marketScoresQuestion,
+  questionScores,
+} = Astro.props;
 
 // Listed score types
 const scoreCols = [
@@ -90,8 +105,17 @@ if (!category) {
   throw new Error(`Category not found for slug ${question.category_slug}`);
 }
 
+// Get resolution from market
+const resolution = markets[0].question_invert
+  ? !markets[0].resolution
+  : markets[0].resolution;
+
+// Get similar questions
+const similarQuestions = await getSimilarQuestions(question.id, 6);
+
+// Utility functions
 function getMarketScore(market_id: string, score_key: string) {
-  return marketScores.find(
+  return marketScoresQuestion.find(
     (s) => s.market_id == market_id && s.score_type == score_key,
   );
 }
@@ -100,11 +124,6 @@ function getQuestionScore(score_key: string) {
     (s) => s.item_id == question.id.toString() && s.score_type == score_key,
   );
 }
-
-// Get resolution from market
-const resolution = markets[0].question_invert
-  ? !markets[0].resolution
-  : markets[0].resolution;
 ---
 
 <Base title="Market">
@@ -332,5 +351,24 @@ const resolution = markets[0].question_invert
         }
       </tbody>
     </table>
+  </div>
+
+  <div class="p-2 m-2">
+    <h1 class="text-2xl font-bold">Similar Questions</h1>
+  </div>
+  <div class="p-4 m-2">
+    {
+      similarQuestions.map((question) => {
+        return (
+          <QuestionCard
+            question={question}
+            categories={categories}
+            scores={marketScoresAll.filter(
+              (score) => score.question_id === question.id,
+            )}
+          />
+        );
+      })
+    }
   </div>
 </Base>
