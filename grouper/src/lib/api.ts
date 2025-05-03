@@ -224,9 +224,12 @@ export async function getMarketsByQuestion(
 
 export async function getSimilarMarkets(
   marketId: string,
+  platformSlug: string,
+  startDate: string,
+  endDate: string,
 ): Promise<SimilarMarkets[]> {
   return fetchFromAPI(
-    `rpc/find_similar_markets_by_id?target_market_id=eq.${marketId}`,
+    `rpc/find_similar_markets_by_id?target_market_id=${marketId}&platform_slug=eq.${platformSlug}&not.or=(close_datetime.lte.${startDate},open_datetime.gte.${endDate})&question_dismissed=eq.0&limit=100`,
   );
 }
 

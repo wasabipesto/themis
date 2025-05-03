@@ -12,7 +12,7 @@
     on:keydown={(e) => e.key === "Enter" && onSearch()}
   />
   <button
-    class="px-4 py-2 bg-blue hover:bg-blue/80 text-white rounded-md"
+    class="px-4 py-2 bg-blue hover:bg-blue/80 text-crust rounded-md"
     on:click={onSearch}
   >
     Search

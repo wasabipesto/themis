@@ -4,6 +4,7 @@
     Question,
     MarketDetails,
     DailyProbabilityDetails,
+    SimilarMarkets,
   } from "@types";
   import {
     LoadingSpinnerSmall,
@@ -28,6 +29,7 @@
     getQuestion,
     getMarketProbs,
     getMarkets,
+    getSimilarMarkets,
     createQuestionNoRefresh,
     linkMarketNoRefresh,
     refreshViewsQuick,
@@ -52,6 +54,7 @@
   let searchQuery = "";
   let searchLoading = true;
   let keywordsLoading = false;
+  let searchMode: "keyword" | "similar" = "similar"; // Toggle between keyword and similar markets search
 
   // Separate results for each platform
   let platformResults: Map<
@@ -137,11 +140,47 @@
     });
     platformResults = platformResults; // Trigger reactivity
 
-    // Assemble query parameters for this specific platform
-    let params = assembleParamString(true, query, [platformSlug], sort);
-
     try {
-      const results = await getMarkets(params);
+      let results;
+
+      if (searchMode === "similar" && market) {
+        const startDate = market.open_datetime?.split("T")[0];
+        const endDate = market.close_datetime?.split("T")[0];
+        // Get similar markets
+        const similarMarketsResults = await getSimilarMarkets(
+          market.id,
+          platformSlug,
+          startDate,
+          endDate,
+        );
+        // Each result in similarMarkets contains all the fields we need, but we need to convert it to MarketDetails format
+        results = similarMarketsResults.map((sm) => ({
+          id: sm.id,
+          title: sm.title,
+          url: sm.url,
+          platform_slug: sm.platform_slug,
+          platform_name: sm.platform_name,
+          category_slug: sm.category_slug,
+          category_name: sm.category_name,
+          question_id: sm.question_id,
+          question_invert: sm.question_invert,
+          question_dismissed: sm.question_dismissed,
+          open_datetime: sm.open_datetime,
+          close_datetime: sm.close_datetime,
+          traders_count: sm.traders_count,
+          volume_usd: sm.volume_usd,
+          duration_days: sm.duration_days,
+          resolution: sm.resolution,
+          description: "",
+          question_slug: "",
+          question_title: "",
+        }));
+      } else {
+        // For keyword search, use the existing approach
+        let params = assembleParamString(true, query, [platformSlug], sort);
+        results = await getMarkets(params);
+      }
+
       platformResults.set(platformSlug, {
         loading: false,
         error: results.length === 0 ? `${platformSlug}: No items found.` : null,
@@ -175,7 +214,12 @@
   }
 
   function handleSearch() {
-    loadAllPlatformData(searchQuery);
+    // In similar mode, we don't need the search query
+    if (searchMode === "similar") {
+      loadAllPlatformData(null); // Pass null to ignore the query
+    } else {
+      loadAllPlatformData(searchQuery);
+    }
   }
 
   async function generateKeywords() {
@@ -313,7 +357,7 @@
         </div>
         <button
           on:click={generateKeywords}
-          class="px-4 py-2 bg-blue hover:bg-blue/80 text-white rounded-md"
+          class="px-4 py-2 bg-blue hover:bg-blue/80 text-crust rounded-md"
           disabled={keywordsLoading}
         >
           {#if keywordsLoading}
@@ -322,11 +366,31 @@
             Keywords
           {/if}
         </button>
+        <button
+          on:click={() => {
+            searchMode = searchMode === "keyword" ? "similar" : "keyword";
+            handleSearch();
+          }}
+          class="px-4 py-2 hover:opacity-80 text-crust rounded-md"
+          class:bg-green={searchMode === "similar"}
+          class:bg-blue={searchMode === "keyword"}
+        >
+          {searchMode === "keyword" ? "Use Similar" : "Use Keywords"}
+        </button>
       </div>
 
       {#if searchLoading}
         <LoadingSpinner />
       {:else}
+        <div class="mb-4 p-2 bg-base-light text-crust rounded-md">
+          <p class="font-medium">
+            {#if searchMode === "similar"}
+              Showing similar markets to "{market?.title}"
+            {:else}
+              Search results for "{searchQuery || "all markets"}"
+            {/if}
+          </p>
+        </div>
         <!-- Display results from each platform separately -->
         {#each otherPlatforms as platform}
           {#if platformResults.has(platform.slug)}

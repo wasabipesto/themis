@@ -279,10 +279,9 @@ pub fn refresh_quick_materialized_views(client: &Client, params: &PostgrestParam
 
 /// Refreshes all materialized views in the database.
 /// Should be called after all data has been uploaded to ensure views are up-to-date.
-/// Uses a longer timeout since this operation can take around 60 seconds.
 pub fn refresh_all_materialized_views(params: &PostgrestParams) -> Result<()> {
     // Create a new client with a longer timeout specifically for this operation
-    let timeout = Duration::from_secs(180); // 3 minute timeout
+    let timeout = Duration::from_secs(300);
     let client = Client::builder()
         .timeout(timeout)
         .build()
