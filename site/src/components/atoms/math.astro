@@ -1,0 +1,14 @@
+---
+import katex from "katex";
+
+const { equation } = Astro.props;
+
+const rendered = katex.renderToString(equation, {
+  displayMode: false,
+  throwOnError: true,
+  trust: true,
+  output: "mathml",
+});
+---
+
+<Fragment set:html={rendered} />
