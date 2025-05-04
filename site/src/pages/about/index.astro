@@ -144,8 +144,142 @@ const scoreTypes = [
   <hr class="my-2" />
 
   <div class="p-4 m-2">
-    <h2 class="text-3xl font-bold" id="faq">Frequently Asked Questions</h2>
+    <h2 class="mb-4 text-3xl font-bold" id="faq">Frequently Asked Questions</h2>
     <div class="grid my-2">
+      <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
+        <h3 class="text-xl font-bold" id="market-types">
+          What market types do we support?
+          <a href="#market-types">
+            <Icon
+              name="mdi:link-variant"
+              class="inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+            />
+          </a>
+        </h3>
+        <p class="my-2">
+          Broadly, we support all binary and multiple-choice markets on all
+          supported platforms. There are a few asterisks around this, however.
+        </p>
+        <p class="my-2">
+          For platforms like Kalshi and Polymarket where all markets are binary,
+          the process is straightforward. Simple yes/no questions are extracted
+          as-is, with the probability based on the price of the YES side. On
+          these platforms, question groups are actually constructed out of
+          binary markets (usually in the form of "Will team X win game Y?" or
+          "Will metric X be greater than Y at time Z?") which makes extraction
+          straightforward.
+        </p>
+        <p class="my-2">
+          Manifold and Metaculus have a number of different market types, which
+          they use for question groups and continuous spreads.
+        </p>
+        <ul class="my-2 ml-5 list-disc">
+          <li>
+            For dependent multiple-choice markets, where there are many
+            potential outcomes but only one outcome can be selected (e.g. "Which
+            film will win best picture at the 2025 Oscars?"). For those markets,
+            we track the winner and use that option's probability over time as
+            the market probability.
+          </li>
+          <li>
+            On Manifold, dependent multiple-choice markets can actually resolve
+            to multiple options as long as their resolution values sum to one.
+            We do not currently evaluate markets that resolve in this way.
+          </li>
+          <li>
+            For independent multiple choice markets, where any number of options
+            can be selected, we decompose all options into their own binary
+            markets. Each option has its own probability history and statistics.
+            Currently only Manifold has this type, everyone else implements this
+            concept as groups of binary markets.
+          </li>
+          <li>
+            Both Manifold and Metaculus have a few versions of continuous
+            markets, which predict a numeric value or date. For Manifold this
+            includes "PseudoNumeric", "Number", "MultiNumeric", and "Date". For
+            Metaculus this includes "Numeric" and "Date". We do not currently
+            evaluate these markets, but we have plans to do so in the future.
+          </li>
+          <li>
+            Finally, Metaculus has the special "Conditional" type. They are not
+            currently supported but we have plans to implement this type in the
+            future.
+          </li>
+        </ul>
+        <p class="my-2">
+          We do not evaluate non-market items from any platform, such as
+          bounties, posts, or non-forecasting polls. Our downloader runs
+          nightly, and notifies us of any new or unrecognized market types so we
+          can implement them as quickly as possible.
+        </p>
+      </div>
+
+      <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
+        <h3 class="text-xl font-bold" id="matching">
+          How do you match markets together?
+          <a href="#matching">
+            <Icon
+              name="mdi:link-variant"
+              class="inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+            />
+          </a>
+        </h3>
+        <p class="my-2">
+          When we first started working on the Calibration City site, we
+          realized how different each prediction market platform was. The
+          apples-to-oranges problem has reared its head many times and we were
+          certainly not the first to realize this.
+        </p>
+        <p class="my-2">
+          Our goal with the matching process is to find equivalent markets
+          across platforms, usually by targeting one of the following
+          situations.
+        </p>
+        <ul class="my-2 ml-5 list-disc">
+          <li>
+            There are some events that most prediction markets are already
+            tracking, such as elections or sports tournaments. These are usually
+            high-volume, popular markets, but can have subtle differences in
+            resolution criteria.
+          </li>
+          <li>
+            Some platforms will create "mirrors" of existing markets from other
+            platforms, allowing users to see differences and arbitrate. These
+            are nice because they will always resolve the same, but are usually
+            limited to platforms that allow users to make their own markets.
+          </li>
+          <li>
+            Occasionally, external groups will make predictions or encourage
+            others to predict specific questions. Some of these, such as the ACX
+            prediction content, have a wide range of valuable questions that
+            share resolution criteria. Even better, some of these have awards
+            that encourage good turnout.
+          </li>
+        </ul>
+        <p class="my-2">
+          After downloading items from each platform's API, we use a couple
+          techniques to try to find these markets. We generate <a
+            href="https://en.wikipedia.org/wiki/Word_embedding">embeddings</a
+          > to find similar markets, then refine matches using tags, keywords, duration
+          overlap, and other heuristics.
+        </p>
+        <p class="my-2">
+          The final decision as to whether two markets are "equivalent" can be
+          surprisingly difficult. For instance, there can be two markets that
+          resolve on December 31st vs January 1st, or use two different news
+          sources, or have any other number of slight variations that make them
+          not 100% equivalent. In order to stay in the spirit of the concept, we
+          allow grouping markets as long as these differences wouldn't have more
+          than a 1% chance of changing the resolution.
+        </p>
+        <p class="my-2">
+          All matches are picked and approved by real people. We do our best,
+          but there may be some mistakes. <a href="#contact">Contact us</a> if you
+          think there's an issue with a market link, or if you have a suggestion
+          for additional market links.
+        </p>
+      </div>
+
       <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
         <h3 class="text-xl font-bold" id="grades">
           How are the letter grades calculated?
