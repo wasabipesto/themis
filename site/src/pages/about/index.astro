@@ -5,6 +5,9 @@ import Math from "@atoms/math.astro";
 import gradeCutoffs from "@data/grade_cutoffs.json";
 import { Icon } from "astro-icon/components";
 
+const api_base = import.meta.env.PGRST_URL;
+console.log(api_base);
+
 const scoreTypes = [
   {
     key: "brier",
@@ -109,12 +112,14 @@ const scoreTypes = [
       const form = document.getElementById("newsletterForm") as HTMLFormElement;
       form.addEventListener("submit", function (e: Event) {
         e.preventDefault();
+        const api_base =
+          form.dataset.apiBase || "https://data.predictionmetrics.org";
         const emailInput = document.getElementById(
           "emailNewsletterSignup",
         ) as HTMLInputElement;
         const email = emailInput.value;
 
-        fetch("http://localhost:3000/newsletter_signups", {
+        fetch(`${api_base}/newsletter_signups`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -548,7 +553,7 @@ const scoreTypes = [
       </ul>
       <p class="my-2">And finally, here's a handy form for anything else:</p>
 
-      <form id="feedbackForm" class="m-2">
+      <form id="feedbackForm" data-api-base={api_base} class="m-2">
         <div class="mx-auto">
           <div class="mb-4">
             <label for="email" class="block text-sm font-medium text-text mb-1">
@@ -627,6 +632,8 @@ const scoreTypes = [
         const form = document.getElementById("feedbackForm") as HTMLFormElement;
         form.addEventListener("submit", function (e: Event) {
           e.preventDefault();
+          const api_base =
+            form.dataset.apiBase || "https://data.predictionmetrics.org";
           const email = (
             document.getElementById("feedbackEmail") as HTMLInputElement
           ).value;
@@ -642,7 +649,7 @@ const scoreTypes = [
             ) as HTMLInputElement
           ).value;
 
-          fetch("http://localhost:3000/general_feedback", {
+          fetch(`${api_base}/general_feedback`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -668,7 +675,7 @@ const scoreTypes = [
             });
 
           if (signup) {
-            fetch("http://localhost:3000/newsletter_signups", {
+            fetch(`${api_base}/newsletter_signups`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
