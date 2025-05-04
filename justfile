@@ -97,6 +97,11 @@ site-test:
 site-build:
     npx astro build --silent
 
+# Build the main site, loud
+[working-directory: 'site']
+site-build-loud:
+    npx astro build
+
 # Push the main site with rclone
 site-push:
     rclone sync site/dist $RCLONE_SITE_TARGET --progress
@@ -118,11 +123,15 @@ group:
 group-test:
     npx astro check --silent
 
+# Generate embeddings
+embeddings *args:
+    uv run scripts/update-embeddings.py {{args}}
+
 # Run nightly process
-nightly: download-test extract-test grade-test
+nightly: download-test extract-test grade-test group-test site-test
     just download --log-level warn --resolved-since-days-ago 10 --reset-cache
     just download --log-level warn --resolved-since-days-ago 10
     just extract --log-level warn
     just grade --log-level warn
-    just group-test site-test
+    just embeddings
     just site-build site-push
