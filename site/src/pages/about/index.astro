@@ -1,6 +1,7 @@
 ---
 import Base from "@layouts/base.astro";
 import Grade from "@atoms/grade.astro";
+import Math from "@atoms/math.astro";
 import gradeCutoffs from "@data/grade_cutoffs.json";
 import { Icon } from "astro-icon/components";
 
@@ -278,6 +279,165 @@ const scoreTypes = [
           think there's an issue with a market link, or if you have a suggestion
           for additional market links.
         </p>
+      </div>
+
+      <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
+        <h3 class="text-xl font-bold" id="scores">
+          How are the scores calculated?
+          <a href="#scores">
+            <Icon
+              name="mdi:link-variant"
+              class="inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+            />
+          </a>
+        </h3>
+        <p class="my-2">
+          Currently we have two main types of scores: absolute and relative
+          scores.
+        </p>
+        <h4 class="text-lg italic">Absolute Scores</h4>
+        <p class="my-2">
+          All absolute scores are calculated based on a criterion probability
+          and scored using a scoring rule. The criterion probability is what we
+          reference as the market's "prediction", and can be at a specific point
+          in time like the midpoint or 30 days before resolution, or it could be
+          an aggregation such as the time-weighted average probability.
+        </p>
+        <p class="my-2">
+          The <a href="https://en.wikipedia.org/wiki/Brier_score">Brier score</a
+          > is fairly intuitive, with better scores closer to zero and worse scores
+          closer to one. Random guesses tend towards a score of 0.25 with superforecasters
+          around 0.10. With any market's criterion probability <Math
+            equation="p"
+          /> and the market's resolution
+          <Math equation="r" />, we can calculate the Brier score with:
+        </p>
+        <div class="text-center my-4">
+          <Math
+            equation={String.raw`
+              \text{Brier Score} = \begin{cases}
+              ~(p-1)^2 &\text{if } r = 1 \\
+              ~p^2 &\text{if } r = 0 \\
+              ~(p-r)^2 &\text{if } 0 \leq r \leq 1
+              \end{cases}`}
+          />
+        </div>
+        <p class="my-2">
+          The <a
+            href="https://en.wikipedia.org/wiki/Scoring_rule#Logarithmic_score"
+            >logarithmic score</a
+          > is another strictly proper scoring rule, but with better scores closer
+          to zero and worse scores closer to negative infinity. Predictions far from
+          the correct resolution are punished extremely hard with this scoring rule.
+          With any market's criterion probability <Math equation="p" /> and resolution
+          <Math equation="r" />, we can calculate the logarithmic score with:
+        </p>
+        <div class="text-center my-4">
+          <Math
+            equation={String.raw`
+              \text{Logarithmic Score} = \begin{cases}
+              ~ln(p)&\text{if } r = 1 \\
+              ~ln(1-p) &\text{if } r = 0 \\
+              ~r \cdot ln(p) + (1-r) \cdot ln(1-p) &\text{if } 0 \leq r \leq 1
+              \end{cases}`}
+          />
+        </div>
+        <p class="my-2">
+          The <a
+            href="https://en.wikipedia.org/wiki/Scoring_rule#Spherical_score"
+            >spherical score</a
+          > is a third strictly proper scoring rule. Better scores tend towards one
+          but the worst possible score is only zero, but the vast majority of predictions
+          will fall very high on this scale (between 0.99 and 1.0) so differentiation
+          is difficult. With any market's criterion probability <Math
+            equation="p"
+          /> and resolution
+          <Math equation="r" />, we can calculate the spherical score with:
+        </p>
+        <div class="text-center my-4">
+          <Math
+            equation={String.raw`
+              \text{Spherical Score} = \begin{cases}
+              ~\displaystyle\frac{p}{\sqrt{p^2+(1-p)^2}} &\text{if } r = 1 \\
+              ~\displaystyle\frac{1-p}{\sqrt{p^2+(1-p)^2}} &\text{if } r = 0 \\
+              ~\displaystyle\frac{r \cdot p+(1-r) \cdot (1-p)}{\sqrt{p^2+(1-p)^2}} &\text{if } 0 \leq r \leq 1
+              \end{cases}`}
+          />
+        </div>
+        <h4 class="text-lg italic">Relative Scores</h4>
+        <p class="my-2">
+          Relative scores are calculated based on the performance of the market
+          relative to other markets. They provide a measure of how well the
+          market has performed compared to its peers. These are only present for
+          markets that are linked in a question, since they are scored against
+          the other markets in that question.
+        </p>
+        <p class="my-2">
+          We calculate a relative score with each scoring rule, which you can
+          find on the individual question pages. The overall process is the
+          exact same between each, with the only difference being the scoring
+          rule used. Scoring rules where a lower score is better will be
+          evaluated the same way for a relative score, so a lower relative Brier
+          score is better while a higher relative logarithmic score is better.
+        </p>
+        <p class="my-2">
+          The process to calculate relative scores for a group of markets starts
+          by determining the scoring period. We choose to score groups for the
+          duration where at least two markets are open. In some situations, we
+          also override the start or end dates so that the scoring period does
+          not include days where the outcome was already known.
+        </p>
+        <p class="my-2">
+          For each day in the scoring period, we calculate each market's score
+          using a scoring rule (Brier, log, etc.) and, from those, calculate the
+          median score. We then subtract the median from each market's daily
+          score and save it as the daily relative score.
+        </p>
+        <p class="my-2">
+          Finally, we sum all of the daily relative scores for each market and
+          divide that by the total number of days in the scoring period. Note
+          that this is not a simple average! For markets that were not open for
+          the entire scoring period, their sum is being divided by more days
+          than they had values for. This means that a market that otherwise
+          performed the same as another but was open for less time will have a
+          relative score closer to zero. Also note that relative scores can be
+          both positive and negative, since this is the difference from a median
+          score.
+        </p>
+        <p class="my-2">
+          One way to represent this score for each market would be:
+        </p>
+        <div class="text-center my-4">
+          <Math
+            equation={String.raw`\displaystyle\text{Relative Score} = \frac{\sum_{i=1}^{n} (s_i - m_i)}{n}`}
+          />
+        </div>
+        <p class="my-2">
+          Where <Math equation="s_i" /> is the market's score on day <Math
+            equation="i"
+          />, <Math equation="m_i" /> is the median score on day <Math
+            equation="i"
+          />, and <Math equation="n" /> is the number of days we're scoring.
+        </p>
+        <p class="my-2">
+          You can learn more about relative scores at the following sources:
+        </p>
+        <ul class="list-disc my-2 px-5">
+          <li>
+            <a
+              href="https://www.cultivatelabs.com/crowdsourced-forecasting-guide/what-are-relative-brier-scores-and-how-are-they-calculated"
+              target="_blank"
+            >
+              Cultivate Labs: What are Relative Brier Scores and How are they
+              Calculated?
+            </a>
+          </li>
+          <li>
+            <a href="https://www.gjopen.com/faq" target="_blank">
+              Good Judgement Open: How are my forecasts scored for accuracy?
+            </a>
+          </li>
+        </ul>
       </div>
 
       <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
