@@ -86,6 +86,7 @@ const scoreTypes = [
 
     <form
       id="newsletterForm"
+      data-api-base={api_base}
       class="mt-6 m-2 p-4 bg-base-light text-crust rounded-md drop-shadow-sm grid grid-cols-1 md:grid-cols-2 gap-2"
     >
       <span class="mx-2">
@@ -614,8 +615,8 @@ const scoreTypes = [
                 id="feedbackNewsletterSignup"
                 name="newsletterSignup"
                 type="checkbox"
+                value="newsletter"
                 class="px-4"
-                value="Submit"
               />
             </div>
             <div class="">
@@ -647,7 +648,7 @@ const scoreTypes = [
             document.getElementById(
               "feedbackNewsletterSignup",
             ) as HTMLInputElement
-          ).value;
+          ).checked;
 
           fetch(`${api_base}/general_feedback`, {
             method: "POST",
