@@ -28,3 +28,51 @@ pub fn get_first_probability(
         .first()
         .cloned()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::median;
+
+    #[test]
+    fn test_median_odd_length() {
+        let values = &[1.0, 2.0, 3.0];
+        assert_eq!(median(values), 2.0);
+    }
+
+    #[test]
+    fn test_median_even_length() {
+        let values = &[1.0, 2.0, 3.0, 4.0];
+        assert_eq!(median(values), 2.5);
+    }
+
+    #[test]
+    fn test_median_single_element() {
+        let values = &[5.0];
+        assert_eq!(median(values), 5.0);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_median_empty_slice() {
+        let values: &[f32] = &[];
+        median(values);
+    }
+
+    #[test]
+    fn test_median_negative_numbers() {
+        let values = &[-5.0, 0.0, 5.0];
+        assert_eq!(median(values), 0.0);
+    }
+
+    #[test]
+    fn test_median_floats() {
+        let values = &[1.5, 2.5, 3.5];
+        assert_eq!(median(values), 2.5);
+    }
+
+    #[test]
+    fn test_median_even_floats() {
+        let values = &[1.1, 2.2, 3.3, 4.4];
+        assert_eq!(median(values), 2.75);
+    }
+}
