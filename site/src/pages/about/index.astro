@@ -78,6 +78,67 @@ const scoreTypes = [
       >. We welcome collaboration and encourage others to use our data, with the
       hope that you'll share your findings with us.
     </p>
+
+    <form
+      id="newsletterForm"
+      class="mt-6 m-2 p-4 bg-base-light text-crust rounded-md drop-shadow-sm grid grid-cols-1 md:grid-cols-2 gap-2"
+    >
+      <span class="mx-2">
+        Interested in staying in touch? Learn about what's next via our email
+        newsletter.
+      </span>
+      <span class="mx-2 flex gap-2">
+        <input
+          type="email"
+          id="emailNewsletterSignup"
+          name="email"
+          class="py-2 px-4 w-full h-full rounded-md border-1 border-crust"
+          placeholder="rhanson@aol.com"
+          required
+        />
+        <input
+          type="submit"
+          class="px-4 h-full rounded-md border-1 border-crust hover:bg-crust hover:text-base-light transition-colors duration-200"
+          value="Subscribe"
+        />
+      </span>
+    </form>
+    <script>
+      const form = document.getElementById("newsletterForm") as HTMLFormElement;
+      form.addEventListener("submit", function (e: Event) {
+        e.preventDefault();
+        const emailInput = document.getElementById(
+          "emailNewsletterSignup",
+        ) as HTMLInputElement;
+        const email = emailInput.value;
+
+        fetch("http://localhost:3000/newsletter_signups", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email }),
+        })
+          .then((response) => {
+            if (response.ok) {
+              const button = form.querySelector(
+                'input[type="submit"]',
+              ) as HTMLInputElement;
+              button.value = "Subscribed!";
+              emailInput.value = "";
+            } else {
+              console.error(
+                "Newsletter signup error:",
+                response.status,
+                response.statusText,
+              );
+            }
+          })
+          .catch((error) => {
+            console.error("Newsletter signup error:", error);
+          });
+      });
+    </script>
   </div>
   <hr class="my-2" />
 
