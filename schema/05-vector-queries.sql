@@ -1,7 +1,7 @@
 -- ==========================================
 -- DO THE MAGIC, DO THE MAGIC, DO THE MAGIC
 -- ==========================================
-
+--
 -- === FIND MARKETS SIMILAR TO TARGET ===
 DROP FUNCTION find_similar_markets_by_id(text,double precision,integer);
 CREATE OR REPLACE FUNCTION find_similar_markets_by_id(

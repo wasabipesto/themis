@@ -1,6 +1,7 @@
 -- ==========================================
 -- TABLE SCHEMA
 -- ==========================================
+--
 -- === PLATFORMS ===
 CREATE TABLE platforms (
     slug TEXT PRIMARY KEY,

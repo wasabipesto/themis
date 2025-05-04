@@ -1,7 +1,7 @@
 -- ==========================================
 -- LIVE-UPDATED VIEWS
 -- ==========================================
-
+--
 -- === DROP ALL VIEWS AND FUNCTIONS (NO DATA LOSS) ===
 DROP MATERIALIZED VIEW IF EXISTS question_details;
 DROP MATERIALIZED VIEW IF EXISTS market_details;

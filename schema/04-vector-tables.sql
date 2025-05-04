@@ -3,6 +3,7 @@
 -- THE NEW WORLD STRUGGLES TO BE BORN
 -- NOW IS THE TIME OF VECTORS
 -- ==========================================
+--
 -- === INITIALIZE THE EXTENSION ===
 CREATE EXTENSION IF NOT EXISTS vector;
 
