@@ -286,7 +286,20 @@ const { numQuestions, numLinkedMarkets } = await getQuestionStats();
       systemic errors.
     </p>
     <div class="my-4">
-      <CalibrationDefault platforms={platforms} markets={markets} />
+      <CalibrationDefault
+        platforms={platforms}
+        markets={markets}
+        width={1100}
+        aspectRatio={2}
+        caption=`<p class="text-xs">
+          Calibration plot for all platforms, with market probability at midpoint
+          versus average resolution value. Includes all resolved binary and multiple
+          choice markets.
+        </p>
+        <p class="text-xs">
+          Source: <a href="https://predictionmetrics.org">predictionmetrics.org</a>
+        </p>`
+      />
     </div>
     <SeeMoreLink
       link={`/charts/calibration`}
