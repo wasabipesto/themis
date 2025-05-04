@@ -77,7 +77,7 @@ To actually start our database and associated services:
 just db-up
 ```
 
-This command will start the database, the REST adapter, and the backup utility. These services only need to be running during the `extract` process, group building process, and site building process.
+This command will start the database, the REST adapter, and the backup utility. These services need to be running during the `extract` process, group building process, and site building process. When the site is deployed it reaches out to the database for a few non-critical functions.
 
 The database will run in Postgres, which will persist data in the `postgres_data` folder. You should never need to access or edit the contents of this folder. Another container handles backups, which will be placed in the `postgres_backups` folder daily.
 
