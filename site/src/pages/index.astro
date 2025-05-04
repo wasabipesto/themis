@@ -13,7 +13,6 @@ import {
   getMarketScores,
   getPlatformCategoryScores,
   getFeaturedQuestions,
-  getPlatformOverallScores,
   getQuestionStats,
 } from "@lib/api";
 import { getScoreStats } from "@lib/stats";
@@ -26,7 +25,6 @@ const categories = await getCategories();
 const markets = await getMarkets();
 const marketScores = await getMarketScores();
 const platformCategoryScores = await getPlatformCategoryScores(scoreType);
-const platformOverallScores = await getPlatformOverallScores();
 const featuredQuestions = await getFeaturedQuestions(4);
 
 // get numbers for the text
@@ -93,7 +91,6 @@ const { numQuestions, numLinkedMarkets } = await getQuestionStats();
           platforms={platforms}
           categories={categories}
           platformCategoryScores={platformCategoryScores}
-          platformOverallScores={platformOverallScores}
         />
       </div>
     </div>

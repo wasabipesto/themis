@@ -4,7 +4,6 @@ import ScoreRel from "@atoms/score-rel.astro";
 import { Icon } from "astro-icon/components";
 import type {
   CategoryDetails,
-  OtherScoreDetails,
   Platform,
   PlatformCategoryScoreDetails,
 } from "../types";
@@ -13,10 +12,8 @@ interface Props {
   platforms: Platform[];
   categories: CategoryDetails[];
   platformCategoryScores: PlatformCategoryScoreDetails[];
-  platformOverallScores: OtherScoreDetails[];
 }
-const { platforms, categories, platformCategoryScores, platformOverallScores } =
-  Astro.props;
+const { platforms, categories, platformCategoryScores } = Astro.props;
 
 // Build score map for table lookup
 const scoreMap = new Map<string, PlatformCategoryScoreDetails>();
