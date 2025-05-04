@@ -32,7 +32,7 @@ const scoreTypes = [
 
 <Base title="About">
   <div class="p-4 m-2">
-    <h1 class="text-4xl font-bold">About</h1>
+    <h1 id="about" class="text-4xl font-bold">About</h1>
     <p class="my-2">
       <a href="https://predictionmetrics.org/" target="_blank"
         >PredictionMetrics.org</a
@@ -85,8 +85,8 @@ const scoreTypes = [
       class="mt-6 m-2 p-4 bg-base-light text-crust rounded-md drop-shadow-sm grid grid-cols-1 md:grid-cols-2 gap-2"
     >
       <span class="mx-2">
-        Interested in staying in touch? Learn about what's next via our email
-        newsletter.
+        Interested in staying in touch? Learn about what's next via our mailing
+        list.
       </span>
       <span class="mx-2 flex gap-2">
         <input
@@ -148,7 +148,7 @@ const scoreTypes = [
     <div class="grid my-2">
       <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
         <h3 class="text-xl font-bold" id="market-types">
-          What market types do we support?
+          What market types do you support?
           <a href="#market-types">
             <Icon
               name="mdi:link-variant"
@@ -348,99 +348,202 @@ const scoreTypes = [
   <hr class="my-2" />
 
   <div class="p-4 m-2">
-    <h2 class="text-3xl font-bold" id="contact">Contact</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 my-2">
-      <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
-        <h3 class="text-xl font-bold">Suggest a New Connection</h3>
-        <p class="my-2">
-          Found a set of markets that aren't covered here? Send us an email with
-          links to each, or submit them as an issue.
-        </p>
-        <ul class="list-disc my-2 px-6">
-          <li>
-            <a href="mailto:connections@predictionmetrics.org">
-              Email us: connections@&#8203;predictionmetrics.org
-            </a>
-          </li>
-          <li>
-            <a
-              href="https://github.com/wasabipesto/themis/issues/new"
-              target="_blank"
+    <h2 class="mb-4 text-3xl font-bold" id="contact">
+      Contact
+      <a href="contact">
+        <Icon
+          name="mdi:link-variant"
+          class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+        />
+      </a>
+    </h2>
+    <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
+      <h3 class="text-xl font-bold" id="matching">
+        Getting in Touch
+        <a href="#matching">
+          <Icon
+            name="mdi:link-variant"
+            class="inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+          />
+        </a>
+      </h3>
+      <p class="my-2">
+        Having an issue with the site? See a bug or a typo? Found a set of
+        markets that aren't covered here? Do you need help accessing the data
+        for a research project? Here's how you can contact us:
+      </p>
+      <ul class="list-disc my-2 px-6">
+        <li>
+          For issues with the site, backend API, data downloaders or extractors,
+          or anying else to do with code,
+          <a
+            href="https://github.com/wasabipesto/themis/issues/new"
+            class="underline"
+            target="_blank"
+          >
+            please submit an issue on GitHub</a
+          >. We also appreciate community developers, but please get in touch
+          before spending time on a significant pull request to check that it
+          aligns with our goals.
+        </li>
+        <li>
+          For questions about the site or assistance with the data, or for any
+          other inquiry, feel free to reach out to us via email at
+          <a href="mailto:issues@predictionmetrics.org" class="underline"
+            >contact@&#8203;predictionmetrics.org</a
+          >. This is likely the fastest way to get in touch with us.
+        </li>
+      </ul>
+      <p class="my-2">And finally, here's a handy form for anything else:</p>
+
+      <form id="feedbackForm" class="m-2">
+        <div class="mx-auto">
+          <div class="mb-4">
+            <label for="email" class="block text-sm font-medium text-text mb-1">
+              Contact Email
+            </label>
+            <input
+              type="text"
+              id="feedbackEmail"
+              name="email"
+              required
+              class="w-full px-3 py-2 rounded-md shadow-sm border border-text focus:border-blue focus:outline-none"
+              placeholder="rhanson@aol.com"
+            />
+          </div>
+          <div class="mb-4">
+            <label
+              for="feedbackType"
+              class="block text-sm font-medium text-text mb-1"
             >
-              Submit an issue on GitHub: wasabipesto/themis
-            </a>
-          </li>
-        </ul>
-      </div>
-      <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
-        <h3 class="text-xl font-bold">Contributors</h3>
-        <p class="my-2">
-          Interested in contributing to the application code? Pick an open issue
-          on GitHub to get started or email us to ask about priorities.
-        </p>
-        <ul class="list-disc my-2 px-6">
-          <li>
-            <a href="mailto:contributors@predictionmetrics.org">
-              Email us: contributors@&#8203;predictionmetrics.org
-            </a>
-          </li>
-          <li>
-            <a
-              href="https://github.com/wasabipesto/themis/issues/new"
-              target="_blank"
+              Feedback Type
+            </label>
+            <select
+              id="feedbackType"
+              name="type"
+              required
+              class="w-full px-3 py-2 rounded-md shadow-sm border border-text focus:border-blue focus:outline-none"
             >
-              Pick an issue on GitHub: wasabipesto/themis
-            </a>
-          </li>
-        </ul>
-      </div>
-      <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
-        <h3 class="text-xl font-bold">Issues with the Site</h3>
-        <p class="my-2">
-          Having trouble with the site? Submit an issue with screenshots, or
-          email us directly for security issues.
-        </p>
-        <ul class="list-disc my-2 px-6">
-          <li>
-            <a href="mailto:issues@predictionmetrics.org">
-              Email us: issues@&#8203;predictionmetrics.org
-            </a>
-          </li>
-          <li>
-            <a
-              href="https://github.com/wasabipesto/themis/issues/new"
-              target="_blank"
+              <option></option>
+              <option value="site-issue">Issues with the Site</option>
+              <option value="bug">Bug, Error, or Security Issue</option>
+              <option value="market-link">Suggest a New Market Link</option>
+              <option value="general">General Inquiry or Data Requests</option>
+              <option value="other">Something Else</option>
+            </select>
+          </div>
+          <div class="mb-4">
+            <label
+              for="feedbackContent"
+              class="block text-sm font-medium text-text mb-1"
             >
-              Submit an issue on GitHub: wasabipesto/themis
-            </a>
-          </li>
-        </ul>
-      </div>
-      <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
-        <h3 class="text-xl font-bold">General Inquiry/Data Requests</h3>
-        <p class="my-2">
-          Want help with the data? We are happy to work with students, faculty,
-          or enthusiasts to further your research.
-        </p>
-        <ul class="list-disc my-2 px-6">
-          <li>
-            <a href="mailto:general-inquiry@predictionmetrics.org">
-              Email us: general-inquiry@&#8203;predictionmetrics.org
-            </a>
-          </li>
-          <li>
-            <a href="mailto:research@predictionmetrics.org">
-              Email us: research@&#8203;predictionmetrics.org
-            </a>
-          </li>
-        </ul>
-      </div>
+              Feedback
+            </label>
+            <textarea
+              id="feedbackContent"
+              name="content"
+              rows="7"
+              required
+              class="w-full px-3 py-2 rounded-md shadow-sm border border-text focus:border-blue focus:outline-none"
+              placeholder="Description of your issue, links to your suggested markets, or any other questions you have."
+            ></textarea>
+          </div>
+          <div class="flex justify-end gap-4">
+            <div class="">
+              <label for="feedbackNewsletterSignup" class="text-sm px-1">
+                Also sign me up for the mailing list
+              </label>
+              <input
+                id="feedbackNewsletterSignup"
+                name="newsletterSignup"
+                type="checkbox"
+                class="px-4"
+                value="Submit"
+              />
+            </div>
+            <div class="">
+              <input
+                type="submit"
+                class="px-4 py-1 text-crust rounded-md bg-base-light hover:bg-blue transition-colors duration-200"
+                value="Submit"
+              />
+            </div>
+          </div>
+        </div>
+      </form>
+      <script>
+        const form = document.getElementById("feedbackForm") as HTMLFormElement;
+        form.addEventListener("submit", function (e: Event) {
+          e.preventDefault();
+          const email = (
+            document.getElementById("feedbackEmail") as HTMLInputElement
+          ).value;
+          const feedback_type = (
+            document.getElementById("feedbackType") as HTMLInputElement
+          ).value;
+          const feedback = (
+            document.getElementById("feedbackContent") as HTMLInputElement
+          ).value;
+          const signup = (
+            document.getElementById(
+              "feedbackNewsletterSignup",
+            ) as HTMLInputElement
+          ).value;
+
+          fetch("http://localhost:3000/general_feedback", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ email, feedback_type, feedback }),
+          })
+            .then((response) => {
+              if (response.ok) {
+                const button = form.querySelector(
+                  'input[type="submit"]',
+                ) as HTMLInputElement;
+                button.value = "Submitted!";
+              } else {
+                console.error(
+                  "Feedback submit error:",
+                  response.status,
+                  response.statusText,
+                );
+              }
+            })
+            .catch((error) => {
+              console.error("Feedback submit error:", error);
+            });
+
+          if (signup) {
+            fetch("http://localhost:3000/newsletter_signups", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ email }),
+            })
+              .then((response) => {
+                if (!response.ok) {
+                  console.error(
+                    "Newsletter signup error:",
+                    response.status,
+                    response.statusText,
+                  );
+                }
+              })
+              .catch((error) => {
+                console.error("Newsletter signup error:", error);
+              });
+          }
+        });
+      </script>
     </div>
   </div>
   <hr class="my-2" />
 
   <div class="p-4 m-2">
-    <h2 class="text-3xl font-bold" id="resources">Links & Resources</h2>
+    <h2 class="mb-4 text-3xl font-bold" id="resources">Links & Resources</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 my-2">
       <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
         <h3 class="text-xl font-bold">Prediction Markets</h3>
