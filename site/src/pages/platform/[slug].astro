@@ -104,32 +104,12 @@ const marketScores = await getMarketScores();
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
     <CalibrationDefault platforms={[platform]} markets={platformMarkets} />
     <HistogramDefault
-      option={{
-        values: marketScores
-          .filter(
-            (ms) =>
-              ms.score_type == "brier-midpoint" &&
-              ms.platform_slug == platform.slug,
-          )
-          .map((ms) => {
-            return {
-              value: ms.score,
-              series: platform.slug,
-              color: platform.color_primary,
-            };
-          }),
-        plotTitle: "Histogram of Scores",
-        axisTitleX: "Midpoint Brier score",
-        rangeStart: 0,
-        rangeEnd: 1,
-      }}
-      series={[
-        {
-          key: platform.slug,
-          name: platform.name,
-          color: platform.color_primary,
-        },
-      ]}
+      platforms={[platform]}
+      scores={marketScores.filter(
+        (ms) =>
+          ms.score_type == "brier-midpoint" &&
+          ms.platform_slug == platform.slug,
+      )}
     />
   </div>
   <SeeMoreLink link={"/charts"} text={`See all charts`} />

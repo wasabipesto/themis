@@ -1,62 +1,57 @@
 ---
+import type { MarketScoreDetails, PlatformDetails } from "@types";
+
+import * as Plot from "@observablehq/plot";
+import { JSDOM } from "jsdom";
+const { document } = new JSDOM().window;
+
 interface Props {
-  option: {
-    values: Array<{
-      value: number;
-      series: string;
-    }>;
-    plotTitle: string;
-    axisTitleX: string;
-    axisTitleY?: string | null;
-    rangeStart: number;
-    rangeEnd: number;
-  };
-  series: Array<{
-    key: string;
-    name: string;
-    color: string;
-  }>;
+  platforms: PlatformDetails[];
+  scores: MarketScoreDetails[];
+  width?: number;
+  aspectRatio?: number;
+  caption?: string;
 }
-const { option, series } = Astro.props;
+let { platforms, scores, width, aspectRatio, caption } = Astro.props;
+
+// NOTE: Currently only supports brier midpoint and requires all scores to be filtered already
 
 export interface HistogramDatapoint {
-  seriesName: string;
-  seriesColor: string;
+  platformName: string;
   startX: number;
   endX: number;
   count: number;
 }
 
 const numBins = 20;
-const minValue = option.rangeStart;
-const maxValue = option.rangeEnd;
+const minValue = 0;
+const maxValue = 1;
 const binWidth = (maxValue - minValue) / numBins;
 
 // Create a nested array to count bins per series
 const bins: { [seriesName: string]: number[] } = {};
 
-option.values.forEach((v) => {
-  if (!bins[v.series]) {
-    bins[v.series] = Array(numBins).fill(0);
+scores.forEach((s) => {
+  if (!bins[s.platform_slug]) {
+    bins[s.platform_slug] = Array(numBins).fill(0);
   }
   const binIndex = Math.min(
     numBins - 1,
-    Math.floor((v.value - minValue) / binWidth),
+    Math.floor((s.score - minValue) / binWidth),
   );
-  bins[v.series][binIndex]++;
+  bins[s.platform_slug][binIndex]++;
 });
 
 const points: HistogramDatapoint[] = [];
-for (const [seriesKey, seriesBins] of Object.entries(bins)) {
-  seriesBins.forEach((count, index) => {
+for (const [platformSlug, platformBins] of Object.entries(bins)) {
+  platformBins.forEach((count, index) => {
     if (count > 0) {
-      const seriesInfo = series.find((s) => s.key == seriesKey);
-      if (!seriesInfo) throw new Error(`Series not found: ${seriesKey}`);
+      const platformInfo = platforms.find((p) => p.slug == platformSlug);
+      if (!platformInfo) throw new Error(`Platform not found: ${platformSlug}`);
       const startX = minValue + index * binWidth;
       const endX = startX + binWidth;
       points.push({
-        seriesName: seriesInfo.name,
-        seriesColor: seriesInfo.color,
+        platformName: platformInfo.name,
         startX,
         endX,
         count,
@@ -65,80 +60,48 @@ for (const [seriesKey, seriesBins] of Object.entries(bins)) {
   });
 }
 
-const optionCalculated = {
-  plotTitle: option.plotTitle,
-  axisTitleX: option.axisTitleX,
-  axisTitleY: option.axisTitleY || "Count",
-  points: points,
-};
+// Set default sizes
+if (!width) width = 600;
+
+// Generate the plot
+const plot = Plot.plot({
+  title: "Accuracy Histogram",
+  width: width,
+  aspectRatio: aspectRatio,
+  marginLeft: 50,
+  x: { label: "Midpoint Brier score" },
+  y: {
+    grid: true,
+    label: "Count",
+  },
+  color: {
+    legend: platforms.length > 1,
+    label: "Platform",
+    domain: platforms.map((p) => p.name),
+    range: platforms.map((p) => p.color_primary),
+  },
+  marks: [
+    Plot.rectY(points, {
+      x1: "startX",
+      x2: "endX",
+      y: "count",
+      fill: "platformName",
+      insetLeft: 1,
+      insetRight: 1,
+    }),
+  ],
+  document,
+}).outerHTML;
 ---
 
 <div
   class="bg-base-light [&_h2]:text-2xl [&_figcaption]:text-xs text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
 >
-  <div
-    id="histogram-plot-default"
-    data-option={JSON.stringify(optionCalculated)}
-  >
-  </div>
+  <Fragment set:html={plot} />
+  <p class="text-xs">
+    {caption}
+  </p>
+  <p class="text-xs">
+    Source: <a href="https://predictionmetrics.org">predictionmetrics.org</a>
+  </p>
 </div>
-
-<script>
-  import * as Plot from "@observablehq/plot";
-  import type { HistogramDatapoint } from "./histogram-select.astro";
-
-  interface HistogramPlotElement extends HTMLElement {
-    dataset: {
-      option: string;
-    };
-  }
-  interface OptionData {
-    description: string;
-    plotTitle: string;
-    axisTitleX: string;
-    axisTitleY: string;
-    points: HistogramDatapoint[];
-  }
-
-  // Get a reference to the plot element using ID
-  const plotElement = document.getElementById(
-    "histogram-plot-default",
-  ) as HistogramPlotElement | null;
-
-  if (plotElement) {
-    const option = JSON.parse(plotElement.dataset.option) as OptionData;
-    const plotWidth = parseInt(window.getComputedStyle(plotElement).width);
-
-    const plot = Plot.plot({
-      title: option.plotTitle,
-      width: plotWidth,
-      // aspectRatio: 2,
-      marginLeft: 50,
-      x: { label: option.axisTitleX },
-      y: {
-        grid: true,
-        label: option.axisTitleY,
-      },
-      marks: [
-        Plot.rectY(option.points, {
-          x1: "startX",
-          x2: "endX",
-          y: "count",
-          fill: "seriesColor",
-          channels: {
-            Platform: "seriesName",
-          },
-          insetLeft: 1,
-          insetRight: 1,
-          tip: true,
-        }),
-      ],
-    });
-
-    // Wipe the existing plot and add the new one
-    while (plotElement.firstChild) {
-      plotElement.removeChild(plotElement.firstChild);
-    }
-    plotElement.appendChild(plot);
-  }
-</script>
