@@ -12,28 +12,33 @@ const platforms = await getPlatforms();
     color: var(--color-rosewater);
   }
   .dialog-left {
-    margin: 1rem;
+    margin: 1rem min(1%, 1rem);
     padding: 1rem;
-    max-width: 30rem;
+    max-width: min(80%, 30rem);
     border: 2px solid var(--color-rosewater);
     border-radius: 0.5rem;
   }
   .dialog-right {
-    margin: 1rem 1rem 1rem auto;
+    margin: 1rem min(1%, 1rem) 1rem auto;
     padding: 1rem;
-    max-width: 30rem;
+    max-width: min(80%, 30rem);
     border: 2px solid var(--color-green);
     border-radius: 0.5rem;
   }
   .table-container {
-    margin: 1rem auto;
-    padding: 0.5rem 1.5rem;
+    margin: min(5%, 1rem) auto;
+    padding: 0.5rem min(1%, 1rem);
+    max-width: min(100%, 50rem);
   }
   .table-cell {
     padding: 0.25rem 1rem;
     border-top: 1px solid;
     border-bottom: 1px solid;
     text-align: left;
+    width: auto;
+  }
+  table {
+    table-layout: fixed;
   }
 </style>
 
@@ -137,29 +142,27 @@ const platforms = await getPlatforms();
       times those predictions came true - ideally everything in the NO bucket
       will resolve NO, and everything in the YES bucket will resolve YES.
     </p>
-    <div class="w-150 overflow-x-auto table-container">
+    <div class="table-container">
       <table class="w-full table-auto border-collapse">
         <thead>
           <tr>
             <th class="table-cell">Prediction</th>
-            <th class="table-cell">NO</th>
-            <th class="table-cell">YES</th>
+            <td class="table-cell">Resolved No</td>
+            <td class="table-cell">Resolved Yes</td>
+            <td class="table-cell">Average Resolution</td>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td class="table-cell">Resolved No</td>
+            <th class="table-cell">NO Bucket</th>
             <td class="table-cell">15</td>
-            <td class="table-cell">7</td>
-          </tr>
-          <tr>
-            <td class="table-cell">Resolved Yes</td>
             <td class="table-cell">3</td>
-            <td class="table-cell">10</td>
+            <td class="table-cell">3 / 18 = <b>16.7%</b></td>
           </tr>
           <tr>
-            <td class="table-cell">Average Resolution</td>
-            <td class="table-cell">3 / 18 = <b>16.7%</b></td>
+            <th class="table-cell">YES Bucket</th>
+            <td class="table-cell">7</td>
+            <td class="table-cell">10</td>
             <td class="table-cell">10 / 17 = <b>58.8%</b></td>
           </tr>
         </tbody>
@@ -186,65 +189,81 @@ const platforms = await getPlatforms();
       a snowy Christmas this year, then we can sort those into the right buckets
       and then evaluate each one.
     </p>
-    <div class="w-200 overflow-x-auto table-container">
+    <div class="table-container">
       <table class="w-full table-auto border-collapse">
         <thead>
           <tr>
             <th class="table-cell">Prediction</th>
-            <th class="table-cell">0%</th>
-            <th class="table-cell">10%</th>
-            <th class="table-cell">20%</th>
-            <th class="table-cell">30%</th>
-            <th class="table-cell">40%</th>
-            <th class="table-cell">50%</th>
-            <th class="table-cell">60%</th>
-            <th class="table-cell">70%</th>
-            <th class="table-cell">80%</th>
-            <th class="table-cell">90%</th>
-            <th class="table-cell">100%</th>
+            <th class="table-cell">Resolved No</th>
+            <th class="table-cell">Resolved Yes</th>
+            <th class="table-cell">Average Resolution</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td class="table-cell">Resolved No</td>
+            <th class="table-cell">0% Bucket</th>
             <td class="table-cell">10</td>
-            <td class="table-cell">15</td>
-            <td class="table-cell">18</td>
-            <td class="table-cell">15</td>
-            <td class="table-cell">20</td>
-            <td class="table-cell">18</td>
-            <td class="table-cell">14</td>
-            <td class="table-cell">7</td>
-            <td class="table-cell">7</td>
-            <td class="table-cell">3</td>
-            <td class="table-cell">0</td>
-          </tr>
-          <tr>
-            <td class="table-cell">Resolved Yes</td>
             <td class="table-cell">1</td>
-            <td class="table-cell">2</td>
-            <td class="table-cell">7</td>
-            <td class="table-cell">7</td>
-            <td class="table-cell">14</td>
-            <td class="table-cell">19</td>
-            <td class="table-cell">21</td>
-            <td class="table-cell">14</td>
-            <td class="table-cell">17</td>
-            <td class="table-cell">13</td>
-            <td class="table-cell">9</td>
+            <td class="table-cell">9.1%</td>
           </tr>
           <tr>
-            <td class="table-cell">Average Resolution</td>
-            <td class="table-cell">9.1%</td>
+            <th class="table-cell">10% Bucket</th>
+            <td class="table-cell">15</td>
+            <td class="table-cell">2</td>
             <td class="table-cell">11.7%</td>
+          </tr>
+          <tr>
+            <th class="table-cell">20% Bucket</th>
+            <td class="table-cell">18</td>
+            <td class="table-cell">7</td>
             <td class="table-cell">28.0%</td>
+          </tr>
+          <tr>
+            <th class="table-cell">30% Bucket</th>
+            <td class="table-cell">15</td>
+            <td class="table-cell">7</td>
             <td class="table-cell">31.8%</td>
+          </tr>
+          <tr>
+            <th class="table-cell">40% Bucket</th>
+            <td class="table-cell">20</td>
+            <td class="table-cell">14</td>
             <td class="table-cell">41.2%</td>
+          </tr>
+          <tr>
+            <th class="table-cell">50% Bucket</th>
+            <td class="table-cell">18</td>
+            <td class="table-cell">19</td>
             <td class="table-cell">51.4%</td>
+          </tr>
+          <tr>
+            <th class="table-cell">60% Bucket</th>
+            <td class="table-cell">14</td>
+            <td class="table-cell">21</td>
             <td class="table-cell">60.0%</td>
+          </tr>
+          <tr>
+            <th class="table-cell">70% Bucket</th>
+            <td class="table-cell">7</td>
+            <td class="table-cell">14</td>
             <td class="table-cell">66.7%</td>
+          </tr>
+          <tr>
+            <th class="table-cell">80% Bucket</th>
+            <td class="table-cell">7</td>
+            <td class="table-cell">17</td>
             <td class="table-cell">70.8%</td>
+          </tr>
+          <tr>
+            <th class="table-cell">90% Bucket</th>
+            <td class="table-cell">3</td>
+            <td class="table-cell">13</td>
             <td class="table-cell">81.3%</td>
+          </tr>
+          <tr>
+            <th class="table-cell">100% Bucket</th>
+            <td class="table-cell">0</td>
+            <td class="table-cell">9</td>
             <td class="table-cell">100.0%</td>
           </tr>
         </tbody>
@@ -270,7 +289,7 @@ const platforms = await getPlatforms();
       bottom-left to the top-right. We'll call this a calibration plot, but it's
       also known as a reliability diagram.
     </p>
-    <div class="w-200 table-container">
+    <div class="table-container">
       <CalibrationExplainer />
     </div>
     <p class="my-2">
@@ -314,7 +333,7 @@ const platforms = await getPlatforms();
       After we have done this for all predictions, we take the average of these
       scores. This gives us the Brier score for the prediction set.
     </p>
-    <div class="w-200 overflow-x-auto table-container">
+    <div class="table-container">
       <table class="w-full table-auto border-collapse">
         <thead>
           <tr>
@@ -326,43 +345,43 @@ const platforms = await getPlatforms();
         </thead>
         <tbody>
           <tr>
-            <td class="table-cell">10%</td>
+            <th class="table-cell">10%</th>
             <td class="table-cell">NO (0)</td>
             <td class="table-cell">0.10</td>
             <td class="table-cell">0.0100</td>
           </tr>
           <tr>
-            <td class="table-cell">35%</td>
+            <th class="table-cell">35%</th>
             <td class="table-cell">NO (0)</td>
             <td class="table-cell">0.35</td>
             <td class="table-cell">0.1225</td>
           </tr>
           <tr>
-            <td class="table-cell">42%</td>
+            <th class="table-cell">42%</th>
             <td class="table-cell">YES (1)</td>
             <td class="table-cell">0.68</td>
             <td class="table-cell">0.3364</td>
           </tr>
           <tr>
-            <td class="table-cell">60%</td>
+            <th class="table-cell">60%</th>
             <td class="table-cell">NO (0)</td>
             <td class="table-cell">0.60</td>
             <td class="table-cell">0.3600</td>
           </tr>
           <tr>
-            <td class="table-cell">75%</td>
+            <th class="table-cell">75%</th>
             <td class="table-cell">YES (1)</td>
             <td class="table-cell">0.25</td>
             <td class="table-cell">0.0625</td>
           </tr>
           <tr>
-            <td class="table-cell">95%</td>
+            <th class="table-cell">95%</th>
             <td class="table-cell">YES (1)</td>
             <td class="table-cell">0.05</td>
             <td class="table-cell">0.0025</td>
           </tr>
           <tr>
-            <td colspan="3" class="table-cell"><b>Average Brier Score</b></td>
+            <th colspan="3" class="table-cell">Average Brier Score</th>
             <td class="table-cell"><b>0.1490</b></td>
           </tr>
         </tbody>
