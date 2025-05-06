@@ -1,0 +1,569 @@
+---
+import Base from "@layouts/base.astro";
+import PlatformCard from "@components/platform-card.astro";
+import CalibrationExplainer from "@components/charts/calibration-explainer.astro";
+import { getPlatforms } from "@lib/api";
+
+const platforms = await getPlatforms();
+---
+
+<style>
+  a {
+    color: var(--color-rosewater);
+  }
+  .dialog-left {
+    margin: 1rem;
+    padding: 1rem;
+    max-width: 30rem;
+    border: 2px solid var(--color-rosewater);
+    border-radius: 0.5rem;
+  }
+  .dialog-right {
+    margin: 1rem 1rem 1rem auto;
+    padding: 1rem;
+    max-width: 30rem;
+    border: 2px solid var(--color-green);
+    border-radius: 0.5rem;
+  }
+  .table-container {
+    margin: 1rem auto;
+    padding: 0.5rem 1.5rem;
+  }
+  .table-cell {
+    padding: 0.25rem 1rem;
+    border-top: 1px solid;
+    border-bottom: 1px solid;
+    text-align: left;
+  }
+</style>
+
+<Base title="Prediction Market Primer">
+  <div class="p-4 m-2">
+    <h1 class="text-4xl font-bold mb-4">A Prediction Market Primer</h1>
+    <p class="my-2">
+      Predicting the future is hard, but it's also incredibly important.
+    </p>
+  </div>
+
+  <div class="p-4 m-2">
+    <h2 class="text-2xl font-bold">Quantified Predictions</h2>
+    <p class="my-2">
+      Let's say someone starts making predictions about important events. How
+      much should you believe them when they say the world will end tomorrow?
+      What about when they say there's a 70% chance the world will end in 50
+      years?
+    </p>
+    <p class="dialog-left">
+      Wait, what does "70%" even mean in this situation? How can you have 70% of
+      an apocalypse?
+    </p>
+    <p class="my-2">
+      In this situation the predictor is making a prediction with a certain <b
+        >confidence</b
+      >. Rather than just saying "it's likely", they've chosen a number to
+      represent how confident they are in that statement.
+    </p>
+    <p class="my-2">
+      People make predictions every day, but most don't choose a specific number
+      to assign to their confidence. This would be wildly impractical for most
+      things! If you're driving and a car in front of you slows down, you could
+      make a prediction about what it's going to do. If they turn on their turn
+      signal, you could make a pretty confident prediction about what it's going
+      to do. You usually don't need to state what potential outcomes you're
+      anticipating, which you think is most likely, or what amount of confidence
+      you'd place on each, but you are already doing it!
+    </p>
+    <p class="my-2">
+      Explicit predictions are most useful when trying to communicate about
+      important, uncertain events. When you hear the morning news say there's a
+      70% chance of rain today, they've given you a useful data point! You can
+      use that information to make decisions: Should I take an umbrella? Should
+      I wear a jacket? Probably!
+    </p>
+    <p class="dialog-left">
+      Why should I care about a specific confidence number? Just say "probably"
+      like everyone else!
+    </p>
+    <p class="my-2">
+      Predictions, quantified or not, are ultimately only useful as tools that
+      you can use to make decisions. If a prediction is not particularly
+      relevant to a decision you're making, or it won't affect you much either
+      way, then "probably" is fine! If someone tells you they will "probably" be
+      home in twenty minutes, that's usually enough information for any decision
+      you need to make.
+    </p>
+    <p class="my-2">
+      On the other hand, predictions that would affect something significant in
+      your life or require you to make a bigger decision should probably be
+      taken more seriously.
+    </p>
+    <ul class="my-2 ml-5 list-disc">
+      <li>
+        Will it rain today? You may have to change your plan to go for a hike.
+      </li>
+      <li>How is the economy doing? Should you invest or save?</li>
+      <li>
+        Who is going to win the election? Will they pass that law they've been
+        talking about?
+      </li>
+      <li>
+        Will COVID cases rise again? Should you stock up on masks or toilet
+        paper?
+      </li>
+    </ul>
+    <p class="my-2">
+      These are the sorts of questions where it's helpful to have <b
+        >quantified predictions</b
+      >.
+    </p>
+  </div>
+
+  <div class="p-4 m-2">
+    <h2 class="text-2xl font-bold">Grading Calibration</h2>
+    <p class="dialog-left">
+      If these predictions are so important, how do we know who to trust? Just
+      because someone is confident in themselves doesn't mean I should be
+      confident in them.
+    </p>
+    <p class="my-2">
+      The best way to measure how good a person is at predicting is to look at
+      how often they were right in the past. If our Nostradamus was wrong about
+      every prediction they've made so far, we should probably ignore them. If
+      they have been right every time, we should probably take them seriously.
+    </p>
+    <p class="my-2">
+      To grade simple predictions, we can put all of the YES predictions in one
+      bucket, and all of the NO predictions in another. We'll count how many
+      times those predictions came true - ideally everything in the NO bucket
+      will resolve NO, and everything in the YES bucket will resolve YES.
+    </p>
+    <div class="w-150 overflow-x-auto table-container">
+      <table class="w-full table-auto border-collapse">
+        <thead>
+          <tr>
+            <th class="table-cell">Prediction</th>
+            <th class="table-cell">NO</th>
+            <th class="table-cell">YES</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="table-cell">Resolved No</td>
+            <td class="table-cell">15</td>
+            <td class="table-cell">7</td>
+          </tr>
+          <tr>
+            <td class="table-cell">Resolved Yes</td>
+            <td class="table-cell">3</td>
+            <td class="table-cell">10</td>
+          </tr>
+          <tr>
+            <td class="table-cell">Average Resolution</td>
+            <td class="table-cell">3 / 18 = <b>16.7%</b></td>
+            <td class="table-cell">10 / 17 = <b>58.8%</b></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="my-2">
+      Well it looks like our Nostradamus was decently accurate whenever he
+      predicted NO - those only happened 17% of the time. But his YES
+      predictions weren't so good - they happened about as often as chance! It
+      seems like this predictor isn't very well-calibrated.
+    </p>
+    <p class="my-2">
+      Anyways, we're more interested in forecasters that don't just say yes or
+      no. We're looking at people who assign some sort of probability to their
+      statement. In the example at the top of the page, our doomsayer was
+      claiming a 70% chance that the world would end by a specific timeframe.
+      How would we judge that after the fact? (Assuming the world did not end,
+      that is.)
+    </p>
+    <p class="my-2">
+      Instead of two buckets (YES and NO), let's break their predictions up into
+      eleven buckets - 0%, 10%, 20%, and so on to 100%. If our Nostradamus said
+      there's a 0% chance that the sky will fall and a 70% chance there will be
+      a snowy Christmas this year, then we can sort those into the right buckets
+      and then evaluate each one.
+    </p>
+    <div class="w-200 overflow-x-auto table-container">
+      <table class="w-full table-auto border-collapse">
+        <thead>
+          <tr>
+            <th class="table-cell">Prediction</th>
+            <th class="table-cell">0%</th>
+            <th class="table-cell">10%</th>
+            <th class="table-cell">20%</th>
+            <th class="table-cell">30%</th>
+            <th class="table-cell">40%</th>
+            <th class="table-cell">50%</th>
+            <th class="table-cell">60%</th>
+            <th class="table-cell">70%</th>
+            <th class="table-cell">80%</th>
+            <th class="table-cell">90%</th>
+            <th class="table-cell">100%</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="table-cell">Resolved No</td>
+            <td class="table-cell">10</td>
+            <td class="table-cell">15</td>
+            <td class="table-cell">18</td>
+            <td class="table-cell">15</td>
+            <td class="table-cell">20</td>
+            <td class="table-cell">18</td>
+            <td class="table-cell">14</td>
+            <td class="table-cell">7</td>
+            <td class="table-cell">7</td>
+            <td class="table-cell">3</td>
+            <td class="table-cell">0</td>
+          </tr>
+          <tr>
+            <td class="table-cell">Resolved Yes</td>
+            <td class="table-cell">1</td>
+            <td class="table-cell">2</td>
+            <td class="table-cell">7</td>
+            <td class="table-cell">7</td>
+            <td class="table-cell">14</td>
+            <td class="table-cell">19</td>
+            <td class="table-cell">21</td>
+            <td class="table-cell">14</td>
+            <td class="table-cell">17</td>
+            <td class="table-cell">13</td>
+            <td class="table-cell">9</td>
+          </tr>
+          <tr>
+            <td class="table-cell">Average Resolution</td>
+            <td class="table-cell">9.1%</td>
+            <td class="table-cell">11.7%</td>
+            <td class="table-cell">28.0%</td>
+            <td class="table-cell">31.8%</td>
+            <td class="table-cell">41.2%</td>
+            <td class="table-cell">51.4%</td>
+            <td class="table-cell">60.0%</td>
+            <td class="table-cell">66.7%</td>
+            <td class="table-cell">70.8%</td>
+            <td class="table-cell">81.3%</td>
+            <td class="table-cell">100.0%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="my-2">
+      This looks a lot better! Now that we have more granularity, we can
+      differentiate between things like "unlikely", "probably not", and
+      "definitely not". When this predictor said something has a 10% chance to
+      occur, it actually happened only 11.7% of the time. And when they gave
+      something a 60% chance, it actually happened 60% of the time! It seems
+      like this predictor has a much better <b>calibration</b>.
+    </p>
+    <p class="dialog-right">
+      If a predictor is <b>calibrated</b> it means that, on average, predictions
+      they make with X% confidence occur X% of the time.
+    </p>
+    <p class="my-2">
+      Let's plot these on a chart for convenience. Across the bottom we'll have
+      a list of all our buckets - 0 to 100%. Along the side we'll have a
+      percentage - how often those predicted events came true. If our predictor
+      is well-calibrated, these points should line up in a row from the
+      bottom-left to the top-right. We'll call this a calibration plot, but it's
+      also known as a reliability diagram.
+    </p>
+    <div class="w-200 table-container">
+      <CalibrationExplainer />
+    </div>
+    <p class="my-2">
+      This is very good! Now we can see visually where our predictor is
+      calibrated or where they're over- or under-confident. If our forecaster
+      keeps making predictions like this, we could expect them to be
+      well-calibrated in most cases - especially when they make predictions
+      between 30% and 70%.
+    </p>
+  </div>
+
+  <div class="p-4 m-2">
+    <h2 class="text-2xl font-bold">Grading Accuracy</h2>
+    <p class="dialog-left">
+      Those charts are nice and all, but it still doesn't tell me how seriously
+      I should take this person.
+    </p>
+    <p class="my-2">
+      Good point! Calibration plots can tell you plenty, but they're hard to
+      compare and they don't give you a single numeric score. For that, let's
+      look into <b>accuracy</b> scoring. Accuracy is an intuitive measure but it
+      has some important caveats.
+    </p>
+    <p class="dialog-right">
+      A predictor is more <b>accurate</b> when their predictions are closer to the
+      resolved outcome.
+    </p>
+    <p class="my-2">
+      We have a few ways to calculate accuracy, but let's focus on the most
+      popular one: <b>Brier scores</b>.
+    </p>
+    <p class="my-2">
+      For each prediction, we take the "distance" it was from the outcome: if we
+      predict 10% but it resolved NO, the distance is 0.1 — but if we predict
+      10% and the answer is YES, the distance would be 0.9. <b>
+        We always want this number to be low!
+      </b> Once we have these distances, we square each one. This has the effect
+      of "forgiving" small errors while punishing larger ones.
+    </p>
+    <p class="my-2">
+      After we have done this for all predictions, we take the average of these
+      scores. This gives us the Brier score for the prediction set.
+    </p>
+    <div class="w-200 overflow-x-auto table-container">
+      <table class="w-full table-auto border-collapse">
+        <thead>
+          <tr>
+            <th class="table-cell">Prediction</th>
+            <th class="table-cell">Resolution</th>
+            <th class="table-cell">"Distance"</th>
+            <th class="table-cell">Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="table-cell">10%</td>
+            <td class="table-cell">NO (0)</td>
+            <td class="table-cell">0.10</td>
+            <td class="table-cell">0.0100</td>
+          </tr>
+          <tr>
+            <td class="table-cell">35%</td>
+            <td class="table-cell">NO (0)</td>
+            <td class="table-cell">0.35</td>
+            <td class="table-cell">0.1225</td>
+          </tr>
+          <tr>
+            <td class="table-cell">42%</td>
+            <td class="table-cell">YES (1)</td>
+            <td class="table-cell">0.68</td>
+            <td class="table-cell">0.3364</td>
+          </tr>
+          <tr>
+            <td class="table-cell">60%</td>
+            <td class="table-cell">NO (0)</td>
+            <td class="table-cell">0.60</td>
+            <td class="table-cell">0.3600</td>
+          </tr>
+          <tr>
+            <td class="table-cell">75%</td>
+            <td class="table-cell">YES (1)</td>
+            <td class="table-cell">0.25</td>
+            <td class="table-cell">0.0625</td>
+          </tr>
+          <tr>
+            <td class="table-cell">95%</td>
+            <td class="table-cell">YES (1)</td>
+            <td class="table-cell">0.05</td>
+            <td class="table-cell">0.0025</td>
+          </tr>
+          <tr>
+            <td colspan="3" class="table-cell"><b>Average Brier Score</b></td>
+            <td class="table-cell"><b>0.1490</b></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="my-2">
+      The most important thing to note here is the fact that <b>
+        smaller is better!
+      </b>
+      This score is actually measuring the amount of error in our predictions, so
+      we want it to be as low as possible. In fact, an ideal score in this system
+      is 0 while the worst possible score is 1.
+    </p>
+    <p class="dialog-right">
+      If you were to guess "50%" on every question, your Brier score would be
+      0.25. Superforecasters tend to fall around 0.15 while aggregated
+      <b> prediction markets </b> generally fall between 0.10 and 0.20.
+    </p>
+    <p class="dialog-left">
+      So how is accuracy different than calibration here?
+    </p>
+    <p class="my-2">
+      Calibration is about how good you are at quantifying your own confidence,
+      not always about how close you are to the truth. If you make a lot of
+      predictions that are incorrect, but properly document your confidence in
+      those predictions, you can be more well-calibrated than someone who makes
+      accurate but over- or under-confident predictions.
+    </p>
+    <p class="my-2">
+      If a forecaster gives you their calibration and their accuracy, you should
+      look at both but weigh their accuracy more than their calibration.
+      Calibration is good, but it doesn't mean you know the future.
+    </p>
+    <p class="dialog-left">
+      It seems like these statistics are pretty easy to game. What's stopping
+      you from predicting 100% on a bunch of certain things, like "will the sun
+      come up tomorrow"?
+    </p>
+    <p class="my-2">
+      Ultimately, nothing is preventing that! It's very important to check what
+      sorts of predictions someone is making to ensure that they're relevant to
+      you. It's especially important when looking at user-generated content on
+      prediction market sites, where extremely easy questions can be added for
+      profit or calibration manipulation.
+    </p>
+    <p class="my-2">
+      This is especially relevant when comparing between different predictors or
+      platforms. Just because someone has a lower Brier score does not mean that
+      they are inherently better! The only way you can directly compare is if
+      the corpus of questions is the same for all participants.
+    </p>
+  </div>
+
+  <div class="p-4 m-2">
+    <h2 class="text-2xl font-bold">Prediction Markets</h2>
+    <p class="dialog-left">
+      What are these prediction markets? How can they be so accurate?
+    </p>
+    <p class="my-2">
+      <a href="https://en.wikipedia.org/wiki/Prediction_market"
+        >Prediction markets</a
+      > are based on a simple concept: If you're confident about something, you can
+      place a bet on it. If someone else disagrees with you, declare terms with them
+      and whoever wins takes the money. By aggregating the odds of these trades,
+      you can gain an insight into the "wisdom of the crowds".
+    </p>
+    <p class="my-2">
+      Imagine a stock exchange, but instead of trading shares, you trade on the
+      likelihood of future events. Each prediction market offers contracts tied
+      to specific events, like elections, economic indicators, or scientific
+      breakthroughs. You can buy or sell these contracts based on your belief
+      about the outcome - if you are very confident about something, or you have
+      specialized information, you can make a lot of money from a market.
+    </p>
+    <p class="my-2">
+      Markets give participants a <b>financial incentive</b> to be correct, encouraging
+      researchers and skilled forecasters to spend time investigating events. Individuals
+      with insider information or niche skills can profit by trading, which also
+      updates the market's probability. Prediction markets have
+      <a href="https://daily.jstor.org/how-accurate-are-prediction-markets/"
+        >out-performed polls</a
+      >
+      and
+      <a
+        href="https://news.manifold.markets/p/manifold-predicted-the-ai-extinction"
+        >revealed insider information</a
+      >, making them a useful tool for information gathering or profit.
+    </p>
+    <p class="my-2">
+      Everyone that participates in a prediction market increases its accuracy
+      in some way:
+    </p>
+    <div class="mx-4 mb-4">
+      <h3 class="text-lg italic">Experts</h3>
+      <p class="mb-2">
+        An expert in the field, who understands the situation and historical
+        context, bets NO when the probability exceeds the base rates. They make
+        money off of the optimists if they're correct and move the probability
+        towards the proper base rates.
+      </p>
+      <h3 class="text-lg italic">Pundit Followers</h3>
+      <p class="mb-2">
+        When pundits or specialists make public claims, their followers place
+        bets. Savvy bettors will follow multiple specialists to avoid bias and
+        bet even more. The market probability will move towards the specialist's
+        consensus, distilling discourse down into a single number.
+      </p>
+      <h3 class="text-lg italic">Insider Traders</h3>
+      <p class="mb-2">
+        Someone who has specific information about the subject places a large
+        bet in order to get a huge payout based on their insider knowledge.
+        Other traders may join them or bet against them, but everyone gains
+        information and is alerted to a potential upset.
+      </p>
+      <h3 class="text-lg italic">Political Partisans</h3>
+      <p class="mb-2">
+        Someone thinks that a market platform has a severe bias against a
+        specific political party. They go and bet for their preferred party
+        across many markets on the platform, which wins them money if they're
+        correct. Betting in multiple markets both reduces their risk and reduces
+        the market bias at the same time.
+      </p>
+      <h3 class="text-lg italic">Researchers</h3>
+      <p class="mb-2">
+        A prediction market has high liquidity but traders haven't found a
+        consensus. Someone decides to conduct original research through polls,
+        experimentation, or some other means then place a large bet in the
+        direction that their research indicates. They then reveal their
+        research, letting everyone make updates based on this new information,
+        and sell their shares at a profit.
+      </p>
+      <h3 class="text-lg italic">Gamblers</h3>
+      <p class="mb-2">
+        Someone who has a lot of money and likes to gamble puts down large bets
+        at random across a platform. This shifts the probability away from the
+        expert consensus, but increases the liquidity of each market. Smart
+        users notice this and arbitrage their positions into profit, rewarding
+        quick responses and correcting the price at the same time.
+      </p>
+      <h3 class="text-lg italic">Journalists</h3>
+      <p class="mb-2">
+        A news journalist links to specific markets as proof or evidence to back
+        up their claims, or cites them as public opinion. If their readers
+        agree, they can subscribe to the market to be informed first of any
+        changes. If they disagree, they can log in and bet against it.
+      </p>
+    </div>
+    <p class="my-2">
+      There are many prediction market platforms where you can go to either
+      place bets or just gather information. The platforms that we track are:
+    </p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+      {platforms.map((platform) => <PlatformCard platform={platform} />)}
+    </div>
+    <p class="my-2">
+      While prediction markets have existed in various capacities for decades,
+      their use in the U.S. is currently limited by the CFTC. Modern platforms
+      either submit questions for approval to the CFTC, use reputation or
+      "play-money" currencies, restrict usage to non-U.S. residents, or utilize
+      cryptocurrencies. Additionally, sites will often focus on a particular
+      niche or community in order to increase trading volume and activity on
+      individual questions.
+    </p>
+  </div>
+
+  <div class="p-4 m-2">
+    <h2 class="text-2xl font-bold">Learn More</h2>
+    <div class="grid grid-cols-1 lg:grid-cols-3">
+      <a href="/platforms" style="text-decoration: none !important;">
+        <div
+          class="p-4 m-2 bg-base-light text-crust rounded-md drop-shadow-sm transition-all duration-200 hover:bg-selection hover:translate-y-[-2px] hover:shadow-md cursor-pointer"
+        >
+          <div class="font-bold mb-1">Market Platforms</div>
+          <div>
+            Learn more about specific platforms, like which are most accurate in
+            the categories you care about.
+          </div>
+        </div>
+      </a>
+      <a href="/charts/calibration" style="text-decoration: none !important;">
+        <div
+          class="p-4 m-2 bg-base-light text-crust rounded-md drop-shadow-sm transition-all duration-200 hover:bg-selection hover:translate-y-[-2px] hover:shadow-md cursor-pointer"
+        >
+          <div class="font-bold mb-1">Calibration Charts</div>
+          <div>
+            See calibration charts for all of our tracked markets with a variety
+            of filters and tools to satisfy your curiosity.
+          </div>
+        </div>
+      </a>
+      <a href="/charts/accuracy" style="text-decoration: none !important;">
+        <div
+          class="p-4 m-2 bg-base-light text-crust rounded-md drop-shadow-sm transition-all duration-200 hover:bg-selection hover:translate-y-[-2px] hover:shadow-md cursor-pointer"
+        >
+          <div class="font-bold mb-1">Accuracy Charts</div>
+          <div>
+            See visualizations of the Brier scores for every market, plus
+            logarithmic, spherical, and relative scores.
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+</Base>

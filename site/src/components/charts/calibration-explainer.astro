@@ -1,0 +1,110 @@
+---
+import type { MarketDetails, PlatformDetails } from "@types";
+import type { CalibrationPoint } from "@lib/charts/types";
+import { calculateCalibrationPoints } from "@lib/calibration";
+
+import * as Plot from "@observablehq/plot";
+import { JSDOM } from "jsdom";
+const { document } = new JSDOM().window;
+
+// Set points
+let points = [
+  {
+    x: 0,
+    y: 0.0909,
+    r: 11,
+  },
+  {
+    x: 0.1,
+    y: 0.1176,
+    r: 17,
+  },
+  {
+    x: 0.2,
+    y: 0.28,
+    r: 25,
+  },
+  {
+    x: 0.3,
+    y: 0.3182,
+    r: 22,
+  },
+  {
+    x: 0.4,
+    y: 0.4118,
+    r: 34,
+  },
+  {
+    x: 0.5,
+    y: 0.5135,
+    r: 37,
+  },
+  {
+    x: 0.6,
+    y: 0.6,
+    r: 35,
+  },
+  {
+    x: 0.7,
+    y: 0.6667,
+    r: 21,
+  },
+  {
+    x: 0.8,
+    y: 0.7083,
+    r: 24,
+  },
+  {
+    x: 0.9,
+    y: 0.8125,
+    r: 16,
+  },
+  {
+    x: 1,
+    y: 1,
+    r: 9,
+  },
+];
+
+// Set default sizes
+let width = 800;
+let pointSizeRange = [width / 100, (width / 100) * 1.5];
+
+// Generate the plot
+const plot = Plot.plot({
+  title: "Calibration Plot",
+  width: width,
+  aspectRatio: undefined,
+  x: {
+    domain: [0, 100],
+    percent: true,
+    label: "Prediction",
+  },
+  y: { domain: [0, 100], grid: true, percent: true, label: "Resolution" },
+  r: { range: pointSizeRange, label: "Scale" },
+  marks: [
+    Plot.dot(points, {
+      x: "x",
+      y: "y",
+      r: "r",
+      fill: "currentColor",
+    }),
+    Plot.ruleX([0]),
+    Plot.ruleY([0]),
+    Plot.lineY(
+      [
+        { x: 0, y: 0 },
+        { x: 1, y: 1 },
+      ],
+      { x: "x", y: "y" },
+    ),
+  ],
+  document,
+}).outerHTML;
+---
+
+<div
+  class="bg-base-light [&_h2]:text-2xl [&_figcaption]:text-xs text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
+>
+  <Fragment set:html={plot} />
+</div>
