@@ -5,7 +5,7 @@ import Volume from "@atoms/volume.astro";
 import Grade from "@atoms/grade.astro";
 import ScoreRel from "@atoms/score-rel.astro";
 import ScoreAbs from "@atoms/score-abs.astro";
-import type { Category, QuestionDetails } from "@types";
+import type { Category, QuestionDetails, PlatformDetails } from "@types";
 import { Icon } from "astro-icon/components";
 import {
   getMarketsByQuestion,
@@ -15,10 +15,11 @@ import {
 import Duration from "@atoms/duration.astro";
 
 interface Props {
+  platforms: PlatformDetails[];
   question: QuestionDetails;
   categories: Category[];
 }
-let { question, categories } = Astro.props;
+let { platforms, question, categories } = Astro.props;
 
 const marketScoreTypes = [
   {
@@ -176,7 +177,7 @@ const resolution = markets[0].question_invert
       </div>
     </div>
     <div>
-      <QuestionProbChart question={question} />
+      <QuestionProbChart platforms={platforms} question={question} />
     </div>
   </div>
 </div>

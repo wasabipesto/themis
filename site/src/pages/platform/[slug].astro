@@ -30,6 +30,7 @@ export async function getStaticPaths() {
 }
 const { platform } = Astro.props;
 
+const platforms = await getPlatforms();
 const categories = await getCategories();
 const markets = await getMarkets();
 const platformMarkets = markets.filter(
@@ -103,12 +104,12 @@ const marketScores = await getMarketScores();
   </div>
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
     <CalibrationDefault
-      platforms={[platform]}
+      platforms={platforms}
       markets={platformMarkets}
       caption="Calibration plot from all resolved questions, market probability at midpoint versus average resolution value."
     />
     <HistogramDefault
-      platforms={[platform]}
+      platforms={platforms}
       scores={marketScores.filter((s) => s.platform_slug == platform.slug)}
       scoreType="brier-midpoint"
       caption="Brier scores from all resolved questions, using probability at market midpoint. Lower scores are better."
@@ -122,7 +123,11 @@ const marketScores = await getMarketScores();
     {
       featuredQuestions.map((question) => {
         return (
-          <QuestionCardDetailed question={question} categories={categories} />
+          <QuestionCardDetailed
+            platforms={platforms}
+            question={question}
+            categories={categories}
+          />
         );
       })
     }

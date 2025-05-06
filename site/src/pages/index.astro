@@ -133,7 +133,13 @@ const { numQuestions, numLinkedMarkets } = await getQuestionStats();
   <div>
     {
       featuredQuestions.map((question) => {
-        return <QuestionCard question={question} categories={categories} />;
+        return (
+          <QuestionCard
+            platforms={platforms}
+            question={question}
+            categories={categories}
+          />
+        );
       })
     }
   </div>
