@@ -510,13 +510,67 @@ const scoreTypes = [
         </p>
       </div>
     </div>
+
+    <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
+      <h3 class="text-xl font-bold" id="support">
+        How can I support development of this site?
+        <a href="#support">
+          <Icon
+            name="mdi:link-variant"
+            class="inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+          />
+        </a>
+      </h3>
+      <p class="my-2">
+        If you find this site useful, please share it with others! We believe
+        prediction markets are valuable, but only if their accuracy is verified
+        and understood. We believe prediction markets should be evaluated
+        rigorously and publicly, showing both their strengths and weaknesses, in
+        order to earn credibility.
+      </p>
+      <p class="my-2">
+        Please also share your feedback about the site with us. Currently our
+        focus is on improving the site, making it more intuitive to use while
+        also adding new features that give valuable insights. We're specifically
+        interested in:
+      </p>
+      <ul class="list-disc ml-5">
+        <li>
+          Was the site easy to navigate? Did it make sense how to find the
+          information you wanted?
+        </li>
+        <li>
+          Did any of the explanations make sense? Was there anything confusing,
+          contradictory, or misleading? Were there any claims that felt weak or
+          unsupported?
+        </li>
+        <li>
+          Is the site missing a market platform or category that you're
+          interested in? Any topic that isn't covered in our questions?
+        </li>
+        <li>
+          Does it feel like the site is missing a certain metric or statistic?
+          Is there anything else you feel we could do with this data?
+        </li>
+        <li>
+          Do you have your own database of markets for arbitrage that you're
+          willing to share?
+        </li>
+      </ul>
+      <p class="my-2">
+        You can shoot us an email at <a
+          href="mailto:contact@predictionmetrics.org"
+          >contact@&#8203;predictionmetrics.org</a
+        > or use the form below to submit feedback.
+      </p>
+    </div>
   </div>
   <hr class="my-2" />
 
   <div class="p-4 m-2">
     <h2 class="mb-4 text-3xl font-bold" id="contact">
       Contact
-      <a href="contact">
+      <a href="#contact">
         <Icon
           name="mdi:link-variant"
           class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
@@ -540,14 +594,24 @@ const scoreTypes = [
             target="_blank"
           >
             please submit an issue on GitHub</a
-          >. We also appreciate community developers, but please get in touch
-          before spending time on a significant pull request to check that it
-          aligns with our goals.
+          >. Also please submit an issue if you have ideas for new features or
+          improvements.
+        </li>
+        <li>
+          If you're interested in contributing to the project, please check out
+          the <a
+            href="https://github.com/wasabipesto/themis/labels/help%20wanted"
+            class="underline"
+            target="_blank">Help Wanted</a
+          > tag on GitHub Issues. There are usually some features I'm looking to
+          implement or problems that need solving. If you have an idea for an improvement
+          not already tracked, please get in touch first so we can discuss it before
+          spending time on a pull request.
         </li>
         <li>
           For questions about the site or assistance with the data, or for any
           other inquiry, feel free to reach out to us via email at
-          <a href="mailto:issues@predictionmetrics.org" class="underline"
+          <a href="mailto:contact@predictionmetrics.org" class="underline"
             >contact@&#8203;predictionmetrics.org</a
           >. This is likely the fastest way to get in touch with us.
         </li>
@@ -587,6 +651,7 @@ const scoreTypes = [
               <option value="bug">Bug, Error, or Security Issue</option>
               <option value="market-link">Suggest a New Market Link</option>
               <option value="general">General Inquiry or Data Requests</option>
+              <option value="compliment">Compliment or Thanks</option>
               <option value="other">Something Else</option>
             </select>
           </div>
