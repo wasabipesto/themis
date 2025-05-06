@@ -8,57 +8,14 @@ const { document } = new JSDOM().window;
 interface Props {
   platforms: PlatformDetails[];
   scores: MarketScoreDetails[];
+  scoreType: string;
   width?: number;
   aspectRatio?: number;
   caption?: string;
 }
-let { platforms, scores, width, aspectRatio, caption } = Astro.props;
+let { platforms, scores, scoreType, width, aspectRatio, caption } = Astro.props;
 
-// NOTE: Currently only supports brier midpoint and requires all scores to be filtered already
-
-export interface HistogramDatapoint {
-  platformName: string;
-  startX: number;
-  endX: number;
-  count: number;
-}
-
-const numBins = 20;
-const minValue = 0;
-const maxValue = 1;
-const binWidth = (maxValue - minValue) / numBins;
-
-// Create a nested array to count bins per series
-const bins: { [seriesName: string]: number[] } = {};
-
-scores.forEach((s) => {
-  if (!bins[s.platform_slug]) {
-    bins[s.platform_slug] = Array(numBins).fill(0);
-  }
-  const binIndex = Math.min(
-    numBins - 1,
-    Math.floor((s.score - minValue) / binWidth),
-  );
-  bins[s.platform_slug][binIndex]++;
-});
-
-const points: HistogramDatapoint[] = [];
-for (const [platformSlug, platformBins] of Object.entries(bins)) {
-  platformBins.forEach((count, index) => {
-    if (count > 0) {
-      const platformInfo = platforms.find((p) => p.slug == platformSlug);
-      if (!platformInfo) throw new Error(`Platform not found: ${platformSlug}`);
-      const startX = minValue + index * binWidth;
-      const endX = startX + binWidth;
-      points.push({
-        platformName: platformInfo.name,
-        startX,
-        endX,
-        count,
-      });
-    }
-  });
-}
+let axisTitleX = { "brier-midpoint": "Midpoint Brier score" }[scoreType];
 
 // Set default sizes
 if (!width) width = 600;
@@ -69,7 +26,7 @@ const plot = Plot.plot({
   width: width,
   aspectRatio: aspectRatio,
   marginLeft: 50,
-  x: { label: "Midpoint Brier score" },
+  x: { label: axisTitleX },
   y: {
     grid: true,
     label: "Count",
@@ -81,14 +38,18 @@ const plot = Plot.plot({
     range: platforms.map((p) => p.color_primary),
   },
   marks: [
-    Plot.rectY(points, {
-      x1: "startX",
-      x2: "endX",
-      y: "count",
-      fill: "platformName",
-      insetLeft: 1,
-      insetRight: 1,
-    }),
+    Plot.rectY(
+      scores.filter((s) => s.score_type == scoreType),
+      Plot.binX(
+        { y: "count" },
+        {
+          x: { value: "score", thresholds: 20 },
+          // @ts-ignore: Dunno why it doesn't like this line
+          fill: "platform_name",
+          inset: 1,
+        },
+      ),
+    ),
   ],
   document,
 }).outerHTML;
