@@ -49,15 +49,8 @@ const plot = Plot.plot({
       fill: "platform_slug",
       stroke: "platform_slug",
       fillOpacity: 0.5,
-      channels: {
-        Prediction: (i: CalibrationPoint) =>
-          (i.x_start * 100).toFixed(0) + "-" + (i.x_end * 100).toFixed(0) + "%",
-        Resolution: (i: CalibrationPoint) =>
-          (i.y_center * 100).toFixed(1) + "%",
-        Markets: "count",
-      },
     }),
-    Plot.line(points || [], {
+    Plot.line(points, {
       x: "x_center",
       y: "y_center",
       stroke: "platform_slug",
@@ -81,5 +74,10 @@ const plot = Plot.plot({
   class="bg-base-light [&_h2]:text-2xl [&_figcaption]:text-xs text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
 >
   <Fragment set:html={plot} />
-  <Fragment set:html={caption} />
+  <p class="text-xs">
+    {caption}
+  </p>
+  <p class="text-xs">
+    Source: <a href="https://predictionmetrics.org">predictionmetrics.org</a>
+  </p>
 </div>
