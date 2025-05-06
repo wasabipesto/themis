@@ -777,84 +777,127 @@ const scoreTypes = [
         />
       </a>
     </h2>
+
     <div class="grid grid-cols-1 md:grid-cols-2 my-2">
       <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
-        <h3 class="text-xl font-bold">Prediction Markets</h3>
-        <ul class="list-disc my-2 px-6">
-          <li>
-            <a
-              href="https://www.astralcodexten.com/p/prediction-market-faq"
-              target="_blank"
-            >
-              Astral Codex Ten: Prediction Market FAQ
-            </a>
-          </li>
-          <li>
-            <a
-              href="https://kalshi.com/blog/article/glossary-predictionmarket"
-              target="_blank"
-            >
-              Kalshi: What is a Prediction Market?
-            </a>
-          </li>
-          <li>
-            <a
-              href="https://en.wikipedia.org/wiki/Prediction_market"
-              target="_blank"
-            >
-              Wikipedia: Prediction market
-            </a>
-          </li>
-          <li>
-            <a
-              href="https://outsidetheasylum.blog/prediction-markets-are-not-polls/"
-              target="_blank"
-            >
-              Isaac King: Prediction Markets are not Polls
-            </a>
-          </li>
-          <li>
-            <a
-              href="https://www.sciencedirect.com/science/article/abs/pii/S0169207008000320"
-              target="_blank"
-            >
-              Berg, Nelson, Rietz: Prediction market accuracy in the long run
-            </a>
-          </li>
-        </ul>
+        <h3 class="text-xl font-bold">Prediction Market Explanations</h3>
+        <p class="my-1 italic">
+          <a
+            href="https://www.astralcodexten.com/p/prediction-market-faq"
+            target="_blank"
+          >
+            Astral Codex Ten: Prediction Market FAQ
+          </a>
+        </p>
+        <p class="my-1">
+          Scott Alexander gives a summary of what prediction markets are, their
+          fundamental qualities, and common objections. It's excellent and super
+          easy to read - if you read anything from this list, it should be this
+          one.
+        </p>
+        <div class="my-2"></div>
+        <p class="my-1 italic">
+          <a
+            href="https://en.wikipedia.org/wiki/Prediction_market"
+            target="_blank"
+          >
+            Wikipedia: Prediction market
+          </a>
+        </p>
+        <p class="my-1">
+          The obligatory Wikipedia page on the topic. It has a good overview and
+          timeline of the recent history, but not much else.
+        </p>
+        <div class="my-2"></div>
+        <p class="my-1 italic">
+          <a
+            href="https://outsidetheasylum.blog/prediction-markets-are-not-polls/"
+            target="_blank"
+          >
+            Prediction Markets are not Polls
+          </a>
+        </p>
+        <p class="my-1">
+          A common refrain to prediction markets is that they're "just polls of
+          random people on the internet". Isaac King puts together a great
+          rebuttal with examples as to why this is not the case.
+        </p>
+        <div class="my-2"></div>
+        <p class="my-1 italic">
+          <a
+            href="https://thezvi.wordpress.com/2018/07/26/prediction-markets-when-do-they-work/"
+            target="_blank"
+          >
+            Prediction Markets: When Do They Work?
+          </a>
+        </p>
+        <p class="my-1">
+          In an older post (from 2018), Zvi discusses some situations where
+          prediction markets thrive, and some where they don't. There are many
+          more markets today, but I believe the basis of this post still holds.
+        </p>
       </div>
+
       <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
-        <h3 class="text-xl font-bold">Scoring Rules and Examples</h3>
+        <h3 class="text-xl font-bold">
+          Previous Aggregation & Comparison Research
+        </h3>
+        <p class="my-1 italic">
+          <a
+            href="https://firstsigma.substack.com/p/midterm-elections-forecast-comparison-analysis"
+            target="_blank"
+          >
+            First Sigma: What can we learn from scoring different election
+            forecasts?
+          </a>
+        </p>
+        <p class="my-1">
+          Jack compares head-to-head performance between Metaculus, 538,
+          Manifold, Polymarket, EBO, and PredictIt on the US 2022 midterm
+          elections. Metaculus and 538 took the lead but with a small sample
+          size.
+        </p>
+        <div class="my-2"></div>
+        <p class="my-1 italic">
+          <a
+            href="https://forum.effectivealtruism.org/posts/PGqu4MD3AKHun7kaF/predictive-performance-on-metaculus-vs-manifold-markets"
+            target="_blank"
+          >
+            EA Forum: Predictive Performance on Metaculus vs. Manifold Markets
+          </a>
+        </p>
+        <p class="my-1">
+          A direct comparison of 64 binary markets mirrored between Manifold and
+          Metaculus. Metaculus had a better score on 75% of the questions.
+        </p>
+        <div class="my-2"></div>
+        <p class="my-1 italic">
+          <a
+            href="https://projects.jhkforecasts.com/forecast-history/index.html"
+            target="_blank"
+          >
+            JHK Forecasts: Forecast Database
+          </a>
+        </p>
+        <p class="my-1">
+          Jack Kersting (a different Jack) assembled an impressive list of US
+          election forecasts across dozens of predictors from 2016 to 2024.
+          While this isn't comparing prediction markets, it's still a good
+          example of prediction metrics.
+        </p>
+      </div>
+
+      <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
+        <h3 class="text-xl font-bold">Platform Self-Scoring</h3>
+        <p class="my-1">
+          Many platforms will score themselves and publish their results, or
+          users will create dashboards similar to this site with the API or
+          blockchain data. We took a lot of inspiration from these sites when
+          creating our standardized scoring format and inspiration for our <a
+            href="charts">charts</a
+          >.
+        </p>
         <ul class="list-disc my-2 px-6">
-          <li>
-            <a
-              href="https://en.wikipedia.org/wiki/Scoring_rule"
-              target="_blank"
-            >
-              Wikipedia: Scoring Rule
-            </a>
-          </li>
-          <li>
-            <a
-              href="https://www.cultivatelabs.com/crowdsourced-forecasting-guide/what-are-relative-brier-scores-and-how-are-they-calculated"
-              target="_blank"
-            >
-              Cultivate Labs: Relative Brier Scores
-            </a>
-          </li>
-          <li>
-            <a
-              href="https://projects.fivethirtyeight.com/checking-our-work/"
-              target="_blank"
-            >
-              538: How Good Are FiveThirtyEight Forecasts?
-            </a>
-          </li>
-          <li>
-            <a href="https://manifold.markets/calibration" target="_blank">
-              Manifold: Calibration
-            </a>
-          </li>
           <li>
             <a
               href="https://www.metaculus.com/questions/track-record/"
@@ -865,82 +908,129 @@ const scoreTypes = [
           </li>
           <li>
             <a
-              href="https://www.metaculus.com/help/scores-faq/"
+              href="https://dune.com/alexmccullough/how-accurate-is-polymarket"
               target="_blank"
             >
-              Metaculus: Scores FAQ
+              Polymarket Historical Accuracy and Bias
             </a>
           </li>
           <li>
-            <a href="https://polymarketanalytics.com/" target="_blank">
-              Polymarket Analytics
+            <a href="https://manifold.markets/calibration" target="_blank">
+              Manifold: Calibration
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://electionbettingodds.com/TrackRecord.html"
+              target="_blank"
+            >
+              Election Betting Odds: Track Record
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://web.archive.org/web/20250306130304/https://projects.fivethirtyeight.com/checking-our-work/"
+              target="_blank"
+            >
+              538: How Good Are FiveThirtyEight Forecasts? (Archived)
             </a>
           </li>
         </ul>
       </div>
+
       <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
-        <h3 class="text-xl font-bold">Previous Research & Aggregation</h3>
-        <ul class="list-disc my-2 px-6">
-          <li>
-            <a href="https://metaforecast.org/" target="_blank">
-              QURI: Metaforecast
-            </a>
-          </li>
-          <li>
-            <a
-              href="https://firstsigma.substack.com/p/midterm-elections-forecast-comparison-analysis"
-              target="_blank"
-            >
-              First Sigma: What can we learn from scoring different election
-              forecasts?
-            </a>
-          </li>
-          <li>
-            <a
-              href="https://projects.jhkforecasts.com/forecast-history/index.html"
-              target="_blank"
-            >
-              JHK Forecasts: Forecast Database
-            </a>
-          </li>
-          <li>
-            <a href="https://data.adj.news/" target="_blank">
-              Adjacent News: Data
-            </a>
-            <a
-              href="https://github.com/adjacentresearchxyz/data.adj.news"
-              target="_blank"
-            >
-              (and source)
-            </a>
-          </li>
-        </ul>
+        <h3 class="text-xl font-bold">Scoring Rules</h3>
+        <p class="my-1 italic">
+          <a href="https://en.wikipedia.org/wiki/Scoring_rule" target="_blank">
+            Wikipedia: Scoring Rule
+          </a>
+        </p>
+        <p class="my-1">
+          The Wikipedia page on scoring rules. It was a great starting point for
+          our research due to covering many different score types.
+        </p>
+        <div class="my-2"></div>
+        <p class="my-1 italic">
+          <a
+            href="https://www.cultivatelabs.com/crowdsourced-forecasting-guide/what-are-relative-brier-scores-and-how-are-they-calculated"
+            target="_blank"
+          >
+            Cultivate Labs: Relative Brier Scores
+          </a>
+        </p>
+        <p class="my-1">
+          This post from Cultivate Labs describing their relative scoring system
+          is really the basis for this site. It describes the method of creating
+          relative scores based on the daily mean score, with the added twist of
+          penalizing forecasters that start predicting later.
+        </p>
+        <div class="my-2"></div>
+        <p class="my-1 italic">
+          <a href="https://erischel.com/againstcalibration/" target="_blank">
+            Eigil Fjeldgren Rischel: Against calibration
+          </a>
+        </p>
+        <p class="my-1">
+          A good summation of calibration versus accuracy, mainly that
+          calibration can be applied more broadly but is less meaningful. This
+          is exactly why we switched focus on this site away from calibration!
+        </p>
       </div>
+
       <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
-        <h3 class="text-xl font-bold">Miscellaneous Resources</h3>
-        <ul class="list-disc my-2 px-6">
-          <li>
-            <a
-              href="https://saul-munn.notion.site/64b8b93b076a40f598f1788b314039c7?v=472f982a7d834a1185167e48ea1f41e3"
-              target="_blank"
-            >
-              Saul Munn: Prediction Market Map
-            </a>
-          </li>
-        </ul>
+        <h3 class="text-xl font-bold">Scientific Articles</h3>
+        <p class="my-1 italic">
+          <a
+            href="https://doi.org/10.1016/j.ijforecast.2008.03.007"
+            target="_blank"
+          >
+            Prediction market accuracy in the long run
+          </a>
+        </p>
+        <p class="my-1">
+          A comparison of the performance of Iowa Electronic Markets (a small
+          academic platform) versus contemporary polls. Between 1988 to 2004,
+          the markets outperformed polls 74% of the time.
+        </p>
+        <div class="my-2"></div>
+        <p class="my-1 italic">
+          <a href="https://doi.org/10.48550/arXiv.2503.03312" target="_blank">
+            How manipulable are prediction markets?
+          </a>
+        </p>
+        <p class="my-1">
+          A team attempts to manipulate 817 random markets on Manifold in early
+          2024 and finds that the manipulations were somewhat reversed after 7
+          days, moreso after 30 days.
+        </p>
+      </div>
+
+      <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
+        <h3 class="text-xl font-bold">Miscellaneous</h3>
+        <p class="my-1 italic">
+          <a href="https://metaforecast.org/" target="_blank"> Metaforecast </a>
+        </p>
+        <p class="my-1">
+          Metaforecast was created by Nuño Sempere (and now maintained by
+          <a href="https://quantifieduncertainty.org/">QURI</a>) to be a search
+          engine for prediction markets from over a dozen platforms. One search
+          bar to find open predictions from basically anywhere.
+        </p>
+        <div class="my-2"></div>
+        <p class="my-1 italic">
+          <a
+            href="https://saul-munn.notion.site/Map-of-the-Prediction-Market-Forecasting-Ecosystem-4ffddd0f10d64fdb92235b374ec5e3f1"
+            target="_blank"
+          >
+            Saul Munn: Prediction Market Map
+          </a>
+        </p>
+        <p class="my-1">
+          If you're interested in exploring everything there is to know about
+          prediction markets, Saul keeps a categorized list of resources on
+          Notion.
+        </p>
       </div>
     </div>
   </div>
-  <hr class="my-2" />
-
-  <!--
-    <div class="p-4 m-2">
-        <h2 class="text-3xl font-bold">Thanks</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 my-2">
-            <div class="bg-crust rounded-md drop-shadow-sm p-4 m-2">
-                <h3 class="text-xl font-bold">Prediction Market FAQs</h3>
-            </div>
-        </div>
-    </div>
-    -->
 </Base>
