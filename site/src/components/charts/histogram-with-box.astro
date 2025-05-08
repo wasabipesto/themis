@@ -1,0 +1,91 @@
+---
+import type { MarketScoreDetails, PlatformDetails } from "@types";
+
+import * as Plot from "@observablehq/plot";
+import { JSDOM } from "jsdom";
+const { document } = new JSDOM().window;
+
+interface Props {
+  platforms: PlatformDetails[];
+  scores: MarketScoreDetails[];
+  scoreType: string;
+  width?: number;
+  aspectRatio?: number;
+  caption?: string;
+}
+let { platforms, scores, scoreType, width, aspectRatio, caption } = Astro.props;
+
+let axisTitleX = { "brier-midpoint": "Midpoint Brier score" }[scoreType];
+
+// Set default sizes
+if (!width) width = 600;
+
+// Generate the plot
+const plotA = Plot.plot({
+  title: "Distribution of Market Accuracy Scores",
+  width: width,
+  aspectRatio: aspectRatio,
+  marginLeft: 70,
+  x: { label: axisTitleX },
+  y: {
+    grid: true,
+    label: "Count",
+  },
+  color: {
+    legend: platforms.length > 1,
+    label: "Platform",
+    domain: platforms.map((p) => p.name),
+    range: platforms.map((p) => p.color_primary),
+  },
+  marks: [
+    Plot.rectY(
+      scores.filter((s) => s.score_type == scoreType),
+      Plot.binX(
+        { y: "count" },
+        {
+          x: { value: "score", thresholds: 20 },
+          // @ts-ignore: Dunno why it doesn't like this line
+          fill: "platform_name",
+          inset: 1,
+        },
+      ),
+    ),
+  ],
+  document,
+}).outerHTML;
+
+const plotB = Plot.plot({
+  width: width,
+  marginLeft: 70,
+  x: { label: axisTitleX },
+  y: {
+    grid: true,
+    label: null,
+  },
+  color: {
+    label: "Platform",
+    domain: platforms.map((p) => p.name),
+    range: platforms.map((p) => p.color_primary),
+  },
+  marks: [
+    Plot.boxX(
+      scores.filter((s) => s.score_type == scoreType),
+      { y: "platform_name", fill: "platform_name", x: "score" },
+    ),
+  ],
+  document,
+}).outerHTML;
+---
+
+<div
+  class="bg-base-light [&_h2]:text-2xl text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
+>
+  <Fragment set:html={plotA} />
+  <Fragment set:html={plotB} />
+  <p class="text-xs">
+    {caption}
+  </p>
+  <p class="text-xs">
+    Source: <a href="https://predictionmetrics.org">predictionmetrics.org</a>
+  </p>
+</div>
