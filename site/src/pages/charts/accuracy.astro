@@ -1,7 +1,9 @@
 ---
 import Base from "@layouts/base.astro";
+import SelectableOptions from "@components/charts/selectable-options-new.astro";
 import AccuracyBoxSelect from "@components/charts/accuracy-box-select.astro";
 import HistogramSelect from "@components/charts/histogram-select.astro";
+import HistogramWithBox from "@components/charts/histogram-with-box.astro";
 import { getPlatforms, getCategories, getMarketScores } from "@lib/api";
 
 // Download data
@@ -108,58 +110,97 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
         alternative scoring methods.
       </div>
     </div>
-    <AccuracyBoxSelect
-      plotId="scoreTypeBox"
-      platforms={platforms}
+    <SelectableOptions
+      id="scoreTypeBox"
       options={[
         {
-          scoreType: "brier-midpoint",
-          scores: scores,
           description:
             "Market Brier score, calculated with midpoint probability",
-          axisTitleY: "Midpoint Brier score",
-          plotRangeStart: 0,
-          plotRangeEnd: 0.8,
+          plot: {
+            component: HistogramWithBox,
+            props: {
+              platforms: platforms,
+              scores: scores,
+              scoreType: "brier-midpoint",
+            },
+          },
         },
         {
-          scoreType: "brier-average",
-          scores: scores,
           description: "Market Brier score, averaged over the entire market",
-          axisTitleY: "Average Brier score",
-          plotRangeStart: 0,
-          plotRangeEnd: 0.8,
+          plot: {
+            component: HistogramWithBox,
+            props: {
+              platforms: platforms,
+              scores: scores,
+              scoreType: "brier-average",
+            },
+          },
         },
         {
-          scoreType: "brier-relative",
-          scores: scores,
+          description: "Market Brier score, 30 days before resolution",
+          plot: {
+            component: HistogramWithBox,
+            props: {
+              platforms: platforms,
+              scores: scores,
+              scoreType: "brier-before-close-days-30",
+            },
+          },
+        },
+        {
           description: "Relative Brier score, calculated for linked markets",
-          axisTitleY: "Relative Brier score",
-          plotRangeStart: -0.08,
-          plotRangeEnd: 0.08,
+          plot: {
+            component: HistogramWithBox,
+            props: {
+              platforms: platforms,
+              scores: scores,
+              scoreType: "brier-relative",
+            },
+          },
         },
         {
-          scoreType: "logarithmic-midpoint",
-          scores: scores,
           description: "Market log score, calculated with midpoint probability",
-          axisTitleY: "Midpoint log score",
-          plotRangeStart: -2,
-          plotRangeEnd: 0,
+          plot: {
+            component: HistogramWithBox,
+            props: {
+              platforms: platforms,
+              scores: scores,
+              scoreType: "logarithmic-midpoint",
+            },
+          },
         },
         {
-          scoreType: "logarithmic-average",
-          scores: scores,
           description: "Market log score, averaged over the entire market",
-          axisTitleY: "Average log score",
-          plotRangeStart: -2,
-          plotRangeEnd: 0,
+          plot: {
+            component: HistogramWithBox,
+            props: {
+              platforms: platforms,
+              scores: scores,
+              scoreType: "logarithmic-average",
+            },
+          },
         },
         {
-          scoreType: "logarithmic-relative",
-          scores: scores,
+          description: "Market log score, 30 days before resolution",
+          plot: {
+            component: HistogramWithBox,
+            props: {
+              platforms: platforms,
+              scores: scores,
+              scoreType: "logarithmic-before-close-days-30",
+            },
+          },
+        },
+        {
           description: "Relative log score, calculated for linked markets",
-          axisTitleY: "Relative log score",
-          plotRangeStart: -0.2,
-          plotRangeEnd: 0.2,
+          plot: {
+            component: HistogramWithBox,
+            props: {
+              platforms: platforms,
+              scores: scores,
+              scoreType: "logarithmic-relative",
+            },
+          },
         },
       ]}
     />
