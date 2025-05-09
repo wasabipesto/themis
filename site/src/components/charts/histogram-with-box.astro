@@ -3,6 +3,7 @@ import type { MarketScoreDetails, PlatformDetails } from "@types";
 
 import * as Plot from "@observablehq/plot";
 import { JSDOM } from "jsdom";
+import { quartilesByPlatform } from "@lib/stats";
 const { document } = new JSDOM().window;
 
 interface Props {
@@ -25,28 +26,39 @@ let {
 let axisTitleX = {
   "brier-average": "Brier score, time-average",
   "brier-midpoint": "Brier score, midpoint",
+  "brier-relative": "Brier score, relative to others",
   "brier-before-close-days-7": "Brier score, 7d before close",
   "brier-before-close-days-30": "Brier score, 30d before close",
   "logarithmic-average": "Logarithmic score, time-average",
   "logarithmic-midpoint": "Logarithmic score, midpoint",
+  "logarithmic-relative": "Logarithmic score, relative to others",
   "logarithmic-before-close-days-7": "Logarithmic score, 7d before close",
   "logarithmic-before-close-days-30": "Logarithmic score, 30d before close",
   "spherical-average": "Spherical score, time-average",
   "spherical-midpoint": "Spherical score, midpoint",
+  "spherical-relative": "Spherical score, relative to others",
   "spherical-before-close-days-7": "Spherical score, 7d before close",
   "spherical-before-close-days-30": "Spherical score, 30d before close",
 }[scoreType];
 
-const scoresFiltered = scores.filter((s) => s.score_type == scoreType);
+const scoresFiltered = scores.filter(
+  (s) => s.score_type == scoreType && s.score > -5,
+);
+const scoresStats = quartilesByPlatform(platforms, scoresFiltered);
+const domain = [
+  scoresFiltered[0].score,
+  scoresFiltered[scoresFiltered.length - 1].score,
+];
 
 // Generate the plot
 const plots = [
+  /* Main plot - histogram of scores */
   Plot.plot({
     title: "Distribution of Market Accuracy Scores",
     width: width,
     aspectRatio: aspectRatio,
     marginLeft: 70,
-    x: { label: axisTitleX },
+    x: { label: axisTitleX, domain: domain },
     y: {
       grid: true,
       label: "Count",
@@ -73,10 +85,12 @@ const plots = [
     ],
     document,
   }).outerHTML,
+  /* Proper box plot - removed because too many outlier data points slowed down the site */
+  /*
   Plot.plot({
     width: width,
     marginLeft: 70,
-    x: { label: axisTitleX },
+    x: { label: axisTitleX, domain: domain },
     y: {
       grid: true,
       label: null,
@@ -95,6 +109,52 @@ const plots = [
     ],
     document,
   }).outerHTML,
+  */
+  /* Manual box plot - without outliers */
+  Plot.plot({
+    width: width,
+    height: 200,
+    marginLeft: 70,
+    x: { label: axisTitleX, domain: domain },
+    y: {
+      grid: true,
+      label: null,
+    },
+    color: {
+      label: "Platform",
+      domain: platforms.map((p) => p.name),
+      range: platforms.map((p) => p.color_primary),
+    },
+    marks: [
+      Plot.ruleY(scoresStats, {
+        y: "platform_name",
+        x1: "c1",
+        x2: "q1",
+        //stroke: "platform_name",
+      }),
+      Plot.barX(scoresStats, {
+        y: "platform_name",
+        x1: "q1",
+        x2: "q3",
+        fill: "platform_name",
+        //stroke: "platform_name",
+        strokeWidth: 2,
+      }),
+      Plot.ruleY(scoresStats, {
+        y: "platform_name",
+        x1: "q3",
+        x2: "c3",
+        //stroke: "platform_name",
+      }),
+      Plot.tickX(scoresStats, {
+        y: "platform_name",
+        x: "q2",
+        //stroke: "platform_name",
+        strokeWidth: 2,
+      }),
+    ],
+    document,
+  }).outerHTML,
 ];
 ---
 
@@ -104,6 +164,7 @@ const plots = [
   {plots.map((plot) => <Fragment set:html={plot} />)}
   <p class="text-xs">
     {caption}
+    n={scoresFiltered.length.toLocaleString()} markets
   </p>
   <p class="text-xs">
     Source: <a href="https://predictionmetrics.org">predictionmetrics.org</a>

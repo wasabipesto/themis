@@ -1,7 +1,7 @@
 // Takes an array of numbers and a percentile value
 // Returns the value at that percentile of the array
 
-import type { MarketScoreDetails } from "@types";
+import type { MarketScoreDetails, PlatformDetails } from "@types";
 
 // Assumes the scores are pre-sorted
 export function percentile(arr: number[], percentile: number): number {
@@ -53,6 +53,38 @@ export function quartiles(arr: number[]): {
     max,
     iqr,
   };
+}
+
+// Takes an array of scores and generates key points per platform
+export function quartilesByPlatform(
+  platforms: PlatformDetails[],
+  scores: MarketScoreDetails[],
+): {
+  platform_name: string;
+  min: number;
+  c1: number;
+  q1: number;
+  q2: number;
+  q3: number;
+  c3: number;
+  max: number;
+}[] {
+  return platforms.map((p) => {
+    const platformScores = scores
+      .filter((s) => s.platform_slug == p.slug)
+      .map((s) => s.score);
+    const stats = quartiles(platformScores);
+    return {
+      platform_name: p.name,
+      min: stats.min,
+      c1: stats.c1,
+      q1: stats.q1,
+      q2: stats.q2,
+      q3: stats.q3,
+      c3: stats.c3,
+      max: stats.max,
+    };
+  });
 }
 
 // Takes an array of numbers and sorts them
