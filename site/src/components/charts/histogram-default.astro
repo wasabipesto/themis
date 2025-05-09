@@ -13,12 +13,16 @@ interface Props {
   aspectRatio?: number;
   caption?: string;
 }
-let { platforms, scores, scoreType, width, aspectRatio, caption } = Astro.props;
+let {
+  platforms,
+  scores,
+  scoreType,
+  width = 600,
+  aspectRatio,
+  caption,
+} = Astro.props;
 
 let axisTitleX = { "brier-midpoint": "Midpoint Brier score" }[scoreType];
-
-// Set default sizes
-if (!width) width = 600;
 
 // Generate the plot
 const plot = Plot.plot({

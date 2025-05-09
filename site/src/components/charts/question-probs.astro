@@ -12,7 +12,7 @@ interface Props {
   width?: number;
   height?: number;
 }
-const { platforms, question, width, height } = Astro.props;
+const { platforms, question, width = 600, height = 200 } = Astro.props;
 
 const points = await getDailyProbabilitiesByQuestion(
   question.id,
@@ -23,8 +23,8 @@ const points = await getDailyProbabilitiesByQuestion(
 // Generate the plot
 const plot = Plot.plot({
   title: "Probability History",
-  width: width || 600,
-  height: height || 200,
+  width: width,
+  height: height,
   x: { type: "utc", label: "Date" },
   y: {
     domain: [0, 100],

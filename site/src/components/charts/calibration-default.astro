@@ -13,14 +13,10 @@ interface Props {
   aspectRatio?: number;
   caption?: string;
 }
-let { platforms, markets, width, aspectRatio, caption } = Astro.props;
+let { platforms, markets, width = 600, aspectRatio, caption } = Astro.props;
 
 // Calculate calibration points
 const points = await calculateCalibrationPoints(markets, "midpoint", null);
-
-// Set default sizes
-if (!width) width = 600;
-let pointSizeRange = [width / 100, (width / 100) * 1.5];
 
 // Generate the plot
 const plot = Plot.plot({
@@ -33,7 +29,7 @@ const plot = Plot.plot({
     label: "Prediction (Midpoint)",
   },
   y: { domain: [0, 100], grid: true, percent: true, label: "Resolution" },
-  r: { range: pointSizeRange, label: "Scale" },
+  r: { range: [width * 0.01, width * 0.015], label: "Scale" },
   color: {
     legend: platforms.length > 1,
     label: "Platform",
