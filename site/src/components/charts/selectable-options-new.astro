@@ -1,0 +1,69 @@
+---
+import { Icon } from "astro-icon/components";
+
+interface Props {
+  id: string;
+  options: {
+    icon?: string;
+    description: string;
+    count?: number;
+    plot: {
+      component: any;
+      props?: any;
+    };
+  }[];
+}
+
+const { id, options } = Astro.props;
+---
+
+<style>
+  [x-cloak] {
+    display: none;
+  }
+</style>
+
+<div
+  x-data={`{ ${id}Selected: 0 }`}
+  class="grid gap-2 grid-cols-1 md:grid-cols-3 my-2"
+>
+  <div class="flex-col space-y-2">
+    {
+      options.map((opt, index) => (
+        <div class="bg-base-light text-crust rounded-md drop-shadow-sm px-4 py-2">
+          <div class="flex items-center">
+            <label class="w-full">
+              <input
+                type="radio"
+                x-model={`${id}Selected`}
+                value={index}
+                class="w-5 h-5 mr-4 text-mantle"
+              />
+              <span>
+                {opt.icon && <Icon name={opt.icon} class="inline mb-1 mr-1" />}
+                {opt.description}
+              </span>
+              {opt.count && (
+                <span>
+                  <div class="text-xs text-right">
+                    n={opt.count.toLocaleString()}
+                  </div>
+                </span>
+              )}
+            </label>
+          </div>
+        </div>
+      ))
+    }
+  </div>
+
+  <div class="flex-col space-y-2 md:col-span-2">
+    {
+      options.map((opt, index) => (
+        <div x-cloak x-show={`${id}Selected == ${index}`}>
+          <opt.plot.component {...opt.plot.props} />
+        </div>
+      ))
+    }
+  </div>
+</div>
