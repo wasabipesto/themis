@@ -36,103 +36,89 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
       </div>
     </div>
     <SelectableOptions
-      id="scoreTypeBox"
       options={[
         {
           icon: "mdi:all-inclusive-box",
           description: "Show all resolved markets.",
-          plot: {
-            component: HistogramWithBox,
-            props: {
-              platforms: platforms,
-              scores: scores,
-              scoreType: "brier-midpoint",
-            },
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "brier-midpoint",
           },
         },
         {
           icon: "mdi:alpha-a-box",
           description:
             "Filter to at least 10 traders or $100 in trade volume, and open for at least 2 days.",
-          plot: {
-            component: HistogramWithBox,
-            props: {
-              platforms: platforms,
-              scores: scores.filter((ms) => {
-                return (
-                  ((ms.traders_count !== null && ms.traders_count >= 10) ||
-                    (ms.volume_usd !== null && ms.volume_usd >= 100)) &&
-                  ms.duration_days >= 2
-                );
-              }),
-              scoreType: "brier-midpoint",
-            },
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores.filter((ms) => {
+              return (
+                ((ms.traders_count !== null && ms.traders_count >= 10) ||
+                  (ms.volume_usd !== null && ms.volume_usd >= 100)) &&
+                ms.duration_days >= 2
+              );
+            }),
+            scoreType: "brier-midpoint",
           },
         },
         {
           icon: "mdi:alpha-b-box",
           description:
             "Filter to at least 100 traders or $1000 in trade volume, and open for at least 14 days.",
-          plot: {
-            component: HistogramWithBox,
-            props: {
-              platforms: platforms,
-              scores: scores.filter((ms) => {
-                return (
-                  ((ms.traders_count !== null && ms.traders_count >= 100) ||
-                    (ms.volume_usd !== null && ms.volume_usd >= 1000)) &&
-                  ms.duration_days >= 14
-                );
-              }),
-              scoreType: "brier-midpoint",
-            },
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores.filter((ms) => {
+              return (
+                ((ms.traders_count !== null && ms.traders_count >= 100) ||
+                  (ms.volume_usd !== null && ms.volume_usd >= 1000)) &&
+                ms.duration_days >= 14
+              );
+            }),
+            scoreType: "brier-midpoint",
           },
         },
         {
           icon: "mdi:alpha-c-box",
           description:
             "Filter to at least 1000 traders or $10,000 in trade volume, and open for at least 30 days.",
-          plot: {
-            component: HistogramWithBox,
-            props: {
-              platforms: platforms,
-              scores: scores.filter((ms) => {
-                return (
-                  ((ms.traders_count !== null && ms.traders_count >= 1000) ||
-                    (ms.volume_usd !== null && ms.volume_usd >= 10000)) &&
-                  ms.duration_days >= 30
-                );
-              }),
-              scoreType: "brier-midpoint",
-            },
+          props: {
+            platforms: platforms,
+            scores: scores.filter((ms) => {
+              return (
+                ((ms.traders_count !== null && ms.traders_count >= 1000) ||
+                  (ms.volume_usd !== null && ms.volume_usd >= 10000)) &&
+                ms.duration_days >= 30
+              );
+            }),
+            scoreType: "brier-midpoint",
           },
         },
         {
           icon: "mdi:calendar-check",
           description: "Filter to markets resolved in the past 12 months.",
-          plot: {
-            component: HistogramWithBox,
-            props: {
-              platforms: platforms,
-              scores: scores.filter(
-                (ms) =>
-                  new Date(ms.close_datetime).getTime() >=
-                  new Date().getTime() - 365 * 24 * 60 * 60 * 1000,
-              ),
-              scoreType: "brier-midpoint",
-            },
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores.filter(
+              (ms) =>
+                new Date(ms.close_datetime).getTime() >=
+                new Date().getTime() - 365 * 24 * 60 * 60 * 1000,
+            ),
+            scoreType: "brier-midpoint",
           },
         },
         {
           icon: "mdi:check-decagram",
           description: "Filter to markets that have been linked in questions.",
-          plot: {
-            component: HistogramWithBox,
-            props: {
-              platforms: platforms,
-              scores: scores.filter((ms) => ms.question_id),
-              scoreType: "brier-midpoint",
-            },
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores.filter((ms) => ms.question_id),
+            scoreType: "brier-midpoint",
           },
         },
       ]}
@@ -155,95 +141,78 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
       </div>
     </div>
     <SelectableOptions
-      id="scoreTypeBox"
       options={[
         {
           description:
             "Market Brier score, calculated with midpoint probability",
-          plot: {
-            component: HistogramWithBox,
-            props: {
-              platforms: platforms,
-              scores: scores,
-              scoreType: "brier-midpoint",
-            },
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "brier-midpoint",
           },
         },
         {
           description: "Market Brier score, averaged over the entire market",
-          plot: {
-            component: HistogramWithBox,
-            props: {
-              platforms: platforms,
-              scores: scores,
-              scoreType: "brier-average",
-            },
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "brier-average",
           },
         },
         {
           description: "Market Brier score, 30 days before resolution",
-          plot: {
-            component: HistogramWithBox,
-            props: {
-              platforms: platforms,
-              scores: scores,
-              scoreType: "brier-before-close-days-30",
-            },
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "brier-before-close-days-30",
           },
         },
         {
           description: "Relative Brier score, calculated for linked markets",
-          plot: {
-            component: HistogramWithBox,
-            props: {
-              platforms: platforms,
-              scores: scores,
-              scoreType: "brier-relative",
-            },
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "brier-relative",
           },
         },
         {
           description: "Market log score, calculated with midpoint probability",
-          plot: {
-            component: HistogramWithBox,
-            props: {
-              platforms: platforms,
-              scores: scores,
-              scoreType: "logarithmic-midpoint",
-            },
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "logarithmic-midpoint",
           },
         },
         {
           description: "Market log score, averaged over the entire market",
-          plot: {
-            component: HistogramWithBox,
-            props: {
-              platforms: platforms,
-              scores: scores,
-              scoreType: "logarithmic-average",
-            },
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "logarithmic-average",
           },
         },
         {
           description: "Market log score, 30 days before resolution",
-          plot: {
-            component: HistogramWithBox,
-            props: {
-              platforms: platforms,
-              scores: scores,
-              scoreType: "logarithmic-before-close-days-30",
-            },
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "logarithmic-before-close-days-30",
           },
         },
         {
           description: "Relative log score, calculated for linked markets",
-          plot: {
-            component: HistogramWithBox,
-            props: {
-              platforms: platforms,
-              scores: scores,
-              scoreType: "logarithmic-relative",
-            },
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "logarithmic-relative",
           },
         },
       ]}
@@ -261,31 +230,26 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
       </div>
     </div>
     <SelectableOptions
-      id="scoreTypeBox"
       options={[
         {
           icon: "mdi:compass-rose",
           description: "All categories",
-          plot: {
-            component: HistogramWithBox,
-            props: {
-              platforms: platforms,
-              scores: scores,
-              scoreType: "brier-midpoint",
-            },
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "brier-midpoint",
           },
         },
       ].concat(
         categories.map((category) => ({
           icon: category.icon,
           description: category.name,
-          plot: {
-            component: HistogramWithBox,
-            props: {
-              platforms: platforms,
-              scores: scores.filter((ms) => ms.category_slug == category.slug),
-              scoreType: "brier-midpoint",
-            },
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores.filter((ms) => ms.category_slug == category.slug),
+            scoreType: "brier-midpoint",
           },
         })),
       )}
@@ -308,56 +272,47 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
       </div>
     </div>
     <SelectableOptions
-      id="scoreTypeBox"
       options={[
         {
           icon: "mdi:all-inclusive-box",
           description: "All markets, regardless of resolution",
-          plot: {
-            component: HistogramWithBox,
-            props: {
-              platforms: platforms,
-              scores: scores,
-              scoreType: "brier-midpoint",
-            },
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "brier-midpoint",
           },
         },
         {
           icon: "mdi:check-circle-outline",
           description: "Only markets that resolved YES",
-          plot: {
-            component: HistogramWithBox,
-            props: {
-              platforms: platforms,
-              scores: scores.filter((ms) => ms.resolution == 1),
-              scoreType: "brier-midpoint",
-            },
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores.filter((ms) => ms.resolution == 1),
+            scoreType: "brier-midpoint",
           },
         },
         {
           icon: "mdi:minus-circle-outline",
           description: "Only markets that resolved NO",
-          plot: {
-            component: HistogramWithBox,
-            props: {
-              platforms: platforms,
-              scores: scores.filter((ms) => ms.resolution == 0),
-              scoreType: "brier-midpoint",
-            },
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores.filter((ms) => ms.resolution == 0),
+            scoreType: "brier-midpoint",
           },
         },
         {
           icon: "mdi:help-circle",
           description: "Only markets that resolved to something inbetween",
-          plot: {
-            component: HistogramWithBox,
-            props: {
-              platforms: platforms,
-              scores: scores.filter(
-                (ms) => ms.resolution != 0 && ms.resolution != 1,
-              ),
-              scoreType: "brier-midpoint",
-            },
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores.filter(
+              (ms) => ms.resolution != 0 && ms.resolution != 1,
+            ),
+            scoreType: "brier-midpoint",
           },
         },
       ]}

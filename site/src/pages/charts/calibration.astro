@@ -1,6 +1,7 @@
 ---
 import Base from "@layouts/base.astro";
-import CalibrationPointSelect from "@components/charts/calibration-point-select.astro";
+import SelectableOptions from "@components/charts/selectable-options-new.astro";
+import CalibrationDefault from "@components/charts/calibration-default.astro";
 import { getMarkets, getPlatforms, getCategories } from "@lib/api";
 
 // Download markets and platforms
@@ -32,65 +33,94 @@ const categories = await getCategories();
         Alternatively, pick from a few other selection criteria.
       </div>
     </div>
-    <CalibrationPointSelect
-      plotId="basic"
-      platforms={platforms}
+    <SelectableOptions
       options={[
         {
           icon: "mdi:all-inclusive-box",
           description: "Show all resolved markets.",
-          markets: markets,
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets,
+            scoreType: "brier-midpoint",
+          },
         },
         {
           icon: "mdi:alpha-a-box",
           description:
             "Filter to at least 10 traders or $100 in trade volume, and open for at least 2 days.",
-          markets: markets.filter((market) => {
-            return (
-              ((market.traders_count !== null && market.traders_count >= 10) ||
-                (market.volume_usd !== null && market.volume_usd >= 100)) &&
-              market.duration_days >= 2
-            );
-          }),
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => {
+              return (
+                ((market.traders_count !== null &&
+                  market.traders_count >= 10) ||
+                  (market.volume_usd !== null && market.volume_usd >= 100)) &&
+                market.duration_days >= 2
+              );
+            }),
+            scoreType: "brier-midpoint",
+          },
         },
         {
           icon: "mdi:alpha-b-box",
           description:
             "Filter to at least 100 traders or $1000 in trade volume, and open for at least 14 days.",
-          markets: markets.filter((market) => {
-            return (
-              ((market.traders_count !== null && market.traders_count >= 100) ||
-                (market.volume_usd !== null && market.volume_usd >= 1000)) &&
-              market.duration_days >= 14
-            );
-          }),
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => {
+              return (
+                ((market.traders_count !== null &&
+                  market.traders_count >= 100) ||
+                  (market.volume_usd !== null && market.volume_usd >= 1000)) &&
+                market.duration_days >= 14
+              );
+            }),
+            scoreType: "brier-midpoint",
+          },
         },
         {
           icon: "mdi:alpha-c-box",
           description:
             "Filter to at least 1000 traders or $10,000 in trade volume, and open for at least 30 days.",
-          markets: markets.filter((market) => {
-            return (
-              ((market.traders_count !== null &&
-                market.traders_count >= 1000) ||
-                (market.volume_usd !== null && market.volume_usd >= 10000)) &&
-              market.duration_days >= 30
-            );
-          }),
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((ms) => {
+              return (
+                ((ms.traders_count !== null && ms.traders_count >= 1000) ||
+                  (ms.volume_usd !== null && ms.volume_usd >= 10000)) &&
+                ms.duration_days >= 30
+              );
+            }),
+            scoreType: "brier-midpoint",
+          },
         },
         {
           icon: "mdi:calendar-check",
           description: "Filter to markets resolved in the past 12 months.",
-          markets: markets.filter(
-            (market) =>
-              new Date(market.close_datetime).getTime() >=
-              new Date().getTime() - 365 * 24 * 60 * 60 * 1000,
-          ),
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter(
+              (market) =>
+                new Date(market.close_datetime).getTime() >=
+                new Date().getTime() - 365 * 24 * 60 * 60 * 1000,
+            ),
+            scoreType: "brier-midpoint",
+          },
         },
         {
           icon: "mdi:check-decagram",
           description: "Filter to markets that have been linked in questions.",
-          markets: markets.filter((market) => market.question_id),
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => market.question_id),
+            scoreType: "brier-midpoint",
+          },
         },
       ]}
     />
@@ -106,22 +136,30 @@ const categories = await getCategories();
         supported yet.
       </div>
     </div>
-    <CalibrationPointSelect
-      plotId="category"
-      platforms={platforms}
+    <SelectableOptions
       options={[
         {
           icon: "mdi:compass-rose",
           description: "All categories",
-          markets: markets,
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets,
+            scoreType: "brier-midpoint",
+          },
         },
       ].concat(
         categories.map((category) => ({
           icon: category.icon,
           description: category.name,
-          markets: markets.filter(
-            (market) => market.category_slug == category.slug,
-          ),
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter(
+              (market) => market.category_slug == category.slug,
+            ),
+            scoreType: "brier-midpoint",
+          },
         })),
       )}
     />
@@ -139,58 +177,77 @@ const categories = await getCategories();
         probability or a fixed point in time?
       </div>
     </div>
-    <CalibrationPointSelect
-      plotId="criterion"
-      platforms={platforms}
+    <SelectableOptions
       options={[
         {
           icon: "mdi:format-horizontal-align-center",
           description: "Probability at midpoint (default)",
-          axisTitleX: "Prediction (midpoint)",
-          markets: markets,
-          criterion: "midpoint",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets,
+            criterion: "midpoint",
+          },
         },
         {
           icon: "mdi:timer-outline",
           description: "Time-weighted average probability",
-          axisTitleX: "Prediction (average)",
-          markets: markets,
-          criterion: "time-average",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets,
+            criterion: "time-average",
+          },
         },
         {
           icon: "mdi:timer-sand-complete",
           description: "Probability 24 hours before resolution",
-          axisTitleX: "Prediction (24h before resolution)",
-          markets: markets.filter((market) => market.duration_days > 2),
-          criterion: "before-close-hours-24",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => market.duration_days > 2),
+            criterion: "before-close-hours-24",
+          },
         },
         {
           icon: "mdi:timer-sand-complete",
           description: "Probability 30 days before resolution",
-          axisTitleX: "Prediction (30d before resolution)",
-          markets: markets.filter((market) => market.duration_days > 31),
-          criterion: "before-close-days-30",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => market.duration_days > 31),
+            criterion: "before-close-days-30",
+          },
         },
         {
           icon: "mdi:timer-sand-complete",
           description: "Probability 90 days before resolution",
-          axisTitleX: "Prediction (90d before resolution)",
-          markets: markets.filter((market) => market.duration_days > 91),
-          criterion: "before-close-days-90",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => market.duration_days > 91),
+            criterion: "before-close-days-90",
+          },
         },
         {
           icon: "mdi:timer-sand-complete",
           description: "Probability 365 days before resolution",
-          axisTitleX: "Prediction (one year before resolution)",
-          markets: markets.filter((market) => market.duration_days > 366),
-          criterion: "before-close-days-365",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => market.duration_days > 366),
+            criterion: "before-close-days-365",
+          },
         },
         {
           icon: "mdi:timer-sand",
           description: "Probability 24 hours after open",
-          axisTitleX: "Prediction (24h after open)",
-          markets: markets.filter((market) => market.duration_days > 2),
-          criterion: "after-start-hours-24",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => market.duration_days > 2),
+            criterion: "after-start-hours-24",
+          },
         },
       ]}
     />
@@ -199,7 +256,7 @@ const categories = await getCategories();
 
   <div class="p-4 m-2">
     <div class="my-4">
-      <h2 class="font-bold text-2xl" id="vary-prediction">Weighted Averages</h2>
+      <h2 class="font-bold text-2xl" id="vary-weight">Weighted Averages</h2>
       <div class="my-2">
         Typically all markets are trated equally with a raw average. What if we
         used a weighted average instead? For instance, markets with $100 in
@@ -208,47 +265,60 @@ const categories = await getCategories();
         beneficial without ignoring others.
       </div>
     </div>
-    <CalibrationPointSelect
-      plotId="weight"
-      platforms={platforms}
+    <SelectableOptions
       options={[
         {
           icon: "mdi:border-none-variant",
           description: "Unweighted",
-          axisTitleY: "Resolution, unweighted",
-          markets: markets,
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets,
+          },
         },
         {
           icon: "mdi:cash",
           description: "Weight market by trade volume",
-          axisTitleY: "Resolution, weighted by volume",
-          markets: markets.filter(
-            (market) => market.volume_usd && market.volume_usd > 0,
-          ),
-          weight: "volume_usd",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter(
+              (market) => market.volume_usd && market.volume_usd > 0,
+            ),
+            weight: "volume_usd",
+          },
         },
         {
           icon: "mdi:account-multiple",
           description: "Weight market by number of traders",
-          axisTitleY: "Resolution, weighted by traders",
-          markets: markets.filter(
-            (market) => market.traders_count && market.traders_count > 0,
-          ),
-          weight: "traders_count",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter(
+              (market) => market.traders_count && market.traders_count > 0,
+            ),
+            weight: "traders_count",
+          },
         },
         {
           icon: "mdi:calendar-blank",
           description: "Weight market by market duration",
-          axisTitleY: "Resolution, weighted by duration",
-          markets: markets.filter((market) => market.duration_days > 0),
-          weight: "duration_days",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => market.duration_days > 0),
+            weight: "duration_days",
+          },
         },
         {
           icon: "mdi:calendar-clock",
           description: "Weight market by recency",
-          axisTitleY: "Resolution, weighted by recency",
-          markets: markets,
-          weight: "recency",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets,
+            weight: "recency",
+          },
         },
       ]}
     />

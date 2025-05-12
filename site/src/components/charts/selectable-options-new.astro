@@ -2,19 +2,22 @@
 import { Icon } from "astro-icon/components";
 
 interface Props {
-  id: string;
   options: {
     icon?: string;
     description: string;
-    count?: number;
-    plot: {
-      component: any;
-      props?: any;
-    };
+    component: any;
+    props?: any;
   }[];
 }
 
-const { id, options } = Astro.props;
+const { options } = Astro.props;
+const id = Array.from(
+  { length: 36 },
+  () =>
+    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"[
+      Math.floor(Math.random() * 62)
+    ],
+).join("");
 ---
 
 <style>
@@ -43,13 +46,6 @@ const { id, options } = Astro.props;
                 {opt.icon && <Icon name={opt.icon} class="inline mb-1 mr-1" />}
                 {opt.description}
               </span>
-              {opt.count && (
-                <span>
-                  <div class="text-xs text-right">
-                    n={opt.count.toLocaleString()}
-                  </div>
-                </span>
-              )}
             </label>
           </div>
         </div>
@@ -61,7 +57,7 @@ const { id, options } = Astro.props;
     {
       options.map((opt, index) => (
         <div x-cloak x-show={`${id}Selected == ${index}`}>
-          <opt.plot.component {...opt.plot.props} />
+          <opt.component {...opt.props} />
         </div>
       ))
     }
