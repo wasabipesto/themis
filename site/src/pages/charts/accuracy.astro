@@ -85,6 +85,7 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
           icon: "mdi:alpha-c-box",
           description:
             "Filter to at least 1000 traders or $10,000 in trade volume, and open for at least 30 days.",
+          component: HistogramWithBox,
           props: {
             platforms: platforms,
             scores: scores.filter((ms) => {
