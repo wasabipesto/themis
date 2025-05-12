@@ -85,31 +85,6 @@ const plots = [
     ],
     document,
   }).outerHTML,
-  /* Proper box plot - removed because too many outlier data points slowed down the site */
-  /*
-  Plot.plot({
-    width: width,
-    marginLeft: 70,
-    x: { label: axisTitleX, domain: domain },
-    y: {
-      grid: true,
-      label: null,
-    },
-    color: {
-      label: "Platform",
-      domain: platforms.map((p) => p.name),
-      range: platforms.map((p) => p.color_primary),
-    },
-    marks: [
-      Plot.boxX(scoresFiltered, {
-        y: "platform_name",
-        fill: "platform_name",
-        x: "score",
-      }),
-    ],
-    document,
-  }).outerHTML,
-  */
   /* Manual box plot - without outliers */
   Plot.plot({
     width: width,
@@ -130,26 +105,22 @@ const plots = [
         y: "platform_name",
         x1: "c1",
         x2: "q1",
-        //stroke: "platform_name",
       }),
       Plot.barX(scoresStats, {
         y: "platform_name",
         x1: "q1",
         x2: "q3",
         fill: "platform_name",
-        //stroke: "platform_name",
         strokeWidth: 2,
       }),
       Plot.ruleY(scoresStats, {
         y: "platform_name",
         x1: "q3",
         x2: "c3",
-        //stroke: "platform_name",
       }),
       Plot.tickX(scoresStats, {
         y: "platform_name",
         x: "q2",
-        //stroke: "platform_name",
         strokeWidth: 2,
       }),
     ],
