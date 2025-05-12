@@ -29,7 +29,6 @@ export function quartiles(arr: number[]): {
   q2: number;
   q3: number;
   c3: number;
-  c9: number;
   max: number;
   iqr: number;
 } {
@@ -41,7 +40,6 @@ export function quartiles(arr: number[]): {
   const iqr = q3 - q1;
   const c1 = Math.max(q1 - 1.5 * iqr, min);
   const c3 = Math.min(q3 + 1.5 * iqr, max);
-  const c9 = percentile(arr, 0.975);
   return {
     min,
     c1,
@@ -49,7 +47,6 @@ export function quartiles(arr: number[]): {
     q2,
     q3,
     c3,
-    c9,
     max,
     iqr,
   };
