@@ -1,0 +1,95 @@
+---
+import type { MarketDetails } from "@types";
+
+import * as Plot from "@observablehq/plot";
+import { JSDOM } from "jsdom";
+const { document } = new JSDOM().window;
+
+interface Props {
+  markets: MarketDetails[];
+  width?: number;
+  aspectRatio?: number;
+  caption?: string;
+}
+let { markets, width = 1100, aspectRatio, caption } = Astro.props;
+
+const cutoffDate = new Date("2020-01-01");
+const marketDates = markets
+  .filter((market) => new Date(market.open_datetime) > cutoffDate)
+  .map((market) => ({
+    market_id: market.id,
+    platform_name: market.platform_name,
+    date: new Date(market.open_datetime),
+    type: "Open",
+  }))
+  .concat(
+    markets
+      .filter((market) => new Date(market.close_datetime) > cutoffDate)
+      .map((market) => ({
+        market_id: market.id,
+        platform_name: market.platform_name,
+        date: new Date(market.close_datetime),
+        type: "Close",
+      })),
+  );
+const numPresent = new Set(marketDates.map((item) => item.market_id)).size;
+const numHidden = markets.length - numPresent;
+
+// Generate the plot
+const plot = Plot.plot({
+  title: "Markets Opened and Closed over Time",
+  width: width,
+  aspectRatio: aspectRatio,
+  marginLeft: 40,
+  marginRight: 80,
+  x: {
+    type: "utc",
+    label: "Date",
+  },
+  y: {
+    grid: true,
+    percent: true,
+    label: "Percent",
+  },
+  fy: { label: null },
+  color: {
+    domain: ["Open", "Close"],
+    range: ["#59a14f", "#e15759"],
+    label: "Status",
+    legend: true,
+  },
+  marks: [
+    Plot.rectY(
+      marketDates,
+      Plot.binX(
+        { y: "proportion-facet" },
+        {
+          x: "date",
+          // @ts-ignore: Dunno why it doesn't like this line
+          fill: "type",
+          fy: "platform_name",
+          insetLeft: 1,
+          insetRight: 1,
+          interval: "14 days",
+        },
+      ),
+    ),
+    Plot.ruleY([0]),
+  ],
+  document,
+}).outerHTML;
+---
+
+<div
+  class="bg-base-light [&_h2]:text-2xl text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
+>
+  <Fragment set:html={plot} />
+  <p class="text-xs">
+    {caption}
+    n={numPresent.toLocaleString()} markets
+    {numHidden > 0 && `(${numHidden.toLocaleString()} hidden)`}
+  </p>
+  <p class="text-xs">
+    Source: <a href="https://predictionmetrics.org">predictionmetrics.org</a>
+  </p>
+</div>
