@@ -9,14 +9,42 @@ const { document } = new JSDOM().window;
 interface Props {
   platforms: PlatformDetails[];
   markets: MarketDetails[];
+  criterion?: string;
+  weight?: string;
   width?: number;
   aspectRatio?: number;
   caption?: string;
 }
-let { platforms, markets, width = 600, aspectRatio, caption } = Astro.props;
+let {
+  platforms,
+  markets,
+  criterion = "midpoint",
+  weight = null,
+  width = 720,
+  aspectRatio,
+  caption,
+} = Astro.props;
 
 // Calculate calibration points
-const points = await calculateCalibrationPoints(markets, "midpoint", null);
+const points = await calculateCalibrationPoints(markets, criterion, weight);
+
+let axisTitleX = {
+  midpoint: "Prediction (Midpoint)",
+  "time-average": "Prediction (Time-Average)",
+  "before-close-hours-24": "Prediction (24h before resolution)",
+  "before-close-days-30": "Prediction (30d before resolution)",
+  "before-close-days-90": "Prediction (90d before resolution)",
+  "before-close-days-365": "Prediction (one year before resolution)",
+  "after-start-hours-24": "Prediction (24h after open)",
+}[criterion];
+
+let axisTitleY = {
+  null: "Resolution",
+  volume_usd: "Resolution, weighted by volume",
+  traders_count: "Resolution, weighted by number of traders",
+  duration_days: "Resolution, weighted by duration",
+  recency: "Resolution, weighted by recency",
+}[weight];
 
 // Generate the plot
 const plot = Plot.plot({
@@ -26,7 +54,7 @@ const plot = Plot.plot({
   x: {
     domain: [0, 100],
     percent: true,
-    label: "Prediction (Midpoint)",
+    label: axisTitleX,
   },
   y: { domain: [0, 100], grid: true, percent: true, label: "Resolution" },
   r: { range: [width * 0.01, width * 0.015], label: "Scale" },
@@ -71,6 +99,7 @@ const plot = Plot.plot({
   <Fragment set:html={plot} />
   <p class="text-xs">
     {caption}
+    n={markets.length.toLocaleString()} markets
   </p>
   <p class="text-xs">
     Source: <a href="https://predictionmetrics.org">predictionmetrics.org</a>
