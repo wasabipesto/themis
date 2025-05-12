@@ -17,11 +17,12 @@ let {
   platforms,
   scores,
   scoreType,
-  width = 600,
+  width = 720,
   aspectRatio,
   caption,
 } = Astro.props;
 
+let scoresFiltered = scores.filter((s) => s.score_type == scoreType);
 let axisTitleX = { "brier-midpoint": "Midpoint Brier score" }[scoreType];
 
 // Generate the plot
@@ -43,7 +44,7 @@ const plot = Plot.plot({
   },
   marks: [
     Plot.rectY(
-      scores.filter((s) => s.score_type == scoreType),
+      scoresFiltered,
       Plot.binX(
         { y: "count" },
         {
@@ -65,6 +66,7 @@ const plot = Plot.plot({
   <Fragment set:html={plot} />
   <p class="text-xs">
     {caption}
+    n={scoresFiltered.length.toLocaleString()} markets
   </p>
   <p class="text-xs">
     Source: <a href="https://predictionmetrics.org">predictionmetrics.org</a>
