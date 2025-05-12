@@ -1,0 +1,95 @@
+---
+import type { PlatformDetails } from "@types";
+import { percentile, roundSF } from "@lib/stats";
+
+import * as Plot from "@observablehq/plot";
+import { JSDOM } from "jsdom";
+const { document } = new JSDOM().window;
+
+interface Props {
+  platforms: PlatformDetails[];
+  plotTitle: string;
+  axisTitleX: string;
+  items: {
+    value: number;
+    platform_name: string;
+  }[];
+  cutoffMax: number;
+  thresholds?: number;
+  width?: number;
+  aspectRatio?: number;
+  caption?: string;
+}
+let {
+  platforms,
+  items,
+  plotTitle,
+  axisTitleX,
+  cutoffMax,
+  thresholds = 20,
+  width = 720,
+  aspectRatio,
+  caption,
+} = Astro.props;
+
+// limit domain to avoid hge outliers
+if (!cutoffMax) {
+  const valuesSorted = items.map((item) => item.value).sort((a, b) => a - b);
+  cutoffMax = roundSF(percentile(valuesSorted, 0.97), 2);
+}
+const itemsInRange = items.filter((i) => i.value <= cutoffMax);
+const numHidden = items.length - itemsInRange.length;
+
+// Generate the plot
+const plot = Plot.plot({
+  title: plotTitle,
+  width: width,
+  aspectRatio: aspectRatio,
+  marginLeft: 50,
+  marginRight: 80,
+  x: { label: axisTitleX },
+  y: {
+    grid: true,
+    percent: true,
+    label: "Percent",
+  },
+  fy: { label: null },
+  color: {
+    legend: platforms.length > 1,
+    label: "Platform",
+    domain: platforms.map((p) => p.name),
+    range: platforms.map((p) => p.color_accent),
+  },
+  marks: [
+    Plot.rectY(
+      itemsInRange,
+      Plot.binX(
+        { y: "proportion-facet" },
+        {
+          x: { value: "value", thresholds },
+          // @ts-ignore: Dunno why it doesn't like this line
+          fill: "platform_name",
+          fy: "platform_name",
+          inset: 1,
+        },
+      ),
+    ),
+    Plot.ruleY([0]),
+  ],
+  document,
+}).outerHTML;
+---
+
+<div
+  class="bg-base-light [&_h2]:text-2xl text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
+>
+  <Fragment set:html={plot} />
+  <p class="text-xs">
+    {caption}
+    n={itemsInRange.length.toLocaleString()} markets
+    {numHidden > 0 && `(${numHidden.toLocaleString()} hidden)`}
+  </p>
+  <p class="text-xs">
+    Source: <a href="https://predictionmetrics.org">predictionmetrics.org</a>
+  </p>
+</div>

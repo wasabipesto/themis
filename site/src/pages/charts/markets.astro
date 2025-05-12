@@ -1,6 +1,7 @@
 ---
 import Base from "@layouts/base.astro";
-import HistogramSelect from "@components/charts/histogram-select.astro";
+import SelectableOptions from "@components/charts/selectable-options-new.astro";
+import HistogramGeneric from "@components/charts/histogram-generic.astro";
 import BarCountOverTime from "@components/charts/bar-count-over-time.astro";
 import { getPlatforms, getMarkets } from "@lib/api";
 
@@ -36,68 +37,97 @@ const markets = await getMarkets();
         open?
       </div>
     </div>
-    <HistogramSelect
-      plotId="histogram-trait"
-      platforms={platforms}
+    <SelectableOptions
       options={[
         {
+          icon: "mdi:cash",
           description: "Market distribution by trade volume.",
-          items: markets
-            .filter((mkt) => mkt.volume_usd && mkt.volume_usd > 0)
-            .map((mkt) => ({
-              value: mkt.volume_usd || 0,
-              platformSlug: mkt.platform_slug,
-            })),
-          plotTitle: "Histogram of Volume",
-          axisTitleX: "Volume (USD)",
+          component: HistogramGeneric,
+          props: {
+            platforms: platforms,
+            plotTitle: "Histogram of Volume",
+            axisTitleX: "Volume (USD)",
+            items: markets
+              .filter((mkt) => mkt.volume_usd && mkt.volume_usd > 0)
+              .map((mkt) => ({
+                value: mkt.volume_usd || 0,
+                platform_name: mkt.platform_name,
+              })),
+          },
         },
         {
+          icon: "mdi:account-multiple",
           description: "Market distribution by number of traders.",
-          items: markets
-            .filter((mkt) => mkt.traders_count && mkt.traders_count > 0)
-            .map((mkt) => ({
-              value: mkt.traders_count || 0,
-              platformSlug: mkt.platform_slug,
-            })),
-          plotTitle: "Histogram of Traders",
-          axisTitleX: "Trader count",
+          component: HistogramGeneric,
+          props: {
+            platforms: platforms,
+            plotTitle: "Histogram of Traders",
+            axisTitleX: "Trader count",
+            items: markets
+              .filter((mkt) => mkt.traders_count && mkt.traders_count > 0)
+              .map((mkt) => ({
+                value: mkt.traders_count || 0,
+                platform_name: mkt.platform_name,
+              })),
+          },
         },
         {
+          icon: "mdi:calendar-blank",
           description: "Market distribution by total duration.",
-          items: markets.map((mkt) => ({
-            value: mkt.duration_days,
-            platformSlug: mkt.platform_slug,
-          })),
-          plotTitle: "Histogram of Duration",
-          axisTitleX: "Duration (days)",
+          component: HistogramGeneric,
+          props: {
+            platforms: platforms,
+            plotTitle: "Histogram of Duration",
+            axisTitleX: "Duration (days)",
+            items: markets.map((mkt) => ({
+              value: mkt.duration_days,
+              platform_name: mkt.platform_name,
+            })),
+          },
         },
         {
+          icon: "mdi:fountain-pen-tip",
           description: "Market distribution by title length.",
-          items: markets.map((mkt) => ({
-            value: mkt.title.length,
-            platformSlug: mkt.platform_slug,
-          })),
-          plotTitle: "Histogram of Title Length",
-          axisTitleX: "Length (chatacters)",
-          rangeEnd: 200,
+          component: HistogramGeneric,
+          props: {
+            platforms: platforms,
+            plotTitle: "Histogram of Title Length",
+            axisTitleX: "Length (chatacters)",
+            items: markets.map((mkt) => ({
+              value: mkt.title.length,
+              platform_name: mkt.platform_name,
+            })),
+            cutoffMax: 200,
+          },
         },
         {
+          icon: "mdi:file-document-multiple-outline",
           description: "Market distribution by total description length.",
-          items: markets.map((mkt) => ({
-            value: mkt.description.length,
-            platformSlug: mkt.platform_slug,
-          })),
-          plotTitle: "Histogram of Description Length",
-          axisTitleX: "Length (chatacters)",
+          component: HistogramGeneric,
+          props: {
+            platforms: platforms,
+            plotTitle: "Histogram of Description Length",
+            axisTitleX: "Length (chatacters)",
+            items: markets.map((mkt) => ({
+              value: mkt.description.length,
+              platform_name: mkt.platform_name,
+            })),
+          },
         },
         {
+          icon: "mdi:check-all",
           description: "Market distribution by resolution value.",
-          items: markets.map((mkt) => ({
-            value: mkt.resolution,
-            platformSlug: mkt.platform_slug,
-          })),
-          plotTitle: "Histogram of Resolution Value",
-          axisTitleX: "Probability",
+          component: HistogramGeneric,
+          props: {
+            platforms: platforms,
+            plotTitle: "Histogram of Resolution Value",
+            axisTitleX: "Probability",
+            items: markets.map((mkt) => ({
+              value: mkt.resolution,
+              platform_name: mkt.platform_name,
+            })),
+            thresholds: 1,
+          },
         },
       ]}
     />

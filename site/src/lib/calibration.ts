@@ -1,5 +1,4 @@
 import type { MarketDetails } from "@types";
-import type { CalibrationPoint } from "@lib/charts/types";
 import { getCriterionProb } from "@lib/api";
 
 export interface PlatformData {
@@ -15,6 +14,15 @@ export interface Bucket {
   platforms: {
     [key: string]: PlatformData;
   };
+}
+
+export interface CalibrationPoint {
+  platform_slug: string;
+  x_start: number;
+  x_center: number;
+  x_end: number;
+  y_center: number;
+  count: number;
 }
 
 // Creates calibration points from market data for visualization
