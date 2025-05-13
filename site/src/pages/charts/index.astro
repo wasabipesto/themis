@@ -12,7 +12,6 @@ const items = [
   {
     title: "Calibration",
     icon: "mdi:chart-line",
-    num: 4,
     link: "/charts/calibration",
     description:
       "Compare predictions to resolutions. Identify over- and under-confidence in specific platforms and categories.",
@@ -20,7 +19,6 @@ const items = [
   {
     title: "Accuracy",
     icon: "mdi:chart-timeline",
-    num: 5,
     link: "/charts/accuracy",
     description:
       "Examine accuracy metrics such as Brier and logarithmic scores. See if higher volume really does make more accurate markets.",
@@ -28,7 +26,6 @@ const items = [
   {
     title: "Markets",
     icon: "mdi:sitemap",
-    num: 2,
     link: "/charts/markets",
     description:
       "Compare market statistics across all prediction platforms. See what kinds of markets each platform specializes in.",
@@ -36,7 +33,6 @@ const items = [
   {
     title: "Experimental",
     icon: "mdi:test-tube",
-    num: 0,
     link: "/charts/experimental",
     description:
       "See some brand-new experiments, plus all of the charts that wouldn't fit anywhere else.",
@@ -47,15 +43,16 @@ const items = [
 <Base title="Charts">
   <div class="p-4 m-2">
     <h1 class="text-4xl font-bold">Chart Directory</h1>
-    <div class="mt-1">
-      <Icon name="mdi:clock-outline" class="inline mr-1 mb-1" />
-      Last Updated: {stats.lastUpdated}
-    </div>
     <div class="my-4">
-      <p>
-        Numbers are great, but context is better. Compare calibration and
-        accuracy visually in order to get a better understanding of what's
-        really going on.
+      <p class="my-2">
+        Numbers are great, but context is better. We do our best to describe our
+        results, but no textual description will convey as much information as a
+        chart or visualization of some kind. With a chart you can see numerical
+        context and even draw your own conclusions.
+      </p>
+      <p class="my-2">
+        Select a domain below to see all of our statistics visually and get a
+        better understanding of what's really going on.
       </p>
     </div>
   </div>
@@ -74,17 +71,26 @@ const items = [
                 <Icon name={i.icon} class="inline mr-2" />
                 {i.title}
               </h2>
-              <div class="ml-auto">
-                <span class="text-sm">
-                  <Icon name="mdi:chart-box" class="inline" />
-                  {i.num ? `${i.num} charts` : "Coming soon!"}
-                </span>
-              </div>
             </div>
             <p class="m-1 mt-3 italic">{i.description}</p>
           </div>
         </a>
       ))
     }
+  </div>
+
+  <div class="my-10"></div>
+
+  <div class="p-4 m-2">
+    <p class="my-2">
+      Are you looking for charts from the old Calibration City site? I'm working
+      on bringing all of those features over here, but in the meantime you can
+      access it at <a
+        href="https://old.calibration.city"
+        class="text-lavender underline"
+        target="_blank">https://old.calibration.city</a
+      >. Note that it doesn't get data updates as frequently, so it may be a bit
+      out of date.
+    </p>
   </div>
 </Base>
