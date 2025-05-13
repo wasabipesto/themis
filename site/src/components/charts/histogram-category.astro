@@ -1,0 +1,81 @@
+---
+import type { PlatformDetails } from "@types";
+import { percentile, roundSF } from "@lib/stats";
+
+import * as Plot from "@observablehq/plot";
+import { JSDOM } from "jsdom";
+const { document } = new JSDOM().window;
+
+interface Props {
+  platforms: PlatformDetails[];
+  plotTitle: string;
+  axisTitleX: string;
+  items: {
+    value: string;
+    platform_name: string;
+  }[];
+  width?: number;
+  aspectRatio?: number;
+  caption?: string;
+}
+let {
+  platforms,
+  items,
+  plotTitle,
+  axisTitleX,
+  width = 720,
+  aspectRatio,
+  caption,
+} = Astro.props;
+
+// Generate the plot
+const plot = Plot.plot({
+  title: plotTitle,
+  width: width,
+  aspectRatio: aspectRatio,
+  marginLeft: 50,
+  marginRight: 80,
+  x: { label: axisTitleX },
+  y: {
+    grid: true,
+    percent: true,
+    label: "Percent",
+  },
+  fy: { label: null },
+  color: {
+    label: "Platform",
+    domain: platforms.map((p) => p.name),
+    range: platforms.map((p) => p.color_accent),
+  },
+  marks: [
+    Plot.rectY(
+      items,
+      Plot.groupX(
+        { y: "proportion-facet" },
+        {
+          x: "value",
+          fill: "platform_name",
+          fy: "platform_name",
+          insetLeft: 1,
+          insetRight: 1,
+        },
+      ),
+    ),
+    Plot.ruleY([0]),
+  ],
+  document,
+}).outerHTML;
+---
+
+<div
+  class="bg-base-light [&_h2]:text-2xl text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
+>
+  <Fragment set:html={plot} />
+  <p class="text-xs">
+    {caption}
+    n={items.length.toLocaleString()} markets
+  </p>
+  <p class="text-xs">
+    Source: <a href="https://predictionmetrics.org">predictionmetrics.org</a>
+  </p>
+</div>
