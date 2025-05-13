@@ -27,7 +27,6 @@ let {
 
 // Calculate calibration points
 const points = await calculateCalibrationPoints(markets, criterion, weight);
-console.log(points.map((i) => i.uncertainty));
 
 let axisTitleX = {
   midpoint: "Prediction (Midpoint)",
