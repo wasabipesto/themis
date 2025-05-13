@@ -214,6 +214,15 @@ const scoreTypes = [
           </li>
         </ul>
         <p class="my-2">
+          We used to assume that the implied probability of a market before the
+          first trade was 50%, since that is how the probaility is often shown
+          on each platform frontend. However, this caused problems if a
+          significant amount of time elapsed between market creation and the
+          first trade or if there were no trades whatsoever. Now, we consider
+          the market to have no probability until the first trade. We also
+          ignore any market that has zero trades for the same reason.
+        </p>
+        <p class="my-2">
           We do not evaluate non-market items from any platform, such as
           bounties, posts, or non-forecasting polls. Our downloader runs
           nightly, and notifies us of any new or unrecognized market types so we
