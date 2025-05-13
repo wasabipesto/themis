@@ -66,16 +66,16 @@ const plot = Plot.plot({
   },
   marks: [
     Plot.dot(points, {
-      x: "x_center",
-      y: "y_center",
+      x: "pred_center",
+      y: "res_mean",
       r: "count",
       fill: "platform_slug",
       stroke: "platform_slug",
       fillOpacity: 0.5,
     }),
     Plot.line(points, {
-      x: "x_center",
-      y: "y_center",
+      x: "pred_center",
+      y: "res_mean",
       stroke: "platform_slug",
       strokeOpacity: 0.5,
     }),

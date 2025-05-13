@@ -18,10 +18,13 @@ export interface Bucket {
 
 export interface CalibrationPoint {
   platform_slug: string;
-  x_start: number;
-  x_center: number;
-  x_end: number;
-  y_center: number;
+  pred_start: number;
+  pred_center: number;
+  pred_end: number;
+  pred_description: string;
+  res_q1: number;
+  res_mean: number;
+  res_q3: number;
   count: number;
 }
 
@@ -117,10 +120,19 @@ export async function calculateCalibrationPoints(
       if (data.count > 0) {
         points.push({
           platform_slug: platform,
-          x_start: bucket.x_start,
-          x_center: bucket.x_center,
-          x_end: bucket.x_end,
-          y_center: data.sum / data.weight,
+          pred_start: bucket.x_start,
+          pred_center: bucket.x_center,
+          pred_end: bucket.x_end,
+          pred_description:
+            (bucket.x_start < 0.1 ? "0" : "") +
+            (bucket.x_start * 100).toFixed(0) +
+            "-" +
+            (bucket.x_end < 0.1 ? "0" : "") +
+            (bucket.x_end * 100).toFixed(0) +
+            "%",
+          res_q1: data.sum / data.weight - 0.05, // TODO
+          res_mean: data.sum / data.weight,
+          res_q3: data.sum / data.weight + 0.05, // TODO
           count: data.count,
         });
       }
