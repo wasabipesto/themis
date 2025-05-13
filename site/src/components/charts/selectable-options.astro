@@ -14,8 +14,8 @@ const { options } = Astro.props;
 const id = Array.from(
   { length: 36 },
   () =>
-    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"[
-      Math.floor(Math.random() * 62)
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"[
+      Math.floor(Math.random() * 52)
     ],
 ).join("");
 ---
