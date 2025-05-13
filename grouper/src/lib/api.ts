@@ -229,7 +229,7 @@ export async function getSimilarMarkets(
   endDate: string,
 ): Promise<SimilarMarkets[]> {
   return fetchFromAPI(
-    `rpc/find_similar_markets_by_id?target_market_id=${marketId}&platform_slug=eq.${platformSlug}&not.or=(close_datetime.lte.${startDate},open_datetime.gte.${endDate})&question_dismissed=eq.0&limit=100`,
+    `rpc/find_similar_markets_by_id?target_market_id=${marketId}&platform_slug=eq.${platformSlug}&not.or=(close_datetime.lte.${startDate},open_datetime.gte.${endDate})&question_dismissed=eq.0&question_id=is.null&limit=100`,
   );
 }
 
