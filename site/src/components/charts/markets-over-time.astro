@@ -1,43 +1,30 @@
 ---
-import type { MarketDetails } from "@types";
+import type { PlatformDetails, MarketDetails } from "@types";
+import { calculateDateBarPoints } from "@lib/histogram";
 
 import * as Plot from "@observablehq/plot";
 import { JSDOM } from "jsdom";
 const { document } = new JSDOM().window;
 
 interface Props {
+  platforms: PlatformDetails[];
   markets: MarketDetails[];
   width?: number;
   aspectRatio?: number;
   caption?: string;
 }
-let { markets, width = 1100, aspectRatio, caption } = Astro.props;
-
-const cutoffDate = new Date("2020-01-01");
-const marketDates = markets
-  .filter((market) => new Date(market.open_datetime) > cutoffDate)
-  .map((market) => ({
-    market_id: market.id,
-    platform_name: market.platform_name,
-    date: new Date(market.open_datetime),
-    type: "Open",
-  }))
-  .concat(
-    markets
-      .filter((market) => new Date(market.close_datetime) > cutoffDate)
-      .map((market) => ({
-        market_id: market.id,
-        platform_name: market.platform_name,
-        date: new Date(market.close_datetime),
-        type: "Close",
-      })),
-  );
-const numPresent = new Set(marketDates.map((item) => item.market_id)).size;
+let { platforms, markets, width = 1100, aspectRatio, caption } = Astro.props;
+const openPoints = calculateDateBarPoints(markets, "open");
+const closedPoints = calculateDateBarPoints(markets, "closed");
+const numPresent = openPoints.reduce((sum, item) => sum + item.count, 0);
 const numHidden = markets.length - numPresent;
+
+console.log(openPoints[100]);
 
 // Generate the plot
 const plot = Plot.plot({
-  title: "Markets Opened and Closed over Time",
+  title: "Market Open and Close Dates",
+  subtitle: "Markets opened (positive) and closed (ngeative) over time",
   width: width,
   aspectRatio: aspectRatio,
   marginLeft: 40,
@@ -53,27 +40,29 @@ const plot = Plot.plot({
   },
   fy: { label: null },
   color: {
-    domain: ["Open", "Close"],
-    range: ["#59a14f", "#e15759"],
-    label: "Status",
-    legend: true,
+    label: "Platform",
+    domain: platforms.map((p) => p.name),
+    range: platforms.map((p) => p.color_accent),
   },
   marks: [
-    Plot.rectY(
-      marketDates,
-      Plot.binX(
-        { y: "proportion-facet" },
-        {
-          x: "date",
-          // @ts-ignore: Dunno why it doesn't like this line
-          fill: "type",
-          fy: "platform_name",
-          insetLeft: 1,
-          insetRight: 1,
-          interval: "14 days",
-        },
-      ),
-    ),
+    Plot.rectY(openPoints, {
+      x1: (i) => new Date(i.date_start),
+      x2: (i) => new Date(i.date_end),
+      y: (i) => i.percent,
+      fill: "platform_name",
+      fy: "platform_name",
+      insetLeft: 1,
+      insetRight: 1,
+    }),
+    Plot.rectY(closedPoints, {
+      x1: (i) => new Date(i.date_start),
+      x2: (i) => new Date(i.date_end),
+      y: (i) => i.percent * -1,
+      fill: "platform_name",
+      fy: "platform_name",
+      insetLeft: 1,
+      insetRight: 1,
+    }),
     Plot.ruleY([0]),
   ],
   document,
