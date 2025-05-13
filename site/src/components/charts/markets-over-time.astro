@@ -19,8 +19,6 @@ const closedPoints = calculateDateBarPoints(markets, "closed");
 const numPresent = openPoints.reduce((sum, item) => sum + item.count, 0);
 const numHidden = markets.length - numPresent;
 
-console.log(openPoints[100]);
-
 // Generate the plot
 const plot = Plot.plot({
   title: "Market Open and Close Dates",

@@ -12,6 +12,7 @@ export interface DateBarDatapoint {
 export function calculateDateBarPoints(
   markets: MarketDetails[],
   dateKey: "open" | "closed",
+  weightKey?: "volume" | "traders",
   minDate?: number,
   binWidth?: number,
 ): DateBarDatapoint[] {
@@ -29,20 +30,30 @@ export function calculateDateBarPoints(
   const bins: { [platform: string]: number[] } = {};
   markets.forEach((mkt) => {
     const platform = mkt.platform_name;
+
+    // Get time value
     let marketTimeMs;
     if (dateKey == "open") {
       marketTimeMs = new Date(mkt.open_datetime).getTime();
     } else {
       marketTimeMs = new Date(mkt.close_datetime).getTime();
     }
+
+    // Get weight value (TODO)
+    let weight;
+
+    // Crate platform array if not existing
     if (!bins[platform]) {
       bins[platform] = Array(numBins).fill(0);
     }
+
+    // Get index for bin
     const binIndex = Math.min(
       numBins - 1,
       Math.floor((marketTimeMs - minDateMs) / binWidthMs),
     );
-    bins[platform][binIndex] += 1; // TODO: Optional weight here
+
+    bins[platform][binIndex] += 1;
   });
 
   // Calculate points for each platform/bin
