@@ -22,10 +22,9 @@ export interface CalibrationPoint {
   pred_center: number;
   pred_end: number;
   pred_description: string;
-  res_q1: number;
   res_mean: number;
-  res_q3: number;
   count: number;
+  uncertainty: number;
 }
 
 // Creates calibration points from market data for visualization
@@ -130,10 +129,9 @@ export async function calculateCalibrationPoints(
             (bucket.x_end < 0.1 ? "0" : "") +
             (bucket.x_end * 100).toFixed(0) +
             "%",
-          res_q1: data.sum / data.weight - 0.05, // TODO
           res_mean: data.sum / data.weight,
-          res_q3: data.sum / data.weight + 0.05, // TODO
           count: data.count,
+          uncertainty: Math.min(Math.max(3 / Math.sqrt(data.count), 0), 1),
         });
       }
     });

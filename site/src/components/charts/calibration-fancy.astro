@@ -27,6 +27,7 @@ let {
 
 // Calculate calibration points
 const points = await calculateCalibrationPoints(markets, criterion, weight);
+console.log(points.map((i) => i.uncertainty));
 
 let axisTitleX = {
   midpoint: "Prediction (Midpoint)",
@@ -71,9 +72,13 @@ const plot = Plot.plot({
     Plot.ruleX(points, {
       fx: "pred_description",
       x: "platform_slug",
-      y1: "res_q1",
-      y2: "res_q3",
+      y1: (i) => i.res_mean - i.res_mean * i.uncertainty,
+      y2: (i) => i.res_mean + (1 - i.res_mean) * i.uncertainty,
       stroke: "platform_slug",
+    }),
+    Plot.ruleY(points, {
+      fx: "pred_description",
+      y: "pred_center",
     }),
   ],
   document,
