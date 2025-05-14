@@ -1,0 +1,140 @@
+---
+import type { MarketScoreDetails, PlatformDetails } from "@types";
+import { calculateCalibrationPoints } from "@lib/calibration";
+
+import * as Plot from "@observablehq/plot";
+import { JSDOM } from "jsdom";
+import { quartiles } from "@lib/stats";
+const { document } = new JSDOM().window;
+
+interface Props {
+  platforms: PlatformDetails[];
+  scores: MarketScoreDetails[];
+  weight?: string;
+  width?: number;
+  aspectRatio?: number;
+  caption?: string;
+}
+let { platforms, scores, width = 720, aspectRatio, caption } = Astro.props;
+
+let scoreTypes = [
+  {
+    key: "brier-average",
+    label: "Time Average",
+    order: 1,
+  },
+  {
+    key: "brier-midpoint",
+    label: "At Midpoint",
+    order: 2,
+  },
+  {
+    key: "brier-before-close-days-30",
+    label: "30 Days Before Close",
+    order: 3,
+  },
+  {
+    key: "brier-before-close-days-7",
+    label: "7 Days Before Close",
+    order: 4,
+  },
+];
+
+const scoresStats = [];
+// Iterate through all score types
+for (const scoreType of scoreTypes) {
+  // Iterate through all platforms
+  for (const platform of platforms) {
+    // Filter scores for current score type and platform
+    const filteredScores = scores
+      .filter(
+        (ms) =>
+          ms.score_type === scoreType.key && ms.platform_name === platform.name,
+      )
+      .map((ms) => ms.score);
+
+    // Only add to scoresStats if we have scores for this combination
+    if (filteredScores.length > 0) {
+      scoresStats.push({
+        score_type: scoreType.key,
+        score_type_order: scoreType.order,
+        platform_name: platform.name,
+        ...quartiles(filteredScores),
+      });
+    }
+  }
+}
+
+// Generate the plot
+const plot = Plot.plot({
+  title: "Brier Scores at Different Points in Time",
+  width: width,
+  aspectRatio: aspectRatio,
+  marginBottom: 60,
+  fx: {
+    label: "Point In Time",
+    tickFormat: (d) => scoreTypes.find((st) => st.key === d)?.label || d,
+  },
+  x: { axis: null },
+  y: {
+    grid: true,
+    domain: [0, 0.8],
+    label: "Brier Score at Specified Point",
+  },
+  color: {
+    legend: platforms.length > 1,
+    label: "Platform",
+    domain: platforms.map((p) => p.name),
+    range: platforms.map((p) => p.color_primary),
+  },
+  marks: [
+    Plot.ruleX(scoresStats, {
+      fx: "score_type",
+      x: "platform_name",
+      y1: "c1",
+      y2: "q1",
+      channels: { fxorder: "score_type_order" },
+      sort: { fx: "fxorder" },
+    }),
+    Plot.barY(scoresStats, {
+      fx: "score_type",
+      x: "platform_name",
+      y1: "q1",
+      y2: "q3",
+      channels: { fxorder: "score_type_order" },
+      sort: { fx: "fxorder" },
+      fill: "platform_name",
+      strokeWidth: 2,
+    }),
+    Plot.ruleX(scoresStats, {
+      fx: "score_type",
+      x: "platform_name",
+      y1: "q3",
+      y2: "c3",
+      channels: { fxorder: "score_type_order" },
+      sort: { fx: "fxorder" },
+    }),
+    Plot.tickY(scoresStats, {
+      fx: "score_type",
+      x: "platform_name",
+      y: "q2",
+      channels: { fxorder: "score_type_order" },
+      sort: { fx: "fxorder" },
+      strokeWidth: 2,
+    }),
+  ],
+  document,
+}).outerHTML;
+---
+
+<div
+  class="bg-base-light [&_h2]:text-2xl text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
+>
+  <Fragment set:html={plot} />
+  <p class="text-xs">
+    {caption}
+  </p>
+  <p class="text-xs">
+    Source: <a href="https://predictionmetrics.org">predictionmetrics.org</a>
+  </p>
+</div>

@@ -1,16 +1,19 @@
 ---
 import Base from "@layouts/base.astro";
-import SelectableOptions from "@components/charts/selectable-options.astro";
 import CalibrationFancy from "@components/charts/calibration-fancy.astro";
-import { getMarkets, getPlatforms, getCategories } from "@lib/api";
+import BoxScoresByCriterion from "@components/charts/box-scores-by-criterion.astro";
+import { getMarkets, getPlatforms, getMarketScores } from "@lib/api";
 
 // Download markets and platforms
 const markets = await getMarkets();
 const platforms = await getPlatforms();
-const categories = await getCategories();
+const marketScores = await getMarketScores();
+
+// pre-sort scores for easier percentile calculations
+const scores = [...marketScores].sort((a, b) => a.score - b.score);
 ---
 
-<Base title="Calibration Charts">
+<Base title="Experiments">
   <div class="p-4 m-2 pb-0 mb-0">
     <h1 class="text-4xl font-bold">Experiments!</h1>
     <div class="mt-2">
@@ -35,5 +38,18 @@ const categories = await getCategories();
       </div>
     </div>
     <CalibrationFancy platforms={platforms} markets={markets} width={1100} />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h2 class="font-bold text-2xl">Scores By Criterion Point</h2>
+      <div class="my-2">
+        We calculate scores at different criterion points, such as 30 days
+        before the market closes. This plot compares the Brier scores
+        side-by-side for all criterion points.
+      </div>
+    </div>
+    <BoxScoresByCriterion platforms={platforms} scores={scores} width={1100} />
   </div>
 </Base>
