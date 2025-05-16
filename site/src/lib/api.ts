@@ -10,8 +10,11 @@ import type {
   QuestionDetails,
   SimilarQuestions,
 } from "@types";
+import fs from "fs";
+import path from "path";
 
 const PGRST_URL = import.meta.env.PGRST_URL;
+const CACHE_DIR = path.resolve(process.cwd(), ".cache");
 
 class APIError extends Error {
   status: number;
@@ -27,10 +30,49 @@ class APIError extends Error {
   }
 }
 
+// Ensure cache directory exists
+function ensureCacheDir() {
+  if (!fs.existsSync(CACHE_DIR)) {
+    try {
+      fs.mkdirSync(CACHE_DIR, { recursive: true });
+    } catch (error) {
+      console.warn(`Failed to create cache directory: ${error}`);
+    }
+  }
+}
+
+// Save data to disk cache
+function saveToCache<T>(cacheKey: string, data: T): void {
+  try {
+    ensureCacheDir();
+    const cacheFile = path.join(CACHE_DIR, `${cacheKey}.json`);
+    fs.writeFileSync(cacheFile, JSON.stringify(data), "utf8");
+    console.log(`Saved cache to ${cacheFile}`);
+  } catch (error) {
+    console.warn(`Failed to save cache for ${cacheKey}: ${error}`);
+  }
+}
+
+// Load data from disk cache
+function loadFromCache<T>(cacheKey: string): T | null {
+  try {
+    const cacheFile = path.join(CACHE_DIR, `${cacheKey}.json`);
+    if (!fs.existsSync(cacheFile)) {
+      return null;
+    }
+    const cacheData = JSON.parse(fs.readFileSync(cacheFile, "utf8"));
+    console.log(`Loaded cache from ${cacheFile}`);
+    return cacheData as T;
+  } catch (error) {
+    console.warn(`Failed to load cache for ${cacheKey}: ${error}`);
+    return null;
+  }
+}
+
 export async function fetchFromAPI<T>(
   endpoint: string,
   options: RequestInit = {},
-  timeout: number = 10_000,
+  timeout: number = 30_000,
 ): Promise<T> {
   if (!PGRST_URL) {
     throw new Error("API URL is not configured");
@@ -215,9 +257,16 @@ export async function getMarketsByQuestion(
 
 let cachedMarkets: MarketDetails[] | null = null;
 export async function getMarkets(): Promise<MarketDetails[]> {
-  // Return cache if existing
+  // Return memory cache if existing
   if (cachedMarkets) {
     return cachedMarkets;
+  }
+
+  // Try to load from disk cache
+  const diskCache = loadFromCache<MarketDetails[]>("markets");
+  if (diskCache) {
+    cachedMarkets = diskCache;
+    return diskCache;
   }
 
   console.log("Refreshing market cache.");
@@ -237,6 +286,10 @@ export async function getMarkets(): Promise<MarketDetails[]> {
   }
   console.log(`Finished downloading markets, ${allMarkets.length} items`);
   cachedMarkets = allMarkets;
+
+  // Save to disk cache
+  saveToCache("markets", allMarkets);
+
   return allMarkets;
 }
 
@@ -248,12 +301,21 @@ export async function getCriterionProb(
   criterion_type: string,
 ): Promise<CriterionProbability | null> {
   if (cachedCriterionProbsLoading) {
-    //console.log("Waiting for criterion probability cache to refresh...");
     await new Promise((resolve) => setTimeout(resolve, 1000));
     return getCriterionProb(market_id, criterion_type);
   }
   const key = `${market_id}/${criterion_type}`;
   if (cachedCriterionProbsLoaded) {
+    return cachedCriterionProbs.get(key) || null;
+  }
+
+  // Try to load from disk cache
+  const cachedMapEntries =
+    loadFromCache<[string, CriterionProbability][]>("criterion_probs");
+  if (cachedMapEntries) {
+    // Restore the Map from cached entries
+    cachedCriterionProbs = new Map(cachedMapEntries);
+    cachedCriterionProbsLoaded = true;
     return cachedCriterionProbs.get(key) || null;
   }
 
@@ -290,6 +352,10 @@ export async function getCriterionProb(
   );
   cachedCriterionProbsLoading = false;
   cachedCriterionProbsLoaded = true;
+
+  // Save to disk cache - convert Map to array of entries for JSON serialization
+  saveToCache("criterion_probs", Array.from(cachedCriterionProbs.entries()));
+
   return cachedCriterionProbs.get(key) || null;
 }
 
@@ -297,6 +363,13 @@ let cachedMarketScores: MarketScoreDetails[] | null = null;
 export async function getMarketScores(): Promise<MarketScoreDetails[]> {
   if (cachedMarketScores) {
     return cachedMarketScores;
+  }
+
+  // Try to load from disk cache
+  const diskCache = loadFromCache<MarketScoreDetails[]>("market_scores");
+  if (diskCache) {
+    cachedMarketScores = diskCache;
+    return diskCache;
   }
 
   console.log("Refreshing market scores cache.");
@@ -318,6 +391,10 @@ export async function getMarketScores(): Promise<MarketScoreDetails[]> {
     `Finished downloading market scores, ${allMarketScores.length} items`,
   );
   cachedMarketScores = allMarketScores;
+
+  // Save to disk cache
+  saveToCache("market_scores", allMarketScores);
+
   return allMarketScores;
 }
 
