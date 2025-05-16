@@ -8,6 +8,7 @@ import HistogramCategory from "@components/charts/histogram-category.astro";
 import MarketsOverTime from "@components/charts/markets-over-time.astro";
 import CalibrationFancy from "@components/charts/calibration-fancy.astro";
 import BoxScoresByCriterion from "@components/charts/box-scores-by-criterion.astro";
+import { Icon } from "astro-icon/components";
 import {
   getPlatforms,
   getCategories,
@@ -39,7 +40,15 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
   </div>
 
   <div class="p-4 m-2 pb-0 mb-0">
-    <h2 class="text-3xl font-bold" id="calibration">Calibration Charts</h2>
+    <h2 class="text-3xl font-bold" id="calibration">
+      Calibration Charts
+      <a href="#calibration">
+        <Icon
+          name="mdi:link-variant"
+          class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+        />
+      </a>
+    </h2>
     <div class="mt-2">
       Calibration is a very simple metric at its core. If a market's listed
       probability is at 70%, we should expect it to resolve YES about 70% of the
@@ -55,6 +64,12 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
     <div class="my-4">
       <h3 class="font-bold text-2xl" id="calibration-selection">
         Basic Filtering
+        <a href="#calibration-selection">
+          <Icon
+            name="mdi:link-variant"
+            class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+          />
+        </a>
       </h3>
       <div class="my-2">
         Select markets to include in the calibration plot based on key
@@ -160,6 +175,12 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
     <div class="my-4">
       <h3 class="font-bold text-2xl" id="calibration-category">
         Category Filtering
+        <a href="#calibration-category">
+          <Icon
+            name="mdi:link-variant"
+            class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+          />
+        </a>
       </h3>
       <div class="my-2">
         Group markets based on what category they're in. This is determined by
@@ -201,6 +222,12 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
     <div class="my-4">
       <h3 class="font-bold text-2xl" id="calibration-criterion">
         Differing Predictions
+        <a href="#calibration-criterion">
+          <Icon
+            name="mdi:link-variant"
+            class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+          />
+        </a>
       </h3>
       <div class="my-2">
         Up until this point we've used the midpoint of each market as the
@@ -289,6 +316,12 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
     <div class="my-4">
       <h3 class="font-bold text-2xl" id="calibration-weight">
         Weighted Averages
+        <a href="#calibration-weight">
+          <Icon
+            name="mdi:link-variant"
+            class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+          />
+        </a>
       </h3>
       <div class="my-2">
         Typically all markets are trated equally with a raw average. What if we
@@ -359,7 +392,15 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
   <hr class="my-2" />
 
   <div class="p-4 m-2 pb-0 mb-0">
-    <h2 class="text-3xl font-bold" id="accuracy">Accuracy Charts</h2>
+    <h2 class="text-3xl font-bold" id="accuracy">
+      Accuracy Charts
+      <a href="#accuracy">
+        <Icon
+          name="mdi:link-variant"
+          class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+        />
+      </a>
+    </h2>
     <div class="mt-2">
       While calibration is focused on how your predictions match reality,
       accuracy is focused on how often you were correct. The main accuracy score
@@ -374,6 +415,12 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
     <div class="my-4">
       <h3 class="font-bold text-2xl" id="accuracy-selection">
         Basic Filtering
+        <a href="#accuracy-selection">
+          <Icon
+            name="mdi:link-variant"
+            class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+          />
+        </a>
       </h3>
       <div class="my-2">
         Select markets to include based on key attributes, such as number of
@@ -475,7 +522,15 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
 
   <div class="p-4 m-2">
     <div class="my-4">
-      <h3 class="font-bold text-2xl" id="accuracy-scoretype">Pick a Score</h3>
+      <h3 class="font-bold text-2xl" id="accuracy-scoretype">
+        Pick a Score
+        <a href="#accuracy-scoretype">
+          <Icon
+            name="mdi:link-variant"
+            class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+          />
+        </a>
+      </h3>
       <div class="my-2">
         We use the Brier score by default in most plots, but we calculate many
         more. Take a look at how the platforms compare when using these
@@ -571,6 +626,12 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
     <div class="my-4">
       <h3 class="font-bold text-2xl" id="accuracy-category">
         Category Filtering
+        <a href="#accuracy-category">
+          <Icon
+            name="mdi:link-variant"
+            class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+          />
+        </a>
       </h3>
       <div class="my-2">
         Group markets based on what category they're in. This is determined by
@@ -608,7 +669,15 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
 
   <div class="p-4 m-2">
     <div class="my-4">
-      <h3 class="font-bold text-2xl" id="accuracy-resolution">Resolution</h3>
+      <h3 class="font-bold text-2xl" id="accuracy-resolution">
+        Resolution
+        <a href="#accuracy-resolution">
+          <Icon
+            name="mdi:link-variant"
+            class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+          />
+        </a>
+      </h3>
       <div class="my-2">
         At a glance, you might think the resolution of a market shouldn't affect
         the accuracy much. However, there tend to be distinct types of markets
@@ -670,7 +739,15 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
   <hr class="my-2" />
 
   <div class="p-4 m-2 pb-0 mb-0">
-    <h2 class="text-3xl font-bold" id="markets">Market Charts</h2>
+    <h2 class="text-3xl font-bold" id="markets">
+      Market Charts
+      <a href="#markets">
+        <Icon
+          name="mdi:link-variant"
+          class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+        />
+      </a>
+    </h2>
     <div class="mt-2">
       What is a market, really? They're similar under the hood - people trade on
       different outcomes at different prices, leading to a consensus probability
@@ -688,6 +765,12 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
     <div class="my-4">
       <h3 class="font-bold text-2xl" id="market-attributes">
         Histograms of Attributes
+        <a href="#market-attributes">
+          <Icon
+            name="mdi:link-variant"
+            class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+          />
+        </a>
       </h3>
       <div class="my-2">
         How much trade volume do these markets typically see? How many traders
@@ -796,6 +879,12 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
     <div class="my-4">
       <h3 class="font-bold text-2xl" id="market-categories">
         Market Categories
+        <a href="#market-categories">
+          <Icon
+            name="mdi:link-variant"
+            class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+          />
+        </a>
       </h3>
       <div class="my-2">
         Each platform tends to focus on certain categories. Some of this is site
@@ -820,7 +909,15 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
 
   <div class="p-4 m-2">
     <div class="my-4">
-      <h3 class="font-bold text-2xl" id="vary-selection">Markets over Time</h3>
+      <h3 class="font-bold text-2xl" id="markets-over-time">
+        Markets over Time
+        <a href="markets-over-time">
+          <Icon
+            name="mdi:link-variant"
+            class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+          />
+        </a>
+      </h3>
       <div class="my-2">
         Prediction markets have become more popular over time, but are there
         more markets to meet that increased demand? Have there been any
@@ -832,7 +929,15 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
   <hr class="my-2" />
 
   <div class="p-4 m-2 pb-0 mb-0">
-    <h2 class="text-3xl font-bold">Experiments!</h2>
+    <h2 class="text-3xl font-bold" id="experiments">
+      Experiments!
+      <a href="#experiments">
+        <Icon
+          name="mdi:link-variant"
+          class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+        />
+      </a>
+    </h2>
     <div class="mt-2">
       The venn diagram of data visualizations that I think are useful,
       interesting, non-obvious, and readable has a very small center. Below are
@@ -845,6 +950,12 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
     <div class="my-4">
       <h3 class="font-bold text-2xl" id="calibration-alt">
         Alternate Calibration Visualization
+        <a href="#calibration-alt">
+          <Icon
+            name="mdi:link-variant"
+            class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+          />
+        </a>
       </h3>
       <div class="my-2">
         The main calibration charts stack all of the platform data points in a
@@ -864,6 +975,12 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
     <div class="my-4">
       <h3 class="font-bold text-2xl" id="accuracy-criterion-alt">
         Scores By Criterion Point
+        <a href="#accuracy-criterion-alt">
+          <Icon
+            name="mdi:link-variant"
+            class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+          />
+        </a>
       </h3>
       <div class="my-2">
         We calculate scores at different criterion points, such as 30 days
