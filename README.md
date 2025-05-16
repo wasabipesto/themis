@@ -1,8 +1,6 @@
 # What is this
 
-This is Project Themis, a suite of tools which powers the site [Calibration City](https://calibration.city/). The purpose of this project is to perform useful analysis of prediction market calibration and accuracy with data from each platform's public API.
-
-This project is in the middle of a rewrite. You can check out the latest build of the new site at [https://beta.predictionmetrics.org/](https://beta.predictionmetrics.org/). I hope to launch the new site sometime in early May.
+This is Project Themis, a suite of tools which powers [Brier.fyi](https://brier.fyi/) and previously [Calibration City](https://calibration.city/). The purpose of this project is to perform useful analysis of prediction market calibration and accuracy with data from each platform's public API.
 
 # How to run this yourself
 
@@ -241,8 +239,8 @@ If you're just developing on the site you don't actually need to use the downloa
 
 You can build the site against my public database that the main site builds from by doing either of these:
 
-- Change the `PGRST_URL` variable in the `.env` environment file to `https://data.predictionmetrics.org`.
-- Run the site development server with `PGRST_URL="https://data.predictionmetrics.org" just site-dev`.
+- Change the `PGRST_URL` variable in the `.env` environment file to `https://data.brier.fyi`.
+- Run the site development server with `PGRST_URL="https://data.brier.fyi" just site-dev`.
 
 First load of the dev site will be slow while it caches some of the Big Data™. Other than that the Astro project should be pretty straightforward.
 
@@ -328,14 +326,14 @@ TODO: This isn't actually set up yet. See https://calibration.city/ for the curr
 
 The production database is publicly readable via PostgREST here:
 
-- [https://data.predictionmetrics.org](https://data.predictionmetrics.org/)
+- [https://data.brier.fyi](https://data.brier.fyi/)
 
 For example, to get items from various tables:
 
 ```bash
-curl -sf https://data.predictionmetrics.org/question_details?limit=100
-curl -sf https://data.predictionmetrics.org/market_details?limit=100
-curl -sf https://data.predictionmetrics.org/daily_probability_details?limit=100
+curl -sf https://data.brier.fyi/question_details?limit=100
+curl -sf https://data.brier.fyi/market_details?limit=100
+curl -sf https://data.brier.fyi/daily_probability_details?limit=100
 ```
 
 You can find PostgREST documentation here:
