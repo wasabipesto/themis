@@ -1,0 +1,890 @@
+---
+import Base from "@layouts/base.astro";
+import SelectableOptions from "@components/charts/selectable-options.astro";
+import CalibrationDefault from "@components/charts/calibration-default.astro";
+import HistogramWithBox from "@components/charts/histogram-scores-with-box.astro";
+import HistogramGeneric from "@components/charts/histogram-generic.astro";
+import HistogramCategory from "@components/charts/histogram-category.astro";
+import MarketsOverTime from "@components/charts/markets-over-time.astro";
+import CalibrationFancy from "@components/charts/calibration-fancy.astro";
+import BoxScoresByCriterion from "@components/charts/box-scores-by-criterion.astro";
+import {
+  getPlatforms,
+  getCategories,
+  getMarkets,
+  getMarketScores,
+} from "@lib/api";
+
+// Download data
+const platforms = await getPlatforms();
+const categories = await getCategories();
+const markets = await getMarkets();
+const marketScores = await getMarketScores();
+
+// pre-sort scores for easier percentile calculations
+const scores = [...marketScores].sort((a, b) => a.score - b.score);
+---
+
+<Base title="Charts">
+  <div class="p-4 m-2">
+    <h1 class="text-4xl font-bold">Charts and Visualizations</h1>
+    <div class="my-4">
+      <p class="my-2">
+        Numbers are great, but context is better. We do our best to describe our
+        results, but no textual description will convey as much information as a
+        chart or visualization of some kind. Our goal is to let you see the
+        numerical context and draw your own conclusions.
+      </p>
+    </div>
+  </div>
+
+  <div class="p-4 m-2 pb-0 mb-0">
+    <h2 class="text-3xl font-bold" id="calibration">Calibration Charts</h2>
+    <div class="mt-2">
+      Calibration is a very simple metric at its core. If a market's listed
+      probability is at 70%, we should expect it to resolve YES about 70% of the
+      time. For all past markets, we can look at the market's midpoint
+      probability and compare it to the end result. If those numbers match, we
+      say the platform is well-calibrated. If they don't, there may be some
+      systemic reason why forecasters routinely under- or over-estimate the
+      odds.
+    </div>
+  </div>
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h3 class="font-bold text-2xl" id="calibration-selection">
+        Basic Filtering
+      </h3>
+      <div class="my-2">
+        Select markets to include in the calibration plot based on key
+        attributes, such as number of traders, market volume, and duration.
+        Alternatively, pick from a few other selection criteria.
+      </div>
+    </div>
+    <SelectableOptions
+      options={[
+        {
+          icon: "mdi:all-inclusive-box",
+          description: "Show all resolved markets.",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets,
+            scoreType: "brier-midpoint",
+          },
+        },
+        {
+          icon: "mdi:alpha-a-box",
+          description:
+            "Filter to at least 10 traders or $100 in trade volume, and open for at least 2 days.",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => {
+              return (
+                ((market.traders_count !== null &&
+                  market.traders_count >= 10) ||
+                  (market.volume_usd !== null && market.volume_usd >= 100)) &&
+                market.duration_days >= 2
+              );
+            }),
+            scoreType: "brier-midpoint",
+          },
+        },
+        {
+          icon: "mdi:alpha-b-box",
+          description:
+            "Filter to at least 100 traders or $1000 in trade volume, and open for at least 14 days.",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => {
+              return (
+                ((market.traders_count !== null &&
+                  market.traders_count >= 100) ||
+                  (market.volume_usd !== null && market.volume_usd >= 1000)) &&
+                market.duration_days >= 14
+              );
+            }),
+            scoreType: "brier-midpoint",
+          },
+        },
+        {
+          icon: "mdi:alpha-c-box",
+          description:
+            "Filter to at least 1000 traders or $10,000 in trade volume, and open for at least 30 days.",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((ms) => {
+              return (
+                ((ms.traders_count !== null && ms.traders_count >= 1000) ||
+                  (ms.volume_usd !== null && ms.volume_usd >= 10000)) &&
+                ms.duration_days >= 30
+              );
+            }),
+            scoreType: "brier-midpoint",
+          },
+        },
+        {
+          icon: "mdi:calendar-check",
+          description: "Filter to markets resolved in the past 12 months.",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter(
+              (market) =>
+                new Date(market.close_datetime).getTime() >=
+                new Date().getTime() - 365 * 24 * 60 * 60 * 1000,
+            ),
+            scoreType: "brier-midpoint",
+          },
+        },
+        {
+          icon: "mdi:check-decagram",
+          description: "Filter to markets that have been linked in questions.",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => market.question_id),
+            scoreType: "brier-midpoint",
+          },
+        },
+      ]}
+    />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h3 class="font-bold text-2xl" id="calibration-category">
+        Category Filtering
+      </h3>
+      <div class="my-2">
+        Group markets based on what category they're in. This is determined by
+        how they are categorized on each platforn, and not all platforms are
+        supported yet.
+      </div>
+    </div>
+    <SelectableOptions
+      options={[
+        {
+          icon: "mdi:compass-rose",
+          description: "All categories",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets,
+            scoreType: "brier-midpoint",
+          },
+        },
+      ].concat(
+        categories.map((category) => ({
+          icon: category.icon,
+          description: category.name,
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter(
+              (market) => market.category_slug == category.slug,
+            ),
+            scoreType: "brier-midpoint",
+          },
+        })),
+      )}
+    />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h3 class="font-bold text-2xl" id="calibration-criterion">
+        Differing Predictions
+      </h3>
+      <div class="my-2">
+        Up until this point we've used the midpoint of each market as the
+        refrence value. What if we used something else, such as the average
+        probability or a fixed point in time?
+      </div>
+    </div>
+    <SelectableOptions
+      options={[
+        {
+          icon: "mdi:format-horizontal-align-center",
+          description: "Probability at midpoint (default)",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets,
+            criterion: "midpoint",
+          },
+        },
+        {
+          icon: "mdi:timer-outline",
+          description: "Time-weighted average probability",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets,
+            criterion: "time-average",
+          },
+        },
+        {
+          icon: "mdi:timer-sand-complete",
+          description: "Probability 24 hours before resolution",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => market.duration_days > 2),
+            criterion: "before-close-hours-24",
+          },
+        },
+        {
+          icon: "mdi:timer-sand-complete",
+          description: "Probability 30 days before resolution",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => market.duration_days > 31),
+            criterion: "before-close-days-30",
+          },
+        },
+        {
+          icon: "mdi:timer-sand-complete",
+          description: "Probability 90 days before resolution",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => market.duration_days > 91),
+            criterion: "before-close-days-90",
+          },
+        },
+        {
+          icon: "mdi:timer-sand-complete",
+          description: "Probability 365 days before resolution",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => market.duration_days > 366),
+            criterion: "before-close-days-365",
+          },
+        },
+        {
+          icon: "mdi:timer-sand",
+          description: "Probability 24 hours after open",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => market.duration_days > 2),
+            criterion: "after-start-hours-24",
+          },
+        },
+      ]}
+    />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h3 class="font-bold text-2xl" id="calibration-weight">
+        Weighted Averages
+      </h3>
+      <div class="my-2">
+        Typically all markets are trated equally with a raw average. What if we
+        used a weighted average instead? For instance, markets with $100 in
+        trade volume might be weighted 10 times as heavily as one with $10. This
+        allows us to prioritize markets that have properties we think are
+        beneficial without ignoring others.
+      </div>
+    </div>
+    <SelectableOptions
+      options={[
+        {
+          icon: "mdi:border-none-variant",
+          description: "Unweighted",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets,
+          },
+        },
+        {
+          icon: "mdi:cash",
+          description: "Weight market by trade volume",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter(
+              (market) => market.volume_usd && market.volume_usd > 0,
+            ),
+            weight: "volume_usd",
+          },
+        },
+        {
+          icon: "mdi:account-multiple",
+          description: "Weight market by number of traders",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter(
+              (market) => market.traders_count && market.traders_count > 0,
+            ),
+            weight: "traders_count",
+          },
+        },
+        {
+          icon: "mdi:calendar-blank",
+          description: "Weight market by market duration",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => market.duration_days > 0),
+            weight: "duration_days",
+          },
+        },
+        {
+          icon: "mdi:calendar-clock",
+          description: "Weight market by recency",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets,
+            weight: "recency",
+          },
+        },
+      ]}
+    />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2 pb-0 mb-0">
+    <h2 class="text-3xl font-bold" id="accuracy">Accuracy Charts</h2>
+    <div class="mt-2">
+      While calibration is focused on how your predictions match reality,
+      accuracy is focused on how often you were correct. The main accuracy score
+      we use here is the Brier score, which compares the prediction (usually at
+      the market's midpoint) with the resolution at the end of the market. The
+      thing to remember is that the Brier score meausres how far off you are,
+      meaning that a lower score is actaully better!
+    </div>
+  </div>
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h3 class="font-bold text-2xl" id="accuracy-selection">
+        Basic Filtering
+      </h3>
+      <div class="my-2">
+        Select markets to include based on key attributes, such as number of
+        traders, market volume, and duration. Alternatively, pick from a few
+        other selection criteria.
+      </div>
+    </div>
+    <SelectableOptions
+      options={[
+        {
+          icon: "mdi:all-inclusive-box",
+          description: "Show all resolved markets.",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "brier-midpoint",
+          },
+        },
+        {
+          icon: "mdi:alpha-a-box",
+          description:
+            "Filter to at least 10 traders or $100 in trade volume, and open for at least 2 days.",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores.filter((ms) => {
+              return (
+                ((ms.traders_count !== null && ms.traders_count >= 10) ||
+                  (ms.volume_usd !== null && ms.volume_usd >= 100)) &&
+                ms.duration_days >= 2
+              );
+            }),
+            scoreType: "brier-midpoint",
+          },
+        },
+        {
+          icon: "mdi:alpha-b-box",
+          description:
+            "Filter to at least 100 traders or $1000 in trade volume, and open for at least 14 days.",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores.filter((ms) => {
+              return (
+                ((ms.traders_count !== null && ms.traders_count >= 100) ||
+                  (ms.volume_usd !== null && ms.volume_usd >= 1000)) &&
+                ms.duration_days >= 14
+              );
+            }),
+            scoreType: "brier-midpoint",
+          },
+        },
+        {
+          icon: "mdi:alpha-c-box",
+          description:
+            "Filter to at least 1000 traders or $10,000 in trade volume, and open for at least 30 days.",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores.filter((ms) => {
+              return (
+                ((ms.traders_count !== null && ms.traders_count >= 1000) ||
+                  (ms.volume_usd !== null && ms.volume_usd >= 10000)) &&
+                ms.duration_days >= 30
+              );
+            }),
+            scoreType: "brier-midpoint",
+          },
+        },
+        {
+          icon: "mdi:calendar-check",
+          description: "Filter to markets resolved in the past 12 months.",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores.filter(
+              (ms) =>
+                new Date(ms.close_datetime).getTime() >=
+                new Date().getTime() - 365 * 24 * 60 * 60 * 1000,
+            ),
+            scoreType: "brier-midpoint",
+          },
+        },
+        {
+          icon: "mdi:check-decagram",
+          description: "Filter to markets that have been linked in questions.",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores.filter((ms) => ms.question_id),
+            scoreType: "brier-midpoint",
+          },
+        },
+      ]}
+    />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h3 class="font-bold text-2xl" id="accuracy-scoretype">Pick a Score</h3>
+      <div class="my-2">
+        We use the Brier score by default in most plots, but we calculate many
+        more. Take a look at how the platforms compare when using these
+        alternative scoring methods.
+      </div>
+      <div class="my-2">
+        Are there significant spikes or outliers in the accuracy distribution?
+        For instance, a spike around Brier score 0.25 would indicate lots of
+        markets that rested at 50% probability.
+      </div>
+    </div>
+    <SelectableOptions
+      options={[
+        {
+          description:
+            "Market Brier score, calculated with midpoint probability",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "brier-midpoint",
+          },
+        },
+        {
+          description: "Market Brier score, averaged over the entire market",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "brier-average",
+          },
+        },
+        {
+          description: "Market Brier score, 30 days before resolution",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "brier-before-close-days-30",
+          },
+        },
+        {
+          description: "Relative Brier score, calculated for linked markets",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "brier-relative",
+          },
+        },
+        {
+          description: "Market log score, calculated with midpoint probability",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "logarithmic-midpoint",
+          },
+        },
+        {
+          description: "Market log score, averaged over the entire market",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "logarithmic-average",
+          },
+        },
+        {
+          description: "Market log score, 30 days before resolution",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "logarithmic-before-close-days-30",
+          },
+        },
+        {
+          description: "Relative log score, calculated for linked markets",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "logarithmic-relative",
+          },
+        },
+      ]}
+    />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h3 class="font-bold text-2xl" id="accuracy-category">
+        Category Filtering
+      </h3>
+      <div class="my-2">
+        Group markets based on what category they're in. This is determined by
+        how they are categorized on each platforn, and not all platforms are
+        supported yet.
+      </div>
+    </div>
+    <SelectableOptions
+      options={[
+        {
+          icon: "mdi:compass-rose",
+          description: "All categories",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "brier-midpoint",
+          },
+        },
+      ].concat(
+        categories.map((category) => ({
+          icon: category.icon,
+          description: category.name,
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores.filter((ms) => ms.category_slug == category.slug),
+            scoreType: "brier-midpoint",
+          },
+        })),
+      )}
+    />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h3 class="font-bold text-2xl" id="accuracy-resolution">Resolution</h3>
+      <div class="my-2">
+        At a glance, you might think the resolution of a market shouldn't affect
+        the accuracy much. However, there tend to be distinct types of markets
+        on most platforms (often in the form of "Will X event happen by Y
+        date?"). If you believe that <a
+          href="https://knowyourmeme.com/memes/nothing-ever-happens"
+          class="text-lavender">nothing ever happens</a
+        >, then you might expect that betting NO a lot will make you pretty
+        accurate.
+      </div>
+    </div>
+    <SelectableOptions
+      options={[
+        {
+          icon: "mdi:all-inclusive-box",
+          description: "All markets, regardless of resolution",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "brier-midpoint",
+          },
+        },
+        {
+          icon: "mdi:check-circle-outline",
+          description: "Only markets that resolved YES",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores.filter((ms) => ms.resolution == 1),
+            scoreType: "brier-midpoint",
+          },
+        },
+        {
+          icon: "mdi:minus-circle-outline",
+          description: "Only markets that resolved NO",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores.filter((ms) => ms.resolution == 0),
+            scoreType: "brier-midpoint",
+          },
+        },
+        {
+          icon: "mdi:help-circle",
+          description: "Only markets that resolved to something inbetween",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores.filter(
+              (ms) => ms.resolution != 0 && ms.resolution != 1,
+            ),
+            scoreType: "brier-midpoint",
+          },
+        },
+      ]}
+    />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2 pb-0 mb-0">
+    <h2 class="text-3xl font-bold" id="markets">Market Charts</h2>
+    <div class="mt-2">
+      What is a market, really? They're similar under the hood - people trade on
+      different outcomes at different prices, leading to a consensus probability
+      whether that's with a limit order book, an automated market maker, or some
+      other mechanism. However, you can see how flexible they are by how the
+      different platforms leverage this mechanism.
+    </div>
+    <div class="mt-2">
+      Here, we'll look at some of the specific traits we measure on each market
+      to see how they compare across platforms.
+    </div>
+  </div>
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h3 class="font-bold text-2xl" id="market-attributes">
+        Histograms of Attributes
+      </h3>
+      <div class="my-2">
+        How much trade volume do these markets typically see? How many traders
+        participate on markets on each platform? How long are they typically
+        open?
+      </div>
+    </div>
+    <SelectableOptions
+      options={[
+        {
+          icon: "mdi:cash",
+          description: "Market distribution by trade volume.",
+          component: HistogramGeneric,
+          props: {
+            platforms: platforms,
+            plotTitle: "Histogram of Volume",
+            axisTitleX: "Volume (USD)",
+            items: markets
+              .filter((mkt) => mkt.volume_usd && mkt.volume_usd > 0)
+              .map((mkt) => ({
+                value: mkt.volume_usd || 0,
+                platform_name: mkt.platform_name,
+              })),
+          },
+        },
+        {
+          icon: "mdi:account-multiple",
+          description: "Market distribution by number of traders.",
+          component: HistogramGeneric,
+          props: {
+            platforms: platforms,
+            plotTitle: "Histogram of Traders",
+            axisTitleX: "Trader count",
+            items: markets
+              .filter((mkt) => mkt.traders_count && mkt.traders_count > 0)
+              .map((mkt) => ({
+                value: mkt.traders_count || 0,
+                platform_name: mkt.platform_name,
+              })),
+          },
+        },
+        {
+          icon: "mdi:calendar-blank",
+          description: "Market distribution by total duration.",
+          component: HistogramGeneric,
+          props: {
+            platforms: platforms,
+            plotTitle: "Histogram of Duration",
+            axisTitleX: "Duration (days)",
+            items: markets.map((mkt) => ({
+              value: mkt.duration_days,
+              platform_name: mkt.platform_name,
+            })),
+          },
+        },
+        {
+          icon: "mdi:fountain-pen-tip",
+          description: "Market distribution by title length.",
+          component: HistogramGeneric,
+          props: {
+            platforms: platforms,
+            plotTitle: "Histogram of Title Length",
+            axisTitleX: "Length (chatacters)",
+            items: markets.map((mkt) => ({
+              value: mkt.title.length,
+              platform_name: mkt.platform_name,
+            })),
+            cutoffMax: 200,
+          },
+        },
+        {
+          icon: "mdi:file-document-multiple-outline",
+          description: "Market distribution by total description length.",
+          component: HistogramGeneric,
+          props: {
+            platforms: platforms,
+            plotTitle: "Histogram of Description Length",
+            axisTitleX: "Length (chatacters)",
+            items: markets.map((mkt) => ({
+              value: mkt.description.length,
+              platform_name: mkt.platform_name,
+            })),
+          },
+        },
+        {
+          icon: "mdi:check-all",
+          description: "Market distribution by resolution value.",
+          component: HistogramGeneric,
+          props: {
+            platforms: platforms,
+            plotTitle: "Histogram of Resolution Value",
+            axisTitleX: "Probability",
+            items: markets.map((mkt) => ({
+              value: mkt.resolution,
+              platform_name: mkt.platform_name,
+            })),
+            thresholds: 1,
+          },
+        },
+      ]}
+    />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h3 class="font-bold text-2xl" id="market-categories">
+        Market Categories
+      </h3>
+      <div class="my-2">
+        Each platform tends to focus on certain categories. Some of this is site
+        culture, some is based on how the platform is designed, and some is just
+        based on marketing strategy. We try to automatically categorize all
+        markets into our standard set, but how do the distributions turn out per
+        platform?
+      </div>
+    </div>
+    <HistogramCategory
+      platforms={platforms}
+      plotTitle="Category Distribution"
+      axisTitleX="Category"
+      items={markets.map((mkt) => ({
+        value: mkt.category_name || "None",
+        platform_name: mkt.platform_name,
+      }))}
+      width={1100}
+    />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h3 class="font-bold text-2xl" id="vary-selection">Markets over Time</h3>
+      <div class="my-2">
+        Prediction markets have become more popular over time, but are there
+        more markets to meet that increased demand? Have there been any
+        particular spikes in market opens/closes?
+      </div>
+    </div>
+    <MarketsOverTime platforms={platforms} markets={markets} />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2 pb-0 mb-0">
+    <h2 class="text-3xl font-bold">Experiments!</h2>
+    <div class="mt-2">
+      The venn diagram of data visualizations that I think are useful,
+      interesting, non-obvious, and readable has a very small center. Below are
+      the charts that I like but don't meet my criteria to show above, or are
+      maybe a bit too complex.
+    </div>
+  </div>
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h3 class="font-bold text-2xl" id="calibration-alt">
+        Alternate Calibration Visualization
+      </h3>
+      <div class="my-2">
+        The main calibration charts stack all of the platform data points in a
+        column, which is accurate but can be hard to read. This one breaks them
+        out side by side and shows an uncertainty range, inspired by <a
+          href="https://projects.jhkforecasts.com/forecast-history/fte.html"
+          class="text-lavender"
+          target="_blank">JHK Forecasts</a
+        >.
+      </div>
+    </div>
+    <CalibrationFancy platforms={platforms} markets={markets} width={1100} />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h3 class="font-bold text-2xl" id="accuracy-criterion-alt">
+        Scores By Criterion Point
+      </h3>
+      <div class="my-2">
+        We calculate scores at different criterion points, such as 30 days
+        before the market closes. This plot compares the Brier scores
+        side-by-side for all criterion points.
+      </div>
+    </div>
+    <BoxScoresByCriterion platforms={platforms} scores={scores} width={1100} />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <p class="my-2">
+      Are you looking for charts from the old Calibration City site? I'm working
+      on bringing all of those features over here, but in the meantime you can
+      access it at <a
+        href="https://old.calibration.city"
+        class="text-lavender underline"
+        target="_blank">https://old.calibration.city</a
+      >. Note that it doesn't get data updates as frequently, so it may be a bit
+      out of date.
+    </p>
+  </div>
+</Base>
