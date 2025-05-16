@@ -38,12 +38,11 @@ const scoreTypes = [
   <div class="p-4 m-2">
     <h1 id="about" class="text-4xl font-bold">About</h1>
     <p class="my-2">
-      <a href="https://predictionmetrics.org/" target="_blank"
-        >PredictionMetrics.org</a
-      > launched in 2025 to help people compare and evaluate prediction markets fairly.
-      Our mission is to help the public make informed decisions about which markets
-      to trust and how to interpret forecasting data. We believe in transparency,
-      honest comparisons, and providing meaningful context.
+      <a href="https://brier.fyi/" target="_blank">Brier.fyi</a> launched in 2025
+      to help people compare and evaluate prediction markets fairly. Our mission
+      is to help the public make informed decisions about which markets to trust
+      and how to interpret forecasting data. We believe in transparency, honest comparisons,
+      and providing meaningful context.
     </p>
     <p class="my-2">
       The idea for this site started in July 2023 when we set out to create a
@@ -78,9 +77,8 @@ const scoreTypes = [
         GitHub project Themis</a
       >, complete with our open issues and roadmap. All our data is available
       through
-      <a href="https://data.predictionmetrics.org" target="_blank">
-        our PostgREST API</a
-      >. We welcome collaboration and encourage others to use our data, with the
+      <a href="https://data.brier.fyi" target="_blank"> our PostgREST API</a>.
+      We welcome collaboration and encourage others to use our data, with the
       hope that you'll share your findings with us.
     </p>
 
@@ -113,8 +111,7 @@ const scoreTypes = [
       const form = document.getElementById("newsletterForm") as HTMLFormElement;
       form.addEventListener("submit", function (e: Event) {
         e.preventDefault();
-        const api_base =
-          form.dataset.apiBase || "https://data.predictionmetrics.org";
+        const api_base = form.dataset.apiBase || "https://data.brier.fyi";
         const emailInput = document.getElementById(
           "emailNewsletterSignup",
         ) as HTMLInputElement;
@@ -567,9 +564,8 @@ const scoreTypes = [
         </li>
       </ul>
       <p class="my-2">
-        You can shoot us an email at <a
-          href="mailto:contact@predictionmetrics.org"
-          >contact@&#8203;predictionmetrics.org</a
+        You can shoot us an email at <a href="mailto:contact@brier.fyi"
+          >contact@&#8203;brier.fyi</a
         > or use the form below to submit feedback.
       </p>
     </div>
@@ -620,8 +616,8 @@ const scoreTypes = [
         <li>
           For questions about the site or assistance with the data, or for any
           other inquiry, feel free to reach out to us via email at
-          <a href="mailto:contact@predictionmetrics.org" class="underline"
-            >contact@&#8203;predictionmetrics.org</a
+          <a href="mailto:contact@brier.fyi" class="underline"
+            >contact@&#8203;brier.fyi</a
           >. This is likely the fastest way to get in touch with us.
         </li>
       </ul>
@@ -707,8 +703,7 @@ const scoreTypes = [
         const form = document.getElementById("feedbackForm") as HTMLFormElement;
         form.addEventListener("submit", function (e: Event) {
           e.preventDefault();
-          const api_base =
-            form.dataset.apiBase || "https://data.predictionmetrics.org";
+          const api_base = form.dataset.apiBase || "https://data.brier.fyi";
           const email = (
             document.getElementById("feedbackEmail") as HTMLInputElement
           ).value;
