@@ -41,16 +41,6 @@ function ensureCacheDir() {
   }
 }
 
-// Check if the data exceeds a certain size threshold
-function isLargeData(data: any): boolean {
-  // Estimate size by converting a small portion to JSON
-  if (Array.isArray(data)) {
-    // If it's a large array, consider it large
-    return data.length > 50000;
-  }
-  return false;
-}
-
 // Save data to disk cache, possibly in chunks
 function saveToCache<T>(cacheKey: string, data: T): void {
   try {
@@ -174,7 +164,7 @@ function loadFromCache<T>(cacheKey: string): T | null {
 export async function fetchFromAPI<T>(
   endpoint: string,
   options: RequestInit = {},
-  timeout: number = 30_000,
+  timeout: number = 10_000,
 ): Promise<T> {
   if (!PGRST_URL) {
     throw new Error("API URL is not configured");
@@ -182,6 +172,17 @@ export async function fetchFromAPI<T>(
 
   const url = `${PGRST_URL}/${endpoint.startsWith("/") ? endpoint.slice(1) : endpoint}`;
 
+  // Try the request with optional retry
+  return await makeRequest(url, options, timeout, false);
+}
+
+// Helper function to make the request with retry capability
+async function makeRequest<T>(
+  url: string,
+  options: RequestInit,
+  timeout: number,
+  isRetry: boolean,
+): Promise<T> {
   // Create an AbortController for timeout handling
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -248,7 +249,19 @@ export async function fetchFromAPI<T>(
 
     // Handle abort errors (timeouts)
     if (error instanceof Error && error.name === "AbortError") {
-      throw new APIError(`Request timeout after ${timeout}ms`, 0, url);
+      // If this is already a retry, don't retry again
+      if (isRetry) {
+        throw new APIError(`Request timeout after retry`, 0, url);
+      }
+
+      // First timeout - wait and retry once
+      console.log(
+        `Request timeout after ${timeout}ms, retrying once after 5s wait...`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 5_000));
+
+      // Retry the request
+      return await makeRequest<T>(url, options, timeout, true);
     }
 
     // Re-throw API errors
@@ -258,7 +271,11 @@ export async function fetchFromAPI<T>(
 
     // Handle other errors
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error occurred";
+      error instanceof Error
+        ? error.message
+        : isRetry
+          ? "Unknown error occurred during retry"
+          : "Unknown error occurred";
     throw new APIError(errorMessage, 0, url);
   }
 }
