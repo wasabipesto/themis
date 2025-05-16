@@ -41,27 +41,129 @@ function ensureCacheDir() {
   }
 }
 
-// Save data to disk cache
+// Check if the data exceeds a certain size threshold
+function isLargeData(data: any): boolean {
+  // Estimate size by converting a small portion to JSON
+  if (Array.isArray(data)) {
+    // If it's a large array, consider it large
+    return data.length > 50000;
+  }
+  return false;
+}
+
+// Save data to disk cache, possibly in chunks
 function saveToCache<T>(cacheKey: string, data: T): void {
   try {
     ensureCacheDir();
-    const cacheFile = path.join(CACHE_DIR, `${cacheKey}.json`);
-    fs.writeFileSync(cacheFile, JSON.stringify(data), "utf8");
-    console.log(`Saved cache to ${cacheFile}`);
+    const chunkSize = 100_000;
+    let isLargeData = false;
+
+    // Convert Map to array of entries if needed
+    let isMap = false;
+    if (data instanceof Map) {
+      data = Array.from(data.entries()) as any;
+      isMap = true;
+    }
+
+    // Check array size
+    if (Array.isArray(data)) {
+      isLargeData = data.length > chunkSize;
+    } else {
+      throw new Error("Unsupported data type");
+    }
+
+    // Check if we need to chunk the data
+    if (isLargeData) {
+      // Save metadata file
+      const metaFile = path.join(CACHE_DIR, `${cacheKey}_meta.json`);
+      const arrayData = data as any[];
+      const numChunks = Math.ceil(arrayData.length / chunkSize);
+
+      // Save metadata
+      const metadata = {
+        type: "chunked",
+        isMap,
+        totalLength: arrayData.length,
+        numChunks,
+        chunkSize,
+      };
+      fs.writeFileSync(metaFile, JSON.stringify(metadata), "utf8");
+
+      // Save each chunk
+      for (let i = 0; i < numChunks; i++) {
+        const chunkStart = i * chunkSize;
+        const chunkEnd = Math.min((i + 1) * chunkSize, arrayData.length);
+        const chunk = arrayData.slice(chunkStart, chunkEnd);
+
+        const chunkFile = path.join(CACHE_DIR, `${cacheKey}_chunk_${i}.json`);
+        fs.writeFileSync(chunkFile, JSON.stringify(chunk), "utf8");
+      }
+
+      console.log(`Saved chunked cache (${numChunks} chunks) for ${cacheKey}`);
+    } else {
+      // Regular single-file save for small data
+      const cacheFile = path.join(CACHE_DIR, `${cacheKey}.json`);
+      fs.writeFileSync(cacheFile, JSON.stringify(data), "utf8");
+      console.log(`Saved cache to ${cacheFile}`);
+    }
   } catch (error) {
     console.warn(`Failed to save cache for ${cacheKey}: ${error}`);
   }
 }
 
-// Load data from disk cache
+// Load data from disk cache, handling chunked data
 function loadFromCache<T>(cacheKey: string): T | null {
   try {
+    // Check if we have a metadata file for chunked data
+    const metaFile = path.join(CACHE_DIR, `${cacheKey}_meta.json`);
+
+    if (fs.existsSync(metaFile)) {
+      // This is chunked data, read the metadata
+      const metadata = JSON.parse(fs.readFileSync(metaFile, "utf8"));
+      console.log(`Loading chunked cache for ${cacheKey}`);
+
+      // Reconstruct array from chunks
+      let resultArray: any[] = [];
+
+      for (let i = 0; i < metadata.numChunks; i++) {
+        const chunkFile = path.join(CACHE_DIR, `${cacheKey}_chunk_${i}.json`);
+        if (!fs.existsSync(chunkFile)) {
+          console.warn(`Missing chunk ${i} for ${cacheKey}, cache incomplete`);
+          return null;
+        }
+
+        const chunkData = JSON.parse(fs.readFileSync(chunkFile, "utf8"));
+        resultArray = resultArray.concat(chunkData);
+      }
+
+      // Convert back to Map if the original was a Map
+      if (metadata.isMap) {
+        console.log(
+          `Loaded chunked map (${resultArray.length} entries) for ${cacheKey}`,
+        );
+        return new Map(resultArray) as T;
+      }
+
+      console.log(
+        `Loaded chunked array (${resultArray.length} items) for ${cacheKey}`,
+      );
+      return resultArray as T;
+    }
+
+    // Try regular single-file cache
     const cacheFile = path.join(CACHE_DIR, `${cacheKey}.json`);
     if (!fs.existsSync(cacheFile)) {
       return null;
     }
+
     const cacheData = JSON.parse(fs.readFileSync(cacheFile, "utf8"));
     console.log(`Loaded cache from ${cacheFile}`);
+
+    // Convert array of entries to Map if needed for criterion_probs
+    if (cacheKey === "criterion_probs" && Array.isArray(cacheData)) {
+      return new Map(cacheData) as T;
+    }
+
     return cacheData as T;
   } catch (error) {
     console.warn(`Failed to load cache for ${cacheKey}: ${error}`);
@@ -310,11 +412,11 @@ export async function getCriterionProb(
   }
 
   // Try to load from disk cache
-  const cachedMapEntries =
-    loadFromCache<[string, CriterionProbability][]>("criterion_probs");
-  if (cachedMapEntries) {
-    // Restore the Map from cached entries
-    cachedCriterionProbs = new Map(cachedMapEntries);
+  const cachedData =
+    loadFromCache<Map<string, CriterionProbability>>("criterion_probs");
+  if (cachedData) {
+    // Use the Map
+    cachedCriterionProbs = cachedData;
     cachedCriterionProbsLoaded = true;
     return cachedCriterionProbs.get(key) || null;
   }
@@ -353,8 +455,8 @@ export async function getCriterionProb(
   cachedCriterionProbsLoading = false;
   cachedCriterionProbsLoaded = true;
 
-  // Save to disk cache - convert Map to array of entries for JSON serialization
-  saveToCache("criterion_probs", Array.from(cachedCriterionProbs.entries()));
+  // Save to disk cache
+  saveToCache("criterion_probs", cachedCriterionProbs);
 
   return cachedCriterionProbs.get(key) || null;
 }
