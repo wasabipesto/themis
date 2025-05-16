@@ -9,3 +9,4 @@
 **/postgres_backups
 .gitsecret/keys/random_seed
 !*.secret
+test.astro
