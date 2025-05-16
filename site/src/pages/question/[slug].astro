@@ -20,17 +20,22 @@ import {
 } from "@lib/api";
 
 // Generate routes for all items
-// Note: rendering still takes a while due to the question prob card
 export async function getStaticPaths() {
+  // Get common data first to share
   const platforms = await getPlatforms();
   const categories = await getCategories();
   const questions = await getQuestions();
   const marketsAll = await getMarkets();
-  const marketScores = await getMarketScores();
+  const marketScoresAll = await getMarketScores();
   const questionScoresAll = await getQuestionOverallScores(null);
+
   return questions.map((question) => {
+    // Filter down the big arrays to just the relevant info
     const markets = marketsAll.filter(
       (market) => market.question_id === question.id,
+    );
+    const marketScores = marketScoresAll.filter((score) =>
+      markets.map((market) => market.id).includes(score.market_id),
     );
     const questionScores = questionScoresAll.filter(
       (score) => score.item_id === question.id.toString(),
@@ -48,14 +53,8 @@ export async function getStaticPaths() {
     };
   });
 }
-const {
-  platforms,
-  categories,
-  question,
-  markets,
-  marketScores,
-  questionScores,
-} = Astro.props;
+let { platforms, categories, question, markets, marketScores, questionScores } =
+  Astro.props;
 
 // Listed score types
 const scoreCols = [
@@ -155,12 +154,6 @@ function getQuestionScore(score_key: string) {
         <li><Traders num={question.total_traders} /></li>
         <li><Volume num={question.total_volume} /></li>
       </ul>
-      <!-- TODO: Tags
-        <ul class="flex items-center space-x-4 my-2">
-            <li class="font-semibold">Tags:</li>
-            {question.tags.map((tag) => <li>{tag}</li>)}
-        </ul>
-      -->
       <div class="whitespace-pre-wrap my-2">{question.description}</div>
     </div>
     <div>

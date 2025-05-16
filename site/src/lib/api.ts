@@ -10,7 +10,7 @@ import type {
   QuestionDetails,
   SimilarQuestions,
 } from "@types";
-import { saveToCache, loadFromCache } from "./cache";
+import { getOrFetchData, saveToCache, loadFromCache } from "./cache";
 
 const PGRST_URL = import.meta.env.PGRST_URL;
 
@@ -246,148 +246,96 @@ export async function getMarketsByQuestion(
   return filteredMarkets;
 }
 
-let cachedMarkets: MarketDetails[] | null = null;
 export async function getMarkets(): Promise<MarketDetails[]> {
-  // Return memory cache if existing
-  if (cachedMarkets) {
-    return cachedMarkets;
-  }
+  return getOrFetchData<MarketDetails[]>("markets", async () => {
+    console.log("Refreshing market cache.");
+    const batchSize = 100_000;
+    let allMarkets: MarketDetails[] = [];
+    let offset = 0;
+    let hasMoreResults = true;
 
-  // Try to load from disk cache
-  const diskCache = loadFromCache<MarketDetails[]>("markets");
-  if (diskCache) {
-    cachedMarkets = diskCache;
-    return diskCache;
-  }
-
-  console.log("Refreshing market cache.");
-  const batchSize = 100_000;
-  let allMarkets: MarketDetails[] = [];
-  let offset = 0;
-  let hasMoreResults = true;
-
-  while (hasMoreResults) {
-    let url = `/market_details?order=id&limit=${batchSize}&offset=${offset}`;
-    const batch = await fetchFromAPI<MarketDetails[]>(url);
-    allMarkets = [...allMarkets, ...batch];
-    offset += batchSize;
-    if (batch.length < batchSize) {
-      hasMoreResults = false;
+    while (hasMoreResults) {
+      let url = `/market_details?order=id&limit=${batchSize}&offset=${offset}`;
+      const batch = await fetchFromAPI<MarketDetails[]>(url);
+      allMarkets = [...allMarkets, ...batch];
+      offset += batchSize;
+      if (batch.length < batchSize) {
+        hasMoreResults = false;
+      }
     }
-  }
-  console.log(`Finished downloading markets, ${allMarkets.length} items`);
-  cachedMarkets = allMarkets;
-
-  // Save to disk cache
-  saveToCache("markets", allMarkets);
-
-  return allMarkets;
+    console.log(`Finished downloading markets, ${allMarkets.length} items`);
+    return allMarkets;
+  });
 }
 
-let cachedCriterionProbs: Map<string, CriterionProbability> = new Map();
-let cachedCriterionProbsLoading = false;
-let cachedCriterionProbsLoaded = false;
 export async function getCriterionProb(
   market_id: string,
   criterion_type: string,
 ): Promise<CriterionProbability | null> {
-  if (cachedCriterionProbsLoading) {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    return getCriterionProb(market_id, criterion_type);
-  }
   const key = `${market_id}/${criterion_type}`;
-  if (cachedCriterionProbsLoaded) {
-    return cachedCriterionProbs.get(key) || null;
-  }
+  
+  // Get the map of all criterion probabilities
+  const criterionProbsMap = await getOrFetchData<Map<string, CriterionProbability>>(
+    "criterion_probs",
+    async () => {
+      console.log("Refreshing criterion probability cache.");
+      const batchSize = 100_000;
+      let allCriterionProbs: CriterionProbability[] = [];
+      let offset = 0;
+      let hasMoreResults = true;
+      
+      while (hasMoreResults) {
+        let url = `/criterion_probabilities?order=market_id&limit=${batchSize}&offset=${offset}`;
+        const batch = await fetchFromAPI<CriterionProbability[]>(url);
+        allCriterionProbs = [...allCriterionProbs, ...batch];
+        offset += batchSize;
+        if (batch.length < batchSize) {
+          hasMoreResults = false;
+        }
+      }
 
-  // Try to load from disk cache
-  const cachedData =
-    loadFromCache<Map<string, CriterionProbability>>("criterion_probs");
-  if (cachedData) {
-    // Use the Map
-    cachedCriterionProbs = cachedData;
-    cachedCriterionProbsLoaded = true;
-    return cachedCriterionProbs.get(key) || null;
-  }
+      // Pre-filter and cache data into maps for quick access
+      const filteredMap: Map<string, CriterionProbability> = new Map();
+      allCriterionProbs.forEach((prob) => {
+        const criterionKey = `${prob.market_id}/${prob.criterion_type}`;
+        filteredMap.set(criterionKey, prob);
+      });
 
-  console.log("Refreshing criterion probability cache.");
-  cachedCriterionProbsLoading = true;
-  const batchSize = 100_000;
-  let allCriterionProbs: CriterionProbability[] = [];
-  let offset = 0;
-  let hasMoreResults = true;
-  while (hasMoreResults) {
-    let url = `/criterion_probabilities?order=market_id&limit=${batchSize}&offset=${offset}`;
-    const batch = await fetchFromAPI<CriterionProbability[]>(url);
-    allCriterionProbs = [...allCriterionProbs, ...batch];
-    offset += batchSize;
-    if (batch.length < batchSize) {
-      hasMoreResults = false;
+      console.log(
+        `Finished downloading criterion probabilities, ${allCriterionProbs.length} items`,
+      );
+      
+      return filteredMap;
     }
-  }
-
-  // Pre-filter and cache data into maps for quick access
-  const filteredMap: Map<string, CriterionProbability> = new Map();
-  allCriterionProbs.forEach((prob) => {
-    const criterionKey = `${prob.market_id}/${prob.criterion_type}`;
-    filteredMap.set(criterionKey, prob);
-  });
-
-  // Cache all pre-filtered results
-  filteredMap.forEach((prob, key) => {
-    cachedCriterionProbs.set(key, prob);
-  });
-
-  console.log(
-    `Finished downloading criterion probabilities, ${allCriterionProbs.length} items`,
   );
-  cachedCriterionProbsLoading = false;
-  cachedCriterionProbsLoaded = true;
-
-  // Save to disk cache
-  saveToCache("criterion_probs", cachedCriterionProbs);
-
-  return cachedCriterionProbs.get(key) || null;
+  
+  return criterionProbsMap.get(key) || null;
 }
 
-let cachedMarketScores: MarketScoreDetails[] | null = null;
 export async function getMarketScores(): Promise<MarketScoreDetails[]> {
-  if (cachedMarketScores) {
-    return cachedMarketScores;
-  }
-
-  // Try to load from disk cache
-  const diskCache = loadFromCache<MarketScoreDetails[]>("market_scores");
-  if (diskCache) {
-    cachedMarketScores = diskCache;
-    return diskCache;
-  }
-
-  console.log("Refreshing market scores cache.");
-  const batchSize = 100_000;
-  let allMarketScores: MarketScoreDetails[] = [];
-  let offset = 0;
-  let hasMoreResults = true;
-  while (hasMoreResults) {
-    let url = `/market_scores_details?order=market_id,score_type&limit=${batchSize}&offset=${offset}`;
-    const batch = await fetchFromAPI<MarketScoreDetails[]>(url);
-    allMarketScores = [...allMarketScores, ...batch];
-    offset += batchSize;
-    if (batch.length < batchSize) {
-      hasMoreResults = false;
+  return getOrFetchData<MarketScoreDetails[]>("market_scores", async () => {
+    console.log("Refreshing market scores cache.");
+    const batchSize = 100_000;
+    let allMarketScores: MarketScoreDetails[] = [];
+    let offset = 0;
+    let hasMoreResults = true;
+    
+    while (hasMoreResults) {
+      let url = `/market_scores_details?order=market_id,score_type&limit=${batchSize}&offset=${offset}`;
+      const batch = await fetchFromAPI<MarketScoreDetails[]>(url);
+      allMarketScores = [...allMarketScores, ...batch];
+      offset += batchSize;
+      if (batch.length < batchSize) {
+        hasMoreResults = false;
+      }
     }
-  }
 
-  console.log(
-    `Finished downloading market scores, ${allMarketScores.length} items`,
-  );
-  cachedMarketScores = allMarketScores;
-  let isMap = false;
-
-  // Save to disk cache
-  saveToCache("market_scores", allMarketScores);
-
-  return allMarketScores;
+    console.log(
+      `Finished downloading market scores, ${allMarketScores.length} items`,
+    );
+    
+    return allMarketScores;
+  });
 }
 
 export async function getMarketScoresByQuestion(
@@ -401,64 +349,35 @@ export async function getMarketScoresByQuestion(
   return fetchFromAPI<MarketScoreDetails[]>(url);
 }
 
-let cachedDailyProbabilities: DailyProbabilityDetails[] | null = null;
-let cachedDailyProbabilitiesLoading = false;
 export async function getAllDailyProbabilities(): Promise<
   DailyProbabilityDetails[]
 > {
-  // Return memory cache if existing
-  if (cachedDailyProbabilities) {
-    return cachedDailyProbabilities;
-  }
-
-  // If already loading, wait for completion
-  if (cachedDailyProbabilitiesLoading) {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    return getAllDailyProbabilities();
-  }
-
-  // Try to load from disk cache
-  const diskCache = loadFromCache<DailyProbabilityDetails[]>(
+  return getOrFetchData<DailyProbabilityDetails[]>(
     "daily_probabilities",
-  );
-  if (diskCache) {
-    cachedDailyProbabilities = diskCache;
-    return diskCache;
-  }
+    async () => {
+      console.log("Refreshing daily probabilities cache.");
+      const batchSize = 100_000;
+      let allDailyProbabilities: DailyProbabilityDetails[] = [];
+      let offset = 0;
+      let hasMoreResults = true;
 
-  console.log("Refreshing daily probabilities cache.");
-  cachedDailyProbabilitiesLoading = true;
-  const batchSize = 100_000;
-  let allDailyProbabilities: DailyProbabilityDetails[] = [];
-  let offset = 0;
-  let hasMoreResults = true;
-
-  try {
-    while (hasMoreResults) {
-      let url = `/daily_probability_details?order=market_id,date&limit=${batchSize}&offset=${offset}`;
-      const batch = await fetchFromAPI<DailyProbabilityDetails[]>(url);
-      allDailyProbabilities = [...allDailyProbabilities, ...batch];
-      offset += batchSize;
-      if (batch.length < batchSize) {
-        hasMoreResults = false;
+      while (hasMoreResults) {
+        let url = `/daily_probability_details?order=market_id,date&limit=${batchSize}&offset=${offset}`;
+        const batch = await fetchFromAPI<DailyProbabilityDetails[]>(url);
+        allDailyProbabilities = [...allDailyProbabilities, ...batch];
+        offset += batchSize;
+        if (batch.length < batchSize) {
+          hasMoreResults = false;
+        }
       }
+
+      console.log(
+        `Finished downloading daily probabilities, ${allDailyProbabilities.length} items`,
+      );
+      
+      return allDailyProbabilities;
     }
-
-    console.log(
-      `Finished downloading daily probabilities, ${allDailyProbabilities.length} items`,
-    );
-    cachedDailyProbabilities = allDailyProbabilities;
-
-    // Save to disk cache
-    saveToCache("daily_probabilities", allDailyProbabilities);
-
-    return allDailyProbabilities;
-  } catch (error) {
-    console.error(`Error refreshing daily probabilities cache: ${error}`);
-    throw error;
-  } finally {
-    cachedDailyProbabilitiesLoading = false;
-  }
+  );
 }
 
 export async function getDailyProbabilitiesByQuestion(
