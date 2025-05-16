@@ -14,7 +14,7 @@ import fs from "fs";
 import path from "path";
 
 const PGRST_URL = import.meta.env.PGRST_URL;
-const CACHE_DIR = path.resolve(process.cwd(), ".cache");
+const CACHE_DIR = path.resolve(process.cwd(), "cache");
 
 class APIError extends Error {
   status: number;
@@ -352,9 +352,14 @@ export async function getQuestionOverallScores(
 export async function getMarketsByQuestion(
   question_id: number,
 ): Promise<MarketDetails[]> {
-  return fetchFromAPI<MarketDetails[]>(
-    `/market_details?order=platform_slug&question_id=eq.${question_id}`,
+  const allMarkets = await getMarkets();
+  const filteredMarkets = allMarkets.filter(
+    (market) => market.question_id === question_id,
   );
+  if (filteredMarkets.length === 0) {
+    throw new Error(`No markets found for question ID ${question_id}`);
+  }
+  return filteredMarkets;
 }
 
 let cachedMarkets: MarketDetails[] | null = null;
@@ -493,6 +498,7 @@ export async function getMarketScores(): Promise<MarketScoreDetails[]> {
     `Finished downloading market scores, ${allMarketScores.length} items`,
   );
   cachedMarketScores = allMarketScores;
+  let isMap = false;
 
   // Save to disk cache
   saveToCache("market_scores", allMarketScores);
@@ -511,19 +517,100 @@ export async function getMarketScoresByQuestion(
   return fetchFromAPI<MarketScoreDetails[]>(url);
 }
 
+let cachedDailyProbabilities: DailyProbabilityDetails[] | null = null;
+let cachedDailyProbabilitiesLoading = false;
+export async function getAllDailyProbabilities(): Promise<
+  DailyProbabilityDetails[]
+> {
+  // Return memory cache if existing
+  if (cachedDailyProbabilities) {
+    return cachedDailyProbabilities;
+  }
+
+  // If already loading, wait for completion
+  if (cachedDailyProbabilitiesLoading) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    return getAllDailyProbabilities();
+  }
+
+  // Try to load from disk cache
+  const diskCache = loadFromCache<DailyProbabilityDetails[]>(
+    "daily_probabilities",
+  );
+  if (diskCache) {
+    cachedDailyProbabilities = diskCache;
+    return diskCache;
+  }
+
+  console.log("Refreshing daily probabilities cache.");
+  cachedDailyProbabilitiesLoading = true;
+  const batchSize = 100_000;
+  let allDailyProbabilities: DailyProbabilityDetails[] = [];
+  let offset = 0;
+  let hasMoreResults = true;
+
+  try {
+    while (hasMoreResults) {
+      let url = `/daily_probability_details?order=market_id,date&limit=${batchSize}&offset=${offset}`;
+      const batch = await fetchFromAPI<DailyProbabilityDetails[]>(url);
+      allDailyProbabilities = [...allDailyProbabilities, ...batch];
+      offset += batchSize;
+      if (batch.length < batchSize) {
+        hasMoreResults = false;
+      }
+    }
+
+    console.log(
+      `Finished downloading daily probabilities, ${allDailyProbabilities.length} items`,
+    );
+    cachedDailyProbabilities = allDailyProbabilities;
+
+    // Save to disk cache
+    saveToCache("daily_probabilities", allDailyProbabilities);
+
+    return allDailyProbabilities;
+  } catch (error) {
+    console.error(`Error refreshing daily probabilities cache: ${error}`);
+    throw error;
+  } finally {
+    cachedDailyProbabilitiesLoading = false;
+  }
+}
+
 export async function getDailyProbabilitiesByQuestion(
   question_id: number,
   start_date_override: string | null,
   end_date_override: string | null,
 ): Promise<DailyProbabilityDetails[]> {
-  let url = `/daily_probability_details?order=date.asc&question_id=eq.${question_id}`;
+  // First try to get all daily probabilities from cache
+  const allProbabilities = await getAllDailyProbabilities();
+
+  // Filter by question_id
+  let filteredProbabilities = allProbabilities.filter(
+    (prob) => prob.question_id === question_id,
+  );
+
+  // Apply date filters if provided
   if (start_date_override) {
-    url += `&date=gte.${start_date_override}`;
+    filteredProbabilities = filteredProbabilities.filter(
+      (prob) => prob.date >= start_date_override,
+    );
   }
+
   if (end_date_override) {
-    url += `&date=lte.${end_date_override}`;
+    filteredProbabilities = filteredProbabilities.filter(
+      (prob) => prob.date <= end_date_override,
+    );
   }
-  return fetchFromAPI<DailyProbabilityDetails[]>(url);
+
+  // If we have results from cache, return them
+  if (filteredProbabilities.length > 0) {
+    return filteredProbabilities;
+  } else {
+    throw new Error(
+      "No matching data found in daily_probability_details cache",
+    );
+  }
 }
 
 export async function getQuestionStats(): Promise<{
