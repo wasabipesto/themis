@@ -95,15 +95,9 @@ site-test:
 
 # Build the main site
 [working-directory: 'site']
-site-build:
+site-build *args:
     NODE_OPTIONS="--max-old-space-size=8192" \
-    npx astro build --silent
-
-# Build the main site, loud
-[working-directory: 'site']
-site-build-loud:
-    NODE_OPTIONS="--max-old-space-size=8192" \
-    npx astro build
+    npx astro build {{args}}
 
 # Push the main site with rclone
 site-push:
@@ -137,4 +131,5 @@ nightly: download-test extract-test grade-test group-test site-test
     just extract --log-level warn
     just grade --log-level warn
     just embeddings
-    just site-build site-push
+    just site-build --silent
+    just site-push
