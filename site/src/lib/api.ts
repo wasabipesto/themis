@@ -64,7 +64,6 @@ export async function fetchAllPaginatedResults<T>(
     // Build the query parameters
     // Handle orderBy parameter separately to prevent comma encoding
     const queryParams = new URLSearchParams({
-      order: orderBy,
       limit: batchSize.toString(),
       offset: offset.toString(),
       ...additionalParams,
@@ -96,7 +95,7 @@ async function makeRequest<T>(
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
-    // console.log(`Fetching ${url}`);
+    console.log(`Fetching ${url}`);
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -217,7 +216,9 @@ export async function getCategories(): Promise<CategoryDetails[]> {
 }
 
 export async function getQuestions(): Promise<QuestionDetails[]> {
-  return fetchFromAPI<QuestionDetails[]>("/question_details?order=id");
+  return getOrFetchData<QuestionDetails[]>("questions", async () => {
+    return fetchFromAPI<QuestionDetails[]>("/question_details?order=id");
+  });
 }
 
 export async function getFeaturedQuestions(
@@ -240,26 +241,25 @@ export async function getTopQuestionsForPlatform(
   const scores = await fetchFromAPI<MarketScoreDetails[]>(
     `/market_scores_details?limit=${limit}&platform_slug=eq.${platformSlug}&score_type=eq.brier-relative&order=score.asc`,
   );
-  return await fetchFromAPI<QuestionDetails[]>(
-    `/question_details?order=hotness_score.desc&id=in.(${scores.map((s) => s.question_id).join(",")})`,
-  );
+  const topQuestionIDs = scores
+    .map((s) => s.question_id)
+    .filter((id) => id !== null);
+  return (await getQuestions())
+    .filter((q) => topQuestionIDs.includes(q.id))
+    .sort((a, b) => a.hotness_score - b.hotness_score);
 }
 
 export async function getSimilarQuestions(
   questionId: number,
   limit: number,
 ): Promise<QuestionDetails[]> {
-  const similarItems = await fetchFromAPI<SimilarQuestions[]>(
+  const similarQs = await fetchFromAPI<SimilarQuestions[]>(
     `/rpc/find_similar_questions_by_id?target_question_id=${questionId}&threshold=1&limit=${limit}`,
   );
-  let result: QuestionDetails[] = [];
-  for (const item of similarItems) {
-    const details = await fetchFromAPI<QuestionDetails[]>(
-      `/question_details?id=eq.${item.question_id}`,
-    );
-    result.push(details[0]);
-  }
-  return result;
+  const similarQuestionIDs = similarQs.map((item) => item.question_id);
+  return (await getQuestions()).filter((q) =>
+    similarQuestionIDs.includes(q.id),
+  );
 }
 
 export async function getPlatformCategoryScores(
@@ -440,15 +440,15 @@ export async function getQuestionStats(): Promise<{
   numQuestions: number;
   numLinkedMarkets: number;
 }> {
-  const numQuestions = await fetchFromAPI<[{ count: number }]>(
-    "/question_details?select=count",
+  const numQuestions = await getQuestions().then(
+    (questions) => questions.length,
   );
-  const numLinkedMarkets = await fetchFromAPI<[{ count: number }]>(
-    "/market_details?question_id=not.is.null&select=count",
+  const numLinkedMarkets = await getMarkets().then(
+    (markets) => markets.filter((market) => market.question_id !== null).length,
   );
 
   return {
-    numQuestions: numQuestions[0].count,
-    numLinkedMarkets: numLinkedMarkets[0].count,
+    numQuestions,
+    numLinkedMarkets,
   };
 }
