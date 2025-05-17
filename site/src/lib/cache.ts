@@ -98,10 +98,10 @@ export function saveToDiskCache<T>(cacheKey: string, data: T): void {
 }
 
 // Load data from disk cache, handling chunked data
-export function loadFromDiskCache<T>(cacheKey: string): {
+export async function loadFromDiskCache<T>(cacheKey: string): Promise<{
   data: T | null;
   timestamp: number;
-} {
+}> {
   try {
     // Check if we have a metadata file for chunked data
     const metaFile = path.join(CACHE_DIR, `${cacheKey}_meta.json`);
@@ -110,19 +110,28 @@ export function loadFromDiskCache<T>(cacheKey: string): {
     const metadata = JSON.parse(fs.readFileSync(metaFile, "utf8"));
     console.log(`Loading chunked disk cache for ${cacheKey}`);
 
-    // Reconstruct array from chunks
-    let resultArray: any[] = [];
+    // Load all chunks in parallel
+    const chunkPromises = Array.from(
+      { length: metadata.numChunks },
+      async (_, i) => {
+        const chunkFile = path.join(CACHE_DIR, `${cacheKey}_chunk_${i}.json`);
+        return fs.promises
+          .readFile(chunkFile, "utf8")
+          .then((data) => JSON.parse(data))
+          .catch((err) => {
+            console.warn(
+              `Missing chunk ${i} for ${cacheKey}, cache incomplete: ${err}`,
+            );
+            throw new Error(`Missing chunk ${i}`);
+          });
+      },
+    );
 
-    for (let i = 0; i < metadata.numChunks; i++) {
-      const chunkFile = path.join(CACHE_DIR, `${cacheKey}_chunk_${i}.json`);
-      if (!fs.existsSync(chunkFile)) {
-        console.warn(`Missing chunk ${i} for ${cacheKey}, cache incomplete`);
-        return { data: null, timestamp: 0 };
-      }
+    // Wait for all chunks to load
+    const chunks = await Promise.all(chunkPromises);
 
-      const chunkData = JSON.parse(fs.readFileSync(chunkFile, "utf8"));
-      resultArray = resultArray.concat(chunkData);
-    }
+    // Combine all chunks
+    const resultArray = chunks.flat();
 
     // Convert back to Map if the original was a Map
     let result: T;
@@ -143,7 +152,7 @@ export function loadFromDiskCache<T>(cacheKey: string): {
       timestamp: metadata.timestamp || 0,
     };
   } catch (error) {
-    console.warn(`Failed to load disk cache for ${cacheKey}: ${error}`);
+    //console.warn(`Failed to load disk cache for ${cacheKey}: ${error}`);
     return { data: null, timestamp: 0 };
   }
 }
@@ -171,10 +180,10 @@ export function saveToCache<T>(
 }
 
 // Load data from cache (checking memory first, then disk)
-export function loadFromCache<T>(
+export async function loadFromCache<T>(
   cacheKey: string,
   options: CacheOptions = {},
-): T | null {
+): Promise<T | null> {
   const opts = { ...defaultCacheOptions, ...options };
   const now = Date.now();
 
@@ -194,7 +203,7 @@ export function loadFromCache<T>(
 
   // If not in memory or expired, try disk cache
   if (!opts.skipDisk) {
-    const { data, timestamp } = loadFromDiskCache<T>(cacheKey);
+    const { data, timestamp } = await loadFromDiskCache<T>(cacheKey);
 
     // If data exists on disk and isn't expired
     if (
@@ -237,7 +246,7 @@ export async function getOrFetchData<T>(
   const opts = { ...defaultCacheOptions, ...options };
 
   // Try to get from cache first
-  const cachedData = loadFromCache<T>(cacheKey, opts);
+  const cachedData = await loadFromCache<T>(cacheKey, opts);
   if (cachedData !== null) {
     return cachedData;
   }
@@ -246,10 +255,10 @@ export async function getOrFetchData<T>(
   if (isLoading(cacheKey)) {
     // Wait until the data is available
     return new Promise((resolve, reject) => {
-      const checkInterval = setInterval(() => {
+      const checkInterval = setInterval(async () => {
         if (!isLoading(cacheKey)) {
           clearInterval(checkInterval);
-          const data = loadFromCache<T>(cacheKey, opts);
+          const data = await loadFromCache<T>(cacheKey, opts);
           if (data !== null) {
             resolve(data);
           } else {
