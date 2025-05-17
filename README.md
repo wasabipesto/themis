@@ -356,11 +356,13 @@ This project has been awarded the following grants:
 
 These grants have been used for furthering development but have not influenced the contents of this site towards or away from any viewpoint.
 
-This project has been featured in the following publications:
+This project has been featured in the following instances:
 
 - [Leveraging Log Probabilities in Language Models to Forecast Future Events](https://arxiv.org/abs/2501.04880v1)
 - [Tangle News: Lessons from the election you could bet on](https://www.readtangle.com/otherposts/lessons-from-the-election-you-could-bet-on/)
 - [Forecasting Newsletter: June 2024](https://forecasting.substack.com/p/forecasting-newsletter-june-2024)
+- [Calibrations Blog: Should we let ourselves see the future?](https://www.calibrations.blog/p/should-we-let-ourselves-see-the-future)
+- [Lightcone News: Accuracy and Trust](https://lightcone.news/about)
 
 I use prediction markets, mainly Manifold and Metaculus, as a personal exercise in calibration. This project grew out of an effort to see how useful they can be as information-gathering tools.
 
