@@ -233,6 +233,7 @@ export async function getFeaturedQuestions(
   }
   return questions
     .sort((a, b) => a.hotness_score - b.hotness_score)
+    .reverse()
     .slice(0, limit);
 }
 
@@ -248,7 +249,8 @@ export async function getTopQuestionsForPlatform(
     .filter((id) => id !== null);
   return (await getQuestions())
     .filter((q) => topQuestionIDs.includes(q.id))
-    .sort((a, b) => a.hotness_score - b.hotness_score);
+    .sort((a, b) => a.hotness_score - b.hotness_score)
+    .reverse();
 }
 
 export async function getSimilarQuestions(
