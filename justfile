@@ -114,7 +114,7 @@ site-push-prod:
     rclone sync site/dist $RCLONE_PROD_TARGET --progress
 
 # Build the main site and deploy
-deploy: site-test site-build site-push-prod
+deploy: site-test site-build site-push-dev site-push-prod
 
 # Start the grouper dev server
 [working-directory: 'grouper']
