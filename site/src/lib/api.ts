@@ -19,7 +19,7 @@ class APIError extends Error {
   url: string;
 
   constructor(message: string, status: number, url: string) {
-    const formattedMessage = `Message: ${message}\nStatus: ${status}\nURL: ${url}`;
+    const formattedMessage = `\n\nMessage: ${message}\nStatus: ${status}\nURL: ${url}`;
     super(formattedMessage);
 
     this.name = "APIError";
@@ -70,7 +70,6 @@ export async function fetchAllPaginatedResults<T>(
     });
 
     let url = `/${endpoint}?${queryParams.toString()}`;
-    console.log(`Fetching ${url}`);
     const batch = await fetchFromAPI<T[]>(url);
     allItems = [...allItems, ...batch];
     offset += batchSize;
@@ -96,6 +95,7 @@ async function makeRequest<T>(
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
+    // console.log(`Fetching ${url}`);
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -155,12 +155,16 @@ async function makeRequest<T>(
     // Clear timeout if there was an error
     clearTimeout(timeoutId);
 
-    // Handle abort errors (timeouts)
-    if (error instanceof Error && error.name === "AbortError") {
+    // Determine if we should retry (either AbortError or network errors with status 0)
+    const isAbortError = error instanceof Error && error.name === "AbortError";
+    const isNetworkError = error instanceof APIError && error.status === 0;
+
+    if (isAbortError || isNetworkError) {
       // Check if we've reached the max retry count
       if (retryCount >= maxRetries) {
+        const errorType = isAbortError ? "timeout" : "network failure";
         throw new APIError(
-          `Request timeout after ${maxRetries} retries`,
+          `Request failed due to ${errorType} after ${maxRetries} retries`,
           0,
           url,
         );
@@ -170,8 +174,9 @@ async function makeRequest<T>(
       const delayMs = baseDelayMs * Math.pow(2, retryCount);
 
       // Log the retry attempt
+      const errorType = isAbortError ? "timeout" : "network failure";
       console.log(
-        `Request timeout for ${url} after ${timeout}ms, retry ${retryCount + 1}/${maxRetries} after ${delayMs}ms wait...`,
+        `Request failed for ${url} due to ${errorType}, retry ${retryCount + 1}/${maxRetries} after ${delayMs}ms wait...`,
       );
 
       // Wait with exponential backoff
