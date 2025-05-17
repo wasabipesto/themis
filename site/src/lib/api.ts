@@ -43,6 +43,45 @@ export async function fetchFromAPI<T>(
   return await makeRequest(url, options, timeout, 0);
 }
 
+export async function fetchAllPaginatedResults<T>(
+  endpoint: string,
+  options: {
+    orderBy?: string;
+    batchSize?: number;
+    additionalParams?: Record<string, string>;
+  } = {},
+): Promise<T[]> {
+  const {
+    orderBy = "id",
+    batchSize = 100_000,
+    additionalParams = {},
+  } = options;
+  let allItems: T[] = [];
+  let offset = 0;
+  let hasMoreResults = true;
+
+  while (hasMoreResults) {
+    // Build the query parameters
+    const queryParams = new URLSearchParams({
+      order: orderBy,
+      limit: batchSize.toString(),
+      offset: offset.toString(),
+      ...additionalParams,
+    });
+
+    let url = `/${endpoint}?${queryParams.toString()}`;
+    console.log(`Fetching ${url}`);
+    const batch = await fetchFromAPI<T[]>(url);
+    allItems = [...allItems, ...batch];
+    offset += batchSize;
+    if (batch.length < batchSize) {
+      hasMoreResults = false;
+    }
+  }
+
+  return allItems;
+}
+
 // Helper function to make the request with retry capability
 async function makeRequest<T>(
   url: string,
@@ -264,23 +303,10 @@ export async function getMarketsByQuestion(
 
 export async function getMarkets(): Promise<MarketDetails[]> {
   return getOrFetchData<MarketDetails[]>("markets", async () => {
-    console.log("Refreshing market cache.");
-    const batchSize = 100_000;
-    let allMarkets: MarketDetails[] = [];
-    let offset = 0;
-    let hasMoreResults = true;
-
-    while (hasMoreResults) {
-      let url = `/market_details?order=id&limit=${batchSize}&offset=${offset}`;
-      const batch = await fetchFromAPI<MarketDetails[]>(url);
-      allMarkets = [...allMarkets, ...batch];
-      offset += batchSize;
-      if (batch.length < batchSize) {
-        hasMoreResults = false;
-      }
-    }
-    console.log(`Finished downloading markets, ${allMarkets.length} items`);
-    return allMarkets;
+    return fetchAllPaginatedResults<MarketDetails>("market_details", {
+      orderBy: "id",
+      batchSize: 100_000,
+    });
   });
 }
 
@@ -288,68 +314,40 @@ export async function getCriterionProb(
   market_id: string,
   criterion_type: string,
 ): Promise<CriterionProbability | null> {
-  const key = `${market_id}/${criterion_type}`;
-
   // Get the map of all criterion probabilities
   const criterionProbsMap = await getOrFetchData<
     Map<string, CriterionProbability>
   >("criterion_probs", async () => {
-    console.log("Refreshing criterion probability cache.");
-    const batchSize = 100_000;
-    let allCriterionProbs: CriterionProbability[] = [];
-    let offset = 0;
-    let hasMoreResults = true;
-
-    while (hasMoreResults) {
-      let url = `/criterion_probabilities?order=market_id&limit=${batchSize}&offset=${offset}`;
-      const batch = await fetchFromAPI<CriterionProbability[]>(url);
-      allCriterionProbs = [...allCriterionProbs, ...batch];
-      offset += batchSize;
-      if (batch.length < batchSize) {
-        hasMoreResults = false;
-      }
-    }
-
-    // Pre-filter and cache data into maps for quick access
-    const filteredMap: Map<string, CriterionProbability> = new Map();
-    allCriterionProbs.forEach((prob) => {
-      const criterionKey = `${prob.market_id}/${prob.criterion_type}`;
-      filteredMap.set(criterionKey, prob);
-    });
-
-    console.log(
-      `Finished downloading criterion probabilities, ${allCriterionProbs.length} items`,
+    // Download all items
+    const items = await fetchAllPaginatedResults<CriterionProbability>(
+      "criterion_probabilities",
+      {
+        orderBy: "market_id",
+        batchSize: 100_000,
+      },
     );
-
-    return filteredMap;
+    // Convert to cache for easier lookup
+    const map: Map<string, CriterionProbability> = new Map();
+    items.forEach((i) => {
+      const key = `${i.market_id}/${i.criterion_type}`;
+      map.set(key, i);
+    });
+    return map;
   });
 
+  const key = `${market_id}/${criterion_type}`;
   return criterionProbsMap.get(key) || null;
 }
 
 export async function getMarketScores(): Promise<MarketScoreDetails[]> {
   return getOrFetchData<MarketScoreDetails[]>("market_scores", async () => {
-    console.log("Refreshing market scores cache.");
-    const batchSize = 100_000;
-    let allMarketScores: MarketScoreDetails[] = [];
-    let offset = 0;
-    let hasMoreResults = true;
-
-    while (hasMoreResults) {
-      let url = `/market_scores_details?order=market_id,score_type&limit=${batchSize}&offset=${offset}`;
-      const batch = await fetchFromAPI<MarketScoreDetails[]>(url);
-      allMarketScores = [...allMarketScores, ...batch];
-      offset += batchSize;
-      if (batch.length < batchSize) {
-        hasMoreResults = false;
-      }
-    }
-
-    console.log(
-      `Finished downloading market scores, ${allMarketScores.length} items`,
+    return fetchAllPaginatedResults<MarketScoreDetails>(
+      "market_scores_details",
+      {
+        orderBy: "market_id,score_type",
+        batchSize: 100_000,
+      },
     );
-
-    return allMarketScores;
   });
 }
 
@@ -370,27 +368,28 @@ export async function getAllDailyProbabilities(): Promise<
   return getOrFetchData<DailyProbabilityDetails[]>(
     "daily_probabilities",
     async () => {
-      console.log("Refreshing daily probabilities cache.");
-      const batchSize = 100_000;
-      let allDailyProbabilities: DailyProbabilityDetails[] = [];
-      let offset = 0;
-      let hasMoreResults = true;
-
-      while (hasMoreResults) {
-        let url = `/daily_probability_details?order=market_id,date&limit=${batchSize}&offset=${offset}`;
-        const batch = await fetchFromAPI<DailyProbabilityDetails[]>(url);
-        allDailyProbabilities = [...allDailyProbabilities, ...batch];
-        offset += batchSize;
-        if (batch.length < batchSize) {
-          hasMoreResults = false;
-        }
-      }
-
-      console.log(
-        `Finished downloading daily probabilities, ${allDailyProbabilities.length} items`,
+      return fetchAllPaginatedResults<DailyProbabilityDetails>(
+        "daily_probability_details",
+        {
+          orderBy: "market_id,date",
+          batchSize: 100_000,
+        },
       );
+    },
+  );
+}
 
-      return allDailyProbabilities;
+export async function getAllDailyProbabilitiesLinked(): Promise<
+  DailyProbabilityDetails[]
+> {
+  return getOrFetchData<DailyProbabilityDetails[]>(
+    "daily_probabilities_linked",
+    async () => {
+      const allDailyProbabilities = await getAllDailyProbabilities();
+      const linkedProbabilities = allDailyProbabilities.filter(
+        (prob) => prob.question_id !== null,
+      );
+      return linkedProbabilities;
     },
   );
 }
@@ -400,8 +399,8 @@ export async function getDailyProbabilitiesByQuestion(
   start_date_override: string | null,
   end_date_override: string | null,
 ): Promise<DailyProbabilityDetails[]> {
-  // First try to get all daily probabilities from cache
-  const allProbabilities = await getAllDailyProbabilities();
+  // Get linked probabilities, from cache or database as necessary
+  const allProbabilities = await getAllDailyProbabilitiesLinked();
 
   // Filter by question_id
   let filteredProbabilities = allProbabilities.filter(
