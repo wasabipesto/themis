@@ -5,8 +5,7 @@ import Math from "@atoms/math.astro";
 import gradeCutoffs from "@data/grade_cutoffs.json";
 import { Icon } from "astro-icon/components";
 
-const api_base = import.meta.env.PGRST_URL;
-console.log(api_base);
+const api_base = import.meta.env.DEPLOYED_PGRST_URL;
 
 const scoreTypes = [
   {
