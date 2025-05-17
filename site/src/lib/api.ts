@@ -62,6 +62,7 @@ export async function fetchAllPaginatedResults<T>(
 
   while (hasMoreResults) {
     // Build the query parameters
+    // Handle orderBy parameter separately to prevent comma encoding
     const queryParams = new URLSearchParams({
       order: orderBy,
       limit: batchSize.toString(),
@@ -69,7 +70,7 @@ export async function fetchAllPaginatedResults<T>(
       ...additionalParams,
     });
 
-    let url = `/${endpoint}?${queryParams.toString()}`;
+    let url = `/${endpoint}?order=${orderBy}&${queryParams.toString()}`;
     const batch = await fetchFromAPI<T[]>(url);
     allItems = [...allItems, ...batch];
     offset += batchSize;
