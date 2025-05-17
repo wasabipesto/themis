@@ -10,7 +10,7 @@ import type {
   QuestionDetails,
   SimilarQuestions,
 } from "@types";
-import { getOrFetchData, saveToCache, loadFromCache } from "./cache";
+import { getOrFetchData } from "./cache";
 
 const PGRST_URL = import.meta.env.PGRST_URL;
 
@@ -39,8 +39,8 @@ export async function fetchFromAPI<T>(
 
   const url = `${PGRST_URL}/${endpoint.startsWith("/") ? endpoint.slice(1) : endpoint}`;
 
-  // Try the request with optional retry
-  return await makeRequest(url, options, timeout, false);
+  // Try the request with retries and exponential backoff
+  return await makeRequest(url, options, timeout, 0);
 }
 
 // Helper function to make the request with retry capability
@@ -48,7 +48,9 @@ async function makeRequest<T>(
   url: string,
   options: RequestInit,
   timeout: number,
-  isRetry: boolean,
+  retryCount: number,
+  maxRetries: number = 5,
+  baseDelayMs: number = 1000,
 ): Promise<T> {
   // Create an AbortController for timeout handling
   const controller = new AbortController();
@@ -116,19 +118,35 @@ async function makeRequest<T>(
 
     // Handle abort errors (timeouts)
     if (error instanceof Error && error.name === "AbortError") {
-      // If this is already a retry, don't retry again
-      if (isRetry) {
-        throw new APIError(`Request timeout after retry`, 0, url);
+      // Check if we've reached the max retry count
+      if (retryCount >= maxRetries) {
+        throw new APIError(
+          `Request timeout after ${maxRetries} retries`,
+          0,
+          url,
+        );
       }
 
-      // First timeout - wait and retry once
-      console.log(
-        `Request timeout for ${url} after ${timeout}ms, retrying once after 5s wait...`,
-      );
-      await new Promise((resolve) => setTimeout(resolve, 5_000));
+      // Calculate exponential backoff delay: baseDelay * 2^retryCount
+      const delayMs = baseDelayMs * Math.pow(2, retryCount);
 
-      // Retry the request
-      return await makeRequest<T>(url, options, timeout, true);
+      // Log the retry attempt
+      console.log(
+        `Request timeout for ${url} after ${timeout}ms, retry ${retryCount + 1}/${maxRetries} after ${delayMs}ms wait...`,
+      );
+
+      // Wait with exponential backoff
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+
+      // Retry the request with incremented retry count
+      return await makeRequest<T>(
+        url,
+        options,
+        timeout,
+        retryCount + 1,
+        maxRetries,
+        baseDelayMs,
+      );
     }
 
     // Re-throw API errors
@@ -140,9 +158,7 @@ async function makeRequest<T>(
     const errorMessage =
       error instanceof Error
         ? error.message
-        : isRetry
-          ? "Unknown error occurred during retry"
-          : "Unknown error occurred";
+        : `Unknown error occurred during retry ${retryCount}`;
     throw new APIError(errorMessage, 0, url);
   }
 }
@@ -273,42 +289,41 @@ export async function getCriterionProb(
   criterion_type: string,
 ): Promise<CriterionProbability | null> {
   const key = `${market_id}/${criterion_type}`;
-  
+
   // Get the map of all criterion probabilities
-  const criterionProbsMap = await getOrFetchData<Map<string, CriterionProbability>>(
-    "criterion_probs",
-    async () => {
-      console.log("Refreshing criterion probability cache.");
-      const batchSize = 100_000;
-      let allCriterionProbs: CriterionProbability[] = [];
-      let offset = 0;
-      let hasMoreResults = true;
-      
-      while (hasMoreResults) {
-        let url = `/criterion_probabilities?order=market_id&limit=${batchSize}&offset=${offset}`;
-        const batch = await fetchFromAPI<CriterionProbability[]>(url);
-        allCriterionProbs = [...allCriterionProbs, ...batch];
-        offset += batchSize;
-        if (batch.length < batchSize) {
-          hasMoreResults = false;
-        }
+  const criterionProbsMap = await getOrFetchData<
+    Map<string, CriterionProbability>
+  >("criterion_probs", async () => {
+    console.log("Refreshing criterion probability cache.");
+    const batchSize = 100_000;
+    let allCriterionProbs: CriterionProbability[] = [];
+    let offset = 0;
+    let hasMoreResults = true;
+
+    while (hasMoreResults) {
+      let url = `/criterion_probabilities?order=market_id&limit=${batchSize}&offset=${offset}`;
+      const batch = await fetchFromAPI<CriterionProbability[]>(url);
+      allCriterionProbs = [...allCriterionProbs, ...batch];
+      offset += batchSize;
+      if (batch.length < batchSize) {
+        hasMoreResults = false;
       }
-
-      // Pre-filter and cache data into maps for quick access
-      const filteredMap: Map<string, CriterionProbability> = new Map();
-      allCriterionProbs.forEach((prob) => {
-        const criterionKey = `${prob.market_id}/${prob.criterion_type}`;
-        filteredMap.set(criterionKey, prob);
-      });
-
-      console.log(
-        `Finished downloading criterion probabilities, ${allCriterionProbs.length} items`,
-      );
-      
-      return filteredMap;
     }
-  );
-  
+
+    // Pre-filter and cache data into maps for quick access
+    const filteredMap: Map<string, CriterionProbability> = new Map();
+    allCriterionProbs.forEach((prob) => {
+      const criterionKey = `${prob.market_id}/${prob.criterion_type}`;
+      filteredMap.set(criterionKey, prob);
+    });
+
+    console.log(
+      `Finished downloading criterion probabilities, ${allCriterionProbs.length} items`,
+    );
+
+    return filteredMap;
+  });
+
   return criterionProbsMap.get(key) || null;
 }
 
@@ -319,7 +334,7 @@ export async function getMarketScores(): Promise<MarketScoreDetails[]> {
     let allMarketScores: MarketScoreDetails[] = [];
     let offset = 0;
     let hasMoreResults = true;
-    
+
     while (hasMoreResults) {
       let url = `/market_scores_details?order=market_id,score_type&limit=${batchSize}&offset=${offset}`;
       const batch = await fetchFromAPI<MarketScoreDetails[]>(url);
@@ -333,7 +348,7 @@ export async function getMarketScores(): Promise<MarketScoreDetails[]> {
     console.log(
       `Finished downloading market scores, ${allMarketScores.length} items`,
     );
-    
+
     return allMarketScores;
   });
 }
@@ -374,9 +389,9 @@ export async function getAllDailyProbabilities(): Promise<
       console.log(
         `Finished downloading daily probabilities, ${allDailyProbabilities.length} items`,
       );
-      
+
       return allDailyProbabilities;
-    }
+    },
   );
 }
 
