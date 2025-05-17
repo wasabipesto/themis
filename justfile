@@ -104,12 +104,17 @@ site-build *args:
     NODE_OPTIONS="--max-old-space-size=8192" \
     npx astro build {{args}}
 
-# Push the main site with rclone
-site-push:
-    rclone sync site/dist $RCLONE_SITE_TARGET --progress
+# Push the site to dev with rclone
+site-push-dev:
+    rclone sync site/dist $RCLONE_DEV_TARGET --progress
+
+# Push the site to prod with rclone
+[confirm]
+site-push-prod:
+    rclone sync site/dist $RCLONE_PROD_TARGET --progress
 
 # Build the main site and deploy
-deploy: site-test site-build site-push
+deploy: site-test site-build site-push-prod
 
 # Start the grouper dev server
 [working-directory: 'grouper']
@@ -136,5 +141,6 @@ nightly: download-test extract-test grade-test group-test site-test
     just extract --log-level warn
     just grade --log-level warn
     just embeddings
+    just site-cache-reset
     just site-build --silent
-    just site-push
+    just site-push-dev
