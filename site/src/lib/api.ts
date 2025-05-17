@@ -274,26 +274,34 @@ export async function getPlatformCategoryScores(
   return fetchFromAPI<PlatformCategoryScoreDetails[]>(url);
 }
 
+export async function getOtherScores(): Promise<OtherScoreDetails[]> {
+  return getOrFetchData<OtherScoreDetails[]>("other_scores", async () => {
+    return fetchFromAPI<OtherScoreDetails[]>("/other_scores?order=item_id");
+  });
+}
+
 export async function getPlatformOverallScores(): Promise<OtherScoreDetails[]> {
-  return fetchFromAPI<OtherScoreDetails[]>(
-    `/other_scores?item_type=eq.platform&order=item_id`,
+  return await getOtherScores().then((scores) =>
+    scores.filter((score) => score.item_type === "platform"),
   );
 }
 
 export async function getCategoryOverallScores(): Promise<OtherScoreDetails[]> {
-  return fetchFromAPI<OtherScoreDetails[]>(
-    `/other_scores?item_type=eq.category&order=item_id`,
+  return await getOtherScores().then((scores) =>
+    scores.filter((score) => score.item_type === "category"),
   );
 }
 
 export async function getQuestionOverallScores(
   question_id: number | null,
 ): Promise<OtherScoreDetails[]> {
-  let url = "/other_scores?item_type=eq.question";
+  let scores = await getOtherScores().then((scores) =>
+    scores.filter((score) => score.item_type === "question"),
+  );
   if (question_id) {
-    url += `&item_id=eq.${question_id}`;
+    scores = scores.filter((score) => score.item_id === question_id.toString());
   }
-  return fetchFromAPI<OtherScoreDetails[]>(url);
+  return scores;
 }
 
 export async function getMarketsByQuestion(
