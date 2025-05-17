@@ -7,6 +7,7 @@ import type {
   Platform,
   PlatformCategoryScoreDetails,
 } from "../types";
+import { getQuestionStats } from "@lib/api";
 
 interface Props {
   platforms: Platform[];
@@ -14,6 +15,9 @@ interface Props {
   platformCategoryScores: PlatformCategoryScoreDetails[];
 }
 const { platforms, categories, platformCategoryScores } = Astro.props;
+
+// Get question count stats
+const { numLinkedMarkets } = await getQuestionStats();
 
 // Build score map for table lookup
 const scoreMap = new Map<string, PlatformCategoryScoreDetails>();
@@ -87,7 +91,9 @@ const categoryData = categories.map((cat) => ({
     </table>
     <div class="text-xs mt-2">
       <p>
-        Letter grades based on relative Brier scores from all matched questions.
+        Letter grades based on relative Brier scores from n={
+          numLinkedMarkets.toLocaleString()
+        } matched markets.
       </p>
       <p>
         Source: <a href="https://brier.fyi">brier.fyi</a>
