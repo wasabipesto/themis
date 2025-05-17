@@ -5,25 +5,27 @@ const CACHE_DIR = path.resolve(process.cwd(), "cache");
 // Type to represent cache data with loading state
 type CacheEntry<T> = {
   data: T | null;
-  loading: boolean;
   lastUpdated: number;
 };
 
 // In-memory cache storage
 const memoryCache = new Map<string, CacheEntry<any>>();
 
+// Track in-flight promises for data being loaded
+const pendingPromises = new Map<string, Promise<any>>();
+
 // Cache options interface
 interface CacheOptions {
   expirationMs?: number;
-  skipMemory?: boolean;
-  skipDisk?: boolean;
+  saveToMemory?: boolean;
+  saveToDisk?: boolean;
 }
 
 // Default cache options
 const defaultCacheOptions: CacheOptions = {
   expirationMs: 7 * 24 * 60 * 60 * 1000,
-  skipMemory: false,
-  skipDisk: false,
+  saveToMemory: true,
+  saveToDisk: true,
 };
 
 // Ensure cache directory exists
@@ -38,11 +40,10 @@ function ensureCacheDir() {
 }
 
 // Get cache entry, initializing if necessary
-function getCacheEntry<T>(cacheKey: string): CacheEntry<T> {
+function getMemCacheEntry<T>(cacheKey: string): CacheEntry<T> {
   if (!memoryCache.has(cacheKey)) {
     memoryCache.set(cacheKey, {
       data: null,
-      loading: false,
       lastUpdated: 0,
     });
   }
@@ -51,6 +52,7 @@ function getCacheEntry<T>(cacheKey: string): CacheEntry<T> {
 
 // Save data to disk cache in chunks, flattening maps into arrays
 export function saveToDiskCache<T>(cacheKey: string, data: T): void {
+  console.log(`Saving ${cacheKey} to disk cache`);
   try {
     ensureCacheDir();
     const chunkSize = 100_000;
@@ -91,7 +93,9 @@ export function saveToDiskCache<T>(cacheKey: string, data: T): void {
       fs.writeFileSync(chunkFile, JSON.stringify(chunk), "utf8");
     }
 
-    console.log(`Saved disk cache (${numChunks} chunks) for ${cacheKey}`);
+    console.log(
+      `Saved disk cache (${arrayData.length} items, ${numChunks} chunks) for ${cacheKey}`,
+    );
   } catch (error) {
     console.warn(`Failed to save disk cache for ${cacheKey}: ${error}`);
   }
@@ -152,7 +156,7 @@ export async function loadFromDiskCache<T>(cacheKey: string): Promise<{
       timestamp: metadata.timestamp || 0,
     };
   } catch (error) {
-    //console.warn(`Failed to load disk cache for ${cacheKey}: ${error}`);
+    // Data files likely do not exist, return empty
     return { data: null, timestamp: 0 };
   }
 }
@@ -166,15 +170,14 @@ export function saveToCache<T>(
   const opts = { ...defaultCacheOptions, ...options };
 
   // Update memory cache
-  if (!opts.skipMemory) {
-    const cacheEntry = getCacheEntry<T>(cacheKey);
+  if (opts.saveToMemory) {
+    const cacheEntry = getMemCacheEntry<T>(cacheKey);
     cacheEntry.data = data;
-    cacheEntry.loading = false;
     cacheEntry.lastUpdated = Date.now();
   }
 
   // Save to disk if requested
-  if (!opts.skipDisk) {
+  if (opts.saveToDisk) {
     saveToDiskCache(cacheKey, data);
   }
 }
@@ -188,8 +191,8 @@ export async function loadFromCache<T>(
   const now = Date.now();
 
   // Check memory cache first
-  if (!opts.skipMemory) {
-    const cacheEntry = getCacheEntry<T>(cacheKey);
+  if (opts.saveToMemory) {
+    const cacheEntry = getMemCacheEntry<T>(cacheKey);
 
     // If data exists in memory and isn't expired
     if (
@@ -202,7 +205,7 @@ export async function loadFromCache<T>(
   }
 
   // If not in memory or expired, try disk cache
-  if (!opts.skipDisk) {
+  if (opts.saveToDisk) {
     const { data, timestamp } = await loadFromDiskCache<T>(cacheKey);
 
     // If data exists on disk and isn't expired
@@ -211,8 +214,8 @@ export async function loadFromCache<T>(
       (opts.expirationMs === undefined || now - timestamp < opts.expirationMs)
     ) {
       // Update memory cache if disk load succeeded
-      if (!opts.skipMemory) {
-        const cacheEntry = getCacheEntry<T>(cacheKey);
+      if (opts.saveToMemory) {
+        const cacheEntry = getMemCacheEntry<T>(cacheKey);
         cacheEntry.data = data;
         cacheEntry.lastUpdated = timestamp;
       }
@@ -222,19 +225,6 @@ export async function loadFromCache<T>(
   }
 
   return null;
-}
-
-// Check if a cache key is currently being loaded
-export function isLoading(cacheKey: string): boolean {
-  return memoryCache.has(cacheKey)
-    ? (memoryCache.get(cacheKey) as CacheEntry<any>).loading
-    : false;
-}
-
-// Set loading state for a cache key
-export function setLoading(cacheKey: string, loading: boolean): void {
-  const cacheEntry = getCacheEntry<any>(cacheKey);
-  cacheEntry.loading = loading;
 }
 
 // Try to get cached data or load it using the provided function
@@ -251,41 +241,35 @@ export async function getOrFetchData<T>(
     return cachedData;
   }
 
-  // Check if already loading
-  if (isLoading(cacheKey)) {
-    // Wait until the data is available
-    return new Promise((resolve, reject) => {
-      const checkInterval = setInterval(async () => {
-        if (!isLoading(cacheKey)) {
-          clearInterval(checkInterval);
-          const data = await loadFromCache<T>(cacheKey, opts);
-          if (data !== null) {
-            resolve(data);
-          } else {
-            reject(new Error(`Cache loading failed for ${cacheKey}`));
-          }
-        }
-      }, 500);
-    });
+  // Check if a promise for this data is already pending
+  // If so, return it and this request will track that promise
+  if (pendingPromises.has(cacheKey)) {
+    console.log(`Reusing pending promise for ${cacheKey}`);
+    return pendingPromises.get(cacheKey) as Promise<T>;
   }
 
-  // Set loading state
-  setLoading(cacheKey, true);
+  // Create a new promise for this data fetch
+  const fetchPromise = (async () => {
+    try {
+      // Fetch fresh data
+      console.log(`Fetching fresh data for ${cacheKey}`);
+      const data = await fetchFn();
 
-  try {
-    // Fetch fresh data
-    console.log(`Fetching fresh data for ${cacheKey}`);
-    const data = await fetchFn();
+      // Save to cache
+      saveToCache(cacheKey, data, opts);
 
-    // Save to cache
-    saveToCache(cacheKey, data, opts);
+      return data;
+    } catch (error) {
+      console.error(`Error fetching data for ${cacheKey}:`, error);
+      throw error;
+    } finally {
+      // Remove this promise from pending promises
+      pendingPromises.delete(cacheKey);
+    }
+  })();
 
-    return data;
-  } catch (error) {
-    console.error(`Error fetching data for ${cacheKey}:`, error);
-    throw error;
-  } finally {
-    // Clear loading state
-    setLoading(cacheKey, false);
-  }
+  // Store the promise so other calls can reuse it
+  pendingPromises.set(cacheKey, fetchPromise);
+
+  return fetchPromise;
 }
