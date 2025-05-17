@@ -30,31 +30,27 @@ export async function getStaticPaths() {
   const questionScoresAll = await getQuestionOverallScores(null);
 
   return questions.map((question) => {
-    // Filter down the big arrays to just the relevant info
-    const markets = marketsAll.filter(
-      (market) => market.question_id === question.id,
-    );
-    const marketScores = marketScoresAll.filter((score) =>
-      markets.map((market) => market.id).includes(score.market_id),
-    );
-    const questionScores = questionScoresAll.filter(
-      (score) => score.item_id === question.id.toString(),
-    );
     return {
       params: { slug: question.slug },
       props: {
         platforms,
         categories,
         question,
-        markets,
-        marketScores,
-        questionScores,
+        marketsAll,
+        marketScoresAll,
+        questionScoresAll,
       },
     };
   });
 }
-let { platforms, categories, question, markets, marketScores, questionScores } =
-  Astro.props;
+let {
+  platforms,
+  categories,
+  question,
+  marketsAll,
+  marketScoresAll,
+  questionScoresAll,
+} = Astro.props;
 
 // Listed score types
 const scoreCols = [
@@ -94,6 +90,17 @@ const scoreRows = [
     optional: false,
   },
 ];
+
+// Filter down the big arrays to just the relevant info
+const markets = marketsAll.filter(
+  (market) => market.question_id === question.id,
+);
+const marketScores = marketScoresAll.filter(
+  (score) => score.question_id === question.id,
+);
+const questionScores = questionScoresAll.filter(
+  (score) => score.item_id === question.id.toString(),
+);
 
 // Select category
 const category = categories.find(
@@ -359,7 +366,7 @@ function getQuestionScore(score_key: string) {
           <QuestionCard
             question={question}
             categories={categories}
-            scores={marketScores.filter(
+            scores={marketScoresAll.filter(
               (score) => score.question_id === question.id,
             )}
           />
