@@ -470,32 +470,66 @@ const scoreTypes = [
           thresholds.
         </p>
         <p class="my-2">The thresholds for absolute scores are:</p>
-        <table class="table-fixed w-full">
-          <thead>
-            <tr>
-              <th>Grade</th>
-              {scoreTypes.map((st) => <th>{st.name}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {
-              gradeCutoffs.map((g) => (
-                <tr class="odd:bg-selection/10 text-center">
-                  <td class="py-1 px-2">
-                    <div class="w-30 mx-auto">
-                      <Grade grade={g.grade} />
-                    </div>
-                  </td>
-                  {g.scores.map((score) => (
-                    <td class="font-mono">
-                      {score.min.toFixed(4)} to {score.max.toFixed(4)}
+
+        {/* Desktop table - hidden on small screens */}
+        <div class="hidden md:block">
+          <table class="table-fixed w-full">
+            <thead>
+              <tr>
+                <th>Grade</th>
+                {scoreTypes.map((st) => <th>{st.name}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {
+                gradeCutoffs.map((g) => (
+                  <tr class="odd:bg-selection/10 text-center">
+                    <td class="py-1 px-2">
+                      <div class="w-30 mx-auto">
+                        <Grade grade={g.grade} />
+                      </div>
                     </td>
-                  ))}
-                </tr>
-              ))
-            }
-          </tbody>
-        </table>
+                    {g.scores.map((score) => (
+                      <td class="font-mono">
+                        {score.min.toFixed(4)} to {score.max.toFixed(4)}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              }
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile-friendly cards - shown only on small screens */}
+        <div class="md:hidden space-y-4">
+          {
+            gradeCutoffs.map((g) => (
+              <div class="bg-selection/10 p-3 rounded-md">
+                <div class="mb-2 text-center">
+                  <div class="w-25 mx-auto">
+                    <Grade grade={g.grade} />
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 gap-2">
+                  {g.scores.map((score, i) => {
+                    const scoreType = scoreTypes.find(
+                      (st) => st.key === score.key,
+                    );
+                    return (
+                      <div class="flex justify-between text-sm">
+                        <span class="font-semibold">{scoreType?.name}:</span>
+                        <span class="font-mono">
+                          {score.min.toFixed(4)} to {score.max.toFixed(4)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+          }
+        </div>
         <div class="my-4"></div>
         <p class="my-2">
           The thresholds for relative scores are a little different. The
