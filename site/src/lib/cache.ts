@@ -14,6 +14,12 @@ const memoryCache = new Map<string, CacheEntry<any>>();
 // Track in-flight promises for data being loaded
 const pendingPromises = new Map<string, Promise<any>>();
 
+// Track in-flight promises for disk cache reads
+const pendingDiskReads = new Map<
+  string,
+  Promise<{ data: any; timestamp: number }>
+>();
+
 // Cache options interface
 interface CacheOptions {
   expirationMs?: number;
@@ -106,59 +112,78 @@ export async function loadFromDiskCache<T>(cacheKey: string): Promise<{
   data: T | null;
   timestamp: number;
 }> {
-  try {
-    // Check if we have a metadata file for chunked data
-    const metaFile = path.join(CACHE_DIR, `${cacheKey}_meta.json`);
-
-    // This is chunked data, read the metadata
-    const metadata = JSON.parse(fs.readFileSync(metaFile, "utf8"));
-    console.log(`Loading chunked disk cache for ${cacheKey}`);
-
-    // Load all chunks in parallel
-    const chunkPromises = Array.from(
-      { length: metadata.numChunks },
-      async (_, i) => {
-        const chunkFile = path.join(CACHE_DIR, `${cacheKey}_chunk_${i}.json`);
-        return fs.promises
-          .readFile(chunkFile, "utf8")
-          .then((data) => JSON.parse(data))
-          .catch((err) => {
-            console.warn(
-              `Missing chunk ${i} for ${cacheKey}, cache incomplete: ${err}`,
-            );
-            throw new Error(`Missing chunk ${i}`);
-          });
-      },
-    );
-
-    // Wait for all chunks to load
-    const chunks = await Promise.all(chunkPromises);
-
-    // Combine all chunks
-    const resultArray = chunks.flat();
-
-    // Convert back to Map if the original was a Map
-    let result: T;
-    if (metadata.isMap) {
-      console.log(
-        `Loaded disk cache (${resultArray.length} entries, map) for ${cacheKey}`,
-      );
-      result = new Map(resultArray) as T;
-    } else {
-      console.log(
-        `Loaded disk cache (${resultArray.length} items, array) for ${cacheKey}`,
-      );
-      result = resultArray as T;
-    }
-
-    return {
-      data: result,
-      timestamp: metadata.timestamp || 0,
-    };
-  } catch (error) {
-    // Data files likely do not exist, return empty
-    return { data: null, timestamp: 0 };
+  // Check if a disk read for this data is already pending
+  if (pendingDiskReads.has(cacheKey)) {
+    return pendingDiskReads.get(cacheKey) as Promise<{
+      data: T | null;
+      timestamp: number;
+    }>;
   }
+
+  // Create a new promise for this disk read operation
+  const readPromise = (async () => {
+    try {
+      // Check if we have a metadata file for chunked data
+      const metaFile = path.join(CACHE_DIR, `${cacheKey}_meta.json`);
+
+      // This is chunked data, read the metadata
+      const metadata = JSON.parse(fs.readFileSync(metaFile, "utf8"));
+      console.log(`Loading chunked disk cache for ${cacheKey}`);
+
+      // Load all chunks in parallel
+      const chunkPromises = Array.from(
+        { length: metadata.numChunks },
+        async (_, i) => {
+          const chunkFile = path.join(CACHE_DIR, `${cacheKey}_chunk_${i}.json`);
+          return fs.promises
+            .readFile(chunkFile, "utf8")
+            .then((data) => JSON.parse(data))
+            .catch((err) => {
+              console.warn(
+                `Missing chunk ${i} for ${cacheKey}, cache incomplete: ${err}`,
+              );
+              throw new Error(`Missing chunk ${i}`);
+            });
+        },
+      );
+
+      // Wait for all chunks to load
+      const chunks = await Promise.all(chunkPromises);
+
+      // Combine all chunks
+      const resultArray = chunks.flat();
+
+      // Convert back to Map if the original was a Map
+      let result: T;
+      if (metadata.isMap) {
+        console.log(
+          `Loaded disk cache (${resultArray.length} entries, map) for ${cacheKey}`,
+        );
+        result = new Map(resultArray) as T;
+      } else {
+        console.log(
+          `Loaded disk cache (${resultArray.length} items, array) for ${cacheKey}`,
+        );
+        result = resultArray as T;
+      }
+
+      return {
+        data: result,
+        timestamp: metadata.timestamp || 0,
+      };
+    } catch (error) {
+      // Data files likely do not exist, return empty
+      return { data: null, timestamp: 0 };
+    } finally {
+      // Remove this promise from pending disk reads
+      pendingDiskReads.delete(cacheKey);
+    }
+  })();
+
+  // Store the promise so other calls can reuse it
+  pendingDiskReads.set(cacheKey, readPromise);
+
+  return readPromise;
 }
 
 // Save data to cache (both memory and disk)
@@ -242,9 +267,8 @@ export async function getOrFetchData<T>(
   }
 
   // Check if a promise for this data is already pending
-  // If so, return it and this request will track that promise
+  // If so, return it and this request will follow that promise
   if (pendingPromises.has(cacheKey)) {
-    console.log(`Reusing pending promise for ${cacheKey}`);
     return pendingPromises.get(cacheKey) as Promise<T>;
   }
 
