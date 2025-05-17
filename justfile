@@ -93,6 +93,11 @@ site-dev:
 site-test:
     npx astro check --silent
 
+# Reset site cache
+site-cache-reset:
+    mkdir -p site/cache/archive
+    mv site/cache/*.json site/cache/archive
+
 # Build the main site
 [working-directory: 'site']
 site-build *args:
