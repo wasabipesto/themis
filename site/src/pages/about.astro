@@ -323,7 +323,7 @@ const scoreTypes = [
           /> and the market's resolution
           <Math equation="r" />, we can calculate the Brier score with:
         </p>
-        <div class="text-center my-4">
+        <div class="text-center my-4 hidden sm:block">
           <Math
             equation={String.raw`
               \text{Brier Score} = \begin{cases}
@@ -332,6 +332,9 @@ const scoreTypes = [
               ~(p-r)^2 &\text{if } 0 \leq r \leq 1
               \end{cases}`}
           />
+        </div>
+        <div class="text-center my-4 sm:hidden">
+          <Math equation={String.raw`(p-r)^2`} />
         </div>
         <p class="my-2">
           The <a
@@ -343,7 +346,7 @@ const scoreTypes = [
           With any market's criterion probability <Math equation="p" /> and resolution
           <Math equation="r" />, we can calculate the logarithmic score with:
         </p>
-        <div class="text-center my-4">
+        <div class="text-center my-4 hidden sm:block">
           <Math
             equation={String.raw`
               \text{Logarithmic Score} = \begin{cases}
@@ -352,6 +355,9 @@ const scoreTypes = [
               ~r \cdot ln(p) + (1-r) \cdot ln(1-p) &\text{if } 0 \leq r \leq 1
               \end{cases}`}
           />
+        </div>
+        <div class="text-center my-4 sm:hidden">
+          <Math equation={String.raw`r \cdot ln(p) + (1-r) \cdot ln(1-p)`} />
         </div>
         <p class="my-2">
           The <a
@@ -365,7 +371,7 @@ const scoreTypes = [
           /> and resolution
           <Math equation="r" />, we can calculate the spherical score with:
         </p>
-        <div class="text-center my-4">
+        <div class="text-center my-4 hidden sm:block">
           <Math
             equation={String.raw`
               \text{Spherical Score} = \begin{cases}
@@ -373,6 +379,11 @@ const scoreTypes = [
               ~\displaystyle\frac{1-p}{\sqrt{p^2+(1-p)^2}} &\text{if } r = 0 \\
               ~\displaystyle\frac{r \cdot p+(1-r) \cdot (1-p)}{\sqrt{p^2+(1-p)^2}} &\text{if } 0 \leq r \leq 1
               \end{cases}`}
+          />
+        </div>
+        <div class="text-center my-4 sm:hidden">
+          <Math
+            equation={String.raw`\displaystyle\frac{r \cdot p+(1-r) \cdot (1-p)}{\sqrt{p^2+(1-p)^2}}`}
           />
         </div>
         <h4 class="text-lg italic">Relative Scores</h4>
@@ -418,9 +429,14 @@ const scoreTypes = [
         <p class="my-2">
           One way to represent this score for each market would be:
         </p>
-        <div class="text-center my-4">
+        <div class="text-center my-4 hidden sm:block">
           <Math
             equation={String.raw`\displaystyle\text{Relative Score} = \frac{\sum_{i=1}^{n} (s_i - m_i)}{n}`}
+          />
+        </div>
+        <div class="text-center my-4 sm:hidden">
+          <Math
+            equation={String.raw`\displaystyle\frac{\sum_{i=1}^{n} (s_i - m_i)}{n}`}
           />
         </div>
         <p class="my-2">
