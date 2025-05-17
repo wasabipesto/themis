@@ -220,6 +220,12 @@ just site-dev # live preview the site in a browser
 just site-build # build the site to the site/dist directory
 ```
 
+The first site page load (in preview mode) or build will take a while as items are downloaded from the server. Subsequent loads/builds will be much faster but will not reflect the database's current state. In order to clear the cache, run the task:
+
+```bash
+just site-cache-reset # invalidate site data cache
+```
+
 We use `rclone` to deploy the site to your provider of choice. First, configure your `rclone` target and add the details to the `.env` file:
 
 ```bash
