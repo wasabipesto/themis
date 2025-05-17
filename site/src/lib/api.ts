@@ -225,13 +225,15 @@ export async function getFeaturedQuestions(
   limit: number,
   categorySlug?: string,
 ): Promise<QuestionDetails[]> {
-  const url = `/question_details?order=hotness_score.desc&limit=${limit}`;
+  let questions = await getQuestions();
   if (categorySlug) {
-    return fetchFromAPI<QuestionDetails[]>(
-      `${url}&category_slug=eq.${categorySlug}`,
+    questions = questions.filter(
+      (question) => question.category_slug === categorySlug,
     );
   }
-  return fetchFromAPI<QuestionDetails[]>(url);
+  return questions
+    .sort((a, b) => a.hotness_score - b.hotness_score)
+    .slice(0, limit);
 }
 
 export async function getTopQuestionsForPlatform(
@@ -357,15 +359,31 @@ export async function getMarketScores(): Promise<MarketScoreDetails[]> {
   });
 }
 
+export async function getMarketScoresLinked(): Promise<MarketScoreDetails[]> {
+  return getOrFetchData<MarketScoreDetails[]>(
+    "market_scores_linked",
+    async () => {
+      const allScores = await getMarketScores();
+      const linkedScores = allScores.filter(
+        (score) => score.question_id !== null,
+      );
+      return linkedScores;
+    },
+  );
+}
+
 export async function getMarketScoresByQuestion(
   question_ids: number[],
   score_type: string | null,
 ): Promise<MarketScoreDetails[]> {
-  let url = `/market_scores_details?question_id=in.(${question_ids.join(",")})&order=platform_slug`;
+  let scores = await getMarketScoresLinked();
+  scores = scores.filter((score) =>
+    question_ids.includes(score.question_id || -1),
+  );
   if (score_type) {
-    url += `&score_type=eq.${score_type}`;
+    scores = scores.filter((score) => score.score_type === score_type);
   }
-  return fetchFromAPI<MarketScoreDetails[]>(url);
+  return scores;
 }
 
 export async function getAllDailyProbabilities(): Promise<
