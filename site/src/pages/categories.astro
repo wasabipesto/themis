@@ -92,8 +92,8 @@ const marketScores = await getMarketScoresByQuestion(
           })}
         </div>
         <SeeMoreLink
-          link={`/questions?category=${category.slug}`}
-          text={`See all ${category.name} questions`}
+          link={`/category/${category.slug}`}
+          text={`Additional ${category.name} statistics`}
         />
       </div>
     ))
