@@ -74,7 +74,7 @@ def get_data(endpoint, headers=None, params=None, batch_size=100_000):
             except Exception as e:
                 print("Could not parse JSON response:", e)
                 print("Raw response:", response.text, "\n")
-            return False
+            raise ValueError()
 
     if len(result) == 0:
         raise ValueError(f"No data found at {endpoint}")
@@ -123,7 +123,7 @@ def import_simple(postgrest_base, headers, cache_dir, table):
         print(f"Warning: {filename} not found")
 
 
-def export_simple(postgrest_base, cache_dir, table, order):
+def export_simple(postgrest_base, headers, cache_dir, table, order):
     print(f"Exporting table: {table}...")
     filename = cache_dir / f"{table}.json"
     items = get_data(
@@ -131,6 +131,7 @@ def export_simple(postgrest_base, cache_dir, table, order):
         params={
             "order": order,
         },
+        headers=headers,
     )
     with open(filename, "w") as f:
         json.dump(items, f, indent=2)
@@ -146,7 +147,7 @@ def import_to_db(cache_dir, postgrest_base, postgrest_apikey):
         )
 
     # Common headers for all requests
-    default_headers = {
+    headers = {
         "Authorization": f"Bearer {postgrest_apikey}",
         "Prefer": "resolution=merge-duplicates",
         "Content-Type": "application/json",
@@ -173,7 +174,7 @@ def import_to_db(cache_dir, postgrest_base, postgrest_apikey):
         post_data(
             f"{postgrest_base}/questions",
             items,
-            headers=default_headers,
+            headers=headers,
             # Merge if the slug already exists
             params={"on_conflict": "slug"},
         )
@@ -210,7 +211,7 @@ def import_to_db(cache_dir, postgrest_base, postgrest_apikey):
         post_data(
             f"{postgrest_base}/markets",
             items,
-            headers=default_headers,
+            headers=headers,
         )
         print(
             f"Imported table markets with {len(items)} items to {postgrest_base}/markets."
@@ -229,7 +230,7 @@ def import_to_db(cache_dir, postgrest_base, postgrest_apikey):
         post_data(
             f"{postgrest_base}/market_dismissals",
             items,
-            headers=default_headers,
+            headers=headers,
         )
         print(
             f"Imported table market_dismissals with {len(items)} items to {postgrest_base}/market_dismissals."
@@ -251,7 +252,7 @@ def import_to_db(cache_dir, postgrest_base, postgrest_apikey):
             if market["question_slug"]
         ]
         # Upload market links
-        post_data(f"{postgrest_base}/market_questions", items, headers=default_headers)
+        post_data(f"{postgrest_base}/market_questions", items, headers=headers)
         print(
             f"Imported table market_questions with {len(items)} items to {postgrest_base}/market_questions."
         )
@@ -259,11 +260,11 @@ def import_to_db(cache_dir, postgrest_base, postgrest_apikey):
         print(f"Warning: {markets_file} not found")
 
     # Upload other simple tables
-    import_simple(postgrest_base, default_headers, cache_dir, "market_embeddings")
-    import_simple(postgrest_base, default_headers, cache_dir, "daily_probabilities")
-    import_simple(postgrest_base, default_headers, cache_dir, "criterion_probabilities")
-    import_simple(postgrest_base, default_headers, cache_dir, "newsletter_signups")
-    import_simple(postgrest_base, default_headers, cache_dir, "general_feedback")
+    import_simple(postgrest_base, headers, cache_dir, "market_embeddings")
+    import_simple(postgrest_base, headers, cache_dir, "daily_probabilities")
+    import_simple(postgrest_base, headers, cache_dir, "criterion_probabilities")
+    import_simple(postgrest_base, headers, cache_dir, "newsletter_signups")
+    import_simple(postgrest_base, headers, cache_dir, "general_feedback")
 
 
 def export_to_disk(cache_dir, postgrest_base, postgrest_apikey):
@@ -271,16 +272,28 @@ def export_to_disk(cache_dir, postgrest_base, postgrest_apikey):
     # Ensure cache directory exists
     cache_dir.mkdir(exist_ok=True)
 
+    # Common headers for all requests
+    headers = {
+        "Authorization": f"Bearer {postgrest_apikey}",
+        "Content-Type": "application/json",
+    }
+
     # Export all simple tables
-    export_simple(postgrest_base, cache_dir, "questions", "id")
-    export_simple(postgrest_base, cache_dir, "markets", "id")
-    export_simple(postgrest_base, cache_dir, "market_embeddings", "market_id")
-    export_simple(postgrest_base, cache_dir, "daily_probabilities", "market_id,date")
+    export_simple(postgrest_base, headers, cache_dir, "questions", "id")
+    export_simple(postgrest_base, headers, cache_dir, "markets", "id")
+    export_simple(postgrest_base, headers, cache_dir, "market_embeddings", "market_id")
     export_simple(
-        postgrest_base, cache_dir, "criterion_probabilities", "market_id,criterion_type"
+        postgrest_base, headers, cache_dir, "daily_probabilities", "market_id,date"
     )
-    export_simple(postgrest_base, cache_dir, "newsletter_signups", "date")
-    export_simple(postgrest_base, cache_dir, "general_feedback", "date")
+    export_simple(
+        postgrest_base,
+        headers,
+        cache_dir,
+        "criterion_probabilities",
+        "market_id,criterion_type",
+    )
+    export_simple(postgrest_base, headers, cache_dir, "newsletter_signups", "date")
+    export_simple(postgrest_base, headers, cache_dir, "general_feedback", "date")
 
 
 def main():
