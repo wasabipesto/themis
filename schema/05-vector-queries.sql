@@ -3,7 +3,7 @@
 -- ==========================================
 --
 -- === FIND MARKETS SIMILAR TO TARGET ===
-DROP FUNCTION find_similar_markets_by_id(text,double precision,integer);
+DROP FUNCTION IF EXISTS find_similar_markets_by_id(text,double precision,integer);
 CREATE OR REPLACE FUNCTION find_similar_markets_by_id(
     target_market_id TEXT,
     threshold FLOAT DEFAULT 0.3,
