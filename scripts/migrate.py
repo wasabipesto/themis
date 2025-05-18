@@ -4,6 +4,7 @@
 #     "dotenv",
 #     "requests",
 #     "argparse",
+#     "tqdm",
 # ]
 # ///
 
@@ -14,6 +15,8 @@ import os
 from pathlib import Path
 import requests
 from dotenv import load_dotenv
+from tqdm import tqdm, trange
+import math
 
 
 def parse_arguments():
@@ -54,17 +57,22 @@ def parse_arguments():
 def get_data(endpoint, headers=None, params=None, batch_size=100_000):
     """Get data from a PostgREST endpoint and handle the response."""
 
-    limit = batch_size
+    count_response = requests.get(endpoint, headers=headers, params="select=count")
+    total_count = count_response.json()[0]["count"]
+    if total_count == 0:
+        raise ValueError(f"No data available at {endpoint}")
+
     result = []
-    while True:
-        params["limit"] = limit
+    num_batches = math.ceil(total_count / batch_size)
+    for i in trange(num_batches):
+        params["limit"] = batch_size
         params["offset"] = len(result)
         response = requests.get(endpoint, headers=headers, params=params)
         if response.ok:
             data = response.json()
             if len(data) > 0:
                 result += data
-            if len(data) < limit:
+            if len(data) < batch_size:
                 break
         else:
             print(f"Download returned code {response.status_code} for {endpoint}")
@@ -76,16 +84,18 @@ def get_data(endpoint, headers=None, params=None, batch_size=100_000):
                 print("Raw response:", response.text, "\n")
             raise ValueError()
 
-    if len(result) == 0:
-        raise ValueError(f"No data found at {endpoint}")
-    else:
-        return result
+    if total_count != len(result):
+        raise ValueError(
+            f"Data missing at {endpoint}: {total_count} expected, {len(result)} received"
+        )
+
+    return result
 
 
 def post_data(endpoint, data, headers=None, params=None, batch_size=10_000):
     """Post data to a PostgREST endpoint and handle the response."""
 
-    for batch in itertools.batched(data, batch_size):
+    for batch in itertools.batched(tqdm(data), batch_size):
         response = requests.post(endpoint, headers=headers, json=batch, params=params)
         if not response.ok:
             print(
@@ -119,6 +129,7 @@ def import_simple(postgrest_base, headers, cache_dir, table):
         print(
             f"Imported table {table} with {len(items)} items to {postgrest_base}/{table}."
         )
+        print()
     else:
         print(f"Warning: {filename} not found")
 
@@ -136,6 +147,7 @@ def export_simple(postgrest_base, headers, cache_dir, table, order):
     with open(filename, "w") as f:
         json.dump(items, f, indent=2)
     print(f"Exported table {table} with {len(items)} items to {filename}")
+    print()
 
 
 def import_to_db(cache_dir, postgrest_base, postgrest_apikey):
@@ -181,12 +193,13 @@ def import_to_db(cache_dir, postgrest_base, postgrest_apikey):
         print(
             f"Imported table questions with {len(items)} items to {postgrest_base}/questions."
         )
+        print()
     else:
         print(f"Warning: {questions_file} not found")
 
     # Upload Markets
     print("Importing table: markets...")
-    markets_file = cache_dir / "markets.json"
+    markets_file = cache_dir / "market_details.json"
     if markets_file.exists():
         markets_raw = load_json_file(markets_file)
 
@@ -208,6 +221,8 @@ def import_to_db(cache_dir, postgrest_base, postgrest_apikey):
             }
             for market in markets_raw
         ]
+        if len(items) == 0:
+            raise ValueError("No markets to import")
         post_data(
             f"{postgrest_base}/markets",
             items,
@@ -216,6 +231,7 @@ def import_to_db(cache_dir, postgrest_base, postgrest_apikey):
         print(
             f"Imported table markets with {len(items)} items to {postgrest_base}/markets."
         )
+        print()
 
         # Upload dismissals
         print("Importing table: market_dismissals...")
@@ -225,8 +241,10 @@ def import_to_db(cache_dir, postgrest_base, postgrest_apikey):
                 "dismissed_status": market["question_dismissed"],
             }
             for market in markets_raw
-            if market["question_dismissed"] > 0
+            if market.get("question_dismissed") and market["question_dismissed"] > 0
         ]
+        if len(items) == 0:
+            raise ValueError("No markets with question_dismissed values")
         post_data(
             f"{postgrest_base}/market_dismissals",
             items,
@@ -235,8 +253,9 @@ def import_to_db(cache_dir, postgrest_base, postgrest_apikey):
         print(
             f"Imported table market_dismissals with {len(items)} items to {postgrest_base}/market_dismissals."
         )
+        print()
 
-        # Replace question slugs with IDs
+        # Upload market links, replacing question slugs with IDs first
         print("Importing table: market_questions...")
         questions = requests.get(
             f"{postgrest_base}/questions", params={"select": "id,slug"}
@@ -249,18 +268,21 @@ def import_to_db(cache_dir, postgrest_base, postgrest_apikey):
                 "question_id": question_map[market["question_slug"]],
             }
             for market in markets_raw
-            if market["question_slug"]
+            if market.get("question_slug")
         ]
-        # Upload market links
+        if len(items) == 0:
+            raise ValueError("No markets with question_slug values")
         post_data(f"{postgrest_base}/market_questions", items, headers=headers)
         print(
             f"Imported table market_questions with {len(items)} items to {postgrest_base}/market_questions."
         )
+        print()
     else:
         print(f"Warning: {markets_file} not found")
 
     # Upload other simple tables
     import_simple(postgrest_base, headers, cache_dir, "market_embeddings")
+    import_simple(postgrest_base, headers, cache_dir, "question_embeddings")
     import_simple(postgrest_base, headers, cache_dir, "daily_probabilities")
     import_simple(postgrest_base, headers, cache_dir, "criterion_probabilities")
     import_simple(postgrest_base, headers, cache_dir, "newsletter_signups")
@@ -280,8 +302,11 @@ def export_to_disk(cache_dir, postgrest_base, postgrest_apikey):
 
     # Export all simple tables
     export_simple(postgrest_base, headers, cache_dir, "questions", "id")
-    export_simple(postgrest_base, headers, cache_dir, "markets", "id")
+    export_simple(postgrest_base, headers, cache_dir, "market_details", "id")
     export_simple(postgrest_base, headers, cache_dir, "market_embeddings", "market_id")
+    export_simple(
+        postgrest_base, headers, cache_dir, "question_embeddings", "question_id"
+    )
     export_simple(
         postgrest_base, headers, cache_dir, "daily_probabilities", "market_id,date"
     )
