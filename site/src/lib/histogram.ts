@@ -12,7 +12,6 @@ export interface DateBarDatapoint {
 export function calculateDateBarPoints(
   markets: MarketDetails[],
   dateKey: "open" | "closed",
-  weightKey?: "volume" | "traders",
   minDate?: number,
   binWidth?: number,
 ): DateBarDatapoint[] {
@@ -38,9 +37,6 @@ export function calculateDateBarPoints(
     } else {
       marketTimeMs = new Date(mkt.close_datetime).getTime();
     }
-
-    // Get weight value (TODO)
-    let weight;
 
     // Crate platform array if not existing
     if (!bins[platform]) {
