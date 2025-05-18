@@ -51,6 +51,13 @@ def parse_arguments():
         default=None,
         help="API key to use for the PostgREST API (default: uses PGRST_APIKEY environment variable)",
     )
+    parser.add_argument(
+        "--table",
+        "-t",
+        type=str,
+        default=None,
+        help="Only import/export a specific table (default: all tables)",
+    )
     return parser.parse_args()
 
 
@@ -147,52 +154,39 @@ def export_simple(postgrest_base, headers, cache_dir, table, order):
     print()
 
 
-def import_to_db(cache_dir, postgrest_base, postgrest_apikey):
-    """Import data from JSON files to PostgREST."""
-    # Ensure cache directory exists for import
-    if not cache_dir.exists() or not cache_dir.is_dir():
-        raise ValueError(
-            f"Cache directory {cache_dir} does not exist, nothing to import!"
-        )
-
-    # Common headers for all requests
-    headers = {
-        "Authorization": f"Bearer {postgrest_apikey}",
-        "Prefer": "resolution=merge-duplicates",
-        "Content-Type": "application/json",
-    }
-
-    # Upload Questions
+def import_questions(postgrest_base, headers, cache_dir):
+    """Import questions table and return necessary mapping data."""
     print("Importing table: questions...")
     questions_file = cache_dir / "questions.json"
-    if questions_file.exists():
-        questions_raw = load_json_file(questions_file)
-
-        # Upload question data
-        items = [
-            {
-                "title": question["title"],
-                "slug": question["slug"],
-                "description": question["description"],
-                "category_slug": question["category_slug"],
-                "start_date_override": question["start_date_override"],
-                "end_date_override": question["end_date_override"],
-            }
-            for question in questions_raw
-        ]
-        post_data(
-            f"{postgrest_base}/questions",
-            items,
-            headers=headers,
-            # Merge if the slug already exists
-            params={"on_conflict": "slug"},
-        )
-        print(
-            f"Imported table questions with {len(items)} items to {postgrest_base}/questions."
-        )
-        print()
-    else:
+    if not questions_file.exists():
         print(f"Warning: {questions_file} not found")
+        return {}, {}
+
+    questions_raw = load_json_file(questions_file)
+
+    # Upload question data
+    items = [
+        {
+            "title": question["title"],
+            "slug": question["slug"],
+            "description": question["description"],
+            "category_slug": question["category_slug"],
+            "start_date_override": question["start_date_override"],
+            "end_date_override": question["end_date_override"],
+        }
+        for question in questions_raw
+    ]
+    post_data(
+        f"{postgrest_base}/questions",
+        items,
+        headers=headers,
+        # Merge if the slug already exists
+        params={"on_conflict": "slug"},
+    )
+    print(
+        f"Imported table questions with {len(items)} items to {postgrest_base}/questions."
+    )
+    print()
 
     # Get updated question map
     questions_new = requests.get(
@@ -206,54 +200,59 @@ def import_to_db(cache_dir, postgrest_base, postgrest_apikey):
         for question in questions_raw
     }
 
-    # Upload Markets
+    return question_slug_to_id_map, question_id_to_id_map
+
+def import_markets(postgrest_base, headers, cache_dir, question_slug_to_id_map):
+    """Import markets and related tables."""
     print("Importing table: markets...")
     markets_file = cache_dir / "market_details.json"
-    if markets_file.exists():
-        markets_raw = load_json_file(markets_file)
+    if not markets_file.exists():
+        print(f"Warning: {markets_file} not found")
+        return
 
-        # Upload raw market data
-        items = [
-            {
-                "id": market["id"],
-                "title": market["title"],
-                "url": market["url"],
-                "description": market["description"],
-                "platform_slug": market["platform_slug"],
-                "category_slug": market["category_slug"],
-                "open_datetime": market["open_datetime"],
-                "close_datetime": market["close_datetime"],
-                "traders_count": market["traders_count"],
-                "volume_usd": market["volume_usd"],
-                "duration_days": market["duration_days"],
-                "resolution": market["resolution"],
-            }
-            for market in markets_raw
-        ]
-        if len(items) == 0:
-            raise ValueError("No markets to import")
-        post_data(
-            f"{postgrest_base}/markets",
-            items,
-            headers=headers,
-        )
-        print(
-            f"Imported table markets with {len(items)} items to {postgrest_base}/markets."
-        )
-        print()
+    markets_raw = load_json_file(markets_file)
 
-        # Upload dismissals
-        print("Importing table: market_dismissals...")
-        items = [
-            {
-                "market_id": market["id"],
-                "dismissed_status": market["question_dismissed"],
-            }
-            for market in markets_raw
-            if market.get("question_dismissed") and market["question_dismissed"] > 0
-        ]
-        if len(items) == 0:
-            raise ValueError("No markets with question_dismissed values")
+    # Upload raw market data
+    items = [
+        {
+            "id": market["id"],
+            "title": market["title"],
+            "url": market["url"],
+            "description": market["description"],
+            "platform_slug": market["platform_slug"],
+            "category_slug": market["category_slug"],
+            "open_datetime": market["open_datetime"],
+            "close_datetime": market["close_datetime"],
+            "traders_count": market["traders_count"],
+            "volume_usd": market["volume_usd"],
+            "duration_days": market["duration_days"],
+            "resolution": market["resolution"],
+        }
+        for market in markets_raw
+    ]
+    if len(items) == 0:
+        raise ValueError("No markets to import")
+    post_data(
+        f"{postgrest_base}/markets",
+        items,
+        headers=headers,
+    )
+    print(
+        f"Imported table markets with {len(items)} items to {postgrest_base}/markets."
+    )
+    print()
+
+    # Upload dismissals
+    print("Importing table: market_dismissals...")
+    items = [
+        {
+            "market_id": market["id"],
+            "dismissed_status": market["question_dismissed"],
+        }
+        for market in markets_raw
+        if market.get("question_dismissed") and market["question_dismissed"] > 0
+    ]
+    if len(items) > 0:
         post_data(
             f"{postgrest_base}/market_dismissals",
             items,
@@ -262,53 +261,93 @@ def import_to_db(cache_dir, postgrest_base, postgrest_apikey):
         print(
             f"Imported table market_dismissals with {len(items)} items to {postgrest_base}/market_dismissals."
         )
-        print()
+    else:
+        print("No markets with question_dismissed values to import")
+    print()
 
-        # Upload market links, replacing question slugs with IDs first
-        print("Importing table: market_questions...")
-        items = [
-            {
-                "market_id": market["id"],
-                "question_invert": market["question_invert"],
-                "question_id": question_slug_to_id_map[market["question_slug"]],
-            }
-            for market in markets_raw
-            if market.get("question_slug")
-        ]
-        if len(items) == 0:
-            raise ValueError("No markets with question_slug values")
+    # Upload market links, replacing question slugs with IDs first
+    print("Importing table: market_questions...")
+    items = [
+        {
+            "market_id": market["id"],
+            "question_invert": market["question_invert"],
+            "question_id": question_slug_to_id_map[market["question_slug"]],
+        }
+        for market in markets_raw
+        if market.get("question_slug")
+    ]
+    if len(items) > 0:
         post_data(f"{postgrest_base}/market_questions", items, headers=headers)
         print(
             f"Imported table market_questions with {len(items)} items to {postgrest_base}/market_questions."
         )
-        print()
     else:
-        print(f"Warning: {markets_file} not found")
+        print("No markets with question_slug values to import")
+    print()
 
-    # Upload question embeddings, replacing old question IDs with new IDs first
+def import_question_embeddings(postgrest_base, headers, cache_dir, question_id_to_id_map):
+    """Import question embeddings."""
     table = "question_embeddings"
     print(f"Importing table: {table}...")
     filename = cache_dir / f"{table}.json"
-    if filename.exists():
-        data = load_json_file(filename)
-        items = [
-            {
-                "question_id": question_id_to_id_map[qemb["question_id"]],
-                "embedding": qemb["embedding"],
-            }
-            for qemb in data
-        ]
-        post_data(
-            f"{postgrest_base}/{table}",
-            items,
-            headers=headers,
-        )
-        print(
-            f"Imported table {table} with {len(items)} items to {postgrest_base}/{table}."
-        )
-        print()
-    else:
+    if not filename.exists():
         print(f"Warning: {filename} not found")
+        return
+        
+    data = load_json_file(filename)
+    items = [
+        {
+            "question_id": question_id_to_id_map[qemb["question_id"]],
+            "embedding": qemb["embedding"],
+        }
+        for qemb in data
+    ]
+    post_data(
+        f"{postgrest_base}/{table}",
+        items,
+        headers=headers,
+    )
+    print(
+        f"Imported table {table} with {len(items)} items to {postgrest_base}/{table}."
+    )
+    print()
+
+def import_to_db(cache_dir, postgrest_base, postgrest_apikey, table=None):
+    """Import data from JSON files to PostgREST."""
+    # Ensure cache directory exists for import
+    if not cache_dir.exists() or not cache_dir.is_dir():
+        raise ValueError(
+            f"Cache directory {cache_dir} does not exist, nothing to import!"
+        )
+
+    # Common headers for all requests
+    headers = {
+        "Authorization": f"Bearer {postgrest_apikey}",
+        "Prefer": "resolution=merge-duplicates",
+        "Content-Type": "application/json",
+    }
+    
+    # Handle single table import
+    if table:
+        if table == "questions":
+            import_questions(postgrest_base, headers, cache_dir)
+        elif table == "markets" or table == "market_details":
+            question_slug_to_id_map, _ = import_questions(postgrest_base, headers, cache_dir)
+            import_markets(postgrest_base, headers, cache_dir, question_slug_to_id_map)
+        elif table == "market_dismissals" or table == "market_questions":
+            question_slug_to_id_map, _ = import_questions(postgrest_base, headers, cache_dir)
+            import_markets(postgrest_base, headers, cache_dir, question_slug_to_id_map)
+        elif table == "question_embeddings":
+            question_slug_to_id_map, question_id_to_id_map = import_questions(postgrest_base, headers, cache_dir)
+            import_question_embeddings(postgrest_base, headers, cache_dir, question_id_to_id_map)
+        else:
+            import_simple(postgrest_base, headers, cache_dir, table)
+        return
+
+    # Import all tables
+    question_slug_to_id_map, question_id_to_id_map = import_questions(postgrest_base, headers, cache_dir)
+    import_markets(postgrest_base, headers, cache_dir, question_slug_to_id_map)
+    import_question_embeddings(postgrest_base, headers, cache_dir, question_id_to_id_map)
 
     # Upload other simple tables
     import_simple(postgrest_base, headers, cache_dir, "market_embeddings")
@@ -318,7 +357,24 @@ def import_to_db(cache_dir, postgrest_base, postgrest_apikey):
     import_simple(postgrest_base, headers, cache_dir, "general_feedback")
 
 
-def export_to_disk(cache_dir, postgrest_base, postgrest_apikey):
+def get_table_order(table):
+    """Get the order parameter for a table for export."""
+    table_orders = {
+        "questions": "id",
+        "market_details": "id",
+        "market_embeddings": "market_id",
+        "question_embeddings": "question_id",
+        "daily_probabilities": "market_id,date",
+        "criterion_probabilities": "market_id,criterion_type",
+        "newsletter_signups": "date",
+        "general_feedback": "date",
+        "markets": "id",
+        "market_dismissals": "market_id",
+        "market_questions": "market_id,question_id",
+    }
+    return table_orders.get(table, "id")
+
+def export_to_disk(cache_dir, postgrest_base, postgrest_apikey, table=None):
     """Export data from PostgREST to JSON files."""
     # Ensure cache directory exists
     cache_dir.mkdir(exist_ok=True)
@@ -329,7 +385,12 @@ def export_to_disk(cache_dir, postgrest_base, postgrest_apikey):
         "Content-Type": "application/json",
     }
 
-    # Export all simple tables
+    # Handle single table export
+    if table:
+        export_simple(postgrest_base, headers, cache_dir, table, get_table_order(table))
+        return
+
+    # Export all tables
     export_simple(postgrest_base, headers, cache_dir, "questions", "id")
     export_simple(postgrest_base, headers, cache_dir, "market_details", "id")
     export_simple(postgrest_base, headers, cache_dir, "market_embeddings", "market_id")
@@ -371,13 +432,16 @@ def main():
 
     # Set up cache directory
     cache_dir = Path(args.cache_dir)
+    
+    # Handle table argument
+    table_msg = f" (table: {args.table})" if args.table else ""
 
     if args.mode == "import":
-        print(f"Importing data from {cache_dir} to PostgREST...")
-        import_to_db(cache_dir, postgrest_base, postgrest_apikey)
+        print(f"Importing data from {cache_dir} to PostgREST{table_msg}...")
+        import_to_db(cache_dir, postgrest_base, postgrest_apikey, args.table)
     else:  # Export mode
-        print(f"Exporting data from PostgREST to {cache_dir}...")
-        export_to_disk(cache_dir, postgrest_base, postgrest_apikey)
+        print(f"Exporting data from PostgREST to {cache_dir}{table_msg}...")
+        export_to_disk(cache_dir, postgrest_base, postgrest_apikey, args.table)
 
     print("Operation completed.")
 
