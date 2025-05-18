@@ -313,8 +313,6 @@ just db-run-sql schema/03-views.sql
 
 # I just want the data
 
-TODO: This isn't actually set up yet. See https://calibration.city/ for the current live site.
-
 The production database is publicly readable via PostgREST here:
 
 - [https://data.brier.fyi](https://data.brier.fyi/)
