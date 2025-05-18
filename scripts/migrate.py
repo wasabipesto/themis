@@ -194,6 +194,18 @@ def import_to_db(cache_dir, postgrest_base, postgrest_apikey):
     else:
         print(f"Warning: {questions_file} not found")
 
+    # Get updated question map
+    questions_new = requests.get(
+        f"{postgrest_base}/questions", params={"select": "id,slug"}
+    ).json()
+    question_slug_to_id_map = {
+        question["slug"]: question["id"] for question in questions_new
+    }
+    question_id_to_id_map = {
+        question["id"]: question_slug_to_id_map[question["slug"]]
+        for question in questions_raw
+    }
+
     # Upload Markets
     print("Importing table: markets...")
     markets_file = cache_dir / "market_details.json"
@@ -254,15 +266,11 @@ def import_to_db(cache_dir, postgrest_base, postgrest_apikey):
 
         # Upload market links, replacing question slugs with IDs first
         print("Importing table: market_questions...")
-        questions = requests.get(
-            f"{postgrest_base}/questions", params={"select": "id,slug"}
-        ).json()
-        question_map = {question["slug"]: question["id"] for question in questions}
         items = [
             {
                 "market_id": market["id"],
                 "question_invert": market["question_invert"],
-                "question_id": question_map[market["question_slug"]],
+                "question_id": question_slug_to_id_map[market["question_slug"]],
             }
             for market in markets_raw
             if market.get("question_slug")
@@ -277,9 +285,33 @@ def import_to_db(cache_dir, postgrest_base, postgrest_apikey):
     else:
         print(f"Warning: {markets_file} not found")
 
+    # Upload question embeddings, replacing old question IDs with new IDs first
+    table = "question_embeddings"
+    print(f"Importing table: {table}...")
+    filename = cache_dir / f"{table}.json"
+    if filename.exists():
+        data = load_json_file(filename)
+        items = [
+            {
+                "question_id": question_id_to_id_map[qemb["question_id"]],
+                "embedding": qemb["embedding"],
+            }
+            for qemb in data
+        ]
+        post_data(
+            f"{postgrest_base}/{table}",
+            items,
+            headers=headers,
+        )
+        print(
+            f"Imported table {table} with {len(items)} items to {postgrest_base}/{table}."
+        )
+        print()
+    else:
+        print(f"Warning: {filename} not found")
+
     # Upload other simple tables
     import_simple(postgrest_base, headers, cache_dir, "market_embeddings")
-    import_simple(postgrest_base, headers, cache_dir, "question_embeddings")
     import_simple(postgrest_base, headers, cache_dir, "daily_probabilities")
     import_simple(postgrest_base, headers, cache_dir, "criterion_probabilities")
     import_simple(postgrest_base, headers, cache_dir, "newsletter_signups")
