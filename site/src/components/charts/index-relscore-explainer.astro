@@ -8,6 +8,10 @@ import {
 } from "@lib/api";
 import type { QuestionDetails } from "@types";
 
+import * as Plot from "@observablehq/plot";
+import { JSDOM } from "jsdom";
+const { document } = new JSDOM().window;
+
 interface Props {
   question: QuestionDetails;
 }
@@ -27,36 +31,177 @@ const marketScores = await getMarketScoresByQuestion(
 
 // Get resolution from market
 const resolution = markets[0].question_invert
-  ? !markets[0].resolution
+  ? 1 - markets[0].resolution
   : markets[0].resolution;
+
+// Brier score helper function
+function brier_score(res: number, prob: number, invert: boolean): number {
+  return (res - (invert ? 1 - prob : prob)) ** 2;
+}
+
+// Calculate scores
+const scores = points.map((s) => ({
+  date: s.date,
+  score: brier_score(resolution, s.prob, s.question_invert),
+  platform_name: s.platform_name,
+}));
+
+// Calculate median scores by date
+const scoresByDate: Record<string, number[]> = {};
+scores.forEach((s) => {
+  const dateStr = s.date;
+  if (!scoresByDate[dateStr]) {
+    scoresByDate[dateStr] = [];
+  }
+  scoresByDate[dateStr].push(s.score);
+});
+
+// Find median for each date (only for days with at least two scores)
+const medianScores = Object.entries(scoresByDate)
+  .filter(([_, dayScores]) => dayScores.length >= 2) // Only include days with at least two scores
+  .map(([date, dayScores]: [string, number[]]) => {
+    const sortedScores = [...dayScores].sort((a, b) => a - b);
+    const middleIndex = Math.floor(sortedScores.length / 2);
+    const median =
+      sortedScores.length % 2 === 0
+        ? (sortedScores[middleIndex - 1] + sortedScores[middleIndex]) / 2
+        : sortedScores[middleIndex];
+
+    return {
+      date,
+      score: median,
+      platform_name: "Median",
+    };
+  });
+
+// Create a map of median scores by date for easy lookup
+const medianByDate = new Map(
+  medianScores.map((item) => [item.date, item.score]),
+);
+
+// Calculate differences from median for each platform's score
+const diffFromMedian = scores
+  .filter((score) => medianByDate.has(score.date)) // Only include dates that have a median
+  .map((score) => {
+    const medianScore = medianByDate.get(score.date);
+    // This should never be undefined due to the filter above, but TypeScript doesn't know that
+    if (medianScore === undefined) {
+      return null; // This will be filtered out below
+    }
+    return {
+      date: score.date,
+      diff: score.score - medianScore,
+      platform_name: score.platform_name,
+    };
+  })
+  .filter((item) => item !== null); // Filter out any nulls
+
+const plots = [
+  /* First plot - raw probabilities */
+  Plot.plot({
+    title: "Daily Probabilities",
+    height: 200,
+    x: { type: "utc", label: "Date" },
+    y: {
+      domain: [0, 100],
+      grid: true,
+      percent: true,
+      label: "Probability",
+    },
+    color: {
+      label: "Platform",
+      domain: ["Manifold", "Kalshi", "Metaculus", "Polymarket", "Median"],
+      range: ["#4337c9", "#00d298", "#283441", "#0072f9", "#ff0000"],
+    },
+    marks: [
+      Plot.line(points, {
+        x: "date",
+        y: (i) => (i.question_invert ? 1 - i.prob : i.prob),
+        stroke: "platform_name",
+        curve: "step",
+      }),
+      Plot.ruleY([0]),
+    ],
+    document,
+  }).outerHTML,
+  /* Second plot - daily scores */
+  Plot.plot({
+    title: "Daily Calculated Brier Scores",
+    height: 200,
+    x: { type: "utc", label: "Date" },
+    y: {
+      grid: true,
+      label: "Brier score (lower is better)",
+    },
+    color: {
+      label: "Platform",
+      domain: ["Manifold", "Kalshi", "Metaculus", "Polymarket", "Median"],
+      range: ["#4337c9", "#00d298", "#283441", "#0072f9", "#ff0000"],
+    },
+    marks: [
+      Plot.line(scores, {
+        x: "date",
+        y: "score",
+        stroke: "platform_name",
+        curve: "step",
+      }),
+      /*
+        Plot.line(medianScores, {
+          x: "date",
+          y: "score",
+          curve: "step",
+        }),
+        */
+      Plot.ruleY([0]),
+    ],
+    document,
+  }).outerHTML,
+  /* Third plot - daily differentials */
+  Plot.plot({
+    title: "Difference from Median Brier Score",
+    height: 200,
+    x: { type: "utc", label: "Date" },
+    y: {
+      grid: true,
+      label: "Score difference (lower is better)",
+    },
+    color: {
+      label: "Platform",
+      domain: ["Manifold", "Kalshi", "Metaculus", "Polymarket"],
+      range: ["#4337c9", "#00d298", "#283441", "#0072f9"],
+    },
+    marks: [
+      //Plot.ruleY([0]),
+      Plot.line(diffFromMedian, {
+        x: "date",
+        y: "diff",
+        stroke: "platform_name",
+        curve: "step",
+      }),
+    ],
+    document,
+  }).outerHTML,
+];
 ---
 
 <div
-  id="plot-relscore-explainer-data"
-  data-points={JSON.stringify(points)}
-  data-resolution={resolution}
+  class="bg-base-light text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
 >
+  <div class="grid grid-cols-1 gap-4">
+    {
+      plots.map((plot) => (
+        <div>
+          <Fragment set:html={plot} />
+        </div>
+      ))
+    }
+  </div>
+  <p class="text-xs">
+    Source: <a href="https://brier.fyi">brier.fyi</a>
+  </p>
 </div>
 
-<div
-  class="bg-base-light text-crust rounded-md drop-shadow-sm p-4 m-2 overflow-x-auto"
->
-  <div id="plot-relscore-explainer-01"></div>
-</div>
-
-<div
-  class="bg-base-light text-crust rounded-md drop-shadow-sm p-4 m-2 overflow-x-auto"
->
-  <div id="plot-relscore-explainer-02"></div>
-</div>
-
-<div
-  class="bg-base-light text-crust rounded-md drop-shadow-sm p-4 m-2 overflow-x-auto"
->
-  <div id="plot-relscore-explainer-03"></div>
-</div>
-
-<div class="bg-crust rounded-md drop-shadow-sm p-4 m-2 mt-4">
+<div class="bg-crust rounded-md drop-shadow-sm p-4 mt-4">
   <h3 class="font-bold">Relative score results:</h3>
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2">
     {
@@ -74,185 +219,3 @@ const resolution = markets[0].question_invert
     }
   </div>
 </div>
-
-<script>
-  import * as Plot from "@observablehq/plot";
-  import type { DailyProbabilityDetails } from "@types";
-
-  function brier_score(res: number, prob: number, invert: boolean): number {
-    return (res - (invert ? 1 - prob : prob)) ** 2;
-  }
-
-  // Get the data
-  const dataContainer = document.querySelector("#plot-relscore-explainer-data");
-  if (!dataContainer) {
-    throw new Error("Missing data container");
-  }
-  const points: DailyProbabilityDetails[] = JSON.parse(
-    (dataContainer as HTMLElement).dataset.points || "[]",
-  );
-  if (!points) {
-    throw new Error("Missing points");
-  }
-  const rawResolution = (dataContainer as HTMLElement).dataset.resolution;
-  if (!rawResolution) {
-    throw new Error("Missing resolution");
-  }
-  const resolution: number = Number(rawResolution);
-  if (isNaN(resolution)) {
-    throw new Error("Resolution is not a valid number");
-  }
-
-  // Calculate scores
-  const scores = points.map((s) => ({
-    date: s.date,
-    score: brier_score(resolution, s.prob, s.question_invert),
-    platform_name: s.platform_name,
-  }));
-
-  // Calculate median scores by date
-  const scoresByDate: Record<string, number[]> = {};
-  scores.forEach((s) => {
-    const dateStr = s.date;
-    if (!scoresByDate[dateStr]) {
-      scoresByDate[dateStr] = [];
-    }
-    scoresByDate[dateStr].push(s.score);
-  });
-
-  // Find median for each date (only for days with at least two scores)
-  const medianScores = Object.entries(scoresByDate)
-    .filter(([_, dayScores]) => dayScores.length >= 2) // Only include days with at least two scores
-    .map(([date, dayScores]: [string, number[]]) => {
-      const sortedScores = [...dayScores].sort((a, b) => a - b);
-      const middleIndex = Math.floor(sortedScores.length / 2);
-      const median =
-        sortedScores.length % 2 === 0
-          ? (sortedScores[middleIndex - 1] + sortedScores[middleIndex]) / 2
-          : sortedScores[middleIndex];
-
-      return {
-        date,
-        score: median,
-        platform_name: "Median",
-      };
-    });
-
-  // Create a map of median scores by date for easy lookup
-  const medianByDate = new Map(
-    medianScores.map((item) => [item.date, item.score]),
-  );
-
-  // Calculate differences from median for each platform's score
-  const diffFromMedian = scores
-    .filter((score) => medianByDate.has(score.date)) // Only include dates that have a median
-    .map((score) => {
-      const medianScore = medianByDate.get(score.date);
-      // This should never be undefined due to the filter above, but TypeScript doesn't know that
-      if (medianScore === undefined) {
-        return null; // This will be filtered out below
-      }
-      return {
-        date: score.date,
-        diff: score.score - medianScore,
-        platform_name: score.platform_name,
-      };
-    })
-    .filter((item) => item !== null); // Filter out any nulls
-
-  document
-    .querySelectorAll("#plot-relscore-explainer-01")
-    .forEach((plotElement) => {
-      const plot = Plot.plot({
-        title: "Daily Probabilities",
-        height: 200,
-        x: { type: "utc", label: "Date" },
-        y: {
-          domain: [0, 100],
-          grid: true,
-          percent: true,
-          label: "Probability",
-        },
-        color: {
-          label: "Platform",
-          domain: ["Manifold", "Kalshi", "Metaculus", "Polymarket", "Median"],
-          range: ["#4337c9", "#00d298", "#283441", "#0072f9", "#ff0000"],
-        },
-        marks: [
-          Plot.line(points, {
-            x: "date",
-            y: (i) => (i.question_invert ? 1 - i.prob : i.prob),
-            stroke: "platform_name",
-            curve: "step",
-          }),
-          Plot.ruleY([0]),
-        ],
-      });
-      plotElement?.append(plot);
-    });
-
-  document
-    .querySelectorAll("#plot-relscore-explainer-02")
-    .forEach((plotElement) => {
-      const plot = Plot.plot({
-        title: "Daily Calculated Brier Scores",
-        height: 200,
-        x: { type: "utc", label: "Date" },
-        y: {
-          grid: true,
-          label: "Brier score (lower is better)",
-        },
-        color: {
-          label: "Platform",
-          domain: ["Manifold", "Kalshi", "Metaculus", "Polymarket", "Median"],
-          range: ["#4337c9", "#00d298", "#283441", "#0072f9", "#ff0000"],
-        },
-        marks: [
-          Plot.line(scores, {
-            x: "date",
-            y: "score",
-            stroke: "platform_name",
-            curve: "step",
-          }),
-          /*
-            Plot.line(medianScores, {
-              x: "date",
-              y: "score",
-              curve: "step",
-            }),
-            */
-          Plot.ruleY([0]),
-        ],
-      });
-      plotElement?.append(plot);
-    });
-
-  document
-    .querySelectorAll("#plot-relscore-explainer-03")
-    .forEach((plotElement) => {
-      const plot = Plot.plot({
-        title: "Difference from Median Brier Score",
-        height: 200,
-        x: { type: "utc", label: "Date" },
-        y: {
-          grid: true,
-          label: "Score difference (lower is better)",
-        },
-        color: {
-          label: "Platform",
-          domain: ["Manifold", "Kalshi", "Metaculus", "Polymarket"],
-          range: ["#4337c9", "#00d298", "#283441", "#0072f9"],
-        },
-        marks: [
-          //Plot.ruleY([0]),
-          Plot.line(diffFromMedian, {
-            x: "date",
-            y: "diff",
-            stroke: "platform_name",
-            curve: "step",
-          }),
-        ],
-      });
-      plotElement?.append(plot);
-    });
-</script>
