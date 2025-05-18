@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 def parse_arguments():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description="Import or export data to/from PostgREST API."
+        description="Import or export data to/from databases via the PostgREST API."
     )
     parser.add_argument(
         "--mode",
@@ -27,7 +27,7 @@ def parse_arguments():
         type=str,
         choices=["import", "export"],
         required=True,
-        help="Operation mode: import data to API or export data from API",
+        help="Operation mode: import data to the database or export data to disk",
     )
     parser.add_argument(
         "--cache-dir",
@@ -51,10 +51,10 @@ def setup_postgrest_connection():
     return postgrest_base, postgrest_apikey
 
 
-def get_data(endpoint, headers=None, params=None):
+def get_data(endpoint, headers=None, params=None, batch_size=100_000):
     """Get data from a PostgREST endpoint and handle the response."""
 
-    limit = 100_000
+    limit = batch_size
     result = []
     while True:
         params["limit"] = limit
@@ -83,10 +83,10 @@ def get_data(endpoint, headers=None, params=None):
         return result
 
 
-def post_data(endpoint, data, headers=None, params=None):
+def post_data(endpoint, data, headers=None, params=None, batch_size=10_000):
     """Post data to a PostgREST endpoint and handle the response."""
 
-    for batch in itertools.batched(data, 100):
+    for batch in itertools.batched(data, batch_size):
         response = requests.post(endpoint, headers=headers, json=batch, params=params)
         if not response.ok:
             print(
@@ -109,8 +109,14 @@ def load_json_file(filename):
         return json.load(f)
 
 
-def import_data(cache_dir, postgrest_base, postgrest_apikey):
+def import_to_db(cache_dir, postgrest_base, postgrest_apikey):
     """Import data from JSON files to PostgREST."""
+    # Ensure cache directory exists for import
+    if not cache_dir.exists() or not cache_dir.is_dir():
+        raise ValueError(
+            f"Cache directory {cache_dir} does not exist, nothing to import!"
+        )
+
     # Common headers for all requests
     default_headers = {
         "Authorization": f"Bearer {postgrest_apikey}",
@@ -187,7 +193,7 @@ def import_data(cache_dir, postgrest_base, postgrest_apikey):
         print(f"Warning: {market_embeddings_file} not found")
 
 
-def export_data(cache_dir, postgrest_base, postgrest_apikey):
+def export_to_disk(cache_dir, postgrest_base, postgrest_apikey):
     """Export data from PostgREST to JSON files."""
     # Ensure cache directory exists
     cache_dir.mkdir(exist_ok=True)
@@ -243,16 +249,11 @@ def main():
     postgrest_base, postgrest_apikey = setup_postgrest_connection()
 
     if args.mode == "import":
-        # Ensure cache directory exists for import
-        if not cache_dir.exists() or not cache_dir.is_dir():
-            raise ValueError(
-                f"Cache directory {cache_dir} does not exist or is not a directory"
-            )
         print(f"Importing data from {cache_dir} to PostgREST...")
-        import_data(cache_dir, postgrest_base, postgrest_apikey)
+        import_to_db(cache_dir, postgrest_base, postgrest_apikey)
     else:  # Export mode
         print(f"Exporting data from PostgREST to {cache_dir}...")
-        export_data(cache_dir, postgrest_base, postgrest_apikey)
+        export_to_disk(cache_dir, postgrest_base, postgrest_apikey)
 
     print("Operation completed.")
 
