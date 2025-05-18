@@ -70,10 +70,7 @@ def get_data(endpoint, headers=None, params=None, batch_size=100_000):
         response = requests.get(endpoint, headers=headers, params=params)
         if response.ok:
             data = response.json()
-            if len(data) > 0:
-                result += data
-            if len(data) < batch_size:
-                break
+            result += data
         else:
             print(f"Download returned code {response.status_code} for {endpoint}")
             try:
