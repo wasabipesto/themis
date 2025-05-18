@@ -79,7 +79,7 @@ mod tests {
         assert_approx_eq(log_score(0.99, 0.0), 0.01_f32.ln());
 
         // These tests fail due to inaccuracies in the standard f32 ln function.
-        // TODO: Find a better crate for this function and re-enable these tests.
+        // Later, we should find a better crate for this and re-enable these tests.
         // For now, the built-in function is good enough to around 1%.
         //assert_approx_eq(log_score(0.00001, 1.0), 0.00001_f32.ln());
         //assert_approx_eq(log_score(0.99999, 0.0), 0.00001_f32.ln());
