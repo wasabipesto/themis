@@ -283,7 +283,7 @@ Eventually you may want to wipe the markets table in the database, either becaus
 just db-backup
 
 # export the questions and market links
-uv run scripts/migrate_mq.py --mode export
+uv run scripts/migrate.py --mode export
 
 # either drop all tables
 just db-run-sql schema/00-drop-all.sql
@@ -308,7 +308,7 @@ docker kill -s SIGUSR1 postgrest
 just extract
 
 # import the questions and market links
-uv run scripts/migrate_mq.py --mode import
+uv run scripts/migrate.py --mode import
 
 # calculate stats and refresh everything else
 just grade
