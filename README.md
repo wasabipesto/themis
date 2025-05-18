@@ -96,6 +96,7 @@ just db-run-sql schema/02-schema.sql
 just db-run-sql schema/03-views.sql
 just db-run-sql schema/04-vector-tables.sql
 just db-run-sql schema/05-vector-queries.sql
+just db-run-sql schema/06-feedback.sql
 just db-run-sql schema/10-platforms.sql
 just db-run-sql schema/11-categories.sql
 ```
