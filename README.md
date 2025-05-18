@@ -85,20 +85,13 @@ To manually run a backup or get the database schema:
 
 ```bash
 just db-backup # run a backup and save in the postgres_backups folder
-just db-schema # extract the current schema and output to stdout
+just db-get-schema # extract the current schema and output to stdout
 ```
 
-Import the schema, roles, and some basic data by running the following SQL files:
+Import the schema, roles, and some basic data with the `db-load-schema` task:
 
 ```bash
-just db-run-sql schema/01-roles.sql
-just db-run-sql schema/02-schema.sql
-just db-run-sql schema/03-views.sql
-just db-run-sql schema/04-vector-tables.sql
-just db-run-sql schema/05-vector-queries.sql
-just db-run-sql schema/06-feedback.sql
-just db-run-sql schema/10-platforms.sql
-just db-run-sql schema/11-categories.sql
+just db-load-schema # run all provided SQL files
 ```
 
 Reload PostgREST for it to see the new schema:
@@ -293,19 +286,10 @@ sudo rm -r postgres_data
 just db-up
 
 # load the schema
-just db-run-sql schema/01-roles.sql
-just db-run-sql schema/02-schema.sql
-just db-run-sql schema/03-views.sql
-just db-run-sql schema/04-vector-tables.sql
-just db-run-sql schema/05-vector-queries.sql
-just db-run-sql schema/10-platforms.sql
-just db-run-sql schema/11-categories.sql
+just db-load-schema
 
 # reload the schema cache
 docker kill -s SIGUSR1 postgrest
-
-# import markets
-just extract
 
 # import the questions and market links
 uv run scripts/migrate.py --mode import
