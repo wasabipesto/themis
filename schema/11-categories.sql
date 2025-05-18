@@ -8,13 +8,13 @@ VALUES
         'Culture',
         'culture',
         'mdi:theater',
-        'Forecasts on social trends, entertainment, media, and demographic shifts. Covers evolving cultural phenomena, from streaming platforms to social movements and changing consumer behaviors.'
+        'Questions about the most popular movies, TV, music, games, celebrities, and the awards surrounding it all. More broadly, questions about demographics, cultural trends, and societal issues.'
     ),
     (
         'Economics',
         'economics',
         'mdi:chart-line',
-        'Predictions for financial markets, economic indicators, and global trade. Includes forecasts on inflation, interest rates, commodity prices, and major economic developments worldwide.'
+        'Predictions for financial markets, economic indicators, and cryptocurrency. Includes forecasts on inflation, interest rates, commodity prices, and major economic developments worldwide.'
     ),
     (
         'Politics',
@@ -26,17 +26,17 @@ VALUES
         'Science',
         'science',
         'mdi:microscope',
-        'Following advances across scientific disciplines, from climate research to space exploration. Includes breakthrough predictions in physics, biology, medicine, and environmental science.'
+        'Following advances across scientific disciplines, from climate research to space exploration and biotechnology. When will the next advances happen, and how much of an impact will they have?'
     ),
     (
         'Sports',
         'sports',
         'mdi:basketball',
-        'Forecasting outcomes in professional and amateur athletics. Covers game results, championship predictions, player performance metrics, and industry developments across major sports.'
+        'Forecasting outcomes in professional athletics. Covers game results, championship predictions, player performance metrics, and olympic medals.'
     ),
     (
         'Technology',
         'technology',
         'mdi:chip',
-        'Monitoring innovations beyond AI, including renewable energy, biotechnology, quantum computing, and emerging tech trends reshaping industries and daily life.'
+        'Monitoring innovations in the tech industry such as new devices and AI capabilities. Also covers new advancements in tech such as blockchain, quantum computing, and virtual reality.'
     );
