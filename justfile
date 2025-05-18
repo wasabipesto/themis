@@ -54,14 +54,14 @@ db-shell:
 
 # Run a SQL file on the database
 db-run-sql file:
-    docker exec -T $POSTGRES_CONTAINER_NAME psql \
+    docker exec -i $POSTGRES_CONTAINER_NAME psql \
     --username=$POSTGRES_USER \
     --dbname=$POSTGRES_DB \
     < {{file}}
 
 # Get the database schema
 db-schema:
-    docker exec $POSTGRES_CONTAINER_NAME pg_dump \
+    docker exec -i $POSTGRES_CONTAINER_NAME pg_dump \
     --username=$POSTGRES_USER \
     --dbname=$POSTGRES_DB \
     --schema-only
