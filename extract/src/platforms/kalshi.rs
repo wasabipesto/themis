@@ -201,7 +201,6 @@ pub struct KalshiMarket {
 }
 
 /// Values returned from the `/trades` endpoint.
-/// TODO: Might change to GetMarketCandlesticks in the future.
 /// https://trading-api.readme.io/reference/gettrades-1
 #[derive(Debug, Clone, Deserialize)]
 pub struct KalshiHistoryItem {
@@ -375,7 +374,6 @@ pub fn build_prob_segments(
     segments
 }
 
-/// TODO: Get the rest of the items needed for this, somehow.
 /// Kalshi market URLs follow the form:
 ///   https://kalshi.com/markets/{series_ticker}/{series_slug}#{event_ticker}
 /// You can't link to a specific market within an event, but you can target an event within a series.

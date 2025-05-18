@@ -178,7 +178,6 @@ pub struct ManifoldMarket {
     /// How this market was resolved.
     /// This can be YES, NO, MKT, CANCEL, or an answer ID for multiple-choice.
     /// Note that Manifold markets can be unresolved and even reopened!
-    /// TODO: Make an enum with default?
     pub resolution: Option<String>,
     /// When `resolution` is MKT, this is the value that it was resolved to.
     pub resolution_probability: Option<f32>,

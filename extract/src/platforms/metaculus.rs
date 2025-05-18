@@ -67,11 +67,11 @@ pub struct MetaculusAggregationTypes {
 pub struct MetaculusAggregationSeries {
     /// The official Metaculus prediction.
     pub metaculus_prediction: MetaculusAggregationTypes,
-    /// The community prediction.
+    /// The community prediction, what we use to track predictions.
     pub recency_weighted: MetaculusAggregationTypes,
-    /// TODO: Unknown.
+    /// Unknown, hidden to non-admins.
     pub single_aggregation: MetaculusAggregationTypes,
-    /// TODO: Unknown.
+    /// Raw aggregation.
     pub unweighted: MetaculusAggregationTypes,
 }
 
@@ -140,7 +140,7 @@ pub enum MetaculusQuestion {
         /// The resolved option. Must be one of `options` or "annulled"
         resolution: Option<String>,
     },
-    /// TODO
+    /// Container for conditional predictions (X if Y, otherwise Z).
     Conditional {
         /// Typical attributes.
         id: u64,
@@ -149,7 +149,7 @@ pub enum MetaculusQuestion {
         resolution_criteria: String,
         fine_print: String,
         aggregations: MetaculusAggregationSeries,
-        /// TODO
+        /// Unknown.
         resolution: Option<String>,
     },
 }
