@@ -1,7 +1,7 @@
 services:
   postgres:
     image: pgvector/pgvector:pg${POSTGRES_MAJOR:-17}
-    container_name: postgres
+    container_name: ${POSTGRES_CONTAINER_NAME}
     restart: always
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -22,7 +22,7 @@ services:
     container_name: postgrest
     restart: always
     environment:
-      PGRST_DB_URI: postgres://${PGRST_USER}:${PGRST_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}
+      PGRST_DB_URI: postgres://${PGRST_USER}:${PGRST_PASSWORD}@${POSTGRES_CONTAINER_NAME}:${POSTGRES_PORT}/${POSTGRES_DB}
       PGRST_DB_SCHEMA: ${PGRST_DB_SCHEMA}
       PGRST_DB_ANON_ROLE: ${PGRST_DB_ANON_ROLE}
       PGRST_JWT_SECRET: ${PGRST_JWT_SECRET:?error}
@@ -40,7 +40,7 @@ services:
     container_name: pgbackups
     restart: always
     environment:
-      POSTGRES_HOST: postgres
+      POSTGRES_HOST: ${POSTGRES_CONTAINER_NAME}
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?error}
