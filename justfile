@@ -46,23 +46,29 @@ db-down:
 db-logs:
     docker compose logs -f
 
+# Get a shell into the database
+db-shell:
+    docker exec -it $POSTGRES_CONTAINER_NAME psql \
+    --username=$POSTGRES_USER \
+    --dbname=$POSTGRES_DB
+
 # Run a SQL file on the database
 db-run-sql file:
-    docker compose exec -T postgres psql \
+    docker exec -T $POSTGRES_CONTAINER_NAME psql \
     --username=$POSTGRES_USER \
     --dbname=$POSTGRES_DB \
     < {{file}}
 
 # Get the database schema
 db-schema:
-    docker compose exec postgres pg_dump \
+    docker exec $POSTGRES_CONTAINER_NAME pg_dump \
     --username=$POSTGRES_USER \
     --dbname=$POSTGRES_DB \
     --schema-only
 
 # Run a manual database backup
 db-backup:
-    docker compose exec pgbackups /backup.sh
+    docker exec pgbackups /backup.sh
 
 # Get DB items from an endpoint
 db-curl *endpoint:
