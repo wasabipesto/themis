@@ -33,9 +33,6 @@ const { platform } = Astro.props;
 const platforms = await getPlatforms();
 const categories = await getCategories();
 const markets = await getMarkets();
-const platformMarkets = markets.filter(
-  (market) => market.platform_slug === platform.slug,
-);
 const platformCategoryScores = await getPlatformCategoryScores(null);
 const platformOverallScores = await getPlatformOverallScores();
 const featuredQuestions = await getTopQuestionsForPlatform(10, platform.slug);
@@ -107,7 +104,7 @@ const marketScores = await getMarketScores();
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
     <CalibrationDefault
       platforms={platforms}
-      markets={platformMarkets}
+      markets={markets.filter((m) => m.platform_slug === platform.slug)}
       caption="Calibration plot from all resolved questions, market probability at midpoint versus average resolution value."
     />
     <HistogramDefault

@@ -75,7 +75,7 @@ const marketScores = await getMarketScores();
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
     <CalibrationDefault
       platforms={platforms}
-      markets={markets}
+      markets={markets.filter((m) => m.category_slug == category.slug)}
       caption="Calibration plot from all resolved questions, market probability at midpoint versus average resolution value."
     />
     <HistogramDefault
