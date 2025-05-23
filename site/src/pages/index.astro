@@ -46,14 +46,20 @@ const { numQuestions, numLinkedMarkets } = await getQuestionStats();
     <div class="p-4 m-2">
       <h1 class="text-4xl font-bold">How accurate are prediction markets?</h1>
       <p class="my-2">
-        Using API data from each platform, we can calculate scores for each
-        market and check how often they were correct.
+        The <a
+          href="https://en.wikipedia.org/wiki/Brier_score"
+          class="text-lavender"
+          target="_blank">Brier score</a
+        > is a proper scoring rule that measures the accuracy of probabilistic predictions.
+        Using API data from various prediction market platforms, we can calculate
+        scores for each market and check how often they were correct.
       </p>
       <p class="my-2">
-        The results: One month before close, {pctScoresMonthWithin30pct}% of
-        markets were already within 30% of the correct resolution, representing
-        a Brier score of 0.09 (n={numScoresMonth.toLocaleString()}). The median
-        Brier score at market midpoint was {medianMidpointBrier.toFixed(4)} (n={
+        The results: One month before close, <span class="font-bold"
+          >{pctScoresMonthWithin30pct}% of markets</span
+        > were already within 30% of the correct resolution, representing a Brier
+        score of 0.09 (n={numScoresMonth.toLocaleString()}). The median Brier
+        score at market midpoint was {medianMidpointBrier.toFixed(4)} (n={
           numScoresMidpoint.toLocaleString()
         }).
       </p>
