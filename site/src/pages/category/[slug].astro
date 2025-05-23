@@ -1,5 +1,7 @@
 ---
 import Base from "@layouts/base.astro";
+import CalibrationDefault from "@components/charts/calibration-default.astro";
+import HistogramDefault from "@components/charts/histogram-scores-default.astro";
 import CategoryReportCard from "@components/category-report-card.astro";
 import QuestionCard from "@components/question-card.astro";
 import SeeMoreLink from "@components/see-more-link.astro";
@@ -10,9 +12,10 @@ import {
   getPlatforms,
   getCategories,
   getFeaturedQuestions,
-  getMarketScoresByQuestion,
+  getMarketScores,
   getPlatformCategoryScores,
   getCategoryOverallScores,
+  getMarkets,
 } from "@lib/api";
 
 // Generate routes for all items
@@ -25,16 +28,12 @@ export async function getStaticPaths() {
 }
 const { category } = Astro.props;
 
-const scoreType = "brier-relative";
-
 const platforms = await getPlatforms();
+const markets = await getMarkets();
 const platformCategoryScores = await getPlatformCategoryScores(null);
 const categoryOverallScores = await getCategoryOverallScores();
 const featuredQuestions = await getFeaturedQuestions(6, category.slug);
-const marketScores = await getMarketScoresByQuestion(
-  featuredQuestions.map((q) => q.id),
-  scoreType,
-);
+const marketScores = await getMarketScores();
 ---
 
 <Base title={category.name}>
@@ -58,6 +57,7 @@ const marketScores = await getMarketScoresByQuestion(
       </div>
       <div class="whitespace-pre-wrap my-2">{category.description}</div>
     </div>
+
     <CategoryReportCard
       platforms={platforms}
       categories={[category]}
@@ -68,6 +68,25 @@ const marketScores = await getMarketScoresByQuestion(
       pivot="platform"
     />
   </div>
+
+  <div class="p-2 m-2">
+    <h1 class="text-2xl font-bold">Charts</h1>
+  </div>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+    <CalibrationDefault
+      platforms={platforms}
+      markets={markets}
+      caption="Calibration plot from all resolved questions, market probability at midpoint versus average resolution value."
+    />
+    <HistogramDefault
+      platforms={platforms}
+      scores={marketScores.filter((s) => s.category_slug == category.slug)}
+      scoreType="brier-midpoint"
+      caption="Brier scores from all resolved questions, using probability at market midpoint. Lower scores are better."
+    />
+  </div>
+  <SeeMoreLink link={"/charts"} text={`See all charts`} />
+
   <div class="p-2 m-2">
     <h1 class="text-2xl font-bold">Questions</h1>
   </div>
@@ -87,8 +106,5 @@ const marketScores = await getMarketScoresByQuestion(
       })
     }
   </div>
-  <SeeMoreLink
-    link={`/questions?category=${category.slug}`}
-    text={`See all ${category.name} questions`}
-  />
+  <SeeMoreLink link={`/questions`} text={`See all questions`} />
 </Base>
