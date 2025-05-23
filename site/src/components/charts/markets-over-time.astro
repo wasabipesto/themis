@@ -40,7 +40,7 @@ const plot = Plot.plot({
   color: {
     label: "Platform",
     domain: platforms.map((p) => p.name),
-    range: platforms.map((p) => p.color_accent),
+    range: platforms.map((p) => p.color_primary),
   },
   marks: [
     Plot.rectY(openPoints, {

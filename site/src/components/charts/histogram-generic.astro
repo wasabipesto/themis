@@ -58,7 +58,7 @@ const plot = Plot.plot({
     //legend: platforms.length > 1,
     label: "Platform",
     domain: platforms.map((p) => p.name),
-    range: platforms.map((p) => p.color_accent),
+    range: platforms.map((p) => p.color_primary),
   },
   marks: [
     Plot.rectY(

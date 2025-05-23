@@ -69,7 +69,6 @@ const plot = Plot.plot({
   title: "Brier Scores at Different Points in Time",
   width: width,
   aspectRatio: aspectRatio,
-  marginBottom: 60,
   fx: {
     label: "Point In Time",
     tickFormat: (d) => scoreTypes.find((st) => st.key === d)?.label || d,
