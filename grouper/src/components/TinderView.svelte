@@ -24,6 +24,7 @@
     createQuestionNoRefresh,
     linkMarketNoRefresh,
     refreshViewsQuick,
+    dismissMarket,
   } from "@lib/api";
   import {
     llmGetKeywords,
@@ -343,6 +344,25 @@
     processNextMarket();
   }
 
+  async function handleDismiss() {
+    if (!currentMarket) return;
+
+    isLoading = true;
+    error = null;
+
+    try {
+      // Dismiss the market with status 1
+      await dismissMarket(currentMarket.id, 1);
+
+      // Move to the next market
+      currentMarketIndex++;
+      await processNextMarket();
+    } catch (err) {
+      error = err instanceof Error ? err.message : "Failed to dismiss market";
+      isLoading = false;
+    }
+  }
+
   function handleFilterChange() {
     // Reset and reload markets with new filters
     currentMarketIndex = 0;
@@ -504,13 +524,23 @@
 
       <!-- Action Buttons -->
       <div class="flex justify-between">
-        <button
-          on:click={handleSkip}
-          class="px-6 py-3 bg-crust hover:bg-crust/80 text-text border border-overlay0 rounded-md"
-          disabled={isCreatingQuestion}
-        >
-          Skip
-        </button>
+        <div class="flex gap-2">
+          <button
+            on:click={handleSkip}
+            class="px-6 py-3 bg-crust hover:bg-crust/80 text-text border border-overlay0 rounded-md"
+            disabled={isCreatingQuestion}
+          >
+            Skip
+          </button>
+
+          <button
+            on:click={handleDismiss}
+            class="px-6 py-3 bg-red hover:bg-red/80 text-crust rounded-md"
+            disabled={isCreatingQuestion || !currentMarket}
+          >
+            Dismiss
+          </button>
+        </div>
 
         <button
           on:click={handleApprove}
