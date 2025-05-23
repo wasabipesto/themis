@@ -112,7 +112,7 @@ if (!category) {
 
 // Get resolution from market
 const resolution = markets[0].question_invert
-  ? !markets[0].resolution
+  ? 1 - markets[0].resolution
   : markets[0].resolution;
 
 // Get similar questions
@@ -167,6 +167,7 @@ function getQuestionScore(score_key: string) {
       <QuestionProbChart
         platforms={platforms}
         question={question}
+        resolution={resolution}
         height={300}
       />
     </div>

@@ -9,10 +9,17 @@ const { document } = new JSDOM().window;
 interface Props {
   platforms: PlatformDetails[];
   question: QuestionDetails;
+  resolution: number;
   width?: number;
   height?: number;
 }
-const { platforms, question, width = 600, height = 200 } = Astro.props;
+const {
+  platforms,
+  question,
+  resolution,
+  width = 600,
+  height = 200,
+} = Astro.props;
 
 const points = await getDailyProbabilitiesByQuestion(
   question.id,
@@ -51,6 +58,12 @@ const plot = Plot.plot({
           z: false,
         },
       },
+    }),
+    Plot.dot([{ x: question.end_date_actual, y: resolution }], {
+      x: "x",
+      y: "y",
+      r: 4,
+      symbol: "diamond",
     }),
     Plot.ruleY([0]),
   ],

@@ -29,7 +29,7 @@ if (!category) {
 }
 
 const resolution = filteredScores[0].question_invert
-  ? !filteredScores[0].resolution
+  ? 1 - filteredScores[0].resolution
   : filteredScores[0].resolution;
 ---
 
