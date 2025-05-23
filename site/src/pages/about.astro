@@ -219,6 +219,15 @@ const scoreTypes = [
           ignore any market that has zero trades for the same reason.
         </p>
         <p class="my-2">
+          For traditional market sites, the implied probability is equivalent to
+          the price of one YES share (where payout would be $1 if it resolves
+          YES). For sites that aggregate predictions in other ways, we follow
+          the probability that they display most prominently. For Metaculus this
+          is the community prediction, which is exposed as <span
+            class="font-mono">recency_weighted</span
+          > in the API.
+        </p>
+        <p class="my-2">
           We do not evaluate non-market items from any platform, such as
           bounties, posts, or non-forecasting polls. Our downloader runs
           nightly, and notifies us of any new or unrecognized market types so we
