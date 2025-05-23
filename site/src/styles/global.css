@@ -20,7 +20,8 @@
   --color-blue: rgb(140, 170, 238);
   --color-lavender: rgb(186, 187, 241);
 
-  --color-text: rgb(198, 208, 245);
+  /* Text is slightly more white for better contrast */
+  --color-text: hsl(227deg, 70%, 92%);
   --color-subtext: rgb(165, 173, 206);
   --color-selection: rgb(148, 156, 187);
 
