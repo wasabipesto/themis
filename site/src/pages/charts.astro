@@ -173,53 +173,6 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
 
   <div class="p-4 m-2">
     <div class="my-4">
-      <h3 class="font-bold text-2xl" id="calibration-category">
-        Category Filtering
-        <a href="#calibration-category">
-          <Icon
-            name="mdi:link-variant"
-            class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
-          />
-        </a>
-      </h3>
-      <div class="my-2">
-        Group markets based on what category they're in. This is determined by
-        how they are categorized on each platforn, and not all platforms are
-        supported yet.
-      </div>
-    </div>
-    <SelectableOptions
-      options={[
-        {
-          icon: "mdi:compass-rose",
-          description: "All categories",
-          component: CalibrationDefault,
-          props: {
-            platforms: platforms,
-            markets: markets,
-            scoreType: "brier-midpoint",
-          },
-        },
-      ].concat(
-        categories.map((category) => ({
-          icon: category.icon,
-          description: category.name,
-          component: CalibrationDefault,
-          props: {
-            platforms: platforms,
-            markets: markets.filter(
-              (market) => market.category_slug == category.slug,
-            ),
-            scoreType: "brier-midpoint",
-          },
-        })),
-      )}
-    />
-  </div>
-  <hr class="my-2" />
-
-  <div class="p-4 m-2">
-    <div class="my-4">
       <h3 class="font-bold text-2xl" id="calibration-criterion">
         Differing Predictions
         <a href="#calibration-criterion">
@@ -618,51 +571,6 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
           },
         },
       ]}
-    />
-  </div>
-  <hr class="my-2" />
-
-  <div class="p-4 m-2">
-    <div class="my-4">
-      <h3 class="font-bold text-2xl" id="accuracy-category">
-        Category Filtering
-        <a href="#accuracy-category">
-          <Icon
-            name="mdi:link-variant"
-            class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
-          />
-        </a>
-      </h3>
-      <div class="my-2">
-        Group markets based on what category they're in. This is determined by
-        how they are categorized on each platforn, and not all platforms are
-        supported yet.
-      </div>
-    </div>
-    <SelectableOptions
-      options={[
-        {
-          icon: "mdi:compass-rose",
-          description: "All categories",
-          component: HistogramWithBox,
-          props: {
-            platforms: platforms,
-            scores: scores,
-            scoreType: "brier-midpoint",
-          },
-        },
-      ].concat(
-        categories.map((category) => ({
-          icon: category.icon,
-          description: category.name,
-          component: HistogramWithBox,
-          props: {
-            platforms: platforms,
-            scores: scores.filter((ms) => ms.category_slug == category.slug),
-            scoreType: "brier-midpoint",
-          },
-        })),
-      )}
     />
   </div>
   <hr class="my-2" />
