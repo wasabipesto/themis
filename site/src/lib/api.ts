@@ -247,10 +247,10 @@ export async function getTopQuestionsForPlatform(
   const topQuestionIDs = scores
     .map((s) => s.question_id)
     .filter((id) => id !== null);
-  return (await getQuestions())
-    .filter((q) => topQuestionIDs.includes(q.id))
-    .sort((a, b) => a.hotness_score - b.hotness_score)
-    .reverse();
+  const questions = await getQuestions();
+  return topQuestionIDs
+    .map((id) => questions.find((q) => q.id === id))
+    .filter((q) => q !== undefined);
 }
 
 export async function getSimilarQuestions(
