@@ -62,7 +62,18 @@
     {/if}
   </div>
 
-  <h3 class="text-lg font-semibold mb-2">{market.title}</h3>
+  <h3 class="text-lg font-semibold mb-2">
+    {market.title}
+    {#if market.resolution == 1.0}
+      <span class="px-2 rounded-md bg-green/20"> YES </span>
+    {:else if market.resolution == 0.0}
+      <span class="px-2 rounded-md bg-red/20"> NO </span>
+    {:else}
+      <span class="px-2 rounded-md bg-teal/20">
+        {market.resolution.toFixed(2)}
+      </span>
+    {/if}
+  </h3>
 
   <div class="grid grid-cols-2 gap-2 text-sm mb-2">
     <div>
