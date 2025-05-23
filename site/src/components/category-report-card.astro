@@ -139,6 +139,12 @@ const headerLabel = pivot === "platform" ? "Platform" : "Category";
         <td class="px-2 py-1 text-center">
           <ScoreAbs num={overallScoreAbs.score} />
         </td>
+        <td class="px-2 py-1 text-center">
+          <Grade grade={overallScoreRel.grade} />
+        </td>
+        <td class="px-2 py-1 text-center">
+          <ScoreAbs num={overallScoreRel.score} />
+        </td>
       </tr>
     </tbody>
   </table>
