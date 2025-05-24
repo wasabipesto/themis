@@ -12,6 +12,7 @@ interface Props {
   criterion?: string;
   weight?: string;
   width?: number;
+  height?: number;
   aspectRatio?: number;
   caption?: string;
 }
@@ -21,6 +22,7 @@ let {
   criterion = "midpoint",
   weight = null,
   width = 720,
+  height,
   aspectRatio,
   caption,
 } = Astro.props;
@@ -50,6 +52,7 @@ let axisTitleY = {
 const plot = Plot.plot({
   title: "Calibration Plot",
   width: width,
+  height: height,
   aspectRatio: aspectRatio,
   x: {
     domain: [0, 100],

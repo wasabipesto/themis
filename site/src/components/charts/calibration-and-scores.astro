@@ -1,0 +1,46 @@
+---
+import type {
+  MarketDetails,
+  PlatformDetails,
+  MarketScoreDetails,
+} from "@types";
+import CalibrationDefault from "@components/charts/calibration-default.astro";
+import HistogramWithBox from "@components/charts/histogram-scores-with-box.astro";
+
+interface Props {
+  platforms: PlatformDetails[];
+  markets: MarketDetails[];
+  scores: MarketScoreDetails[];
+  scoreType: string;
+  width?: number;
+  heights?: number[];
+  aspectRatio?: number;
+  caption?: string;
+}
+let {
+  platforms,
+  markets,
+  scores,
+  scoreType = "brier-midpoint",
+  width = 720,
+  caption,
+} = Astro.props;
+---
+
+<div class="flex flex-col gap-2">
+  <CalibrationDefault
+    platforms={platforms}
+    markets={markets}
+    width={width}
+    height={300}
+    caption={caption}
+  />
+  <HistogramWithBox
+    platforms={platforms}
+    scores={scores}
+    scoreType={scoreType}
+    width={width}
+    height={300}
+    caption={caption}
+  />
+</div>
