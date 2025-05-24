@@ -2,7 +2,7 @@
 import Base from "@layouts/base.astro";
 import ChartNavbar from "@components/charts/chart-navbar.astro";
 import ChartAll from "@components/charts/chart-all.astro";
-import { getPlatforms, getMarkets, getMarketScores } from "@lib/api";
+import { getPlatforms, getMarkets, getMarketScoresSorted } from "@lib/api";
 
 // Generate routes for all items
 export async function getStaticPaths() {
@@ -20,12 +20,9 @@ const platforms = [platform];
 const markets = (await getMarkets()).filter(
   (market) => market.platform_slug === platform.slug,
 );
-const marketScores = (await getMarketScores()).filter(
+const scores = (await getMarketScoresSorted()).filter(
   (score) => score.platform_slug === platform.slug,
 );
-
-// pre-sort scores for easier percentile calculations
-const scores = [...marketScores].sort((a, b) => a.score - b.score);
 ---
 
 <Base title={`Charts: ${platform.name}`}>

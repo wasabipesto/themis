@@ -2,15 +2,12 @@
 import Base from "@layouts/base.astro";
 import ChartNavbar from "@components/charts/chart-navbar.astro";
 import ChartAll from "@components/charts/chart-all.astro";
-import { getPlatforms, getMarkets, getMarketScores } from "@lib/api";
+import { getPlatforms, getMarkets, getMarketScoresSorted } from "@lib/api";
 
 // Download data
 const platforms = await getPlatforms();
 const markets = await getMarkets();
-const marketScores = await getMarketScores();
-
-// pre-sort scores for easier percentile calculations
-const scores = [...marketScores].sort((a, b) => a.score - b.score);
+const scores = await getMarketScoresSorted();
 ---
 
 <Base title="Charts: Home">

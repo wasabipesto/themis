@@ -369,6 +369,17 @@ export async function getMarketScores(): Promise<MarketScoreDetails[]> {
   });
 }
 
+export async function getMarketScoresSorted(): Promise<MarketScoreDetails[]> {
+  return getOrFetchData<MarketScoreDetails[]>(
+    "market_scores_sorted",
+    async () => {
+      const allScores = await getMarketScores();
+      const sortedScores = [...allScores].sort((a, b) => a.score - b.score);
+      return sortedScores;
+    },
+  );
+}
+
 export async function getMarketScoresLinked(): Promise<MarketScoreDetails[]> {
   return getOrFetchData<MarketScoreDetails[]>(
     "market_scores_linked",
