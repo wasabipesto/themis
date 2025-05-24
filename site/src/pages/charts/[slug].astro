@@ -4,34 +4,55 @@ import ChartNavbar from "@components/charts/chart-navbar.astro";
 import ChartAll from "@components/charts/chart-all.astro";
 import { getPlatforms, getMarkets, getMarketScores } from "@lib/api";
 
+// Generate routes for all items
+export async function getStaticPaths() {
+  const platforms = await getPlatforms();
+  return platforms.map((platform) => ({
+    params: { slug: platform.slug },
+    props: { platform },
+  }));
+}
+const { platform } = Astro.props;
+
 // Download data
-const platforms = await getPlatforms();
-const markets = await getMarkets();
-const marketScores = await getMarketScores();
+const allPlatforms = await getPlatforms();
+const platforms = [platform];
+const markets = (await getMarkets()).filter(
+  (market) => market.platform_slug === platform.slug,
+);
+const marketScores = (await getMarketScores()).filter(
+  (score) => score.platform_slug === platform.slug,
+);
 
 // pre-sort scores for easier percentile calculations
 const scores = [...marketScores].sort((a, b) => a.score - b.score);
 ---
 
-<Base title="Charts: Home">
+<Base title={`Charts: ${platform.name}`}>
   <div class="p-4 m-2 pb-0 mb-0">
-    <h1 class="text-4xl font-bold">Charts and Visualizations</h1>
+    <h1 class="text-4xl font-bold">{platform.name} Charts</h1>
     <div class="my-4">
       <p class="my-2">
         Numbers are great, but context is better. We do our best to describe our
         results, but no textual description will convey as much information as a
         chart or visualization of some kind. Our goal is to let you see the
-        numerical context and draw your own conclusions. Check out the charts
-        below for all platforms, or select a platform to filter to just those
-        markets.
+        numerical context and draw your own conclusions.
+      </p>
+      <p class="my-2">
+        Below you'll find detailed charts for all markets on {platform.name}.
+        <a href="/charts" class="text-lavender underline">Click here</a> or the Charts
+        Home button below to see all platforms
       </p>
     </div>
   </div>
 
-  <ChartNavbar platforms={platforms} currentPage={"/charts"} />
+  <ChartNavbar
+    platforms={allPlatforms}
+    currentPage={`/charts/${platform.slug}`}
+  />
 
   <ChartAll
-    allPlatforms={platforms}
+    allPlatforms={allPlatforms}
     platforms={platforms}
     markets={markets}
     scores={scores}

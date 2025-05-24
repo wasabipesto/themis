@@ -1,0 +1,306 @@
+---
+import Base from "@layouts/base.astro";
+import SelectableOptions from "@components/charts/selectable-options.astro";
+import CalibrationDefault from "@components/charts/calibration-default.astro";
+import HistogramWithBox from "@components/charts/histogram-scores-with-box.astro";
+import ChartNavbar from "@components/charts/chart-navbar.astro";
+import { Icon } from "astro-icon/components";
+import { getPlatforms, getMarkets, getMarketScores } from "@lib/api";
+
+// Download data
+const platforms = await getPlatforms();
+const markets = await getMarkets();
+const marketScores = await getMarketScores();
+
+// pre-sort scores for easier percentile calculations
+const scores = [...marketScores].sort((a, b) => a.score - b.score);
+---
+
+<Base title="Experimental Charts">
+  <div class="p-4 m-2 pb-0 mb-0">
+    <h1 class="text-4xl font-bold">Experimental Charts</h1>
+    <div class="my-4">
+      <p class="my-2">
+        Not all the charts we dream up are perfect on the first try. Here are
+        some experiments which don't quite meet our standards for the main chart
+        page.
+      </p>
+    </div>
+  </div>
+
+  <ChartNavbar platforms={platforms} currentPage={"/charts/experimental"} />
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h3 class="font-bold text-2xl" id="calibration-criterion">
+        Differing Predictions
+        <a href="#calibration-criterion">
+          <Icon
+            name="mdi:link-variant"
+            class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+          />
+        </a>
+      </h3>
+      <div class="my-2">
+        Up until this point we've used the midpoint of each market as the
+        refrence value. What if we used something else, such as the average
+        probability or a fixed point in time?
+      </div>
+    </div>
+    <SelectableOptions
+      options={[
+        {
+          icon: "mdi:format-horizontal-align-center",
+          description: "Probability at midpoint (default)",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets,
+            criterion: "midpoint",
+          },
+        },
+        {
+          icon: "mdi:timer-outline",
+          description: "Time-weighted average probability",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets,
+            criterion: "time-average",
+          },
+        },
+        {
+          icon: "mdi:timer-sand-complete",
+          description: "Probability 24 hours before resolution",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => market.duration_days > 2),
+            criterion: "before-close-hours-24",
+          },
+        },
+        {
+          icon: "mdi:timer-sand-complete",
+          description: "Probability 30 days before resolution",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => market.duration_days > 31),
+            criterion: "before-close-days-30",
+          },
+        },
+        {
+          icon: "mdi:timer-sand-complete",
+          description: "Probability 90 days before resolution",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => market.duration_days > 91),
+            criterion: "before-close-days-90",
+          },
+        },
+        {
+          icon: "mdi:timer-sand-complete",
+          description: "Probability 365 days before resolution",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => market.duration_days > 366),
+            criterion: "before-close-days-365",
+          },
+        },
+        {
+          icon: "mdi:timer-sand",
+          description: "Probability 24 hours after open",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => market.duration_days > 2),
+            criterion: "after-start-hours-24",
+          },
+        },
+      ]}
+    />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h3 class="font-bold text-2xl" id="calibration-weight">
+        Weighted Averages
+        <a href="#calibration-weight">
+          <Icon
+            name="mdi:link-variant"
+            class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+          />
+        </a>
+      </h3>
+      <div class="my-2">
+        Typically all markets are trated equally with a raw average. What if we
+        used a weighted average instead? For instance, markets with $100 in
+        trade volume might be weighted 10 times as heavily as one with $10. This
+        allows us to prioritize markets that have properties we think are
+        beneficial without ignoring others.
+      </div>
+    </div>
+    <SelectableOptions
+      options={[
+        {
+          icon: "mdi:border-none-variant",
+          description: "Unweighted",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets,
+          },
+        },
+        {
+          icon: "mdi:cash",
+          description: "Weight market by trade volume",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter(
+              (market) => market.volume_usd && market.volume_usd > 0,
+            ),
+            weight: "volume_usd",
+          },
+        },
+        {
+          icon: "mdi:account-multiple",
+          description: "Weight market by number of traders",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter(
+              (market) => market.traders_count && market.traders_count > 0,
+            ),
+            weight: "traders_count",
+          },
+        },
+        {
+          icon: "mdi:calendar-blank",
+          description: "Weight market by market duration",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets.filter((market) => market.duration_days > 0),
+            weight: "duration_days",
+          },
+        },
+        {
+          icon: "mdi:calendar-clock",
+          description: "Weight market by recency",
+          component: CalibrationDefault,
+          props: {
+            platforms: platforms,
+            markets: markets,
+            weight: "recency",
+          },
+        },
+      ]}
+    />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h3 class="font-bold text-2xl" id="accuracy-scoretype">
+        Pick a Score
+        <a href="#accuracy-scoretype">
+          <Icon
+            name="mdi:link-variant"
+            class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+          />
+        </a>
+      </h3>
+      <div class="my-2">
+        We use the Brier score by default in most plots, but we calculate many
+        more. Take a look at how the platforms compare when using these
+        alternative scoring methods.
+      </div>
+      <div class="my-2">
+        Are there significant spikes or outliers in the accuracy distribution?
+        For instance, a spike around Brier score 0.25 would indicate lots of
+        markets that rested at 50% probability.
+      </div>
+    </div>
+    <SelectableOptions
+      options={[
+        {
+          description:
+            "Market Brier score, calculated with midpoint probability",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "brier-midpoint",
+          },
+        },
+        {
+          description: "Market Brier score, averaged over the entire market",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "brier-average",
+          },
+        },
+        {
+          description: "Market Brier score, 30 days before resolution",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "brier-before-close-days-30",
+          },
+        },
+        {
+          description: "Relative Brier score, calculated for linked markets",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "brier-relative",
+          },
+        },
+        {
+          description: "Market log score, calculated with midpoint probability",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "logarithmic-midpoint",
+          },
+        },
+        {
+          description: "Market log score, averaged over the entire market",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "logarithmic-average",
+          },
+        },
+        {
+          description: "Market log score, 30 days before resolution",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "logarithmic-before-close-days-30",
+          },
+        },
+        {
+          description: "Relative log score, calculated for linked markets",
+          component: HistogramWithBox,
+          props: {
+            platforms: platforms,
+            scores: scores,
+            scoreType: "logarithmic-relative",
+          },
+        },
+      ]}
+    />
+  </div>
+</Base>

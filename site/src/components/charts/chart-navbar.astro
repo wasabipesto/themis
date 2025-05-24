@@ -1,0 +1,62 @@
+---
+import type { PlatformDetails } from "@types";
+import { Icon } from "astro-icon/components";
+
+interface Props {
+  platforms: PlatformDetails[];
+  currentPage: string;
+}
+let { platforms, currentPage } = Astro.props;
+
+let navitems = [
+  {
+    icon: "mdi:home",
+    url: "/charts",
+    cols: 3,
+    title: "Charts Home",
+    description: "Home page with all charts for all platforms",
+  },
+  {
+    icon: "mdi:test-tube",
+    url: "/charts/experimental",
+    cols: 1,
+    title: "Experimental Charts",
+    description: "Some experiments",
+  },
+];
+platforms.forEach((platform) =>
+  navitems.push({
+    icon: "mdi:eye",
+    url: `/charts/${platform.slug}`,
+    cols: 1,
+    title: `Just ${platform.name}`,
+    description: `Only ${platform.name} markets`,
+  }),
+);
+---
+
+<div
+  class="grid grid-cols-1 md:grid-cols-4 items-center justify-center gap-2 px-4 py-2 m-2"
+>
+  {
+    navitems.map((item) => (
+      <a
+        href={item.url}
+        style="text-decoration: none !important;"
+        class={
+          item.cols === 3 ? "col-span-3" : item.cols === 2 ? "col-span-2" : ""
+        }
+      >
+        <div
+          class={`${currentPage == item.url ? "bg-crust text-text" : "bg-base-light text-crust hover:bg-selection hover:translate-y-[-2px] hover:shadow-md"} px-4 py-2 rounded-md drop-shadow-sm transition-all duration-200 cursor-pointer`}
+        >
+          <div class="font-bold">
+            <Icon name={item.icon} class="h-5 inline-block" />
+            {item.title}
+          </div>
+          <div>{item.description}</div>
+        </div>
+      </a>
+    ))
+  }
+</div>

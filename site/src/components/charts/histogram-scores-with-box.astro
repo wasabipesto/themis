@@ -46,10 +46,15 @@ let axisTitleX = {
 const scoresFiltered = scores.filter(
   (s) => s.score_type == scoreType && s.score > -5,
 );
+if (scoresFiltered.length === 0) {
+  console.warn(
+    "No scores found for the selected score type. Chart will be blank.",
+  );
+}
 const scoresStats = quartilesByPlatform(platforms, scoresFiltered);
 const domain = [
-  scoresFiltered[0].score,
-  scoresFiltered[scoresFiltered.length - 1].score,
+  scoresFiltered[0]?.score || 0,
+  scoresFiltered[scoresFiltered.length - 1]?.score || 0,
 ];
 
 // Generate the plot

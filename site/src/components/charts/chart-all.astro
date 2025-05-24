@@ -1,0 +1,477 @@
+---
+import SelectableOptions from "@components/charts/selectable-options.astro";
+import CalibrationAndScores from "@components/charts/calibration-and-scores.astro";
+import HistogramGeneric from "@components/charts/histogram-generic.astro";
+import HistogramCategory from "@components/charts/histogram-category.astro";
+import MarketsOverTime from "@components/charts/markets-over-time.astro";
+import CalibrationFancy from "@components/charts/calibration-fancy.astro";
+import BoxScoresByResolution from "@components/charts/box-scores-by-resolution.astro";
+import { Icon } from "astro-icon/components";
+import type {
+  PlatformDetails,
+  MarketDetails,
+  MarketScoreDetails,
+} from "@types";
+
+interface Props {
+  allPlatforms: PlatformDetails[];
+  platforms: PlatformDetails[];
+  markets: MarketDetails[];
+  scores: MarketScoreDetails[];
+}
+let { allPlatforms, platforms, markets, scores } = Astro.props;
+---
+
+<div class="p-4 m-2 pb-0 mb-0">
+  <h2 class="text-3xl font-bold" id="calibration">
+    Calibration and Accuracy
+    <a href="#calibration">
+      <Icon
+        name="mdi:link-variant"
+        class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+      />
+    </a>
+  </h2>
+  <div class="mt-2">
+    Calibration is a very simple metric at its core. If a market's listed
+    probability is at 70%, we should expect it to resolve YES about 70% of the
+    time. For all past markets, we can look at the market's midpoint probability
+    and compare it to the end result. If those numbers match, we say the
+    platform is well-calibrated. If they don't, there may be some systemic
+    reason why forecasters routinely under- or over-estimate the odds.
+  </div>
+  <div class="mt-2">
+    While calibration is focused on how your predictions match reality, accuracy
+    is focused on how often you were correct. The main accuracy score we use
+    here is the Brier score, which compares the prediction (usually at the
+    market's midpoint) with the resolution at the end of the market. The thing
+    to remember is that the Brier score meausres how far off you are, meaning
+    that a lower score is actaully better!
+  </div>
+</div>
+
+<div class="p-4 m-2">
+  <div class="my-4">
+    <h3 class="font-bold text-2xl" id="calibration-selection">
+      Basic Filtering
+      <a href="#calibration-selection">
+        <Icon
+          name="mdi:link-variant"
+          class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+        />
+      </a>
+    </h3>
+    <div class="my-2">
+      Select markets to include in the calibration plot and accuracy scores
+      based on key attributes, such as number of traders, market volume, and
+      duration. We break these down by the percentile range - for every
+      million-dollar market there's a thousand others with just a few trades.
+      Here you can filter out the ones without much activity.
+    </div>
+  </div>
+  <SelectableOptions
+    options={[
+      {
+        icon: "mdi:all-inclusive-box",
+        description: "Show all resolved markets.",
+        component: CalibrationAndScores,
+        props: {
+          platforms: platforms,
+          markets: markets,
+          scores: scores,
+        },
+      },
+      {
+        icon: "mdi:account-multiple",
+        description:
+          "Filter to markets with traders in the top 50th percentile.",
+        component: CalibrationAndScores,
+        props: {
+          platforms: platforms,
+          markets: markets.filter(
+            (market) =>
+              market.traders_count !== null && market.traders_count >= 12,
+          ),
+          scores: scores.filter(
+            (score) =>
+              score.traders_count !== null && score.traders_count >= 12,
+          ),
+          caption: "Markets with at least 12 unique traders.",
+        },
+      },
+      {
+        icon: "mdi:cash",
+        description:
+          "Filter to markets with trade volume the top 50th percentile.",
+        component: CalibrationAndScores,
+        props: {
+          platforms: platforms,
+          markets: markets.filter(
+            (market) => market.volume_usd !== null && market.volume_usd >= 150,
+          ),
+          scores: scores.filter(
+            (score) => score.volume_usd !== null && score.volume_usd >= 150,
+          ),
+          caption: "Markets with at least $150 in trade volume.",
+        },
+      },
+      {
+        icon: "mdi:calendar-blank",
+        description: "Filter to markets with duration the top 50th percentile.",
+        component: CalibrationAndScores,
+        props: {
+          platforms: platforms,
+          markets: markets.filter((market) => market.duration_days >= 3),
+          scores: scores.filter((score) => score.duration_days >= 3),
+          caption: "Markets open for at least 3 days.",
+        },
+      },
+      {
+        icon: "mdi:alpha-a-box",
+        description:
+          "Filter to markets with traders, volume, and duration above the 25th percentile.",
+        component: CalibrationAndScores,
+        props: {
+          platforms: platforms,
+          markets: markets.filter((market) => {
+            return (
+              ((market.traders_count !== null && market.traders_count >= 6) ||
+                (market.volume_usd !== null && market.volume_usd >= 8)) &&
+              market.duration_days >= 2
+            );
+          }),
+          scores: scores.filter((score) => {
+            return (
+              ((score.traders_count !== null && score.traders_count >= 6) ||
+                (score.volume_usd !== null && score.volume_usd >= 8)) &&
+              score.duration_days >= 2
+            );
+          }),
+          caption:
+            "Markets with at least 6 traders or $8 in trade volume, and open for at least 2 days.",
+        },
+      },
+      {
+        icon: "mdi:alpha-b-box",
+        description:
+          "Filter to markets with traders, volume, and duration in the top 50th percentile.",
+        component: CalibrationAndScores,
+        props: {
+          platforms: platforms,
+          markets: markets.filter((market) => {
+            return (
+              ((market.traders_count !== null && market.traders_count >= 12) ||
+                (market.volume_usd !== null && market.volume_usd >= 150)) &&
+              market.duration_days >= 3
+            );
+          }),
+          scores: scores.filter((score) => {
+            return (
+              ((score.traders_count !== null && score.traders_count >= 12) ||
+                (score.volume_usd !== null && score.volume_usd >= 150)) &&
+              score.duration_days >= 3
+            );
+          }),
+          caption:
+            "Markets with at least 12 traders or $150 in trade volume, and open for at least 3 days.",
+        },
+      },
+      {
+        icon: "mdi:alpha-c-box",
+        description:
+          "Filter to markets with traders, volume, and duration in the top 25th percentile.",
+        component: CalibrationAndScores,
+        props: {
+          platforms: platforms,
+          markets: markets.filter((ms) => {
+            return (
+              ((ms.traders_count !== null && ms.traders_count >= 30) ||
+                (ms.volume_usd !== null && ms.volume_usd >= 2000)) &&
+              ms.duration_days >= 14
+            );
+          }),
+          scores: scores.filter((score) => {
+            return (
+              ((score.traders_count !== null && score.traders_count >= 30) ||
+                (score.volume_usd !== null && score.volume_usd >= 2000)) &&
+              score.duration_days >= 14
+            );
+          }),
+          caption:
+            "Markets with at least 30 traders or $2000 in trade volume, and open for at least 14 days.",
+        },
+      },
+      {
+        icon: "mdi:calendar-check",
+        description: "Filter to markets resolved in the past 12 months.",
+        component: CalibrationAndScores,
+        props: {
+          platforms: platforms,
+          markets: markets.filter(
+            (market) =>
+              new Date(market.close_datetime).getTime() >=
+              new Date().getTime() - 365 * 24 * 60 * 60 * 1000,
+          ),
+          scores: scores.filter(
+            (score) =>
+              new Date(score.close_datetime).getTime() >=
+              new Date().getTime() - 365 * 24 * 60 * 60 * 1000,
+          ),
+          caption: `Markets closed on or after ${new Date(new Date().getTime() - 365 * 24 * 60 * 60 * 1000).toLocaleDateString()}.`,
+        },
+      },
+      {
+        icon: "mdi:check-decagram",
+        description: "Filter to markets that have been linked in questions.",
+        component: CalibrationAndScores,
+        props: {
+          platforms: platforms,
+          markets: markets.filter((market) => market.question_id),
+          scores: scores.filter((score) => score.question_id),
+          description: "Markets linked to a question.",
+        },
+      },
+    ]}
+  />
+</div>
+<hr class="my-2" />
+
+<div class="p-4 m-2">
+  <div class="my-4">
+    <h3 class="font-bold text-2xl" id="calibration-alt">
+      Side-By-Side Calibration
+      <a href="#calibration-alt">
+        <Icon
+          name="mdi:link-variant"
+          class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+        />
+      </a>
+    </h3>
+    <div class="my-2">
+      The main calibration charts stack all of the platform data points in a
+      column, which is accurate but can be hard to read. This one breaks them
+      out side by side and shows an uncertainty range, inspired by <a
+        href="https://projects.jhkforecasts.com/forecast-history/fte.html"
+        class="text-lavender"
+        target="_blank">JHK Forecasts</a
+      >.
+    </div>
+  </div>
+  <CalibrationFancy platforms={platforms} markets={markets} width={1100} />
+</div>
+<hr class="my-2" />
+
+<div class="p-4 m-2">
+  <div class="my-4">
+    <h3 class="font-bold text-2xl" id="accuracy-resolution">
+      Resolution
+      <a href="#accuracy-resolution">
+        <Icon
+          name="mdi:link-variant"
+          class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+        />
+      </a>
+    </h3>
+    <div class="my-2">
+      At a glance, you might think the resolution of a market shouldn't affect
+      the accuracy much. However, there tend to be distinct types of markets on
+      most platforms (often in the form of "Will X event happen by Y date?"). If
+      you believe that <a
+        href="https://knowyourmeme.com/memes/nothing-ever-happens"
+        class="text-lavender">nothing ever happens</a
+      >, then you might expect that betting NO a lot will make you pretty
+      accurate. And according to these stats, you would be right.
+    </div>
+  </div>
+  <BoxScoresByResolution platforms={platforms} scores={scores} width={1100} />
+</div>
+<hr class="my-2" />
+
+<div class="p-4 m-2 pb-0 mb-0">
+  <h2 class="text-3xl font-bold" id="markets">
+    Market Charts
+    <a href="#markets">
+      <Icon
+        name="mdi:link-variant"
+        class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+      />
+    </a>
+  </h2>
+  <div class="mt-2">
+    What is a market, really? They're similar under the hood - people trade on
+    different outcomes at different prices, leading to a consensus probability
+    whether that's with a limit order book, an automated market maker, or some
+    other mechanism. However, you can see how flexible they are by how the
+    different platforms leverage this mechanism.
+  </div>
+  <div class="mt-2">
+    Here, we'll look at some of the specific traits we measure on each market to
+    see how they compare across platforms.
+  </div>
+</div>
+
+<div class="p-4 m-2">
+  <div class="my-4">
+    <h3 class="font-bold text-2xl" id="market-attributes">
+      Histograms of Attributes
+      <a href="#market-attributes">
+        <Icon
+          name="mdi:link-variant"
+          class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+        />
+      </a>
+    </h3>
+    <div class="my-2">
+      How much trade volume do these markets typically see? How many traders
+      participate on markets on each platform? How long are they typically open?
+    </div>
+  </div>
+  <SelectableOptions
+    options={[
+      {
+        icon: "mdi:cash",
+        description: "Market distribution by trade volume.",
+        component: HistogramGeneric,
+        props: {
+          platforms: platforms,
+          plotTitle: "Histogram of Volume",
+          axisTitleX: "Volume (USD)",
+          items: markets
+            .filter((mkt) => mkt.volume_usd && mkt.volume_usd > 0)
+            .map((mkt) => ({
+              value: mkt.volume_usd || 0,
+              platform_name: mkt.platform_name,
+            })),
+        },
+      },
+      {
+        icon: "mdi:account-multiple",
+        description: "Market distribution by number of traders.",
+        component: HistogramGeneric,
+        props: {
+          platforms: platforms,
+          plotTitle: "Histogram of Traders",
+          axisTitleX: "Trader count",
+          items: markets
+            .filter((mkt) => mkt.traders_count && mkt.traders_count > 0)
+            .map((mkt) => ({
+              value: mkt.traders_count || 0,
+              platform_name: mkt.platform_name,
+            })),
+        },
+      },
+      {
+        icon: "mdi:calendar-blank",
+        description: "Market distribution by total duration.",
+        component: HistogramGeneric,
+        props: {
+          platforms: platforms,
+          plotTitle: "Histogram of Duration",
+          axisTitleX: "Duration (days)",
+          items: markets.map((mkt) => ({
+            value: mkt.duration_days,
+            platform_name: mkt.platform_name,
+          })),
+        },
+      },
+      {
+        icon: "mdi:fountain-pen-tip",
+        description: "Market distribution by title length.",
+        component: HistogramGeneric,
+        props: {
+          platforms: platforms,
+          plotTitle: "Histogram of Title Length",
+          axisTitleX: "Length (chatacters)",
+          items: markets.map((mkt) => ({
+            value: mkt.title.length,
+            platform_name: mkt.platform_name,
+          })),
+          cutoffMax: 200,
+        },
+      },
+      {
+        icon: "mdi:file-document-multiple-outline",
+        description: "Market distribution by total description length.",
+        component: HistogramGeneric,
+        props: {
+          platforms: platforms,
+          plotTitle: "Histogram of Description Length",
+          axisTitleX: "Length (chatacters)",
+          items: markets.map((mkt) => ({
+            value: mkt.description.length,
+            platform_name: mkt.platform_name,
+          })),
+        },
+      },
+      {
+        icon: "mdi:check-all",
+        description: "Market distribution by resolution value.",
+        component: HistogramGeneric,
+        props: {
+          platforms: platforms,
+          plotTitle: "Histogram of Resolution Value",
+          axisTitleX: "Probability",
+          items: markets.map((mkt) => ({
+            value: mkt.resolution,
+            platform_name: mkt.platform_name,
+          })),
+          thresholds: 1,
+        },
+      },
+    ]}
+  />
+</div>
+<hr class="my-2" />
+
+<div class="p-4 m-2">
+  <div class="my-4">
+    <h3 class="font-bold text-2xl" id="market-categories">
+      Market Categories
+      <a href="#market-categories">
+        <Icon
+          name="mdi:link-variant"
+          class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+        />
+      </a>
+    </h3>
+    <div class="my-2">
+      Each platform tends to focus on certain categories. Some of this is site
+      culture, some is based on how the platform is designed, and some is just
+      based on marketing strategy. We try to automatically categorize all
+      markets into our standard set, but how do the distributions turn out per
+      platform?
+    </div>
+  </div>
+  <HistogramCategory
+    platforms={platforms}
+    plotTitle="Category Distribution"
+    axisTitleX="Category"
+    items={markets.map((mkt) => ({
+      value: mkt.category_name || "None",
+      platform_name: mkt.platform_name,
+    }))}
+    width={1100}
+  />
+</div>
+<hr class="my-2" />
+
+<div class="p-4 m-2">
+  <div class="my-4">
+    <h3 class="font-bold text-2xl" id="markets-over-time">
+      Markets over Time
+      <a href="#markets-over-time">
+        <Icon
+          name="mdi:link-variant"
+          class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+        />
+      </a>
+    </h3>
+    <div class="my-2">
+      Prediction markets have become more popular over time, but are there more
+      markets to meet that increased demand? Have there been any particular
+      spikes in market opens/closes?
+    </div>
+  </div>
+  <MarketsOverTime platforms={platforms} markets={markets} />
+</div>
+<hr class="my-2" />
