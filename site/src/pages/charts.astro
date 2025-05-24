@@ -8,6 +8,7 @@ import HistogramGeneric from "@components/charts/histogram-generic.astro";
 import HistogramCategory from "@components/charts/histogram-category.astro";
 import MarketsOverTime from "@components/charts/markets-over-time.astro";
 import CalibrationFancy from "@components/charts/calibration-fancy.astro";
+import BoxScoresByResolution from "@components/charts/box-scores-by-resolution.astro";
 import BoxScoresByCriterion from "@components/charts/box-scores-by-criterion.astro";
 import { Icon } from "astro-icon/components";
 import { getPlatforms, getMarkets, getMarketScores } from "@lib/api";
@@ -549,52 +550,7 @@ const scores = [...marketScores].sort((a, b) => a.score - b.score);
         accurate.
       </div>
     </div>
-    <SelectableOptions
-      options={[
-        {
-          icon: "mdi:all-inclusive-box",
-          description: "All markets, regardless of resolution",
-          component: HistogramWithBox,
-          props: {
-            platforms: platforms,
-            scores: scores,
-            scoreType: "brier-midpoint",
-          },
-        },
-        {
-          icon: "mdi:check-circle-outline",
-          description: "Only markets that resolved YES",
-          component: HistogramWithBox,
-          props: {
-            platforms: platforms,
-            scores: scores.filter((ms) => ms.resolution == 1),
-            scoreType: "brier-midpoint",
-          },
-        },
-        {
-          icon: "mdi:minus-circle-outline",
-          description: "Only markets that resolved NO",
-          component: HistogramWithBox,
-          props: {
-            platforms: platforms,
-            scores: scores.filter((ms) => ms.resolution == 0),
-            scoreType: "brier-midpoint",
-          },
-        },
-        {
-          icon: "mdi:help-circle",
-          description: "Only markets that resolved to something inbetween",
-          component: HistogramWithBox,
-          props: {
-            platforms: platforms,
-            scores: scores.filter(
-              (ms) => ms.resolution != 0 && ms.resolution != 1,
-            ),
-            scoreType: "brier-midpoint",
-          },
-        },
-      ]}
-    />
+    <BoxScoresByResolution platforms={platforms} scores={scores} width={1100} />
   </div>
   <hr class="my-2" />
 
