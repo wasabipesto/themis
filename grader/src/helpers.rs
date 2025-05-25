@@ -14,19 +14,24 @@ pub fn median(values: &[f32]) -> f32 {
     }
 }
 
-/// Get the first probability in the list that matches the criterion type.
+/// Get the probability in the list that matches the criterion type.
 /// Assumes that the list has been filtered to the correct market.
-pub fn get_first_probability(
+/// Will return None if none are found. Will panic if multiple are found.
+pub fn get_criterion_probability(
     criteria_probs: &[CriterionProbabilityPoint],
     criterion_type: &str,
 ) -> Option<CriterionProbabilityPoint> {
-    criteria_probs
+    let probs = criteria_probs
         .iter()
         .filter(|prob| prob.criterion_type == criterion_type)
         .cloned()
-        .collect::<Vec<_>>()
-        .first()
-        .cloned()
+        .collect::<Vec<_>>();
+    assert!(
+        probs.len() < 2,
+        "Expected zero or one probabilities for criterion type '{}'",
+        criterion_type
+    );
+    probs.first().cloned()
 }
 
 #[cfg(test)]

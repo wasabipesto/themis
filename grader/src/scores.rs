@@ -143,23 +143,23 @@ impl AbsoluteScoreType {
             AbsoluteScoreType::BrierAverage
             | AbsoluteScoreType::LogarithmicAverage
             | AbsoluteScoreType::SphericalAverage => {
-                helpers::get_first_probability(criteron_probs, "time-average").map(|p| p.prob)
+                helpers::get_criterion_probability(criteron_probs, "time-average").map(|p| p.prob)
             }
             AbsoluteScoreType::BrierMidpoint
             | AbsoluteScoreType::LogarithmicMidpoint
             | AbsoluteScoreType::SphericalMidpoint => {
-                helpers::get_first_probability(criteron_probs, "midpoint").map(|p| p.prob)
+                helpers::get_criterion_probability(criteron_probs, "midpoint").map(|p| p.prob)
             }
             AbsoluteScoreType::BrierBeforeClose7d
             | AbsoluteScoreType::LogarithmicBeforeClose7d
             | AbsoluteScoreType::SphericalBeforeClose7d => {
-                helpers::get_first_probability(criteron_probs, "before-close-days-7")
+                helpers::get_criterion_probability(criteron_probs, "before-close-days-7")
                     .map(|p| p.prob)
             }
             AbsoluteScoreType::BrierBeforeClose30d
             | AbsoluteScoreType::LogarithmicBeforeClose30d
             | AbsoluteScoreType::SphericalBeforeClose30d => {
-                helpers::get_first_probability(criteron_probs, "before-close-days-30")
+                helpers::get_criterion_probability(criteron_probs, "before-close-days-30")
                     .map(|p| p.prob)
             }
         }
@@ -315,9 +315,9 @@ pub fn calculate_absolute_scores(
     criterion_probs: Vec<CriterionProbabilityPoint>,
 ) -> Result<Vec<MarketScore>> {
     // Index the criterion probabilities by market ID to optimize lookup times.
-    let mut crit_prob_map = HashMap::with_capacity(criterion_probs.len());
+    let mut criterion_prob_map = HashMap::with_capacity(criterion_probs.len());
     for prob in criterion_probs {
-        crit_prob_map
+        criterion_prob_map
             .entry(prob.market_id.to_owned())
             .or_insert_with(Vec::new)
             .push(prob);
@@ -330,7 +330,7 @@ pub fn calculate_absolute_scores(
         log::trace!("Calculating absolute scores for market {}", market.id);
 
         // Retrieve criterion probabilities associated with the current market ID.
-        if let Some(market_criterion_probs) = crit_prob_map.get(&market.id) {
+        if let Some(market_criterion_probs) = criterion_prob_map.get(&market.id) {
             for score_type in &score_types {
                 match score_type.score_market(market, market_criterion_probs) {
                     Ok(Some(market_score)) => scores.push(market_score),
