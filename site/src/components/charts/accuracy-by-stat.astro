@@ -50,14 +50,16 @@ const statValues = scores
   .map((s) => s[stat as keyof MarketScoreDetails] as number)
   .filter((val) => val != null && !isNaN(val));
 
-if (statValues.length === 0) {
-  throw new Error(`No valid values found for stat: ${stat}`);
+let maxVal = 0;
+let binWidth = 0;
+if (statValues.length >= 0) {
+  // Calculate x-range: from 0 to nth percentile
+  const valuesSorted = sort(statValues);
+  maxVal = roundSF(percentile(valuesSorted, 0.96), 2);
+  binWidth = maxVal / binCount;
+} else {
+  console.warn(`No valid values found for stat: ${stat}`);
 }
-
-// Calculate x-range: from 0 to 97th percentile
-const valuesSorted = sort(statValues);
-const maxVal = roundSF(percentile(valuesSorted, 0.96), 2);
-const binWidth = maxVal / binCount;
 
 // Create bins and calculate quartiles for each bin
 const points: Array<{
