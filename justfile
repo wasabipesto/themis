@@ -102,7 +102,7 @@ db-refresh-quick:
 # Start the main site dev server
 [working-directory: 'site']
 site-dev:
-    NODE_OPTIONS="--max-old-space-size=8192" \
+    NODE_OPTIONS="--max-old-space-size=64000" \
     npx astro dev
 
 # Check the main site for errors
@@ -118,7 +118,7 @@ site-cache-reset:
 # Build the main site
 [working-directory: 'site']
 site-build *args:
-    NODE_OPTIONS="--max-old-space-size=8192" \
+    NODE_OPTIONS="--max-old-space-size=64000" \
     npx astro build {{args}}
 
 # Push the site to dev with rclone
@@ -153,9 +153,10 @@ embeddings *args:
 
 # Run nightly process
 nightly: download-test extract-test grade-test group-test site-test
-    just download --log-level warn --resolved-since-days-ago 10 --reset-cache
-    just download --log-level warn --resolved-since-days-ago 10
+    just download --log-level warn --reset-cache
+    just download --log-level warn
     just extract --log-level warn
+    uv run scripts/fix-criterion-probs.py
     just grade --log-level warn
     TQDM_MININTERVAL=100 just embeddings
     just site-cache-reset
