@@ -187,6 +187,10 @@ For now I am intentionally not documenting specific features of the admin tools 
 When you have finished grouping markets, you can calculate all market scores by running the grader tool:
 
 ```bash
+# optional, fix criterion probabilities to be more intuitive for linked questions
+uv run scripts/fix-criterion-probs.py
+
+# caluclate all scores and grades
 just grade
 ```
 
