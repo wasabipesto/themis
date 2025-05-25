@@ -119,6 +119,7 @@ const plot = Plot.plot({
     label: `Days before Resolution`,
     reverse: true,
     tickFormat: (d) => {
+      if (d % 2 != 0) return null;
       const point = points.find((p) => p.group_index === d);
       return point ? point.group_label : d;
     },

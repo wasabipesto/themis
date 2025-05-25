@@ -1,0 +1,160 @@
+---
+import type { MarketScoreDetails, PlatformDetails } from "@types";
+import { quartiles, percentile, roundSF, sort } from "@lib/stats";
+
+import * as Plot from "@observablehq/plot";
+import { JSDOM } from "jsdom";
+const { document } = new JSDOM().window;
+
+interface Props {
+  platforms: PlatformDetails[];
+  scores: MarketScoreDetails[];
+  stat: string;
+  score_type?: string;
+  width?: number;
+  aspectRatio?: number;
+  caption?: string;
+  binCount?: number;
+}
+let {
+  platforms,
+  scores,
+  stat,
+  score_type = "brier-midpoint",
+  width = 720,
+  aspectRatio,
+  caption,
+  binCount = 50,
+} = Astro.props;
+
+scores = scores.filter((s) => s.score_type == score_type);
+
+// Lookup map for stat labels and titles
+const statLookup: Record<string, { title: string; xLabel: string }> = {
+  volume_usd: {
+    title: "Accuracy vs Trade Volume",
+    xLabel: "Trade Volume (USD)",
+  },
+  traders_count: {
+    title: "Accuracy vs Number of Traders",
+    xLabel: "Number of Traders",
+  },
+  duration_days: {
+    title: "Accuracy vs Market Duration",
+    xLabel: "Duration (Days)",
+  },
+};
+
+// Get stat values and filter out null values
+const statValues = scores
+  .map((s) => s[stat as keyof MarketScoreDetails] as number)
+  .filter((val) => val != null && !isNaN(val));
+
+if (statValues.length === 0) {
+  throw new Error(`No valid values found for stat: ${stat}`);
+}
+
+// Calculate x-range: from 0 to 97th percentile
+const valuesSorted = sort(statValues);
+const maxVal = roundSF(percentile(valuesSorted, 0.96), 2);
+const binWidth = maxVal / binCount;
+
+// Create bins and calculate quartiles for each bin
+const points: Array<{
+  xval: number;
+  q1: number;
+  q2: number;
+  q3: number;
+  platform_name: string;
+}> = [];
+
+// Process each platform separately
+platforms.forEach((platform) => {
+  const platformScores = scores.filter(
+    (s) => s.platform_slug === platform.slug,
+  );
+
+  // Create bins for this platform
+  for (let i = 0; i < binCount; i++) {
+    const binStart = i * binWidth;
+    const binEnd = (i + 1) * binWidth;
+    const binCenter = binStart + binWidth / 2;
+
+    // Find scores in this bin
+    const scoresInBin = platformScores.filter((s) => {
+      const statVal = s[stat as keyof MarketScoreDetails] as number;
+      return statVal != null && statVal >= binStart && statVal < binEnd;
+    });
+
+    // Only create a point if we have at least 3 scores in the bin
+    if (scoresInBin.length >= 10) {
+      const binQuartiles = quartiles(sort(scoresInBin.map((s) => s.score)));
+
+      points.push({
+        xval: binCenter,
+        q1: binQuartiles.q1,
+        q2: binQuartiles.q2,
+        q3: binQuartiles.q3,
+        platform_name: platform.name,
+      });
+    }
+  }
+});
+
+const currentStat = statLookup[stat] || {
+  title: `Accuracy vs ${stat}`,
+  xLabel: stat,
+};
+
+// Generate the plot
+const plot = Plot.plot({
+  title: currentStat.title,
+  width: width,
+  marginRight: 80,
+  aspectRatio: aspectRatio,
+  x: {
+    label: currentStat.xLabel,
+    domain: [0, maxVal],
+  },
+  y: {
+    domain: [0, 0.8],
+    grid: true,
+    label: "Midpoint Brier score (lower is better)",
+  },
+  fy: { label: "Platform" },
+  color: {
+    label: "Platform",
+    domain: platforms.map((p) => p.name),
+    range: platforms.map((p) => p.color_primary),
+  },
+  marks: [
+    Plot.dot(points, {
+      x: "xval",
+      y: "q2",
+      fill: "platform_name",
+      fy: "platform_name",
+    }),
+    Plot.ruleX(points, {
+      x: "xval",
+      y1: "q1",
+      y2: "q3",
+      fy: "platform_name",
+      stroke: "platform_name",
+    }),
+    Plot.ruleY([0]),
+  ],
+  document,
+}).outerHTML;
+---
+
+<div
+  class="bg-base-light [&_h2]:text-2xl text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
+>
+  <Fragment set:html={plot} />
+  <p class="text-xs">
+    {caption}
+  </p>
+  <p class="text-xs">
+    Source: <a href="https://brier.fyi">brier.fyi</a>
+  </p>
+</div>

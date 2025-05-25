@@ -7,6 +7,7 @@ import MarketsOverTime from "@components/charts/markets-over-time.astro";
 import CalibrationFancy from "@components/charts/calibration-fancy.astro";
 import BoxScoresByResolution from "@components/charts/box-scores-by-resolution.astro";
 import AccuracyDaysBeforeClose from "@components/charts/accuracy-days-before-close.astro";
+import AccuracyByStat from "@components/charts/accuracy-by-stat.astro";
 import { Icon } from "astro-icon/components";
 import type {
   PlatformDetails,
@@ -266,9 +267,9 @@ let { platforms, markets, scores, probs } = Astro.props;
 
 <div class="p-4 m-2">
   <div class="my-4">
-    <h3 class="font-bold text-2xl" id="accuracy-date">
-      Accuracy by Date
-      <a href="#accuracy-date">
+    <h3 class="font-bold text-2xl" id="accuracy-stats">
+      Accuracy by Stats
+      <a href="#accuracy-stats">
         <Icon
           name="mdi:link-variant"
           class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
@@ -292,12 +293,42 @@ let { platforms, markets, scores, probs } = Astro.props;
       sample size for most of those data points, since only 10% of their markets
       are longer than 50 days.
     </div>
+    <div class="my-2">
+      Similarly to above, it is often noted that a large number of traders or
+      high volume signifies a higher expected market accuracy. A proper test of
+      this hypothesis would need to control for variables that we do not have,
+      bt we can at least see if our unfiltered samples show a correlation in
+      this way. Note that several of these datapoints have a low number of
+      sample markets, and any with less than 10 in the sample were excluded.
+    </div>
   </div>
-  <AccuracyDaysBeforeClose
-    platforms={platforms}
-    markets={markets}
-    probs={probs}
-    width={1100}
+  <SelectableOptions
+    options={[
+      {
+        icon: "mdi:calendar",
+        description: "Compare market accuracy by days before resolution.",
+        component: AccuracyDaysBeforeClose,
+        props: { platforms, markets, probs },
+      },
+      {
+        icon: "mdi:cash",
+        description: "Compare market accuracy to trade volume.",
+        component: AccuracyByStat,
+        props: { platforms, scores, stat: "volume_usd" },
+      },
+      {
+        icon: "mdi:account-multiple",
+        description: "Compare market accuracy to number of traders.",
+        component: AccuracyByStat,
+        props: { platforms, scores, stat: "traders_count" },
+      },
+      {
+        icon: "mdi:calendar-blank",
+        description: "Compare market accuracy to market duration.",
+        component: AccuracyByStat,
+        props: { platforms, scores, stat: "duration_days" },
+      },
+    ]}
   />
 </div>
 <hr class="my-2" />
