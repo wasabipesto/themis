@@ -6,20 +6,22 @@ import HistogramCategory from "@components/charts/histogram-category.astro";
 import MarketsOverTime from "@components/charts/markets-over-time.astro";
 import CalibrationFancy from "@components/charts/calibration-fancy.astro";
 import BoxScoresByResolution from "@components/charts/box-scores-by-resolution.astro";
+import AccuracyDaysBeforeClose from "@components/charts/accuracy-days-before-close.astro";
 import { Icon } from "astro-icon/components";
 import type {
   PlatformDetails,
   MarketDetails,
   MarketScoreDetails,
+  DailyProbabilityDetails,
 } from "@types";
 
 interface Props {
-  allPlatforms: PlatformDetails[];
   platforms: PlatformDetails[];
   markets: MarketDetails[];
   scores: MarketScoreDetails[];
+  probs: DailyProbabilityDetails[];
 }
-let { allPlatforms, platforms, markets, scores } = Astro.props;
+let { platforms, markets, scores, probs } = Astro.props;
 ---
 
 <div class="p-4 m-2 pb-0 mb-0">
@@ -248,9 +250,10 @@ let { allPlatforms, platforms, markets, scores } = Astro.props;
       </a>
     </h3>
     <div class="my-2">
-      The main calibration charts stack all of the platform data points in a
-      column, which is accurate but can be hard to read. This one breaks them
-      out side by side and shows an uncertainty range, inspired by <a
+      Having trouble deciphering the calibration plots? The main calibration
+      charts stack all of the platform data points in a column, which is
+      accurate but can be hard to read. This one breaks them out side by side
+      and shows an uncertainty range, inspired by <a
         href="https://projects.jhkforecasts.com/forecast-history/fte.html"
         class="text-lavender"
         target="_blank">JHK Forecasts</a
@@ -263,8 +266,46 @@ let { allPlatforms, platforms, markets, scores } = Astro.props;
 
 <div class="p-4 m-2">
   <div class="my-4">
+    <h3 class="font-bold text-2xl" id="accuracy-date">
+      Accuracy by Date
+      <a href="#accuracy-date">
+        <Icon
+          name="mdi:link-variant"
+          class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+        />
+      </a>
+    </h3>
+    <div class="my-2">
+      The closer we are to an event, we should expect that the more accuract the
+      forecasts will be. For one, traders will be more likely to invest in the
+      market due to a shorter time to return, giving the market more liquidity.
+      Two, we will presumably have more information about the upcoming event,
+      such as polls, research, and generally reduced uncertainty.
+    </div>
+    <div class="my-2">
+      This seems to be mostly backed up by the plot below. Kalshi and Manifold
+      have a gradually decreasing score (lower is better) starting around 6
+      months before resolution. Metaculus, which does not rely on liquidity,
+      shows a similar but smaller change. However, for Polymarket you'll notice
+      a large uptick instead - this is due to the fact that most of their
+      markets are very short-term. What you're actually seeing is a very low
+      sample size for most of those data points, since only 10% of their markets
+      are longer than 50 days.
+    </div>
+  </div>
+  <AccuracyDaysBeforeClose
+    platforms={platforms}
+    markets={markets}
+    probs={probs}
+    width={1100}
+  />
+</div>
+<hr class="my-2" />
+
+<div class="p-4 m-2">
+  <div class="my-4">
     <h3 class="font-bold text-2xl" id="accuracy-resolution">
-      Resolution
+      Accuracy by Resolution
       <a href="#accuracy-resolution">
         <Icon
           name="mdi:link-variant"

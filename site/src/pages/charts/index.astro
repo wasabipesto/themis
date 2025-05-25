@@ -2,12 +2,18 @@
 import Base from "@layouts/base.astro";
 import ChartNavbar from "@components/charts/chart-navbar.astro";
 import ChartAll from "@components/charts/chart-all.astro";
-import { getPlatforms, getMarkets, getMarketScoresSorted } from "@lib/api";
+import {
+  getPlatforms,
+  getMarkets,
+  getMarketScoresSorted,
+  getAllDailyProbabilities,
+} from "@lib/api";
 
 // Download data
 const platforms = await getPlatforms();
 const markets = await getMarkets();
 const scores = await getMarketScoresSorted();
+const probs = await getAllDailyProbabilities();
 ---
 
 <Base title="Charts: Home">
@@ -28,10 +34,10 @@ const scores = await getMarketScoresSorted();
   <ChartNavbar platforms={platforms} currentPage={"/charts"} />
 
   <ChartAll
-    allPlatforms={platforms}
     platforms={platforms}
     markets={markets}
     scores={scores}
+    probs={probs}
   />
 
   <div class="p-4 m-2">

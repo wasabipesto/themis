@@ -2,7 +2,12 @@
 import Base from "@layouts/base.astro";
 import ChartNavbar from "@components/charts/chart-navbar.astro";
 import ChartAll from "@components/charts/chart-all.astro";
-import { getPlatforms, getMarkets, getMarketScoresSorted } from "@lib/api";
+import {
+  getPlatforms,
+  getMarkets,
+  getMarketScoresSorted,
+  getAllDailyProbabilities,
+} from "@lib/api";
 
 // Generate routes for all items
 export async function getStaticPaths() {
@@ -22,6 +27,9 @@ const markets = (await getMarkets()).filter(
 );
 const scores = (await getMarketScoresSorted()).filter(
   (score) => score.platform_slug === platform.slug,
+);
+const probs = (await getAllDailyProbabilities()).filter(
+  (prob) => prob.platform_slug === platform.slug,
 );
 ---
 
@@ -49,10 +57,10 @@ const scores = (await getMarketScoresSorted()).filter(
   />
 
   <ChartAll
-    allPlatforms={allPlatforms}
     platforms={platforms}
     markets={markets}
     scores={scores}
+    probs={probs}
   />
 
   <div class="p-4 m-2">

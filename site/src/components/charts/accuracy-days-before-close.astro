@@ -1,0 +1,181 @@
+---
+import type {
+  DailyProbabilityDetails,
+  MarketDetails,
+  PlatformDetails,
+} from "@types";
+import { quartiles } from "@lib/stats";
+
+import * as Plot from "@observablehq/plot";
+import { JSDOM } from "jsdom";
+const { document } = new JSDOM().window;
+
+interface Props {
+  platforms: PlatformDetails[];
+  markets: MarketDetails[];
+  probs: DailyProbabilityDetails[];
+  width?: number;
+  aspectRatio?: number;
+  caption?: string;
+}
+let {
+  platforms,
+  markets,
+  probs,
+  width = 720,
+  aspectRatio,
+  caption,
+} = Astro.props;
+
+const maxDaysBefore = 370;
+const groupingDays = 10;
+const msPerDay = 24 * 60 * 60 * 1000;
+
+// Calculate which time group each probability belongs to
+// groupingDays = 1: daily groups (0, 1, 2, 3, ...)
+// groupingDays = 7: weekly groups (0 = days 0-6, 1 = days 7-13, ...)
+
+// Create index of probs by market_id for O(1) lookup
+const probsByMarketId = new Map();
+for (const prob of probs) {
+  if (!probsByMarketId.has(prob.market_id)) {
+    probsByMarketId.set(prob.market_id, []);
+  }
+  probsByMarketId.get(prob.market_id).push(prob);
+}
+
+// Pre-calculate market end times and generate scores directly
+let scoresByPlatformAndDays = new Map<string, number[]>();
+
+for (const market of markets) {
+  const marketProbs = probsByMarketId.get(market.id) || [];
+  const market_end = new Date(market.close_datetime).getTime();
+  const cutoffTime = market_end - maxDaysBefore * msPerDay;
+
+  for (const prob of marketProbs) {
+    const prob_date = new Date(prob.date).getTime();
+    if (prob_date > cutoffTime) {
+      const days_before = Math.floor((market_end - prob_date) / msPerDay);
+      const group_index = Math.floor(days_before / groupingDays);
+      const score = (market.resolution - prob.prob) ** 2;
+
+      const key = `${market.platform_name}-${group_index}`;
+      if (!scoresByPlatformAndDays.has(key)) {
+        scoresByPlatformAndDays.set(key, []);
+      }
+      scoresByPlatformAndDays.get(key)!.push(score);
+    }
+  }
+}
+
+let points: Array<{
+  platform_name: string;
+  group_index: number;
+  group_label: number;
+  c1: number;
+  q1: number;
+  q2: number;
+  q3: number;
+  c3: number;
+}> = [];
+// Calculate how many groups we'll have based on the grouping interval
+const maxGroups = Math.ceil((maxDaysBefore + 1) / groupingDays);
+const groupValues = Array.from({ length: maxGroups }, (_, i) => i);
+
+for (const platform of platforms) {
+  for (const group_index of groupValues) {
+    const key = `${platform.name}-${group_index}`;
+    const filteredScores = scoresByPlatformAndDays.get(key) || [];
+
+    if (filteredScores.length > 0) {
+      filteredScores.sort((a: number, b: number) => a - b);
+      const { c1, q1, q2, q3, c3 } = quartiles(filteredScores);
+
+      // Generate group label based on grouping interval
+      const startDay = group_index * groupingDays;
+      const group_label = startDay;
+
+      points.push({
+        platform_name: platform.name,
+        group_index,
+        group_label,
+        c1,
+        q1,
+        q2,
+        q3,
+        c3,
+      });
+    }
+  }
+}
+
+// Generate the plot
+const plot = Plot.plot({
+  title: "Accuracy by Days Before Resolution",
+  width: width,
+  marginRight: 80,
+  aspectRatio: aspectRatio,
+  x: {
+    label: `Days before Resolution`,
+    reverse: true,
+    tickFormat: (d) => {
+      const point = points.find((p) => p.group_index === d);
+      return point ? point.group_label : d;
+    },
+  },
+  y: {
+    domain: [0, 0.8],
+    grid: true,
+    label: "Brier score (lower is better)",
+  },
+  fy: { label: "Platform" },
+  color: {
+    label: "Platform",
+    domain: platforms.map((p) => p.name),
+    range: platforms.map((p) => p.color_primary),
+  },
+  marks: [
+    Plot.ruleX(points, {
+      x: "group_index",
+      y1: "c1",
+      y2: "q1",
+      fy: "platform_name",
+      fill: "platform_name",
+    }),
+    Plot.barY(points, {
+      x: "group_index",
+      y1: "q1",
+      y2: "q3",
+      fy: "platform_name",
+      fill: "platform_name",
+      strokeWidth: 2,
+    }),
+    Plot.ruleX(points, {
+      x: "group_index",
+      y1: "q3",
+      y2: "c3",
+      fy: "platform_name",
+      fill: "platform_name",
+    }),
+    Plot.tickY(points, {
+      x: "group_index",
+      y: "q2",
+      fy: "platform_name",
+    }),
+    Plot.ruleY([0]),
+  ],
+  document,
+}).outerHTML;
+---
+
+<div
+  class="bg-base-light [&_h2]:text-2xl text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
+>
+  <Fragment set:html={plot} />
+  <p class="text-xs">
+    {caption}
+  </p>
+  <p class="text-xs">
+    Source: <a href="https://brier.fyi">brier.fyi</a>
+  </p>
+</div>
