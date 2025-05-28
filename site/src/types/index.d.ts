@@ -205,7 +205,7 @@ export interface DailyProbabilityDetails {
   platform_name: string;
   question_id: number | null;
   question_invert: boolean;
-  date: string;
+  date: string; // ISO datetime, noon UTC on day of sample
   prob: number;
 }
 
@@ -214,4 +214,18 @@ export interface CriterionProbability {
   market_id: string;
   criterion_type: string;
   prob: number;
+}
+
+/** A user signed up for the newsletter. **/
+export interface NewsletterSignup {
+  email: string;
+  date: string; // ISO datetime
+}
+
+/** Feedback submitted through the website form. **/
+export interface FeedbackItem {
+  email: string;
+  feedback_type: string;
+  feedback: string;
+  date: string; // ISO datetime
 }
