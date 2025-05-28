@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "prettier": "^3.5.3",
+    "prettier-plugin-astro": "^0.14.1",
     "prettier-plugin-svelte": "^3.3.3"
   }
 }
