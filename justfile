@@ -153,8 +153,8 @@ embeddings *args:
 
 # Run nightly process
 nightly: download-test extract-test grade-test group-test site-test
-    just download --log-level warn --reset-cache
-    just download --log-level warn
+    just download --log-level warn --resolved-since-days-ago 10 --reset-cache
+    just download --log-level warn --resolved-since-days-ago 10
     just extract --log-level warn
     uv run scripts/fix-criterion-probs.py
     just grade --log-level warn
