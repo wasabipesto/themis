@@ -15,8 +15,8 @@ use super::{IndexItem, Platform};
 use crate::util::{display_progress, get_id, get_reqwest_client_ratelimited, send_request};
 
 const METACULUS_API_BASE: &str = "https://www.metaculus.com/api";
-const METACULUS_RATELIMIT: usize = 15;
-const METACULUS_RATELIMIT_MS: u64 = 60_000;
+const METACULUS_RATELIMIT: usize = 8;
+const METACULUS_RATELIMIT_MS: u64 = 30_000;
 
 /// Format of data saved to JSON for extended data
 #[derive(Debug, Clone, Serialize, Deserialize)]
