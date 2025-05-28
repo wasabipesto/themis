@@ -64,7 +64,9 @@ const marketScores = await getMarketScores();
       platformCategoryScores={platformCategoryScores.filter(
         (score) => score.category_slug == category.slug,
       )}
-      overallScores={categoryOverallScores}
+      overallScores={categoryOverallScores.filter(
+        (score) => score.item_id == category.slug,
+      )}
       pivot="platform"
     />
   </div>
