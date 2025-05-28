@@ -317,9 +317,7 @@ just db-run-sql schema/03-views.sql
 
 # I just want the data
 
-The production database is publicly readable via PostgREST here:
-
-- [https://data.brier.fyi](https://data.brier.fyi/)
+The production database is publicly readable via PostgREST at [https://data.brier.fyi](https://data.brier.fyi/). This will lead you to a full OpenAPI spec, which you could plug in to Swagger or your client generator of choice.
 
 For example, to get items from various tables:
 
@@ -331,8 +329,8 @@ curl -sf https://data.brier.fyi/daily_probability_details?limit=100
 
 You can find PostgREST documentation here:
 
-- https://docs.postgrest.org/en/v12/references/api/tables_views.html
-- https://docs.postgrest.org/en/v12/references/api/pagination_count.html
+- https://docs.postgrest.org/en/stable/references/api/tables_views.html
+- https://docs.postgrest.org/en/stable/references/api/pagination_count.html
 
 # Notes, news, and disclaimers
 
