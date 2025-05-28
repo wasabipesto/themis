@@ -1,5 +1,115 @@
 ---
-import Base from "@layouts/base.astro";
+import Base from '@layouts/base.astro'
+import { getNewsletterSignups, getFeedbackItems } from '@lib/api'
+import type { NewsletterSignup, FeedbackItem } from '@types'
+
+// Get data from last 30 days
+const thirtyDaysAgo = new Date()
+thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+let recentSignups: NewsletterSignup[] = []
+let recentFeedback: FeedbackItem[] = []
+
+const newsletterSignups = await getNewsletterSignups()
+const feedbackItems = await getFeedbackItems()
+
+// Filter items from last 30 days
+recentSignups = newsletterSignups.filter((signup) => new Date(signup.date) >= thirtyDaysAgo)
+recentFeedback = feedbackItems.filter((feedback) => new Date(feedback.date) >= thirtyDaysAgo)
+
+// Create unified list with type indicator
+interface ActivityItem {
+  type: 'signup' | 'feedback'
+  date: string
+  email: string
+  data: NewsletterSignup | FeedbackItem
+}
+
+const allActivity: ActivityItem[] = [
+  ...recentSignups.map((signup) => ({
+    type: 'signup' as const,
+    date: signup.date,
+    email: signup.email,
+    data: signup
+  })),
+  ...recentFeedback.map((feedback) => ({
+    type: 'feedback' as const,
+    date: feedback.date,
+    email: feedback.email,
+    data: feedback
+  }))
+]
+
+// Sort by date (most recent first)
+allActivity.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+// Helper function to format date
+function formatDate(dateString: string): string {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
 ---
 
-<Base title="Dashboard">sadfsadfasf</Base>
+<Base title="Dashboard">
+  <div class="w-full max-w-4xl mx-auto p-6">
+    <h1 class="text-3xl font-bold mb-6 text-text">Dashboard</h1>
+
+    <div class="bg-crust rounded-lg p-6 shadow-lg">
+      <h2 class="text-2xl font-semibold mb-2 text-text">Recent Activity (Last 30 Days)</h2>
+
+      <div class="text-sm text-text/70 mb-4">
+        Showing {allActivity.length} items ({recentSignups.length} newsletter signups, {
+          recentFeedback.length
+        } feedback items)
+      </div>
+
+      {
+        allActivity.length === 0 ? (
+          <div class="text-center py-8 text-text/60">No activity in the last 30 days</div>
+        ) : (
+          <div class="space-y-3">
+            {allActivity.map((item) => (
+              <div class="border border-base-accent/20 rounded-lg p-4 hover:bg-base-accent/5 transition-colors">
+                <div class="flex items-start justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    {item.type === 'signup' ? (
+                      <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green/10 text-green/80">
+                        📧 Newsletter Signup
+                      </span>
+                    ) : (
+                      <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue/10 text-blue/80">
+                        💬 Feedback
+                      </span>
+                    )}
+                    <span class="text-sm text-text/70">{formatDate(item.date)}</span>
+                  </div>
+                </div>
+
+                <div class="text-sm">
+                  <div class="font-medium text-text mb-1">{item.email}</div>
+
+                  {item.type === 'feedback' && (
+                    <div class="space-y-1">
+                      <div class="text-text/70">
+                        <span class="font-medium">Type:</span>{' '}
+                        {(item.data as FeedbackItem).feedback_type}
+                      </div>
+                      <div class="text-text bg-base-dark/20 rounded p-2 text-sm">
+                        {(item.data as FeedbackItem).feedback}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      }
+    </div>
+  </div>
+</Base>

@@ -9,6 +9,8 @@ import type {
   Question,
   QuestionDetails,
   SimilarMarkets,
+  NewsletterSignup,
+  FeedbackItem,
 } from "@types";
 
 const PGRST_URL = import.meta.env.PUBLIC_PGRST_URL;
@@ -300,4 +302,14 @@ export async function invertMarketLink(
   });
   await refreshViewsQuick();
   return getMarket(marketId);
+}
+
+export async function getNewsletterSignups(): Promise<NewsletterSignup[]> {
+  const order = "date.desc";
+  return fetchFromAPI(`newsletter_signups?order=${order}`);
+}
+
+export async function getFeedbackItems(): Promise<FeedbackItem[]> {
+  const order = "date.desc";
+  return fetchFromAPI(`general_feedback?order=${order}`);
 }
