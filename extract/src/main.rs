@@ -93,7 +93,7 @@ fn main() -> Result<()> {
 
     // Initialize HTTP client
     let client = Client::builder()
-        .timeout(Duration::from_secs(30))
+        .timeout(Duration::from_secs(60))
         .build()
         .context("Failed to create HTTP client")?;
 
@@ -306,10 +306,10 @@ fn upload_batch(
 /// Should be called after all data has been uploaded to ensure views are up-to-date.
 /// Uses a longer timeout since this operation can take around 60 seconds.
 fn refresh_materialized_views(params: &PostgrestParams) -> Result<()> {
-    info!("Refreshing all materialized views (this may take up to 5 minutes)");
+    info!("Refreshing all materialized views (this may take a while)");
 
     // Create a new client with a longer timeout specifically for this operation
-    let timeout = Duration::from_secs(300);
+    let timeout = Duration::from_secs(600);
     let long_timeout_client = Client::builder()
         .timeout(timeout)
         .build()
