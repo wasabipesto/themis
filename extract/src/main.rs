@@ -16,7 +16,7 @@ use themis_extract::{MarketAndProbs, MarketError};
 
 /// Collect this many markets before uploading to database.
 /// Not a firm limit, can be exceeded if the last line has multiple markets.
-const BATCH_SIZE: usize = 10000;
+const BATCH_SIZE: usize = 1000;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about)]
