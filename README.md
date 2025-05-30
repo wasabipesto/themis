@@ -337,7 +337,7 @@ You can find PostgREST documentation here:
 This project has been awarded the following grants:
 
 - $3,500 as part of the [Manifold Community Fund](https://manifund.org/projects/wasabipestos-umbrella-project), an impact certificate-based funding round.
-- $3,764 as part of the [EA Community Choice](https://manifund.org/projects/calibration-city), a donation matching pool.
+- $8,864 as part of the [EA Community Choice](https://manifund.org/projects/calibration-city), a donation matching pool.
 
 These grants have been used for furthering development but have not influenced the contents of this site towards or away from any viewpoint.
 
