@@ -36,20 +36,25 @@ export async function calculateCalibrationPoints(
   markets: MarketDetails[],
   criterion_type: string,
   weight_type: string | null,
+  aggregate_platforms: boolean = false,
 ): Promise<CalibrationPoint[]> {
   // Set bucket width
   const bucketWidth = 0.05;
 
   // Extract unique platform names from markets
   const platformSet = new Set<string>();
-  markets.forEach((market) => {
-    if (market.platform_slug) {
-      const platformName =
-        market.platform_slug.charAt(0).toUpperCase() +
-        market.platform_slug.slice(1);
-      platformSet.add(platformName);
-    }
-  });
+  if (aggregate_platforms) {
+    platformSet.add("All Platforms");
+  } else {
+    markets.forEach((market) => {
+      if (market.platform_slug) {
+        const platformName =
+          market.platform_slug.charAt(0).toUpperCase() +
+          market.platform_slug.slice(1);
+        platformSet.add(platformName);
+      }
+    });
+  }
 
   // Convert Set to Array
   const platforms = Array.from(platformSet);
@@ -108,23 +113,23 @@ export async function calculateCalibrationPoints(
         Math.floor(prediction / bucketWidth),
         buckets.length - 1,
       );
-      if (buckets[bucketIndex].platforms[market.platform_name]) {
-        buckets[bucketIndex].platforms[market.platform_name].sum +=
+
+      const platformKey = aggregate_platforms
+        ? "All Platforms"
+        : market.platform_name;
+
+      if (buckets[bucketIndex].platforms[platformKey]) {
+        buckets[bucketIndex].platforms[platformKey].sum +=
           market.resolution * weight_value;
-        buckets[bucketIndex].platforms[market.platform_name].weight +=
-          weight_value;
-        buckets[bucketIndex].platforms[market.platform_name].count += 1;
+        buckets[bucketIndex].platforms[platformKey].weight += weight_value;
+        buckets[bucketIndex].platforms[platformKey].count += 1;
         if (market.resolution === 0) {
-          buckets[bucketIndex].platforms[market.platform_name].count_no -= 1;
+          buckets[bucketIndex].platforms[platformKey].count_no -= 1;
         }
         if (market.resolution === 1) {
-          buckets[bucketIndex].platforms[market.platform_name].count_yes += 1;
+          buckets[bucketIndex].platforms[platformKey].count_yes += 1;
         }
       }
-    } else {
-      console.error(
-        `No criterion probability found for market ${market.id}/${criterion_type}`,
-      );
     }
   }
 
