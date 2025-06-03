@@ -1,0 +1,81 @@
+---
+import type { MarketScoreDetails, PlatformDetails } from "@types";
+
+import * as Plot from "@observablehq/plot";
+import { JSDOM } from "jsdom";
+const { document } = new JSDOM().window;
+
+interface Props {
+  platforms: PlatformDetails[];
+  scores: MarketScoreDetails[];
+  width?: number;
+  height?: number;
+  aspectRatio?: number;
+  caption?: string;
+}
+let {
+  platforms,
+  scores,
+  width = 600,
+  height,
+  aspectRatio,
+  caption,
+} = Astro.props;
+
+const criterion = "brier-before-close-days-30";
+const cutoff = 0.09;
+
+let points = platforms.map((p) => {
+  const platform_scores = scores.filter(
+    (s) => s.platform_slug === p.slug && s.score_type == criterion,
+  );
+  const platform_scores_under_cutoff = platform_scores.filter(
+    (s) => s.score < cutoff,
+  );
+  return {
+    platform_name: p.name,
+    pct_within: platform_scores_under_cutoff.length / platform_scores.length,
+  };
+});
+
+// Generate the plot
+const plot = Plot.plot({
+  width: width,
+  height: height,
+  aspectRatio: aspectRatio,
+  marginLeft: 70,
+  x: {
+    domain: [0, 100],
+    percent: true,
+    grid: true,
+    label:
+      "Percent of markets within 30% of resolution one month before closing",
+  },
+  y: {
+    label: null,
+    domain: platforms.map((p) => p.name),
+  },
+  color: {
+    domain: platforms.map((p) => p.name),
+    range: platforms.map((p) => p.color_primary),
+  },
+  marks: [
+    Plot.barX(points, {
+      x: "pct_within",
+      y: "platform_name",
+      fill: "platform_name",
+    }),
+    //Plot.ruleX([0]),
+  ],
+  document,
+}).outerHTML;
+---
+
+<div
+  class="bg-base-light [&_h2]:text-2xl text-crust rounded-md drop-shadow-sm px-4 py-1 m-2 overflow-x-auto"
+>
+  <Fragment set:html={plot} />
+  <p class="text-xs">
+    {caption}
+  </p>
+</div>

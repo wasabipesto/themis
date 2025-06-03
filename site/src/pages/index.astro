@@ -1,6 +1,7 @@
 ---
 import Base from "@layouts/base.astro";
-import ReportCard from "@components/index-report-card.astro";
+import IndexBasicAccuracy from "@components/charts/index-basic-accuracy.astro";
+import IndexReportCard from "@components/index-report-card.astro";
 import QuestionCard from "@components/question-card-detailed.astro";
 import SeeMoreLink from "@components/see-more-link.astro";
 import PlatformCard from "@components/platform-card.astro";
@@ -77,7 +78,7 @@ const { numQuestions, numLinkedMarkets } = await getQuestionStats();
         </span>
         <span class="inline md:hidden"> below </span> for those scores.
       </p>
-      <ul class="list-disc px-4">
+      <ul class="list-disc p-4">
         <li>
           <a href="#intro" class="text-lavender underline">
             What's a prediction market?
@@ -95,9 +96,21 @@ const { numQuestions, numLinkedMarkets } = await getQuestionStats();
         </li>
       </ul>
     </div>
-    <div class="h-full md:flex">
-      <div class="my-auto pb-10">
-        <ReportCard
+    <div class="pt-4 m-2">
+      <p class="mx-2 px-2 font-bold text-lg">
+        One month before close, most markets are already within 30% of the
+        resolution.
+      </p>
+      <div class="my-2">
+        <IndexBasicAccuracy platforms={platforms} scores={marketScores} />
+      </div>
+      <div class="h-2"></div>
+      <p class="m-2 px-2 font-bold text-lg">
+        When graded directly against each other, some platforms perform better
+        in specific categories.
+      </p>
+      <div class="my-2">
+        <IndexReportCard
           platforms={platforms}
           categories={categories}
           platformCategoryScores={platformCategoryScores}
