@@ -3,6 +3,7 @@ import Base from "@layouts/base.astro";
 import SelectableOptions from "@components/charts/selectable-options.astro";
 import CalibrationDefault from "@components/charts/calibration-default.astro";
 import HistogramWithBox from "@components/charts/histogram-scores-with-box.astro";
+import CalibrationStems from "@components/charts/calibration-stems.astro";
 import ChartNavbar from "@components/charts/chart-navbar.astro";
 import { Icon } from "astro-icon/components";
 import { getPlatforms, getMarkets, getMarketScoresSorted } from "@lib/api";
@@ -299,5 +300,41 @@ const scores = await getMarketScoresSorted();
         },
       ]}
     />
+  </div>
+  <hr class="my-2" />
+
+  <div class="p-4 m-2">
+    <div class="my-4">
+      <h3 class="font-bold text-2xl" id="other">
+        Other Experiments
+        <a href="#other">
+          <Icon
+            name="mdi:link-variant"
+            class="h-5 inline-block mb-1 opacity-10 hover:opacity-100 transition-opacity duration-100"
+          />
+        </a>
+      </h3>
+    </div>
+
+    <div class="my-2">
+      <CalibrationDefault
+        platforms={platforms}
+        markets={markets}
+        criterion="before-close-days-30"
+        aggregate={true}
+        width={1100}
+        caption="Calibration for all markets, aggregated across platforms."
+      />
+    </div>
+
+    <div class="my-2">
+      <CalibrationStems
+        platforms={platforms}
+        markets={markets}
+        criterion="before-close-days-30"
+        width={1100}
+        caption="Total count resolved yes vs no for each prediction bucket."
+      />
+    </div>
   </div>
 </Base>

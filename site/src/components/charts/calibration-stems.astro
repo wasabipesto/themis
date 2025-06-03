@@ -10,8 +10,6 @@ interface Props {
   platforms: PlatformDetails[];
   markets: MarketDetails[];
   criterion?: string;
-  weight?: string;
-  aggregate?: boolean;
   width?: number;
   height?: number;
   aspectRatio?: number;
@@ -21,8 +19,6 @@ let {
   platforms,
   markets,
   criterion = "midpoint",
-  weight = null,
-  aggregate = false,
   width = 720,
   height,
   aspectRatio,
@@ -30,12 +26,7 @@ let {
 } = Astro.props;
 
 // Calculate calibration points
-const points = await calculateCalibrationPoints(
-  markets,
-  criterion,
-  weight,
-  aggregate,
-);
+const points = await calculateCalibrationPoints(markets, criterion, null, true);
 
 let axisTitleX = {
   midpoint: "Prediction (Midpoint)",
@@ -47,17 +38,9 @@ let axisTitleX = {
   "after-start-hours-24": "Prediction (24h after open)",
 }[criterion];
 
-let axisTitleY = {
-  none: "Resolution",
-  volume_usd: "Resolution, weighted by volume",
-  traders_count: "Resolution, weighted by number of traders",
-  duration_days: "Resolution, weighted by duration",
-  recency: "Resolution, weighted by recency",
-}[weight || "none"];
-
 // Generate the plot
 const plot = Plot.plot({
-  title: "Calibration Plot",
+  title: "Calibration Stem Plot",
   width: width,
   height: height,
   aspectRatio: aspectRatio,
@@ -66,41 +49,19 @@ const plot = Plot.plot({
     percent: true,
     label: axisTitleX,
   },
-  y: { domain: [0, 100], grid: true, percent: true, label: axisTitleY },
-  r: { range: [width * 0.008, width * 0.016], label: "Scale" },
-  color:
-    aggregate == false
-      ? {
-          legend: platforms.length > 1,
-          label: "Platform",
-          domain: platforms.map((p) => p.name),
-          range: platforms.map((p) => p.color_primary),
-        }
-      : {},
+  y: { grid: true, label: "Resolution" },
   marks: [
-    Plot.dot(points, {
+    Plot.ruleX(points, {
       x: "pred_center",
-      y: "res_mean",
-      r: "count",
-      fill: "platform_slug",
-      stroke: "platform_slug",
-      fillOpacity: 0.5,
+      y: "count_yes",
+      strokeWidth: 5,
     }),
-    Plot.line(points, {
+    Plot.ruleX(points, {
       x: "pred_center",
-      y: "res_mean",
-      stroke: "platform_slug",
-      strokeOpacity: 0.2,
+      y: "count_no",
+      strokeWidth: 5,
     }),
-    Plot.ruleX([0]),
     Plot.ruleY([0]),
-    Plot.lineY(
-      [
-        { x: 0, y: 0 },
-        { x: 1, y: 1 },
-      ],
-      { x: "x", y: "y", opacity: 0.5 },
-    ),
   ],
   document,
 }).outerHTML;
