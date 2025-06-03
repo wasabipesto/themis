@@ -5,6 +5,8 @@ export interface PlatformData {
   sum: number;
   weight: number;
   count: number;
+  count_no: number;
+  count_yes: number;
 }
 
 export interface Bucket {
@@ -24,6 +26,8 @@ export interface CalibrationPoint {
   pred_description: string;
   res_mean: number;
   count: number;
+  count_no: number; // negative count
+  count_yes: number;
   uncertainty: number;
 }
 
@@ -58,7 +62,13 @@ export async function calculateCalibrationPoints(
 
     // Initialize platform data for each platform
     platforms.forEach((platform) => {
-      platformsObj[platform] = { sum: 0, weight: 0, count: 0 };
+      platformsObj[platform] = {
+        sum: 0,
+        weight: 0,
+        count: 0,
+        count_no: 0,
+        count_yes: 0,
+      };
     });
 
     buckets.push({
@@ -104,6 +114,12 @@ export async function calculateCalibrationPoints(
         buckets[bucketIndex].platforms[market.platform_name].weight +=
           weight_value;
         buckets[bucketIndex].platforms[market.platform_name].count += 1;
+        if (market.resolution === 0) {
+          buckets[bucketIndex].platforms[market.platform_name].count_no -= 1;
+        }
+        if (market.resolution === 1) {
+          buckets[bucketIndex].platforms[market.platform_name].count_yes += 1;
+        }
       }
     } else {
       console.error(
@@ -131,6 +147,8 @@ export async function calculateCalibrationPoints(
             "%",
           res_mean: data.sum / data.weight,
           count: data.count,
+          count_no: data.count_no,
+          count_yes: data.count_yes,
           uncertainty: Math.min(Math.max(3 / Math.sqrt(data.count), 0), 1),
         });
       }
