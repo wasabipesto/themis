@@ -8,7 +8,7 @@
 use crate::scores::{brier, logarithmic, spherical, AbsoluteScoreType, RelativeScoreType};
 
 /// Brier score cutoffs and their corresponding letter grades
-pub const BRIER_SCORE_GRADES: [(f32, &str); 14] = [
+pub const BRIER_ABSCORE_GRADES: [(f32, &str); 14] = [
     (0.0001, "S"),
     (0.0009, "A+"),
     (0.0018, "A"),
@@ -22,6 +22,24 @@ pub const BRIER_SCORE_GRADES: [(f32, &str); 14] = [
     (0.050, "D+"),
     (0.110, "D"),
     (0.250, "D-"),
+    (1.000, "F"),
+];
+
+/// Brier score cutoffs and their corresponding letter grades
+pub const BRIER_RELSCORE_GRADES: [(f32, &str); 14] = [
+    (-0.070, "S"),
+    (-0.040, "A+"),
+    (-0.016, "A"),
+    (-0.010, "A-"),
+    (-0.008, "B+"),
+    (-0.004, "B"),
+    (-0.002, "B-"),
+    (0.000, "C+"),
+    (0.005, "C"),
+    (0.010, "C-"),
+    (0.015, "D+"),
+    (0.025, "D"),
+    (0.035, "D-"),
     (1.000, "F"),
 ];
 
@@ -57,7 +75,7 @@ pub fn absolute_letter_grade(score_type: &AbsoluteScoreType, score: f32) -> Stri
         }
     };
 
-    for &(cutoff, grade) in BRIER_SCORE_GRADES.iter() {
+    for &(cutoff, grade) in BRIER_ABSCORE_GRADES.iter() {
         if brier_score <= cutoff {
             return grade.to_string();
         }
@@ -70,48 +88,20 @@ pub fn absolute_letter_grade(score_type: &AbsoluteScoreType, score: f32) -> Stri
 /// The relative scoring algorithm we use results in a lot of scores very close
 /// to zero with a sharp dropoff and roughly-symmetrical curve on either side.
 ///
-/// We will calculate our grade cutoffs so that C+ is centered at zero, with a
-/// reference grade "bin" width based on the score type. And of course the Brier
-/// score needs to be inverted.
+/// Once again we will use the Brier scores as a reference, this time using coefficients
+/// determined from sampling data.
 ///
 pub fn relative_letter_grade(score_type: &RelativeScoreType, score: f32) -> String {
-    let (width, invert) = match score_type {
-        RelativeScoreType::BrierRelative => (0.002, true),
-        RelativeScoreType::LogarithmicRelative => (0.006, false),
-        RelativeScoreType::SphericalRelative => (0.002, false),
+    let brier_rel_score = match score_type {
+        RelativeScoreType::BrierRelative => score,
+        RelativeScoreType::LogarithmicRelative => score * -3.0,
+        RelativeScoreType::SphericalRelative => score * -1.0,
     };
-    match invert {
-        false => match score {
-            x if x > 35.0 * width => "S".to_string(),
-            x if x > 20.0 * width => "A+".to_string(),
-            x if x > 8.0 * width => "A".to_string(),
-            x if x > 5.0 * width => "A-".to_string(),
-            x if x > 4.0 * width => "B+".to_string(),
-            x if x > 2.0 * width => "B".to_string(),
-            x if x > 1.0 * width => "B-".to_string(),
-            x if x > 0.0 * width => "C+".to_string(),
-            x if x > -1.0 * width => "C".to_string(),
-            x if x > -2.0 * width => "C-".to_string(),
-            x if x > -4.0 * width => "D+".to_string(),
-            x if x > -8.0 * width => "D".to_string(),
-            x if x > -12.0 * width => "D-".to_string(),
-            _ => "F".to_string(),
-        },
-        true => match score {
-            x if x < -35.0 * width => "S".to_string(),
-            x if x < -20.0 * width => "A+".to_string(),
-            x if x < -8.0 * width => "A".to_string(),
-            x if x < -5.0 * width => "A-".to_string(),
-            x if x < -4.0 * width => "B+".to_string(),
-            x if x < -2.0 * width => "B".to_string(),
-            x if x < -1.0 * width => "B-".to_string(),
-            x if x < 0.0 * width => "C+".to_string(),
-            x if x < 1.0 * width => "C".to_string(),
-            x if x < 2.0 * width => "C-".to_string(),
-            x if x < 4.0 * width => "D+".to_string(),
-            x if x < 8.0 * width => "D".to_string(),
-            x if x < 12.0 * width => "D-".to_string(),
-            _ => "F".to_string(),
-        },
+
+    for &(cutoff, grade) in BRIER_RELSCORE_GRADES.iter() {
+        if brier_rel_score <= cutoff {
+            return grade.to_string();
+        }
     }
+    "ERROR".to_string()
 }

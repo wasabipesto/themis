@@ -15,7 +15,7 @@ use crate::{DailyProbabilityPoint, Market, MarketWithProbs, Question};
 /// https://www.cultivatelabs.com/crowdsourced-forecasting-guide/what-are-relative-brier-scores-and-how-are-they-calculated
 ///
 /// For each day in the scoring period, we calculate each market's score, then
-/// the median score, then the difference between the two (relative daily score).
+/// the baseline score, then the difference between the two (relative daily score).
 /// The relative score is each market's sum of relative daily scores divided by
 /// the total number of days in the scoring period.
 ///
@@ -150,8 +150,8 @@ pub fn score_market(
 
     // For each day:
     //  Get each market's score.
-    //  Get the median score across all markets for that day.
-    //  Get each market's relative score (score - median).
+    //  Get the baseline score across all markets for that day.
+    //  Get each market's relative score (score - baseline).
     for day in days {
         let mut daily_market_absolute_scores = HashMap::with_capacity(markets.len());
         for market in markets {
@@ -183,17 +183,17 @@ pub fn score_market(
             daily_market_absolute_scores.insert(market.id.clone(), score);
         }
 
-        // Get median score for the current day
+        // Get baseline score for the current day
         let scores = daily_market_absolute_scores
             .values()
             .cloned()
             .collect::<Vec<f32>>();
-        let median = helpers::median(&scores);
+        let baseline = helpers::median(&scores);
 
-        // Subtract the median from each score to get the relative scores for each market
+        // Subtract the baseline from each score to get the relative scores for each market
         let daily_market_relative_scores: HashMap<String, f32> = daily_market_absolute_scores
             .iter()
-            .map(|(market_id, abs_score)| (market_id.clone(), abs_score - median))
+            .map(|(market_id, abs_score)| (market_id.clone(), abs_score - baseline))
             .collect();
 
         // Add the relative scores to the overall relative scores
