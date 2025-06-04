@@ -12,7 +12,7 @@ const xvals = Array.from({ length: 101 }, (_, i) => i / 100);
 const points = xvals
   .map((x) => [
     { error: x, score_type: "Brier", score: x ** 2 },
-    { error: x, score_type: "Log", score: Math.log(1 - x) },
+    { error: x, score_type: "Logarithmic", score: Math.log(1 - x) },
     {
       error: x,
       score_type: "Spherical",
@@ -23,7 +23,7 @@ const points = xvals
 const points_drv = xvals
   .map((x) => [
     { error: x, score_type: "Brier", score: 2 * x },
-    { error: x, score_type: "Log", score: -1 / (1 - x) },
+    { error: x, score_type: "Logarithmic", score: -1 / (1 - x) },
     {
       error: x,
       score_type: "Spherical",
@@ -34,7 +34,7 @@ const points_drv = xvals
 
 // Generate the plot
 const plot = Plot.plot({
-  title: "Comparison of Scoring Methods",
+  title: "Scoring Methods",
   x: {
     label: "Error, percent",
     percent: true,
@@ -56,6 +56,7 @@ const plot = Plot.plot({
       stroke: "score_type",
     }),
     Plot.ruleY([0]),
+    Plot.ruleX([0.5]),
   ],
   document,
 }).outerHTML;
@@ -82,6 +83,7 @@ const plot_drv = Plot.plot({
       stroke: "score_type",
     }),
     Plot.ruleY([0]),
+    Plot.ruleX([0.5]),
   ],
   document,
 }).outerHTML;
@@ -90,7 +92,7 @@ const plot_drv = Plot.plot({
 <div
   class="bg-base-light [&_h2]:text-2xl text-crust rounded-md drop-shadow-sm p-4 overflow-x-auto"
 >
-  <div class="grid grid-cols-2 gap-2">
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
     <div>
       <Fragment set:html={plot} />
     </div>

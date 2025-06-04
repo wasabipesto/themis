@@ -44,7 +44,11 @@ platforms.forEach((platform) =>
         href={item.url}
         style="text-decoration: none !important;"
         class={
-          item.cols === 3 ? "col-span-3" : item.cols === 2 ? "col-span-2" : ""
+          item.cols === 3
+            ? "col-span-3"
+            : item.cols === 2
+              ? "col-span-2"
+              : "col-span-1"
         }
       >
         <div
