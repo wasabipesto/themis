@@ -120,6 +120,12 @@ const plots = [
         stroke: "platform_name",
         curve: "step",
       }),
+      Plot.dot([{ x: question.end_date_actual, y: resolution }], {
+        x: "x",
+        y: "y",
+        r: 4,
+        symbol: "diamond",
+      }),
       Plot.ruleY([0]),
     ],
     document,
