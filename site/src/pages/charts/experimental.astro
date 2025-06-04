@@ -4,6 +4,7 @@ import SelectableOptions from "@components/charts/selectable-options.astro";
 import CalibrationDefault from "@components/charts/calibration-default.astro";
 import HistogramWithBox from "@components/charts/histogram-scores-with-box.astro";
 import CalibrationStems from "@components/charts/calibration-stems.astro";
+import ScoringRules from "@components/charts/scoring-rules.astro";
 import ChartNavbar from "@components/charts/chart-navbar.astro";
 import { Icon } from "astro-icon/components";
 import { getPlatforms, getMarkets, getMarketScoresSorted } from "@lib/api";
@@ -335,6 +336,10 @@ const scores = await getMarketScoresSorted();
         width={1100}
         caption="Total count resolved yes vs no for each prediction bucket."
       />
+    </div>
+
+    <div class="my-2">
+      <ScoringRules />
     </div>
   </div>
 </Base>
