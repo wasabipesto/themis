@@ -305,8 +305,16 @@ let { platforms, markets, scores, probs } = Astro.props;
   <SelectableOptions
     options={[
       {
+        icon: "mdi:calendar-blank",
+        description:
+          "Compare market accuracy by days before resolution (long markets only).",
+        component: AccuracyDaysBeforeClose,
+        props: { platforms, markets, probs, onlyLong: true },
+      },
+      {
         icon: "mdi:calendar",
-        description: "Compare market accuracy by days before resolution.",
+        description:
+          "Compare market accuracy by days before resolution (all markets).",
         component: AccuracyDaysBeforeClose,
         props: { platforms, markets, probs },
       },

@@ -14,6 +14,7 @@ interface Props {
   platforms: PlatformDetails[];
   markets: MarketDetails[];
   probs: DailyProbabilityDetails[];
+  onlyLong?: boolean;
   width?: number;
   aspectRatio?: number;
   caption?: string;
@@ -22,6 +23,7 @@ let {
   platforms,
   markets,
   probs,
+  onlyLong = false,
   width = 720,
   aspectRatio,
   caption,
@@ -30,6 +32,10 @@ let {
 const maxDaysBefore = 370;
 const groupingDays = 10;
 const msPerDay = 24 * 60 * 60 * 1000;
+
+if (onlyLong) {
+  markets = markets.filter((m) => m.duration_days > maxDaysBefore);
+}
 
 // Calculate which time group each probability belongs to
 // groupingDays = 1: daily groups (0, 1, 2, 3, ...)
@@ -175,6 +181,7 @@ const plot = Plot.plot({
   <Fragment set:html={plot} />
   <p class="text-xs">
     {caption}
+    n={markets.length.toLocaleString()} markets
   </p>
   <p class="text-xs">
     Source: <a href="https://brier.fyi">brier.fyi</a>
