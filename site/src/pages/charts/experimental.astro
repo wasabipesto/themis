@@ -321,7 +321,7 @@ const scores = await getMarketScoresSorted();
       <CalibrationDefault
         platforms={platforms}
         markets={markets}
-        criterion="before-close-days-30"
+        criterion="midpoint"
         aggregate={true}
         width={1100}
         caption="Calibration for all markets, aggregated across platforms."
@@ -332,7 +332,7 @@ const scores = await getMarketScoresSorted();
       <CalibrationStems
         platforms={platforms}
         markets={markets}
-        criterion="before-close-days-30"
+        criterion="midpoint"
         width={1100}
         caption="Total count resolved yes vs no for each prediction bucket."
       />
