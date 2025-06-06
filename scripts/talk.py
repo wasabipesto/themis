@@ -40,7 +40,7 @@ def main():
 
     basic_cali_chart = defaultdict(int)
     for market in markets:
-        prediction_val = get_prediction(market, "before-close-days-30")
+        prediction_val = get_prediction(market, "midpoint")
         if prediction_val is None:
             continue
         if prediction_val < 0.3:
@@ -115,6 +115,14 @@ def main():
             print(
                 f"{question_id_status:15}: {count:4} markets, Avg Brier: {avg_brier:.4f}"
             )
+
+    # Investigate polymarket dip at 45-50% time average
+    with open("cache/polymarket_in.txt", "w") as outfile:
+        for market in markets:
+            if market["platform_slug"] == "polymarket":
+                avg_prob = get_prediction(market, "time-average")
+                if avg_prob and 0.45 <= avg_prob <= 0.50:
+                    outfile.write(f"{market['title']}: ({avg_prob}, {market["resolution"]})\n")
 
 
 if __name__ == "__main__":
