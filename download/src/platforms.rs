@@ -12,6 +12,7 @@ use std::path::Path;
 
 use crate::util::{backup_file, load_data_ids, load_index_from_file};
 
+pub mod forecastex;
 pub mod kalshi;
 pub mod manifold;
 pub mod metaculus;
