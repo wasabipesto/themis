@@ -348,6 +348,7 @@ This project has been featured in the following instances:
 - [Forecasting Newsletter: June 2024](https://forecasting.substack.com/p/forecasting-newsletter-june-2024)
 - [Calibrations Blog: Should we let ourselves see the future?](https://www.calibrations.blog/p/should-we-let-ourselves-see-the-future)
 - [Lightcone News: Accuracy and Trust](https://lightcone.news/about)
+- [Valis Research: Unanswered Questions Surrounding Prediction Markets](https://valisresearch.xyz/work/unanswered-questions-surrounding-prediction-markets/index.html)
 
 I use prediction markets, mainly Manifold and Metaculus, as a personal exercise in calibration. This project grew out of an effort to see how useful they can be as information-gathering tools.
 
