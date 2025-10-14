@@ -11,18 +11,18 @@ use crate::scores::{brier, logarithmic, spherical, AbsoluteScoreType, RelativeSc
 pub const BRIER_ABSCORE_GRADES: [(f32, &str); 14] = [
     (0.0001, "S"),
     (0.0009, "A+"),
-    (0.0018, "A"),
-    (0.0022, "A-"),
-    (0.0030, "B+"),
-    (0.0045, "B"),
-    (0.0055, "B-"),
-    (0.0075, "C+"),
-    (0.015, "C"),
-    (0.025, "C-"),
-    (0.050, "D+"),
-    (0.110, "D"),
-    (0.250, "D-"),
-    (1.000, "F"),
+    (0.0064, "A"),
+    (0.0100, "A-"),
+    (0.0144, "B+"),
+    (0.0320, "B"),
+    (0.0400, "B-"),
+    (0.0576, "C+"),
+    (0.1296, "C"),
+    (0.1600, "C-"),
+    (0.1936, "D+"),
+    (0.3136, "D"),
+    (0.3600, "D-"),
+    (1.0000, "F"),
 ];
 
 /// Brier score cutoffs and their corresponding letter grades
@@ -30,16 +30,16 @@ pub const BRIER_RELSCORE_GRADES: [(f32, &str); 14] = [
     (-0.070, "S"),
     (-0.040, "A+"),
     (-0.016, "A"),
-    (-0.010, "A-"),
-    (-0.008, "B+"),
-    (-0.004, "B"),
-    (-0.002, "B-"),
-    (0.000, "C+"),
-    (0.005, "C"),
-    (0.010, "C-"),
-    (0.015, "D+"),
-    (0.025, "D"),
-    (0.035, "D-"),
+    (-0.006, "A-"),
+    (-0.004, "B+"),
+    (0.002, "B"),
+    (0.003, "B-"),
+    (0.005, "C+"),
+    (0.010, "C"),
+    (0.015, "C-"),
+    (0.020, "D+"),
+    (0.030, "D"),
+    (0.040, "D-"),
     (1.000, "F"),
 ];
 
@@ -91,6 +91,7 @@ pub fn absolute_letter_grade(score_type: &AbsoluteScoreType, score: f32) -> Stri
 /// Once again we will use the Brier scores as a reference, this time using coefficients
 /// determined from sampling data.
 ///
+#[allow(clippy::neg_multiply)]
 pub fn relative_letter_grade(score_type: &RelativeScoreType, score: f32) -> String {
     let brier_rel_score = match score_type {
         RelativeScoreType::BrierRelative => score,

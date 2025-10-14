@@ -3,126 +3,126 @@
     "grade": "S",
     "scores": [
       { "key": "brier", "min": 0.0, "max": 0.0001 },
-      { "key": "logarithmic", "min": 0.0, "max": -0.010050327 },
-      { "key": "spherical", "min": 1.0, "max": 0.9999489 },
-      { "key": "probability", "min": 0.0, "max": 0.00999999 }
+      { "key": "logarithmic", "min": 0.0, "max": -0.0101 },
+      { "key": "spherical", "min": 1.0, "max": 0.9999 },
+      { "key": "probability", "min": 0.0, "max": 0.01 }
     ]
   },
   {
     "grade": "A+",
     "scores": [
       { "key": "brier", "min": 0.0001, "max": 0.0009 },
-      { "key": "logarithmic", "min": -0.010050327, "max": -0.030459179 },
-      { "key": "spherical", "min": 0.9999489, "max": 0.9995221 },
-      { "key": "probability", "min": 0.00999999, "max": 0.029999971 }
+      { "key": "logarithmic", "min": -0.0101, "max": -0.0305 },
+      { "key": "spherical", "min": 0.9999, "max": 0.9995 },
+      { "key": "probability", "min": 0.01, "max": 0.03 }
     ]
   },
   {
     "grade": "A",
     "scores": [
-      { "key": "brier", "min": 0.0009, "max": 0.0018 },
-      { "key": "logarithmic", "min": -0.030459179, "max": -0.0433527 },
-      { "key": "spherical", "min": 0.9995221, "max": 0.9990199 },
-      { "key": "probability", "min": 0.029999971, "max": 0.042426407 }
+      { "key": "brier", "min": 0.0009, "max": 0.0064 },
+      { "key": "logarithmic", "min": -0.0305, "max": -0.0834 },
+      { "key": "spherical", "min": 0.9995, "max": 0.9962 },
+      { "key": "probability", "min": 0.03, "max": 0.08 }
     ]
   },
   {
     "grade": "A-",
     "scores": [
-      { "key": "brier", "min": 0.0018, "max": 0.0022 },
-      { "key": "logarithmic", "min": -0.0433527, "max": -0.0480398 },
-      { "key": "spherical", "min": 0.9990199, "max": 0.9987912 },
-      { "key": "probability", "min": 0.042426407, "max": 0.046904147 }
+      { "key": "brier", "min": 0.0064, "max": 0.01 },
+      { "key": "logarithmic", "min": -0.0834, "max": -0.1054 },
+      { "key": "spherical", "min": 0.9962, "max": 0.9939 },
+      { "key": "probability", "min": 0.08, "max": 0.1 }
     ]
   },
   {
     "grade": "B+",
     "scores": [
-      { "key": "brier", "min": 0.0022, "max": 0.003 },
-      { "key": "logarithmic", "min": -0.0480398, "max": -0.056329384 },
-      { "key": "spherical", "min": 0.9987912, "max": 0.99832535 },
-      { "key": "probability", "min": 0.046904147, "max": 0.054772258 }
+      { "key": "brier", "min": 0.01, "max": 0.0144 },
+      { "key": "logarithmic", "min": -0.1054, "max": -0.1278 },
+      { "key": "spherical", "min": 0.9939, "max": 0.9908 },
+      { "key": "probability", "min": 0.1, "max": 0.12 }
     ]
   },
   {
     "grade": "B",
     "scores": [
-      { "key": "brier", "min": 0.003, "max": 0.0045 },
-      { "key": "logarithmic", "min": -0.056329384, "max": -0.06943802 },
-      { "key": "spherical", "min": 0.99832535, "max": 0.99742484 },
-      { "key": "probability", "min": 0.054772258, "max": 0.06708205 }
+      { "key": "brier", "min": 0.0144, "max": 0.032 },
+      { "key": "logarithmic", "min": -0.1278, "max": -0.1971 },
+      { "key": "spherical", "min": 0.9908, "max": 0.9771 },
+      { "key": "probability", "min": 0.12, "max": 0.1789 }
     ]
   },
   {
     "grade": "B-",
     "scores": [
-      { "key": "brier", "min": 0.0045, "max": 0.0055 },
-      { "key": "logarithmic", "min": -0.06943802, "max": -0.07705601 },
-      { "key": "spherical", "min": 0.99742484, "max": 0.9968071 },
-      { "key": "probability", "min": 0.06708205, "max": 0.07416201 }
+      { "key": "brier", "min": 0.032, "max": 0.04 },
+      { "key": "logarithmic", "min": -0.1971, "max": -0.2231 },
+      { "key": "spherical", "min": 0.9771, "max": 0.9701 },
+      { "key": "probability", "min": 0.1789, "max": 0.2 }
     ]
   },
   {
     "grade": "C+",
     "scores": [
-      { "key": "brier", "min": 0.0055, "max": 0.0075 },
-      { "key": "logarithmic", "min": -0.07705601, "max": -0.09058419 },
-      { "key": "spherical", "min": 0.9968071, "max": 0.9955353 },
-      { "key": "probability", "min": 0.07416201, "max": 0.08660257 }
+      { "key": "brier", "min": 0.04, "max": 0.0576 },
+      { "key": "logarithmic", "min": -0.2231, "max": -0.2744 },
+      { "key": "spherical", "min": 0.9701, "max": 0.9536 },
+      { "key": "probability", "min": 0.2, "max": 0.24 }
     ]
   },
   {
     "grade": "C",
     "scores": [
-      { "key": "brier", "min": 0.0075, "max": 0.015 },
-      { "key": "logarithmic", "min": -0.09058419, "max": -0.13064925 },
-      { "key": "spherical", "min": 0.9955353, "max": 0.99040043 },
-      { "key": "probability", "min": 0.08660257, "max": 0.12247449 }
+      { "key": "brier", "min": 0.0576, "max": 0.1296 },
+      { "key": "logarithmic", "min": -0.2744, "max": -0.4463 },
+      { "key": "spherical", "min": 0.9536, "max": 0.8716 },
+      { "key": "probability", "min": 0.24, "max": 0.36 }
     ]
   },
   {
     "grade": "C-",
     "scores": [
-      { "key": "brier", "min": 0.015, "max": 0.025 },
-      { "key": "logarithmic", "min": -0.13064925, "max": -0.17211054 },
-      { "key": "spherical", "min": 0.99040043, "max": 0.9828172 },
-      { "key": "probability", "min": 0.12247449, "max": 0.1581139 }
+      { "key": "brier", "min": 0.1296, "max": 0.16 },
+      { "key": "logarithmic", "min": -0.4463, "max": -0.5108 },
+      { "key": "spherical", "min": 0.8716, "max": 0.8321 },
+      { "key": "probability", "min": 0.36, "max": 0.4 }
     ]
   },
   {
     "grade": "D+",
     "scores": [
-      { "key": "brier", "min": 0.025, "max": 0.05 },
-      { "key": "logarithmic", "min": -0.17211054, "max": -0.25309622 },
-      { "key": "spherical", "min": 0.9828172, "max": 0.96093976 },
-      { "key": "probability", "min": 0.1581139, "max": 0.22360682 }
+      { "key": "brier", "min": 0.16, "max": 0.1936 },
+      { "key": "logarithmic", "min": -0.5108, "max": -0.5798 },
+      { "key": "spherical", "min": 0.8321, "max": 0.7863 },
+      { "key": "probability", "min": 0.4, "max": 0.44 }
     ]
   },
   {
     "grade": "D",
     "scores": [
-      { "key": "brier", "min": 0.05, "max": 0.11 },
-      { "key": "logarithmic", "min": -0.25309622, "max": -0.40296197 },
-      { "key": "spherical", "min": 0.96093976, "max": 0.89576685 },
-      { "key": "probability", "min": 0.22360682, "max": 0.33166248 }
+      { "key": "brier", "min": 0.1936, "max": 0.3136 },
+      { "key": "logarithmic", "min": -0.5798, "max": -0.821 },
+      { "key": "spherical", "min": 0.7863, "max": 0.6178 },
+      { "key": "probability", "min": 0.44, "max": 0.56 }
     ]
   },
   {
     "grade": "D-",
     "scores": [
-      { "key": "brier", "min": 0.11, "max": 0.25 },
-      { "key": "logarithmic", "min": -0.40296197, "max": -0.6931472 },
-      { "key": "spherical", "min": 0.89576685, "max": 0.70710677 },
-      { "key": "probability", "min": 0.33166248, "max": 0.5 }
+      { "key": "brier", "min": 0.3136, "max": 0.36 },
+      { "key": "logarithmic", "min": -0.821, "max": -0.9163 },
+      { "key": "spherical", "min": 0.6178, "max": 0.5547 },
+      { "key": "probability", "min": 0.56, "max": 0.6 }
     ]
   },
   {
     "grade": "F",
     "scores": [
-      { "key": "brier", "min": 0.25, "max": 1.0 },
-      { "key": "logarithmic", "min": -0.6931472, "max": -3.4028235e38 },
-      { "key": "spherical", "min": 0.70710677, "max": 0.0 },
-      { "key": "probability", "min": 0.5, "max": 1.0 }
+      { "key": "brier", "min": 0.36, "max": 1.0 },
+      { "key": "logarithmic", "min": -0.9163, "max": -99 },
+      { "key": "spherical", "min": 0.5547, "max": 0.0 },
+      { "key": "probability", "min": 0.6, "max": 1.0 }
     ]
   }
 ]
