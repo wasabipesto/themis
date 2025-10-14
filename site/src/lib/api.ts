@@ -31,7 +31,7 @@ class APIError extends Error {
 export async function fetchFromAPI<T>(
   endpoint: string,
   options: RequestInit = {},
-  timeout: number = 10_000,
+  timeout: number = 30_000,
 ): Promise<T> {
   if (!PGRST_URL) {
     throw new Error("API URL is not configured");
