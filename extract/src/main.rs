@@ -309,7 +309,7 @@ fn refresh_materialized_views(params: &PostgrestParams) -> Result<()> {
     info!("Refreshing all materialized views (this may take a while)");
 
     // Create a new client with a longer timeout specifically for this operation
-    let timeout = Duration::from_secs(600);
+    let timeout = Duration::from_secs(6000);
     let long_timeout_client = Client::builder()
         .timeout(timeout)
         .build()
