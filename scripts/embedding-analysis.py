@@ -195,7 +195,7 @@ def apply_pca_reduction(embeddings, target_dim):
     print(f"PCA explained variance ratio: {sum(pca.explained_variance_ratio_):.3f}")
     return embeddings
 
-def collate_cluster_information(cluster_id, markets, market_novelty_mapped):
+def collate_cluster_information(markets, market_novelty_mapped):
     """
     Collate comprehensive cluster information.
     """
@@ -350,7 +350,6 @@ def remove_duplicates_by_embedding(market_embeddings_mapped, market_clusters):
     """
     Return a copy of market_clusters, but all markets with duplicate embeddings are removed.
     """
-    print(f"Deduplicating {len(market_clusters)} markets by embedding...", end="")
     unique_embeddings = set()
     unique_market_clusters = []
     for mc in market_clusters:
@@ -358,76 +357,92 @@ def remove_duplicates_by_embedding(market_embeddings_mapped, market_clusters):
         if embedding not in unique_embeddings:
             unique_embeddings.add(embedding)
             unique_market_clusters.append(mc)
-    print(f"Done. Reduced to {len(unique_market_clusters)} markets.")
     return unique_market_clusters
 
-def plot_clusters_umap(market_embeddings_mapped, market_clusters_orig, output_file):
+def dimension_reduction_umap(market_embeddings_mapped, market_clusters, n_jobs=6):
     """
-    Reduce embeddings to 2D using UMAP and plot clusters.
+    Reduce embeddings to 2D using UMAP.
     """
     # Remove duplicate markets
-    market_clusters = remove_duplicates_by_embedding(market_embeddings_mapped, market_clusters_orig)
+    print(f"Deduplicating {len(market_clusters)} markets by embedding...", end="")
+    market_clusters_filtered = remove_duplicates_by_embedding(market_embeddings_mapped, market_clusters)
+    print(f"Done. Reduced to {len(market_clusters_filtered)} markets.")
 
-    market_ids = [i["market_id"] for i in market_clusters]
-    cluster_labels = np.array([i["cluster"] for i in market_clusters])
+    market_ids = [i["market_id"] for i in market_clusters_filtered]
     embedding_vectors = np.array([market_embeddings_mapped[id] for id in market_ids], dtype='float32')
     embedding_vectors = embedding_vectors / np.linalg.norm(embedding_vectors, axis=1, keepdims=True)
 
-    print("Reducing embeddings to 2D with UMAP...")
-    reducer = umap.UMAP()
+    print("Reducing embeddings to 2D with UMAP...", end="")
+    reducer = umap.UMAP(n_jobs=n_jobs, verbose=True)
     embedding_2d = reducer.fit_transform(embedding_vectors)
+    print("Complete.")
 
-    plt.figure(figsize=(10, 8))
-    scatter = plt.scatter(embedding_2d[:, 0], embedding_2d[:, 1], c=cluster_labels, cmap='tab20', s=4, alpha=0.8)
-    plt.colorbar(scatter, label="Cluster")
-    plt.title("Market Embeddings Clusters (UMAP)")
-    plt.tight_layout()
-    plt.savefig(output_file, format="png", bbox_inches="tight")
-    plt.close()
+    return [
+        {
+            "market_id": market_id,
+            "embedding": embedding_2d[i].tolist()
+        }
+        for i, market_id in enumerate(market_ids)
+    ]
 
-def plot_clusters_tsne(market_embeddings_mapped, market_clusters, output_file):
+def dimension_reduction_tsne(market_embeddings_mapped, market_clusters):
     """
-    Reduce embeddings to 2D using t-SNE and plot clusters.
+    Reduce embeddings to 2D using t-SNE.
     """
     market_ids = [i["market_id"] for i in market_clusters]
-    cluster_labels = np.array([i["cluster"] for i in market_clusters])
     embedding_vectors = np.array([market_embeddings_mapped[id] for id in market_ids], dtype='float32')
     embedding_vectors = embedding_vectors / np.linalg.norm(embedding_vectors, axis=1, keepdims=True)
 
-    print("Reducing embeddings to 2D with t-SNE...")
-    reducer = TSNE(n_components=2, random_state=42, perplexity=min(30, len(embedding_vectors)-1))
+    print("Reducing embeddings to 2D with t-SNE...", end="")
+    reducer = TSNE(n_components=2, perplexity=min(30, len(embedding_vectors)-1))
     embedding_2d = reducer.fit_transform(embedding_vectors)
+    print("Complete.")
 
-    plt.figure(figsize=(10, 8))
-    scatter = plt.scatter(embedding_2d[:, 0], embedding_2d[:, 1], c=cluster_labels, cmap='tab20', s=4, alpha=0.8)
-    plt.colorbar(scatter, label="Cluster")
-    plt.title("Market Embeddings Clusters (t-SNE)")
-    plt.tight_layout()
-    plt.savefig(output_file, format="png", bbox_inches="tight")
-    plt.close()
+    return [
+        {
+            "market_id": market_id,
+            "embedding": embedding_2d[i].tolist()
+        }
+        for i, market_id in enumerate(market_ids)
+    ]
 
-def plot_clusters_pca(market_embeddings_mapped, market_clusters, output_file):
+def dimension_reduction_pca(market_embeddings_mapped, market_clusters):
     """
-    Reduce embeddings to 2D using PCA and plot clusters.
+    Reduce embeddings to 2D using PCA.
     """
     market_ids = [i["market_id"] for i in market_clusters]
-    cluster_labels = np.array([i["cluster"] for i in market_clusters])
     embedding_vectors = np.array([market_embeddings_mapped[id] for id in market_ids], dtype='float32')
     embedding_vectors = embedding_vectors / np.linalg.norm(embedding_vectors, axis=1, keepdims=True)
 
-    print("Reducing embeddings to 2D with PCA...")
-    pca = PCA(n_components=2, random_state=42)
+    print("Reducing embeddings to 2D with PCA...", end="")
+    pca = PCA(n_components=2)
     embedding_2d = pca.fit_transform(embedding_vectors)
+    print("Complete.")
 
     explained_var = pca.explained_variance_ratio_
     print(f"PCA explained variance: {explained_var[0]:.3f}, {explained_var[1]:.3f} (total: {sum(explained_var):.3f})")
 
+    return [
+        {
+            "market_id": market_id,
+            "embedding": embedding_2d[i].tolist()
+        }
+        for i, market_id in enumerate(market_ids)
+    ]
+
+def plot_clusters(title, market_embeddings_2d_mapped, market_clusters, output_file):
+    """
+    Plot clusters given a list of 2d embeddings and a list of cluster IDs
+    """
+    market_ids = [i["market_id"] for i in market_clusters]
+    embedding_2d = np.array([market_embeddings_2d_mapped[id] for id in market_ids], dtype='float32')
+    cluster_labels = np.array([i["cluster"] for i in market_clusters])
+
+    # TODO: Make outliers (cluster label == -1) more transparent
     plt.figure(figsize=(10, 8))
     scatter = plt.scatter(embedding_2d[:, 0], embedding_2d[:, 1], c=cluster_labels, cmap='tab20', s=4, alpha=0.8)
     plt.colorbar(scatter, label="Cluster")
-    plt.title(f"Market Embeddings Clusters (PCA) - Explained Var: {sum(explained_var):.1%}")
-    plt.xlabel(f"PC1 ({explained_var[0]:.1%})")
-    plt.ylabel(f"PC2 ({explained_var[1]:.1%})")
+    plt.title(f"Market Embeddings Clusters ({title})")
     plt.tight_layout()
     plt.savefig(output_file, format="png", bbox_inches="tight")
     plt.close()
@@ -449,6 +464,8 @@ def main():
     parser.add_argument("--plot-method", "-p", default="umap",
                        choices=["umap", "tsne", "pca"],
                        help="Plotting method for clusters (default: umap)")
+    parser.add_argument("--umap-cores", "-uc", type=int, default=6,
+                       help="Number of cores to use for UMAP (default: 6)")
     args = parser.parse_args()
 
     load_dotenv()
@@ -460,6 +477,7 @@ def main():
     novelty_cache = f"{args.cache_dir}/market_novelty.jsonl"
     cluster_cache = f"{args.cache_dir}/market_clusters_{args.sample_size}_{args.min_cluster_size}.jsonl"
     cluster_info_cache = f"{args.cache_dir}/cluster_info_{args.sample_size}_{args.min_cluster_size}.jsonl"
+    embeddings_2d_cache = f"{args.cache_dir}/embeddings_2d_{args.sample_size}_{args.plot_method}.jsonl"
 
     # Reset cache if requested
     if args.reset_cache:
@@ -515,10 +533,15 @@ def main():
     market_novelty_mapped = {m["market_id"]: m["novelty"] for m in market_novelty}
 
     # Create clusters
-    # TODO: Disable sampling (use all markets) if args.sample_size is 0 or greater than number of markets
     market_clusters = load_from_cache(cluster_cache)
     if market_clusters is None:
-        market_embeddings_sample = random.sample(embeddings_for_analysis, min(args.sample_size, len(embeddings_for_analysis)))
+        # Disable sampling if sample_size is 0 or greater than number of markets
+        if args.sample_size == 0 or args.sample_size >= len(embeddings_for_analysis):
+            market_embeddings_sample = embeddings_for_analysis
+            print(f"Using all {len(embeddings_for_analysis)} markets for clustering (no sampling)")
+        else:
+            market_embeddings_sample = random.sample(embeddings_for_analysis, args.sample_size)
+            print(f"Using sample of {len(market_embeddings_sample)} markets for clustering")
         market_clusters = create_clusters_hdbscan(market_embeddings_sample, args.min_cluster_size)
         save_to_cache(cluster_cache, market_clusters)
 
@@ -531,7 +554,7 @@ def main():
         for cluster_id in tqdm(cluster_ids, desc="Collating cluster information"):
             market_ids = [m["market_id"] for m in market_clusters if m["cluster"] == cluster_id]
             markets_in_cluster = [markets_mapped[mid] for mid in market_ids if mid in markets_mapped]
-            cluster_info_dict[cluster_id] = collate_cluster_information(cluster_id, markets_in_cluster, market_novelty_mapped)
+            cluster_info_dict[cluster_id] = collate_cluster_information(markets_in_cluster, market_novelty_mapped)
 
         # Save cluster info (convert to list for JSON serialization)
         cluster_info_list = [{"cluster_id": cid, **info} for cid, info in cluster_info_dict.items()]
@@ -555,7 +578,7 @@ def main():
     print(tabulate(
         [
             [m["market_id"], markets_mapped[m["market_id"]]["title"], markets_mapped[m["market_id"]]["volume_usd"], f"{m["novelty"]:.4f}"]
-            for m in sorted(market_novelty, key=lambda x: x["novelty"], reverse=True)[:10]
+            for m in sorted(market_novelty, key=lambda x: x["novelty"], reverse=True)[:20]
         ],
         headers=['ID', 'Title', 'Volume', 'Novelty'],
         tablefmt="github"
@@ -567,7 +590,7 @@ def main():
             [m["market_id"], markets_mapped[m["market_id"]]["title"], markets_mapped[m["market_id"]]["volume_usd"], f"{m["novelty"]:.4f}"]
             for m in sorted([
                 m for m in market_novelty if markets_mapped[m["market_id"]]["volume_usd"] and markets_mapped[m["market_id"]]["volume_usd"] > 10
-            ], key=lambda x: x["novelty"], reverse=True)[:30]
+            ], key=lambda x: x["novelty"], reverse=True)[:20]
         ],
         headers=['ID', 'Title', 'Volume', 'Novelty'],
         tablefmt="github"
@@ -612,13 +635,32 @@ def main():
         ))
 
     # Generate cluster visualization based on selected method
-    output_filename = f"{args.output_dir}/clusters_{args.plot_method}.png"
-    if args.plot_method == "umap":
-        plot_clusters_umap(market_embeddings_mapped, market_clusters, output_filename)
-    elif args.plot_method == "tsne":
-        plot_clusters_tsne(market_embeddings_mapped, market_clusters, output_filename)
-    elif args.plot_method == "pca":
-        plot_clusters_pca(market_embeddings_mapped, market_clusters, output_filename)
+    # Check if 2D embeddings are cached
+    embeddings_2d_data = load_from_cache(embeddings_2d_cache)
+    if embeddings_2d_data is None:
+        # Generate new 2D embeddings
+        print(f"Generating new {args.plot_method.upper()} embeddings...")
+        if args.plot_method == "umap":
+            embeddings_2d_data = dimension_reduction_umap(market_embeddings_mapped, market_clusters, args.umap_cores)
+        elif args.plot_method == "tsne":
+            embeddings_2d_data = dimension_reduction_tsne(market_embeddings_mapped, market_clusters)
+        elif args.plot_method == "pca":
+            embeddings_2d_data = dimension_reduction_pca(market_embeddings_mapped, market_clusters)
+        else:
+            raise ValueError(f"Invalid plot method: {args.plot_method}")
+
+        # Save the 2D embeddings to cache
+        save_to_cache(embeddings_2d_cache, embeddings_2d_data)
+        print(f"Cached {args.plot_method.upper()} embeddings for future use")
+    else:
+        # Use cached 2D embeddings
+        print(f"Using cached {args.plot_method.upper()} embeddings...")
+    market_embeddings_2d_mapped = {m["market_id"]: m["embedding"] for m in embeddings_2d_data}
+
+    print("Plotting clusters...", end="")
+    output_file = f"{args.output_dir}/clusters_{args.plot_method}.png"
+    plot_clusters(args.plot_method.upper(), market_embeddings_2d_mapped, market_clusters, output_file)
+    print("Complete.")
 
 if __name__ == "__main__":
     main()
