@@ -465,7 +465,7 @@ def plot_clusters(method, market_embeddings_2d_mapped, market_clusters, output_f
     if np.any(outlier_mask):
         plt.scatter(
             embedding_2d[outlier_mask, 0], embedding_2d[outlier_mask, 1],
-            c='lightgray', s=2, alpha=0.05, label='Outliers'
+            c='lightgray', s=1, alpha=0.05, label='Outliers'
         )
 
     # Plot regular clusters with normal alpha
@@ -507,8 +507,10 @@ def main():
                        help="Output directory for PNG files (default: current directory)")
     parser.add_argument("--pca-dim", "-d", type=int, default=300,
                        help="PCA dimensionality reduction target (default: 300, 0 to skip)")
-    parser.add_argument("--sample-size", "-s", type=int, default=10000,
-                       help="Sample size for clustering (default: 10,000)")
+    parser.add_argument("--sample-size", "-ss", type=int, default=0,
+                       help="Sample size for clustering (default: all)")
+    parser.add_argument("--sample-platform", "-sp", type=str, default=None,
+                       help="Filter sample to specific platform_slug (default: all)")
     parser.add_argument("--min-cluster-size", "-c", type=int, default=250,
                        help="Minimum cluster size for HDBSCAN (default: 250)")
     parser.add_argument("--plot-method", "-p", default="umap",
@@ -521,13 +523,15 @@ def main():
     load_dotenv()
     postgrest_base = os.environ.get("PGRST_URL")
 
+    # Create cache file names with platform filtering
+    platform_suffix = f"_{args.sample_platform}" if args.sample_platform else ""
     markets_cache = f"{args.cache_dir}/markets.jsonl"
     market_embeddings_cache = f"{args.cache_dir}/market_embeddings.jsonl"
     market_embeddings_pca_cache = f"{args.cache_dir}/market_embeddings_pca_{args.pca_dim}.jsonl"
     novelty_cache = f"{args.cache_dir}/market_novelty.jsonl"
-    cluster_cache = f"{args.cache_dir}/market_clusters_{args.sample_size}_{args.min_cluster_size}.jsonl"
-    cluster_info_cache = f"{args.cache_dir}/cluster_info_{args.sample_size}_{args.min_cluster_size}.jsonl"
-    embeddings_2d_cache = f"{args.cache_dir}/embeddings_2d_{args.sample_size}_{args.plot_method}.jsonl"
+    cluster_cache = f"{args.cache_dir}/market_clusters_{args.sample_size}_{args.min_cluster_size}{platform_suffix}.jsonl"
+    cluster_info_cache = f"{args.cache_dir}/cluster_info_{args.sample_size}_{args.min_cluster_size}{platform_suffix}.jsonl"
+    embeddings_2d_cache = f"{args.cache_dir}/embeddings_2d_{args.sample_size}_{args.plot_method}{platform_suffix}.jsonl"
 
     # Reset cache if requested
     if args.reset_cache:
@@ -545,6 +549,11 @@ def main():
     if markets is None:
         markets = get_data(f"{postgrest_base}/markets", params={"order": "id"})
         save_to_cache(markets_cache, markets)
+
+    # Show platform filtering info if specified
+    if args.sample_platform:
+        print(f"Platform filtering active: using only markets from '{args.sample_platform}' platform ({len(markets)} markets)")
+        markets = [m for m in markets if m["platform_slug"] == args.sample_platform]
 
     # Calculate market scores
     for m in markets:
@@ -572,6 +581,7 @@ def main():
             embeddings_for_analysis = market_embeddings_pca
         else:
             embeddings_for_analysis = market_embeddings
+    embeddings_for_analysis = [me for me in embeddings_for_analysis if me["market_id"] in markets_mapped]
     market_embeddings_mapped = {m["market_id"]: m["embedding"] for m in embeddings_for_analysis}
 
     # Compute novelty
@@ -613,15 +623,6 @@ def main():
         for item in cached_cluster_info:
             cluster_id = item.pop("cluster_id")
             cluster_info_dict[cluster_id] = item
-
-    # Generate plots
-    plt.title("Market Novelty Histogram")
-    plt.hist([i["novelty"] for i in market_novelty], bins=30)
-    plt.savefig(f"{args.output_dir}/novelty_histogram.png", format="png", bbox_inches="tight")
-    plt.close()
-
-    # Create cluster dashboard
-    create_cluster_dashboard(cluster_info_dict, args.output_dir)
 
     print("\n| Most Novel Markets")
     print(tabulate(
@@ -682,6 +683,9 @@ def main():
             headers=['ID', 'Count', 'Top Market', 'Top Platform', 'Med Novelty', 'Med Volume', 'Med Traders', 'Med Duration', 'Mean Res'],
             tablefmt="github"
         ))
+
+    # Create cluster dashboard
+    create_cluster_dashboard(cluster_info_dict, args.output_dir)
 
     # Generate cluster visualization based on selected method
     # Check if 2D embeddings are cached
