@@ -16,6 +16,7 @@
 # ///
 
 import os
+import re
 import json
 import requests
 from dotenv import load_dotenv
@@ -174,6 +175,7 @@ def apply_pca_reduction(embeddings, target_dim):
     Apply PCA dimensionality reduction to embeddings.
     Skip if target_dim is zero or greater than raw dimensionality.
     """
+    # TODO: Can we remove this function and just use dimension_reduction_pca?
     current_dim = len(embeddings[0]['embedding'])
     if target_dim == 0 or target_dim >= current_dim:
         print(f"Skipping PCA: target_dim={target_dim}, embedding_dim={current_dim}")
@@ -195,6 +197,17 @@ def apply_pca_reduction(embeddings, target_dim):
     print(f"PCA explained variance ratio: {sum(pca.explained_variance_ratio_):.3f}")
     return embeddings
 
+def remove_emoji(string):
+    emoji_pattern = re.compile("["
+        u"\U0001F600-\U0001F64F"  # emoticons
+        u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+        u"\U0001F680-\U0001F6FF"  # transport & map symbols
+        u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+        u"\U00002702-\U000027B0"
+        u"\U000024C2-\U0001F251"
+    "]+", flags=re.UNICODE)
+    return emoji_pattern.sub(r'', string)
+
 def collate_cluster_information(markets, market_novelty_mapped):
     """
     Collate comprehensive cluster information.
@@ -211,7 +224,7 @@ def collate_cluster_information(markets, market_novelty_mapped):
     # Top market by score
     top_market = max(markets, key=lambda x: x["score"])
     info["top_market"] = top_market
-    info["top_market_title"] = top_market["title"]
+    info["top_market_title"] = remove_emoji(top_market["title"])
 
     # First market by open_datetime
     markets_with_dates = [m for m in markets if m.get("open_datetime")]
@@ -229,6 +242,7 @@ def collate_cluster_information(markets, market_novelty_mapped):
     total_markets = len(markets)
     info["platform_proportions"] = {platform: count/total_markets for platform, count in platform_counts.items()}
     info["top_platform"] = platform_counts.most_common(1)[0][0] if platform_counts else "unknown"
+    info["top_platform_pct"] = platform_counts[info["top_platform"]]
 
     # Statistical aggregations
     novelty_values = [market_novelty_mapped.get(m["id"]) for m in markets]
@@ -430,7 +444,7 @@ def dimension_reduction_pca(market_embeddings_mapped, market_clusters):
         for i, market_id in enumerate(market_ids)
     ]
 
-def plot_clusters(title, market_embeddings_2d_mapped, market_clusters, output_file):
+def plot_clusters(method, market_embeddings_2d_mapped, market_clusters, output_file, label_top_n_clusters=20):
     """
     Plot clusters given a list of 2d embeddings and a list of cluster IDs
     """
@@ -438,13 +452,49 @@ def plot_clusters(title, market_embeddings_2d_mapped, market_clusters, output_fi
     embedding_2d = np.array([market_embeddings_2d_mapped[id] for id in market_ids], dtype='float32')
     cluster_labels = np.array([i["cluster"] for i in market_clusters])
 
-    # TODO: Make outliers (cluster label == -1) more transparent
+    # Count cluster sizes to identify largest clusters
+    cluster_counts = Counter(cluster_labels)
+    # Get the largest non-outlier clusters
+    largest_clusters = [cluster_id for cluster_id, _ in cluster_counts.most_common() if cluster_id != -1][:label_top_n_clusters]
+
+    # Initialize figure
     plt.figure(figsize=(10, 8))
-    scatter = plt.scatter(embedding_2d[:, 0], embedding_2d[:, 1], c=cluster_labels, cmap='tab20', s=4, alpha=0.8)
-    plt.colorbar(scatter, label="Cluster")
-    plt.title(f"Market Embeddings Clusters ({title})")
+
+    # Plot outliers (cluster -1) with lower alpha for transparency
+    outlier_mask = cluster_labels == -1
+    if np.any(outlier_mask):
+        plt.scatter(
+            embedding_2d[outlier_mask, 0], embedding_2d[outlier_mask, 1],
+            c='lightgray', s=2, alpha=0.05, label='Outliers'
+        )
+
+    # Plot regular clusters with normal alpha
+    non_outlier_mask = cluster_labels != -1
+    if np.any(non_outlier_mask):
+        scatter = plt.scatter(
+            embedding_2d[non_outlier_mask, 0], embedding_2d[non_outlier_mask, 1],
+            c=cluster_labels[non_outlier_mask], cmap='tab20', s=3, alpha=0.8
+        )
+        plt.colorbar(scatter, label="Cluster")
+
+    # Add labels to the largest clusters
+    for cluster_id in largest_clusters:
+        cluster_mask = cluster_labels == cluster_id
+        if np.any(cluster_mask):
+            # Calculate cluster centroid
+            cluster_points = embedding_2d[cluster_mask]
+            centroid_x = np.mean(cluster_points[:, 0])
+            centroid_y = np.mean(cluster_points[:, 1])
+            plt.annotate(
+                f'C{cluster_id}', (centroid_x, centroid_y),
+                fontsize=6,
+                fontweight='bold',
+                bbox=dict(boxstyle='round,pad=0.1', facecolor='white', alpha=0.8)
+            )
+
+    plt.title(f"Market Embeddings Clusters ({method})")
     plt.tight_layout()
-    plt.savefig(output_file, format="png", bbox_inches="tight")
+    plt.savefig(output_file, format="png", bbox_inches="tight", dpi=300)
     plt.close()
 
 def main():
@@ -459,8 +509,8 @@ def main():
                        help="PCA dimensionality reduction target (default: 300, 0 to skip)")
     parser.add_argument("--sample-size", "-s", type=int, default=10000,
                        help="Sample size for clustering (default: 10,000)")
-    parser.add_argument("--min-cluster-size", "-c", type=int, default=50,
-                       help="Minimum cluster size for HDBSCAN (default: 50)")
+    parser.add_argument("--min-cluster-size", "-c", type=int, default=250,
+                       help="Minimum cluster size for HDBSCAN (default: 250)")
     parser.add_argument("--plot-method", "-p", default="umap",
                        choices=["umap", "tsne", "pca"],
                        help="Plotting method for clusters (default: umap)")
@@ -507,7 +557,6 @@ def main():
     if market_embeddings_pca is not None:
         # PCA cache exists and is valid, use it directly
         embeddings_for_analysis = market_embeddings_pca
-        print(f"Using cached PCA embeddings from {market_embeddings_pca_cache}")
     else:
         # Need to load original embeddings
         market_embeddings = load_from_cache(market_embeddings_cache)
@@ -652,15 +701,12 @@ def main():
         # Save the 2D embeddings to cache
         save_to_cache(embeddings_2d_cache, embeddings_2d_data)
         print(f"Cached {args.plot_method.upper()} embeddings for future use")
-    else:
-        # Use cached 2D embeddings
-        print(f"Using cached {args.plot_method.upper()} embeddings...")
     market_embeddings_2d_mapped = {m["market_id"]: m["embedding"] for m in embeddings_2d_data}
 
-    print("Plotting clusters...", end="")
+    print("Plotting clusters... ", end="")
     output_file = f"{args.output_dir}/clusters_{args.plot_method}.png"
     plot_clusters(args.plot_method.upper(), market_embeddings_2d_mapped, market_clusters, output_file)
-    print("Complete.")
+    print(f"Complete. Saved to {output_file}")
 
 if __name__ == "__main__":
     main()
