@@ -360,29 +360,35 @@ def create_cluster_dashboard(cluster_info_dict, output_dir):
     plt.savefig(f"{output_dir}/cluster_dashboard.png", format="png", bbox_inches="tight", dpi=150)
     plt.close()
 
-def remove_duplicates_by_embedding(market_embeddings_mapped, market_clusters):
+def jitter_duplicate_markets(market_embeddings_mapped, market_ids):
     """
-    Return a copy of market_clusters, but all markets with duplicate embeddings are removed.
+    Add slight jitter to market embedding values so that all markets have unique locations.
+    Must be deterministic to ensure reproducibility.
     """
+    print(f"Adding jitter to markets by embedding...", end="")
+    markets_updated = 0
     unique_embeddings = set()
-    unique_market_clusters = []
-    for mc in market_clusters:
-        embedding = json.dumps(market_embeddings_mapped[mc["market_id"]])
-        if embedding not in unique_embeddings:
-            unique_embeddings.add(embedding)
-            unique_market_clusters.append(mc)
-    return unique_market_clusters
+    for mid in market_ids:
+        embedding = market_embeddings_mapped[mid]
+        embedding_hash = json.dumps(embedding)
+        if embedding_hash in unique_embeddings:
+            # Add deterministic jitter based on market ID for reproducibility
+            random.seed(hash(mid) % (2**32))  # Use market ID as seed for determinism
+            jitter_scale = 1e-6  # Very small jitter to preserve embedding relationships
+            new_embedding = [x + random.uniform(-jitter_scale, jitter_scale) for x in embedding]
+            market_embeddings_mapped[mid] = new_embedding
+            markets_updated += 1
+        else:
+            unique_embeddings.add(embedding_hash)
+    print(f"Done. Updated {markets_updated} duplicate markets.")
+    return market_embeddings_mapped
 
 def dimension_reduction_umap(market_embeddings_mapped, market_clusters, n_jobs=6):
     """
     Reduce embeddings to 2D using UMAP.
     """
-    # Remove duplicate markets
-    print(f"Deduplicating {len(market_clusters)} markets by embedding...", end="")
-    market_clusters_filtered = remove_duplicates_by_embedding(market_embeddings_mapped, market_clusters)
-    print(f"Done. Reduced to {len(market_clusters_filtered)} markets.")
-
-    market_ids = [i["market_id"] for i in market_clusters_filtered]
+    market_ids = [i["market_id"] for i in market_clusters]
+    market_embeddings_mapped = jitter_duplicate_markets(market_embeddings_mapped, market_ids)
     embedding_vectors = np.array([market_embeddings_mapped[id] for id in market_ids], dtype='float32')
     embedding_vectors = embedding_vectors / np.linalg.norm(embedding_vectors, axis=1, keepdims=True)
 
@@ -449,6 +455,14 @@ def plot_clusters(method, market_embeddings_2d_mapped, market_clusters, output_f
     Plot clusters given a list of 2d embeddings and a list of cluster IDs
     """
     market_ids = [i["market_id"] for i in market_clusters]
+    missing_ids = []
+    for mid in market_ids:
+        if mid not in market_embeddings_2d_mapped:
+            print("Missing 2D embedding for market ID:", mid)
+            market_ids.remove(mid)
+            missing_ids.append(mid)
+    if len(missing_ids) > 0:
+        print(f"Missing 2D embeddings for {len(missing_ids)} market IDs.")
     embedding_2d = np.array([market_embeddings_2d_mapped[id] for id in market_ids], dtype='float32')
     cluster_labels = np.array([i["cluster"] for i in market_clusters])
 
@@ -589,6 +603,7 @@ def main():
     if market_novelty is None:
         market_novelty = compute_novelty_faiss(embeddings_for_analysis)
         save_to_cache(novelty_cache, market_novelty)
+    market_novelty_sample = [mn for mn in market_novelty if mn["market_id"] in markets_mapped]
     market_novelty_mapped = {m["market_id"]: m["novelty"] for m in market_novelty}
 
     # Create clusters
@@ -624,66 +639,6 @@ def main():
             cluster_id = item.pop("cluster_id")
             cluster_info_dict[cluster_id] = item
 
-    print("\n| Most Novel Markets")
-    print(tabulate(
-        [
-            [m["market_id"], markets_mapped[m["market_id"]]["title"], markets_mapped[m["market_id"]]["volume_usd"], f"{m["novelty"]:.4f}"]
-            for m in sorted(market_novelty, key=lambda x: x["novelty"], reverse=True)[:20]
-        ],
-        headers=['ID', 'Title', 'Volume', 'Novelty'],
-        tablefmt="github"
-    ))
-
-    print("\n| Most Novel Markets, >$10 Volume")
-    print(tabulate(
-        [
-            [m["market_id"], markets_mapped[m["market_id"]]["title"], markets_mapped[m["market_id"]]["volume_usd"], f"{m["novelty"]:.4f}"]
-            for m in sorted([
-                m for m in market_novelty if markets_mapped[m["market_id"]]["volume_usd"] and markets_mapped[m["market_id"]]["volume_usd"] > 10
-            ], key=lambda x: x["novelty"], reverse=True)[:20]
-        ],
-        headers=['ID', 'Title', 'Volume', 'Novelty'],
-        tablefmt="github"
-    ))
-
-    print("\n| Least Novel Markets")
-    print(tabulate(
-        [
-            [m["market_id"], markets_mapped[m["market_id"]]["title"], markets_mapped[m["market_id"]]["volume_usd"], f"{m["novelty"]:.4f}"]
-            for m in sorted(market_novelty, key=lambda x: x["novelty"])[:10]
-        ],
-        headers=['ID', 'Title', 'Volume', 'Novelty'],
-        tablefmt="github"
-    ))
-
-    if cluster_info_dict:
-        plt.title("Count of Markets per Cluster")
-        cluster_ids = list(cluster_info_dict.keys())
-        market_counts = [cluster_info_dict[cid]["market_count"] for cid in cluster_ids]
-        plt.bar(cluster_ids, market_counts)
-        plt.savefig(f"{args.output_dir}/cluster_counts.png", format="png", bbox_inches="tight")
-        plt.close()
-
-        print("\n| Clusters Summary:")
-        print(tabulate(
-            [
-                [
-                    cluster_id,
-                    info["market_count"],
-                    info["top_market_title"][:50] + "..." if len(info["top_market_title"]) > 50 else info["top_market_title"],
-                    info["top_platform"],
-                    f"{info['median_novelty']:.3f}",
-                    f"${info['median_volume_usd']:.0f}",
-                    f"{info['median_traders_count']:.0f}",
-                    f"{info['median_duration_days']:.0f}",
-                    f"{info['mean_resolution']:.3f}"
-                ]
-                for cluster_id, info in sorted(cluster_info_dict.items(), key=lambda x: x[1]["market_count"], reverse=True)
-            ],
-            headers=['ID', 'Count', 'Top Market', 'Top Platform', 'Med Novelty', 'Med Volume', 'Med Traders', 'Med Duration', 'Mean Res'],
-            tablefmt="github"
-        ))
-
     # Create cluster dashboard
     create_cluster_dashboard(cluster_info_dict, args.output_dir)
 
@@ -711,6 +666,59 @@ def main():
     output_file = f"{args.output_dir}/clusters_{args.plot_method}.png"
     plot_clusters(args.plot_method.upper(), market_embeddings_2d_mapped, market_clusters, output_file)
     print(f"Complete. Saved to {output_file}")
+
+    print("\n| Most Novel Markets")
+    print(tabulate(
+        [
+            [m["market_id"], markets_mapped[m["market_id"]]["title"], markets_mapped[m["market_id"]]["volume_usd"], f"{m["novelty"]:.4f}"]
+            for m in sorted(market_novelty_sample, key=lambda x: x["novelty"], reverse=True)[:20]
+        ],
+        headers=['ID', 'Title', 'Volume', 'Novelty'],
+        tablefmt="github"
+    ))
+
+    print("\n| Most Novel Markets, >$10 Volume")
+    print(tabulate(
+        [
+            [m["market_id"], markets_mapped[m["market_id"]]["title"], markets_mapped[m["market_id"]]["volume_usd"], f"{m["novelty"]:.4f}"]
+            for m in sorted([
+                m for m in market_novelty_sample if markets_mapped[m["market_id"]]["volume_usd"] and markets_mapped[m["market_id"]]["volume_usd"] > 10
+            ], key=lambda x: x["novelty"], reverse=True)[:20]
+        ],
+        headers=['ID', 'Title', 'Volume', 'Novelty'],
+        tablefmt="github"
+    ))
+
+    print("\n| Least Novel Markets")
+    print(tabulate(
+        [
+            [m["market_id"], markets_mapped[m["market_id"]]["title"], markets_mapped[m["market_id"]]["volume_usd"], f"{m["novelty"]:.4f}"]
+            for m in sorted(market_novelty_sample, key=lambda x: x["novelty"])[:10]
+        ],
+        headers=['ID', 'Title', 'Volume', 'Novelty'],
+        tablefmt="github"
+    ))
+
+    print("\n| Clusters Summary:")
+    print(tabulate(
+        [
+            [
+                cluster_id,
+                info["market_count"],
+                info["top_market_title"][:72] + "..." if len(info["top_market_title"]) > 75 else info["top_market_title"],
+                info["top_platform"],
+                f"{info['median_novelty']:.3f}",
+                f"${info['median_volume_usd']:.0f}",
+                f"{info['median_traders_count']:.0f}",
+                f"{info['median_duration_days']:.0f}",
+                f"{info['mean_resolution']:.3f}"
+            ]
+            # for cluster_id, info in sorted(cluster_info_dict.items(), key=lambda x: x[1]["market_count"], reverse=True)
+            for cluster_id, info in cluster_info_dict.items()
+        ],
+        headers=['ID', 'Count', 'Top Market', 'Top Platform', 'Med Novelty', 'Med Volume', 'Med Traders', 'Med Duration', 'Mean Res'],
+        tablefmt="github"
+    ))
 
 if __name__ == "__main__":
     main()
