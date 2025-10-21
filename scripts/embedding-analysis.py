@@ -511,6 +511,56 @@ def plot_clusters(method, market_embeddings_2d_mapped, market_clusters, output_f
     plt.savefig(output_file, format="png", bbox_inches="tight", dpi=300)
     plt.close()
 
+def generate_cluster_keywords(cluster_info_dict, n=10):
+    """
+    Generate keywords for each cluster using word frequency analysis.
+    """
+    # Common stop words to filter out
+    stop_words = {
+        'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+        'will', 'be', 'is', 'are', 'was', 'were', 'been', 'have', 'has', 'had', 'do', 'does',
+        'did', 'can', 'could', 'would', 'should', 'may', 'might', 'must', 'shall', 'this',
+        'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him',
+        'her', 'us', 'them', 'my', 'your', 'his', 'its', 'our', 'their', 'what', 'which',
+        'who', 'when', 'where', 'why', 'how', 'if', 'than', 'then', 'now', 'here', 'there',
+        'up', 'down', 'out', 'off', 'over', 'under', 'again', 'further', 'once', 'more',
+        'most', 'other', 'some', 'any', 'only', 'own', 'same', 'so', 'than', 'too', 'very',
+        'yes', 'no'
+    }
+
+    for cluster_id, cluster_info in cluster_info_dict.items():
+        if not cluster_info or 'markets' not in cluster_info:
+            cluster_info['keywords'] = 'No markets'
+            continue
+
+        # Extract all titles from markets in this cluster
+        titles = []
+        for market in cluster_info['markets']:
+            title = market.get('title', '')
+            if title:
+                # Remove emoji and clean the title
+                cleaned_title = remove_emoji(title)
+                titles.append(cleaned_title)
+
+        # Tokenize and count words
+        word_counts = Counter()
+        for title in titles:
+            # Convert to lowercase and extract words (letters only, minimum 2 characters)
+            words = re.findall(r'\b[a-zA-Z]{2,}\b', title.lower())
+            for word in words:
+                if word not in stop_words:
+                    word_counts[word] += 1
+
+        # Get most frequent words
+        if word_counts:
+            top_words = [word for word, count in word_counts.most_common(n)]
+            cluster_info['keywords'] = ', '.join(top_words)
+        else:
+            cluster_info['keywords'] = 'No keywords'
+
+    return cluster_info_dict
+
+
 def main():
     parser = argparse.ArgumentParser(description="Market embedding analysis with clustering")
     parser.add_argument("--cache-dir", "-cd", default="cache/embedding-analysis",
@@ -639,6 +689,11 @@ def main():
             cluster_id = item.pop("cluster_id")
             cluster_info_dict[cluster_id] = item
 
+    # Generate keywords for each cluster
+    cluster_info_dict = generate_cluster_keywords(cluster_info_dict)
+    cluster_info_list = [{"cluster_id": cid, **info} for cid, info in cluster_info_dict.items()]
+    save_to_cache(cluster_info_cache, cluster_info_list)
+
     # Create cluster dashboard
     create_cluster_dashboard(cluster_info_dict, args.output_dir)
 
@@ -706,17 +761,16 @@ def main():
                 cluster_id,
                 info["market_count"],
                 info["top_market_title"][:72] + "..." if len(info["top_market_title"]) > 75 else info["top_market_title"],
+                info["keywords"][:72] + "..." if len(info["keywords"]) > 75 else info["keywords"],
                 info["top_platform"],
                 f"{info['median_novelty']:.3f}",
                 f"${info['median_volume_usd']:.0f}",
-                f"{info['median_traders_count']:.0f}",
-                f"{info['median_duration_days']:.0f}",
                 f"{info['mean_resolution']:.3f}"
             ]
             # for cluster_id, info in sorted(cluster_info_dict.items(), key=lambda x: x[1]["market_count"], reverse=True)
             for cluster_id, info in cluster_info_dict.items()
         ],
-        headers=['ID', 'Count', 'Top Market', 'Top Platform', 'Med Novelty', 'Med Volume', 'Med Traders', 'Med Duration', 'Mean Res'],
+        headers=['ID', 'Count', 'Top Market', 'Keywords', 'Top Platform', 'Med Novelty', 'Med Volume', 'Mean Res'],
         tablefmt="github"
     ))
 
