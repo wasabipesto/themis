@@ -231,14 +231,9 @@ def collate_cluster_information(markets, market_novelty_mapped):
     info["top_market_title"] = remove_emoji(top_market["title"])
 
     # First market by open_datetime
-    markets_with_dates = [m for m in markets if m.get("open_datetime")]
-    if markets_with_dates:
-        first_market = min(markets_with_dates, key=lambda x: x["open_datetime"])
-        info["first_market"] = first_market
-        info["first_market_platform"] = first_market.get("platform_slug", "unknown")
-    else:
-        info["first_market"] = None
-        info["first_market_platform"] = "unknown"
+    first_market = min(markets, key=lambda x: x["open_datetime"])
+    info["first_market"] = first_market
+    info["first_market_platform"] = first_market.get("platform_slug", "unknown")
 
     # Platform proportions
     platforms = [m.get("platform_slug") for m in markets]
@@ -246,20 +241,14 @@ def collate_cluster_information(markets, market_novelty_mapped):
     total_markets = len(markets)
     info["platform_proportions"] = {platform: count/total_markets for platform, count in platform_counts.items()}
     info["top_platform"] = platform_counts.most_common(1)[0][0] if platform_counts else "unknown"
-    info["top_platform_pct"] = platform_counts[info["top_platform"]]
+    info["top_platform_pct"] = platform_counts[info["top_platform"]] / total_markets
 
     # Statistical aggregations
-    novelty_values = [market_novelty_mapped.get(m["id"]) for m in markets]
-    volume_values = [m.get("volume_usd") for m in markets if m.get("volume_usd")]
-    traders_values = [m.get("traders_count") for m in markets if m.get("traders_count")]
-    duration_values = [m.get("duration_days") for m in markets]
-    resolution_values = [m.get("resolution") for m in markets]
-
-    info["median_novelty"] = np.median(novelty_values) if novelty_values else 0
-    info["median_volume_usd"] = np.median(volume_values) if volume_values else 0
-    info["median_traders_count"] = np.median(traders_values) if traders_values else 0
-    info["median_duration_days"] = np.median(duration_values) if duration_values else 0
-    info["mean_resolution"] = np.mean(resolution_values) if resolution_values else 0
+    info["median_novelty"] = np.median([market_novelty_mapped.get(m["id"]) for m in markets])
+    info["median_volume_usd"] = np.median([m.get("volume_usd") for m in markets if m.get("volume_usd")])
+    info["median_traders_count"] = np.median([m.get("traders_count") for m in markets if m.get("traders_count")])
+    info["median_duration_days"] = np.median([m.get("duration_days") for m in markets])
+    info["mean_resolution"] = np.mean([m.get("resolution") for m in markets])
 
     return info
 
@@ -515,8 +504,7 @@ def plot_clusters(method, market_embeddings_2d_mapped, market_clusters, output_f
     plt.savefig(output_file, format="png", bbox_inches="tight", dpi=300)
     plt.close()
 
-
-def create_interactive_visualization(method, market_embeddings_2d_mapped, market_clusters, markets_mapped, cluster_info_dict, output_file):
+def create_interactive_visualization(method, market_embeddings_2d_mapped, market_clusters, markets_mapped, cluster_info_dict, output_file, display_prob):
     """
     Create an interactive HTML visualization with hover tooltips and interactive features
     """
@@ -532,7 +520,7 @@ def create_interactive_visualization(method, market_embeddings_2d_mapped, market
 
         for cluster_data in market_clusters:
             market_id = cluster_data["market_id"]
-            if market_id in market_embeddings_2d_mapped and market_id in markets_mapped:
+            if market_id in market_embeddings_2d_mapped and market_id in markets_mapped and random.random() < display_prob:
                 market_ids.append(market_id)
                 embedding = market_embeddings_2d_mapped[market_id]
                 embeddings_x.append(float(embedding[0]))
@@ -720,7 +708,6 @@ def generate_cluster_keywords(cluster_info_dict, n=10):
 
     return cluster_info_dict
 
-
 def main():
     parser = argparse.ArgumentParser(description="Market embedding analysis with clustering")
     parser.add_argument("--cache-dir", "-cd", default="cache/embedding-analysis",
@@ -885,7 +872,8 @@ def main():
     # Create interactive HTML visualization
     print("Creating interactive HTML visualization... ", end="")
     html_output_file = f"{args.output_dir}/clusters_{args.plot_method}_interactive.html"
-    create_interactive_visualization(args.plot_method.upper(), market_embeddings_2d_mapped, market_clusters, markets_mapped, cluster_info_dict, html_output_file)
+    display_prob = 50_000 / len(market_embeddings_2d_mapped)
+    create_interactive_visualization(args.plot_method.upper(), market_embeddings_2d_mapped, market_clusters, markets_mapped, cluster_info_dict, html_output_file, display_prob)
     print(f"Complete. Saved to {html_output_file}")
 
     print("\n| Most Novel Markets")
@@ -926,9 +914,9 @@ def main():
             [
                 cluster_id,
                 info["market_count"],
-                info["top_market_title"][:72] + "..." if len(info["top_market_title"]) > 75 else info["top_market_title"],
-                info["keywords"][:72] + "..." if len(info["keywords"]) > 75 else info["keywords"],
-                info["top_platform"],
+                info["top_market_title"][:62] + "..." if len(info["top_market_title"]) > 65 else info["top_market_title"],
+                info["keywords"][:52] + "..." if len(info["keywords"]) > 55 else info["keywords"],
+                f"{info["top_platform"]} ({100.0*info["top_platform_pct"]:.2f}%)",
                 f"{info['median_novelty']:.3f}",
                 f"${info['median_volume_usd']:.0f}",
                 f"{info['mean_resolution']:.3f}"
@@ -936,7 +924,7 @@ def main():
             # for cluster_id, info in sorted(cluster_info_dict.items(), key=lambda x: x[1]["market_count"], reverse=True)
             for cluster_id, info in cluster_info_dict.items()
         ],
-        headers=['ID', 'Count', 'Top Market', 'Keywords', 'Top Platform', 'Med Novelty', 'Med Volume', 'Mean Res'],
+        headers=['ID', 'Count', 'Top Market', 'Keywords', 'Top Platform', 'Md Novelty', 'Md Volume', 'Mn Res'],
         tablefmt="github"
     ))
 
