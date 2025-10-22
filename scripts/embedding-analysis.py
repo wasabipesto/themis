@@ -12,6 +12,7 @@
 #     "hdbscan",
 #     "umap-learn",
 #     "scikit-learn",
+#     "plotly",
 # ]
 # ///
 
@@ -33,6 +34,9 @@ import argparse
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from collections import Counter
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
 
 def get_data(endpoint: str, headers={}, params={}, batch_size=20_000):
     """Get data from a PostgREST endpoint and handle the response."""
@@ -511,6 +515,162 @@ def plot_clusters(method, market_embeddings_2d_mapped, market_clusters, output_f
     plt.savefig(output_file, format="png", bbox_inches="tight", dpi=300)
     plt.close()
 
+
+def create_interactive_visualization(method, market_embeddings_2d_mapped, market_clusters, markets_mapped, cluster_info_dict, output_file):
+    """
+    Create an interactive HTML visualization with hover tooltips and interactive features
+    """
+    try:
+        # Prepare data for visualization
+        market_ids = []
+        embeddings_x = []
+        embeddings_y = []
+        cluster_labels = []
+        titles = []
+        volumes = []
+        platforms = []
+
+        for cluster_data in market_clusters:
+            market_id = cluster_data["market_id"]
+            if market_id in market_embeddings_2d_mapped and market_id in markets_mapped:
+                market_ids.append(market_id)
+                embedding = market_embeddings_2d_mapped[market_id]
+                embeddings_x.append(float(embedding[0]))
+                embeddings_y.append(float(embedding[1]))
+                cluster_labels.append(cluster_data["cluster"])
+
+                market = markets_mapped[market_id]
+                titles.append(str(market.get("title", "Unknown"))[:100])  # Truncate long titles
+                volume = market.get("volume_usd", 0)
+                volumes.append(float(volume) if volume is not None else 0.0)
+                platforms.append(str(market.get("platform_slug", "Unknown")))
+
+        if not market_ids:
+            print("Warning: No valid market data found for visualization")
+            return
+
+        # Convert to numpy arrays
+        embeddings_x = np.array(embeddings_x, dtype=float)
+        embeddings_y = np.array(embeddings_y, dtype=float)
+        cluster_labels = np.array(cluster_labels)
+
+        # Create the main scatter plot
+        fig = go.Figure()
+
+        # Get unique clusters
+        unique_clusters = np.unique(cluster_labels)
+
+        # Color palette for clusters
+        colors = px.colors.qualitative.Set3 + px.colors.qualitative.Pastel + px.colors.qualitative.Dark24
+
+        # Plot outliers first (cluster -1)
+        if -1 in unique_clusters:
+            outlier_mask = cluster_labels == -1
+            outlier_indices = [i for i in range(len(market_ids)) if cluster_labels[i] == -1]
+
+            fig.add_trace(go.Scatter(
+                x=embeddings_x[outlier_mask],
+                y=embeddings_y[outlier_mask],
+                mode='markers',
+                marker=dict(
+                    size=3,
+                    color='lightgray',
+                    opacity=0.3
+                ),
+                name='Outliers',
+                text=[f"Market ID: {market_ids[i]}<br>Title: {titles[i]}<br>Volume: ${volumes[i]:,.2f}<br>Platform: {platforms[i]}"
+                      for i in outlier_indices],
+                hovertemplate='<b>%{text}</b><extra></extra>',
+                visible=True
+            ))
+
+        # Plot regular clusters
+        for i, cluster_id in enumerate(sorted([c for c in unique_clusters if c != -1])):
+            cluster_mask = cluster_labels == cluster_id
+            cluster_color = colors[i % len(colors)]
+            cluster_indices = [j for j in range(len(market_ids)) if cluster_labels[j] == cluster_id]
+
+            # Get cluster info if available
+            cluster_keywords = ""
+            if cluster_id in cluster_info_dict:
+                keywords = cluster_info_dict[cluster_id].get('keywords', '')
+                cluster_keywords = f"<br>Keywords: {keywords}" if keywords else ""
+
+            fig.add_trace(go.Scatter(
+                x=embeddings_x[cluster_mask],
+                y=embeddings_y[cluster_mask],
+                mode='markers',
+                marker=dict(
+                    size=4,
+                    color=cluster_color,
+                    opacity=0.7
+                ),
+                name=f'Cluster {cluster_id}',
+                text=[f"Market ID: {market_ids[j]}<br>Title: {titles[j]}<br>Volume: ${volumes[j]:,.2f}<br>Platform: {platforms[j]}<br>Cluster: {cluster_id}{cluster_keywords}"
+                      for j in cluster_indices],
+                hovertemplate='<b>%{text}</b><extra></extra>',
+                visible=True
+            ))
+
+        # Update layout
+        fig.update_layout(
+            title=f"Interactive Market Embeddings Clusters ({method})",
+            xaxis_title=f"{method} Component 1",
+            yaxis_title=f"{method} Component 2",
+            width=1200,
+            height=800,
+            hovermode='closest',
+            showlegend=True,
+            legend=dict(
+                yanchor="top",
+                y=0.99,
+                xanchor="left",
+                x=1.01
+            ),
+            margin=dict(l=50, r=150, t=80, b=50),
+            plot_bgcolor='white',
+            paper_bgcolor='white'
+        )
+
+        # Add buttons to toggle outliers
+        fig.update_layout(
+            updatemenus=[
+                dict(
+                    type="buttons",
+                    direction="left",
+                    buttons=list([
+                        dict(
+                            args=[{"visible": [True] * len(fig.data)}],
+                            label="Show All",
+                            method="update"
+                        ),
+                        dict(
+                            args=[{"visible": [trace.name != 'Outliers' for trace in fig.data]}],
+                            label="Hide Outliers",
+                            method="update"
+                        )
+                    ]),
+                    pad={"r": 10, "t": 10},
+                    showactive=True,
+                    x=0.01,
+                    xanchor="left",
+                    y=1.02,
+                    yanchor="top"
+                ),
+            ]
+        )
+
+        # Add range slider and buttons for zooming
+        fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
+        fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
+
+        # Save as HTML
+        fig.write_html(output_file, include_plotlyjs=True)
+
+    except Exception as e:
+        print(f"Error creating interactive visualization: {e}")
+        print("Falling back to static visualization only")
+
 def generate_cluster_keywords(cluster_info_dict, n=10):
     """
     Generate keywords for each cluster using word frequency analysis.
@@ -721,6 +881,12 @@ def main():
     output_file = f"{args.output_dir}/clusters_{args.plot_method}.png"
     plot_clusters(args.plot_method.upper(), market_embeddings_2d_mapped, market_clusters, output_file)
     print(f"Complete. Saved to {output_file}")
+
+    # Create interactive HTML visualization
+    print("Creating interactive HTML visualization... ", end="")
+    html_output_file = f"{args.output_dir}/clusters_{args.plot_method}_interactive.html"
+    create_interactive_visualization(args.plot_method.upper(), market_embeddings_2d_mapped, market_clusters, markets_mapped, cluster_info_dict, html_output_file)
+    print(f"Complete. Saved to {html_output_file}")
 
     print("\n| Most Novel Markets")
     print(tabulate(
