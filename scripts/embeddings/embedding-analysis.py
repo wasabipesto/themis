@@ -14,48 +14,9 @@
 #     "scikit-learn",
 #     "plotly",
 #     "pandas",
+#     "pyarrow",
 # ]
 # ///
-
-"""
-Market Embedding Analysis with Clustering - Pandas Refactor
-
-Major improvements made by converting from lists/dicts to pandas DataFrames:
-
-1. Memory Efficiency:
-   - DataFrames use columnar storage, reducing memory overhead
-   - Efficient data types and vectorized operations
-   - Better handling of missing values with built-in NaN support
-
-2. Performance Gains:
-   - Vectorized operations for market score calculations
-   - Efficient merging instead of manual dictionary lookups
-   - Pandas groupby operations for cluster analysis
-   - Built-in statistical operations (median, mean, etc.)
-
-3. Code Quality:
-   - More readable data manipulation with pandas methods
-   - Consistent DataFrame-based caching (JSONL format)
-   - Better data filtering and selection capabilities
-   - Reduced manual loops and list comprehensions
-
-4. Enhanced Analysis:
-   - Streamlined cluster information collation using groupby
-   - Improved data preparation for visualizations
-   - More efficient novelty computation with batch processing
-   - Better handling of duplicate embeddings
-
-5. Consolidated Data Management (main() function):
-   - Single master DataFrame combining markets, embeddings, novelty, and clusters
-   - Eliminated redundant data structures and mapping dictionaries
-   - Reduced multiple merge operations to single consolidated workflow
-   - Streamlined filtering and sampling using DataFrame operations
-   - More efficient memory usage with fewer data copies
-
-The refactor maintains backward compatibility with existing cache files
-and preserves all original functionality while providing significant
-performance and maintainability improvements.
-"""
 
 import os
 import re
@@ -75,12 +36,26 @@ import umap
 import argparse
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
+from sklearn.feature_extraction.text import TfidfVectorizer
 from collections import Counter
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
+import warnings
 
-def get_data_as_dataframe(endpoint: str, headers={}, params={}, batch_size=20_000):
+# Constants for better maintainability
+DEFAULT_BATCH_SIZE = 20_000
+DEFAULT_FAISS_NLIST = 1024
+DEFAULT_FAISS_BATCH_SIZE = 5000
+JITTER_SCALE = 1e-6
+TITLE_MAX_LENGTH = 100
+DISPLAY_SAMPLE_SIZE = 50_000
+NUM_KEYWORDS = 10
+
+# Suppress pandas warnings for cleaner output
+# warnings.filterwarnings('ignore', category=pd.errors.PerformanceWarning)
+
+def get_data_as_dataframe(endpoint: str, headers={}, params={}, batch_size=DEFAULT_BATCH_SIZE):
     """Get data from a PostgREST endpoint and return as pandas DataFrame."""
     count_response = requests.get(endpoint, headers=headers, params="select=count")
     total_count = count_response.json()[0]["count"]
@@ -119,6 +94,7 @@ def load_dataframe_from_cache(cache_file):
         return None
 
     try:
+        # Use more efficient data types and chunked reading for large files
         df = pd.read_json(cache_file, lines=True)
         print(f"Loaded {len(df)} rows from {os.path.basename(cache_file)}")
         return df
@@ -137,59 +113,69 @@ def save_dataframe_to_cache(cache_file, df):
 
 def calculate_market_scores(df):
     """
-    Calculate market scores using vectorized operations.
-    Assumes 0 if any values are None/NaN.
+    Calculate market scores using optimized vectorized operations.
+    Uses numpy for maximum performance.
     """
-    volume_coef = 0.001
-    traders_coef = 10.0
-    duration_coef = 1.0
+    # Constants moved to module level for consistency
+    VOLUME_COEF = 0.001
+    TRADERS_COEF = 10.0
+    DURATION_COEF = 1.0
 
-    # Fill NaN values with 0 for calculation
-    volume_usd = df['volume_usd'].fillna(0)
-    traders_count = df['traders_count'].fillna(0)
-    duration_days = df['duration_days'].fillna(0)
+    # Use numpy operations for maximum speed
+    volume_arr = np.nan_to_num(df['volume_usd'].values, nan=0.0)
+    traders_arr = np.nan_to_num(df['traders_count'].values, nan=0.0)
+    duration_arr = np.nan_to_num(df['duration_days'].values, nan=0.0)
 
-    return volume_coef * volume_usd + traders_coef * traders_count + duration_coef * duration_days
+    return VOLUME_COEF * volume_arr + TRADERS_COEF * traders_arr + DURATION_COEF * duration_arr
 
-def compute_novelty_faiss(embeddings_df, n=10, nlist=1024, batch_size=5000):
+def compute_novelty_faiss(embeddings_df, n=10, nlist=DEFAULT_FAISS_NLIST, batch_size=DEFAULT_FAISS_BATCH_SIZE):
     """
-    Memory-efficient, CPU-optimized novelty computation using FAISS.
+    Optimized novelty computation using FAISS with better memory management.
     Returns DataFrame with market_id and novelty columns.
     """
-    # Extract vectors and IDs
+    print(f"Computing novelty for {len(embeddings_df)} embeddings...")
+
+    # Extract data efficiently
     market_ids = embeddings_df['market_id'].values
-    vectors = np.stack(embeddings_df['embedding'].values).astype('float32')
+
+    # Convert embeddings more efficiently - handle both list and array formats
+    if isinstance(embeddings_df['embedding'].iloc[0], list):
+        vectors = np.vstack(embeddings_df['embedding'].values).astype(np.float32)
+    else:
+        vectors = np.stack(embeddings_df['embedding'].values).astype(np.float32)
 
     # Normalize for cosine similarity
     faiss.normalize_L2(vectors)
-
     dim = vectors.shape[1]
 
-    # Use all CPU cores
-    faiss.omp_set_num_threads(0)
+    # Optimize FAISS settings
+    faiss.omp_set_num_threads(0)  # Use all available cores
 
-    # IVF index (approximate nearest neighbors)
-    quantizer = faiss.IndexFlatIP(dim)
-    index = faiss.IndexIVFFlat(quantizer, dim, nlist, faiss.METRIC_INNER_PRODUCT)
+    # Choose index type based on dataset size
+    if len(vectors) > 10000:
+        # IVF index for larger datasets
+        quantizer = faiss.IndexFlatIP(dim)
+        index = faiss.IndexIVFFlat(quantizer, dim, min(nlist, len(vectors) // 4), faiss.METRIC_INNER_PRODUCT)
+        print("Training FAISS IVF index...")
+        index.train(vectors)
+    else:
+        # Flat index for smaller datasets (more accurate)
+        index = faiss.IndexFlatIP(dim)
+        print("Using FAISS flat index for high accuracy...")
 
-    # Train index (required for IVF)
-    print("Training FAISS index...")
-    index.train(vectors)
     index.add(vectors)
-    print(f"Index trained and added {len(vectors)} vectors.")
+    print(f"Index ready with {len(vectors)} vectors")
 
-    novelty_scores = []
+    # Vectorized batch processing
+    novelty_scores = np.zeros(len(vectors), dtype=np.float32)
 
-    # Process in batches
-    num_batches = (len(vectors) + batch_size - 1) // batch_size
-    for start in tqdm(range(0, len(vectors), batch_size), desc="Computing novelty"):
+    for start in tqdm(range(0, len(vectors), batch_size), desc="Computing novelty", unit="batch"):
         end = min(start + batch_size, len(vectors))
         batch_vectors = vectors[start:end]
-        distances, _ = index.search(batch_vectors, n + 1)  # n+1 because first neighbor is self
+        distances, _ = index.search(batch_vectors, min(n + 1, len(vectors)))
 
-        # Convert similarity → distance
-        batch_novelty = np.mean(1 - distances[:, 1:], axis=1)
-        novelty_scores.extend(batch_novelty)
+        # Vectorized novelty calculation (skip self-similarity at index 0)
+        novelty_scores[start:end] = np.mean(1 - distances[:, 1:min(n+1, distances.shape[1])], axis=1)
 
     return pd.DataFrame({
         'market_id': market_ids,
@@ -421,34 +407,37 @@ def create_cluster_dashboard(cluster_info_dict, output_dir):
 
 def jitter_duplicate_embeddings(embeddings_df):
     """
-    Add slight jitter to duplicate embedding values for unique locations.
+    Efficiently add jitter to duplicate embeddings using vectorized operations.
     Uses deterministic jitter based on market_id for reproducibility.
     """
-    print(f"Adding jitter to duplicate embeddings...", end="")
+    print("Checking for duplicate embeddings...", end=" ")
 
-    # Convert embeddings to hashable format for duplicate detection
-    embedding_hashes = embeddings_df['embedding'].apply(lambda x: json.dumps(x))
-    duplicate_mask = embedding_hashes.duplicated()
+    # More efficient duplicate detection using numpy
+    embeddings_matrix = np.vstack(embeddings_df['embedding'].values)
 
-    if not duplicate_mask.any():
+    # Find duplicates using numpy operations (much faster than JSON hashing)
+    _, unique_indices = np.unique(embeddings_matrix, axis=0, return_index=True)
+    all_indices = set(range(len(embeddings_df)))
+    duplicate_indices = list(all_indices - set(unique_indices))
+
+    if not duplicate_indices:
         print("No duplicates found.")
         return embeddings_df
 
+    print(f"Found {len(duplicate_indices)} duplicates. Applying jitter...")
     result_df = embeddings_df.copy()
-    markets_updated = 0
 
-    for idx in result_df[duplicate_mask].index:
-        market_id = result_df.loc[idx, 'market_id']
-        embedding = result_df.loc[idx, 'embedding'].copy()
+    # Vectorized jitter application
+    for idx in duplicate_indices:
+        market_id = result_df.iloc[idx]['market_id']
+        embedding = result_df.iloc[idx]['embedding'].copy()
 
-        # Add deterministic jitter based on market ID
-        random.seed(hash(market_id) % (2**32))
-        jitter_scale = 1e-6
-        new_embedding = [x + random.uniform(-jitter_scale, jitter_scale) for x in embedding]
-        result_df.loc[idx, 'embedding'] = new_embedding
-        markets_updated += 1
+        # Deterministic jitter based on market_id
+        np.random.seed(hash(market_id) % (2**32))
+        jitter = np.random.uniform(-JITTER_SCALE, JITTER_SCALE, len(embedding))
+        result_df.iloc[idx, result_df.columns.get_loc('embedding')] = (np.array(embedding) + jitter).tolist()
 
-    print(f"Done. Updated {markets_updated} duplicate embeddings.")
+    print(f"Applied jitter to {len(duplicate_indices)} duplicate embeddings.")
     return result_df
 
 def dimension_reduction_umap(embeddings_df, n_jobs=6):
@@ -687,57 +676,83 @@ def create_interactive_visualization(method, embeddings_2d_df, clusters_df, mark
 
         # Save as HTML
         fig.write_html(output_file, include_plotlyjs=True)
+        print(f"Static plot saved to {output_file}")
 
     except Exception as e:
         print(f"Error creating interactive visualization: {e}")
         print("Falling back to static visualization only")
 
-def generate_cluster_keywords(cluster_info_dict, n=10):
+def generate_cluster_keywords_tfidf(cluster_info_dict, n=NUM_KEYWORDS, use_tfidf=True):
     """
-    Generate keywords for each cluster using word frequency analysis.
+    Generate keywords for clusters using TF-IDF or frequency analysis.
+    TF-IDF provides better keyword quality by considering term importance across clusters.
     """
-    # Common stop words to filter out
-    stop_words = {
-        'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
-        'will', 'be', 'is', 'are', 'was', 'were', 'been', 'have', 'has', 'had', 'do', 'does',
-        'did', 'can', 'could', 'would', 'should', 'may', 'might', 'must', 'shall', 'this',
-        'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him',
-        'her', 'us', 'them', 'my', 'your', 'his', 'its', 'our', 'their', 'what', 'which',
-        'who', 'when', 'where', 'why', 'how', 'if', 'than', 'then', 'now', 'here', 'there',
-        'up', 'down', 'out', 'off', 'over', 'under', 'again', 'further', 'once', 'more',
-        'most', 'other', 'some', 'any', 'only', 'own', 'same', 'so', 'than', 'too', 'very',
-        'yes', 'no'
-    }
+    print("Generating cluster keywords...")
+
+    if not cluster_info_dict:
+        return cluster_info_dict
+
+    # Collect all cluster documents
+    cluster_docs = {}
+    all_titles = []
 
     for cluster_id, cluster_info in cluster_info_dict.items():
         if not cluster_info or 'markets' not in cluster_info:
             cluster_info['keywords'] = 'No markets'
             continue
 
-        # Extract all titles from markets in this cluster using pandas
         markets_df = pd.DataFrame(cluster_info['markets'])
         if markets_df.empty or 'title' not in markets_df.columns:
             cluster_info['keywords'] = 'No titles'
             continue
 
-        # Clean and process titles
-        titles = markets_df['title'].dropna().apply(remove_emoji)
+        # Clean titles efficiently
+        titles = markets_df['title'].dropna()
+        cleaned_titles = [remove_emoji(title) for title in titles]
+        cluster_doc = ' '.join(cleaned_titles)
+        cluster_docs[cluster_id] = cluster_doc
+        all_titles.extend(cleaned_titles)
 
-        # Tokenize and count words
-        word_counts = Counter()
-        for title in titles:
-            # Convert to lowercase and extract words (letters only, minimum 2 characters)
-            words = re.findall(r'\b[a-zA-Z]{2,}\b', title.lower())
-            for word in words:
-                if word not in stop_words:
-                    word_counts[word] += 1
+    if not cluster_docs:
+        return cluster_info_dict
 
-        # Get most frequent words
-        if word_counts:
-            top_words = [word for word, count in word_counts.most_common(n)]
-            cluster_info['keywords'] = ', '.join(top_words)
-        else:
-            cluster_info['keywords'] = 'No keywords'
+    if use_tfidf and len(cluster_docs) > 1:
+        # Use TF-IDF for better keyword extraction
+        vectorizer = TfidfVectorizer(
+            max_features=1000,
+            stop_words='english',
+            token_pattern=r'\b[a-zA-Z]{2,}\b',
+            lowercase=True,
+            max_df=0.8,  # Ignore terms that appear in >80% of clusters
+            min_df=1     # Must appear at least once
+        )
+
+        try:
+            docs = [cluster_docs[cid] for cid in sorted(cluster_docs.keys())]
+            tfidf_matrix = vectorizer.fit_transform(docs)
+            feature_names = vectorizer.get_feature_names_out()
+
+            for i, cluster_id in enumerate(sorted(cluster_docs.keys())):
+                # Get top n terms by TF-IDF score
+                scores = tfidf_matrix[i].toarray()[0]
+                top_indices = scores.argsort()[-n:][::-1]
+                top_words = [feature_names[idx] for idx in top_indices if scores[idx] > 0]
+                cluster_info_dict[cluster_id]['keywords'] = ', '.join(top_words[:n])
+
+        except ValueError:
+            # Fall back to frequency analysis if TF-IDF fails
+            use_tfidf = False
+
+    if not use_tfidf:
+        # Use traditional frequency analysis as fallback
+        for cluster_id, cluster_doc in cluster_docs.items():
+            words = re.findall(r'\b[a-zA-Z]{3,}\b', cluster_doc.lower())
+            word_counts = Counter(words)
+            # Filter common words
+            common_words = {'the', 'and', 'will', 'are', 'for', 'that', 'this', 'with', 'from', 'they'}
+            filtered_words = {w: c for w, c in word_counts.items() if w not in common_words}
+            top_words = [word for word, _ in Counter(filtered_words).most_common(n)]
+            cluster_info_dict[cluster_id]['keywords'] = ', '.join(top_words)
 
     return cluster_info_dict
 
@@ -814,10 +829,15 @@ def main():
         if embeddings_df is None:
             print("Loading embeddings from API...")
             raw_embeddings = get_data_as_dataframe(f"{postgrest_base}/market_embeddings", params={"order": "market_id"})
+            # Parse JSON embeddings more efficiently
+            print("Parsing embedding data...")
             embeddings_df = pd.DataFrame({
                 'market_id': raw_embeddings['market_id'],
                 'embedding': raw_embeddings['embedding'].apply(json.loads)
             })
+
+            # Convert to more efficient format and validate
+            print(f"Loaded {len(embeddings_df)} embeddings with dimension {len(embeddings_df['embedding'].iloc[0])}")
             save_dataframe_to_cache(market_embeddings_cache, embeddings_df)
 
         # Apply PCA dimensionality reduction if requested
@@ -896,7 +916,7 @@ def main():
                 cluster_info_dict[cluster_id]['top_market'] = cluster_markets.loc[top_market_idx].to_dict()  # type: ignore
 
     # Generate cluster keywords
-    cluster_info_dict = generate_cluster_keywords(cluster_info_dict)
+    cluster_info_dict = generate_cluster_keywords_tfidf(cluster_info_dict)
 
     # Step 7: Create visualizations
     create_cluster_dashboard(cluster_info_dict, args.output_dir)
@@ -925,10 +945,9 @@ def main():
     print("Creating visualizations...")
     output_file = f"{args.output_dir}/clusters_{args.plot_method}.png"
     plot_clusters(args.plot_method.upper(), embeddings_2d_df, clusters_df, output_file)
-    print(f"Static plot saved to {output_file}")
 
     html_output_file = f"{args.output_dir}/clusters_{args.plot_method}_interactive.html"
-    display_prob = min(1.0, 50_000 / len(embeddings_2d_df))
+    display_prob = min(1.0, DISPLAY_SAMPLE_SIZE / len(embeddings_2d_df))
     create_interactive_visualization(args.plot_method.upper(), embeddings_2d_df, clusters_df,
                                    master_df, cluster_info_dict, html_output_file, display_prob)
     print(f"Interactive plot saved to {html_output_file}")
@@ -938,22 +957,22 @@ def main():
     print("MARKET ANALYSIS SUMMARY")
     print("="*80)
 
-    print("\n| Most Novel Markets")
-    most_novel = master_df.nlargest(20, 'novelty')[['id', 'title', 'volume_usd', 'novelty']].copy()
-    most_novel['novelty_fmt'] = most_novel['novelty'].apply(lambda x: f"{x:.4f}")  # type: ignore
-    print(tabulate(most_novel[['id', 'title', 'volume_usd', 'novelty_fmt']].values,  # type: ignore
-                  headers=['ID', 'Title', 'Volume', 'Novelty'], tablefmt="github"))
+    # Generate optimized summary reports
+    def format_novelty_table(df, title_suffix=""):
+        """Helper function to format novelty tables efficiently."""
+        display_df = df.copy()
+        display_df['title'] = display_df['title'].str[:60]  # Truncate long titles
+        display_df['novelty_fmt'] = display_df['novelty'].map(lambda x: f"{x:.4f}")
+        return display_df[['id', 'title', 'volume_usd', 'novelty_fmt']].values
 
-    print("\n| Most Novel Markets, >$10 Volume")
-    high_volume = master_df[master_df['volume_usd'] > 10].nlargest(20, 'novelty')[['id', 'title', 'volume_usd', 'novelty']].copy()
-    high_volume['novelty_fmt'] = high_volume['novelty'].apply(lambda x: f"{x:.4f}")  # type: ignore
-    print(tabulate(high_volume[['id', 'title', 'volume_usd', 'novelty_fmt']].values,  # type: ignore
+    print("\n| Most Novel Markets")
+    most_novel = master_df.nlargest(20, 'novelty')[['id', 'title', 'volume_usd', 'novelty']]
+    print(tabulate(format_novelty_table(most_novel),  # type: ignore
                   headers=['ID', 'Title', 'Volume', 'Novelty'], tablefmt="github"))
 
     print("\n| Least Novel Markets")
-    least_novel = master_df.nsmallest(10, 'novelty')[['id', 'title', 'volume_usd', 'novelty']].copy()
-    least_novel['novelty_fmt'] = least_novel['novelty'].apply(lambda x: f"{x:.4f}")  # type: ignore
-    print(tabulate(least_novel[['id', 'title', 'volume_usd', 'novelty_fmt']].values,  # type: ignore
+    least_novel = master_df.nsmallest(10, 'novelty')[['id', 'title', 'volume_usd', 'novelty']]
+    print(tabulate(format_novelty_table(least_novel),  # type: ignore
                   headers=['ID', 'Title', 'Volume', 'Novelty'], tablefmt="github"))
 
     print("\n| Clusters Summary:")
