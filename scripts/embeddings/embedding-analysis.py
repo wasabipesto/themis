@@ -566,10 +566,27 @@ def create_interactive_visualization(method, embeddings_2d_df, clusters_df, mark
     Create an interactive HTML visualization with hover tooltips and interactive features.
     """
     try:
-        # Merge all data together
-        viz_data = (embeddings_2d_df
-                    .merge(clusters_df, on='market_id', how='inner')
-                    .merge(markets_df, left_on='market_id', right_on='id', how='inner'))
+        # Merge all data together - handle potential column conflicts
+        viz_data = embeddings_2d_df.copy()
+
+        # Rename embedding column first to avoid conflicts
+        viz_data = viz_data.rename(columns={'embedding': 'embedding_2d'})
+        viz_data = viz_data.merge(clusters_df, on='market_id', how='inner')
+
+        # For the final merge, be explicit about suffixes and drop duplicates
+        viz_data = viz_data.merge(
+            markets_df,
+            left_on='market_id',
+            right_on='id',
+            how='inner',
+            suffixes=('', '_markets')
+        )
+
+        # Handle any remaining duplicate columns by keeping the left version
+        if 'cluster_markets' in viz_data.columns:
+            viz_data = viz_data.drop('cluster_markets', axis=1)
+        if 'market_id_markets' in viz_data.columns:
+            viz_data = viz_data.drop('market_id_markets', axis=1)
 
         # Sample data for performance if needed
         if display_prob < 1.0:
@@ -579,10 +596,15 @@ def create_interactive_visualization(method, embeddings_2d_df, clusters_df, mark
             print("Warning: No valid market data found for visualization")
             return
 
+        # Check for required columns
+        required_columns = ['embedding_2d', 'cluster', 'market_id', 'title', 'volume_usd', 'platform_slug']
+        missing_columns = [col for col in required_columns if col not in viz_data.columns]
+        if missing_columns:
+            print(f"DEBUG: Missing required columns: {missing_columns}")
+            print(f"DEBUG: Available columns: {list(viz_data.columns)}")
+
         # Extract coordinates and prepare data
-        coordinates = np.stack(viz_data['embedding'].values)
-        embeddings_x = coordinates[:, 0]
-        embeddings_y = coordinates[:, 1]
+        coordinates = np.stack(viz_data['embedding_2d'].values)
 
         # Create the main scatter plot
         fig = go.Figure()
@@ -594,7 +616,7 @@ def create_interactive_visualization(method, embeddings_2d_df, clusters_df, mark
         # Plot outliers first (cluster -1)
         if -1 in unique_clusters:
             outlier_data = viz_data[viz_data['cluster'] == -1]
-            outlier_coords = np.stack(outlier_data['embedding'].values)
+            outlier_coords = np.stack(outlier_data['embedding_2d'].values)
 
             fig.add_trace(go.Scatter(
                 x=outlier_coords[:, 0],
@@ -613,7 +635,7 @@ def create_interactive_visualization(method, embeddings_2d_df, clusters_df, mark
         regular_clusters = sorted([c for c in unique_clusters if c != -1])
         for i, cluster_id in enumerate(regular_clusters):
             cluster_data = viz_data[viz_data['cluster'] == cluster_id]
-            cluster_coords = np.stack(cluster_data['embedding'].values)
+            cluster_coords = np.stack(cluster_data['embedding_2d'].values)
             cluster_color = colors[i % len(colors)]
 
             # Get cluster info if available
