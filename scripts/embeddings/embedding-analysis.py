@@ -1421,37 +1421,21 @@ def main():
     print("MARKET ANALYSIS SUMMARY")
     print("="*80)
 
-    # Generate optimized summary reports
-    def format_novelty_table(df, title_suffix=""):
-        """Helper function to format novelty tables efficiently."""
-        display_df = df.copy()
-        display_df['title'] = display_df['title'].str[:60]  # Truncate long titles
-        display_df['novelty_fmt'] = display_df['novelty'].map(lambda x: f"{x:.4f}")
-        return display_df[['id', 'title', 'volume_usd', 'novelty_fmt']].values
+    print("\nMost Novel Markets:")
+    print(master_df.nlargest(10, 'novelty')[['id', 'title', 'novelty']])
 
-    print("\n| Most Novel Markets")
-    most_novel = master_df.nlargest(20, 'novelty')[['id', 'title', 'volume_usd', 'novelty']]
-    print(tabulate(format_novelty_table(most_novel),  # type: ignore
-                  headers=['ID', 'Title', 'Volume', 'Novelty'], tablefmt="github"))
+    print("\nLeast Novel Markets:")
+    print(master_df.nsmallest(10, 'novelty')[['id', 'title', 'novelty']])
 
-    print("\n| Least Novel Markets")
-    least_novel = master_df.nsmallest(10, 'novelty')[['id', 'title', 'volume_usd', 'novelty']]
-    print(tabulate(format_novelty_table(least_novel),  # type: ignore
-                  headers=['ID', 'Title', 'Volume', 'Novelty'], tablefmt="github"))
-
-    print("\n| Clusters Summary:")
+    print("\nClusters Summary:")
     cluster_summary = []
     for cluster_id, info in cluster_info_dict.items():
-        title = info.get("top_market_title", "Unknown")
-        title = title[:62] + "..." if len(title) > 65 else title
-
         keywords = info.get("keywords", "")
         keywords = keywords[:52] + "..." if len(keywords) > 55 else keywords
 
         cluster_summary.append([
             cluster_id,
             info.get("market_count", 0),
-            title,
             keywords,
             f"{info.get('top_platform', 'unknown')} ({100.0*info.get('top_platform_pct', 0):.2f}%)",
             f"{info.get('median_novelty', 0):.3f}",
@@ -1460,7 +1444,7 @@ def main():
         ])
 
     print(tabulate(cluster_summary,
-                  headers=['ID', 'Count', 'Top Market', 'Keywords', 'Top Platform', 'Md Novelty', 'Md Volume', 'Mn Res'],
+                  headers=['ID', 'Count', 'Keywords', 'Top Platform', 'Md Novelty', 'Md Volume', 'Mn Res'],
                   tablefmt="github"))
 
 if __name__ == "__main__":
