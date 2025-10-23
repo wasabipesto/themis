@@ -472,7 +472,7 @@ def plot_clusters(method, market_embeddings_2d_mapped, market_clusters, output_f
     if np.any(outlier_mask):
         plt.scatter(
             embedding_2d[outlier_mask, 0], embedding_2d[outlier_mask, 1],
-            c='lightgray', s=1, alpha=0.05, label='Outliers'
+            c='lightgray', s=1, alpha=0.3, label='Outliers'
         )
 
     # Plot regular clusters with normal alpha
@@ -710,8 +710,8 @@ def generate_cluster_keywords(cluster_info_dict, n=10):
 
 def main():
     parser = argparse.ArgumentParser(description="Market embedding analysis with clustering")
-    parser.add_argument("--cache-dir", "-cd", default="cache/embedding-analysis",
-                       help="Cache directory (default: cache/embedding-analysis)")
+    parser.add_argument("--cache-dir", "-cd", default="./cache",
+                       help="Cache directory (default: ./cache)")
     parser.add_argument("--reset-cache", action="store_true",
                        help="Reset cache and re-download all data")
     parser.add_argument("--output-dir", "-od", default=".",
@@ -724,11 +724,9 @@ def main():
                        help="Filter sample to specific platform_slug (default: all)")
     parser.add_argument("--min-cluster-size", "-c", type=int, default=250,
                        help="Minimum cluster size for HDBSCAN (default: 250)")
-    parser.add_argument("--plot-method", "-p", default="umap",
+    parser.add_argument("--plot-method", "-p", default="tsne",
                        choices=["umap", "tsne", "pca"],
-                       help="Plotting method for clusters (default: umap)")
-    parser.add_argument("--umap-cores", "-uc", type=int, default=6,
-                       help="Number of cores to use for UMAP (default: 6)")
+                       help="Plotting method for clusters (default: tsne)")
     args = parser.parse_args()
 
     load_dotenv()
@@ -851,7 +849,7 @@ def main():
         # Generate new 2D embeddings
         print(f"Generating new {args.plot_method.upper()} embeddings...")
         if args.plot_method == "umap":
-            embeddings_2d_data = dimension_reduction_umap(market_embeddings_mapped, market_clusters, args.umap_cores)
+            embeddings_2d_data = dimension_reduction_umap(market_embeddings_mapped, market_clusters)
         elif args.plot_method == "tsne":
             embeddings_2d_data = dimension_reduction_tsne(market_embeddings_mapped, market_clusters)
         elif args.plot_method == "pca":
