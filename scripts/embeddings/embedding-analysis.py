@@ -169,10 +169,11 @@ def save_dataframe_to_cache(cache_file, df):
 
 def calculate_market_scores(df):
     """
-    Calculate composite market scores using weighted metrics and vectorized operations.
+    Calculate composite market scores using logarithmic scaling and distribution-aware normalization.
 
-    Combines volume (USD), trader count, and duration into a single score using predefined
-    coefficients. Uses numpy operations for optimal performance on large datasets.
+    Combines volume (USD), trader count, and duration into a single score using logarithmic
+    transformations and statistical normalization to prevent extreme values from washing
+    out the signal. Handles NaN traders gracefully by using median imputation.
 
     Args:
         df (pd.DataFrame): Market data with required columns:
@@ -184,23 +185,71 @@ def calculate_market_scores(df):
         np.ndarray: Array of calculated market scores (float)
 
     Formula:
-        score = 0.001 * volume_usd + 10.0 * traders_count + 1.0 * duration_days
+        For each metric:
+        1. Apply log1p transformation to handle skewness
+        2. Normalize using robust scaling (median and IQR)
+        3. Combine with balanced coefficients
 
     Side Effects:
         - None (pure computation, no external modifications)
-        - Handles NaN values by converting them to 0.0
+        - Imputes NaN trader counts with median value
     """
-    # Constants moved to module level for consistency
-    VOLUME_COEF = 0.001
-    TRADERS_COEF = 10.0
-    DURATION_COEF = 1.0
+    # Coefficients for balanced contribution after normalization
+    VOLUME_COEF = 1.0
+    TRADERS_COEF = 1.0
+    DURATION_COEF = 0.5
 
-    # Use numpy operations for maximum speed
-    volume_arr = np.nan_to_num(df['volume_usd'].values, nan=0.0)
-    traders_arr = np.nan_to_num(df['traders_count'].values, nan=0.0)
-    duration_arr = np.nan_to_num(df['duration_days'].values, nan=0.0)
+    # Extract arrays and handle missing values
+    volume_arr = df['volume_usd'].values.copy()
+    traders_arr = df['traders_count'].values.copy()
+    duration_arr = df['duration_days'].values.copy()
 
-    return VOLUME_COEF * volume_arr + TRADERS_COEF * traders_arr + DURATION_COEF * duration_arr
+    # Handle volume: replace NaN/negative with small positive value
+    volume_mask = np.isnan(volume_arr) | (volume_arr <= 0)
+    volume_arr[volume_mask] = 1.0  # $1 minimum for log transform
+
+    # Handle traders: impute NaN with median (more graceful than 0)
+    traders_mask = np.isnan(traders_arr)
+    if np.any(~traders_mask):  # If we have any valid trader counts
+        median_traders = np.median(traders_arr[~traders_mask])
+        traders_arr[traders_mask] = median_traders
+    else:
+        traders_arr[traders_mask] = 1.0  # Fallback if all NaN
+    traders_arr = np.maximum(traders_arr, 1.0)  # Ensure minimum of 1 trader
+
+    # Handle duration: replace NaN/negative with small positive value
+    duration_mask = np.isnan(duration_arr) | (duration_arr <= 0)
+    duration_arr[duration_mask] = 0.1  # 0.1 days minimum
+
+    # Apply logarithmic transformation to reduce skewness
+    log_volume = np.log1p(volume_arr)  # log(1 + x) handles values near 0
+    log_traders = np.log1p(traders_arr)
+    log_duration = np.log1p(duration_arr)
+
+    # Robust normalization using median and IQR to handle outliers
+    def robust_normalize(arr):
+        median_val = np.median(arr)
+        q75, q25 = np.percentile(arr, [75, 25])
+        iqr = q75 - q25
+        if iqr == 0:  # Handle case where all values are the same
+            return np.zeros_like(arr)
+        return (arr - median_val) / iqr
+
+    norm_volume = robust_normalize(log_volume)
+    norm_traders = robust_normalize(log_traders)
+    norm_duration = robust_normalize(log_duration)
+
+    # Combine normalized components
+    scores = (VOLUME_COEF * norm_volume +
+             TRADERS_COEF * norm_traders +
+             DURATION_COEF * norm_duration)
+
+    # Shift to ensure positive scores for easier interpretation
+    min_score = np.min(scores)
+    if min_score < 0:
+        scores = scores - min_score + 1.0
+
+    return scores
 
 def compute_novelty_faiss(embeddings_df, n=10, nlist=DEFAULT_FAISS_NLIST, batch_size=DEFAULT_FAISS_BATCH_SIZE):
     """
@@ -390,7 +439,7 @@ def remove_emoji(string):
     "]+", flags=re.UNICODE)
     return emoji_pattern.sub(r'', string)
 
-def collate_cluster_information(markets_df, novelty_df):
+def collate_cluster_information(markets_df, novelty_df=None):
     """
     Aggregate and compute comprehensive statistics for each market cluster.
 
@@ -401,7 +450,7 @@ def collate_cluster_information(markets_df, novelty_df):
 
     Args:
         markets_df (pd.DataFrame): Market data with required columns:
-            - market_id (int/str): Unique market identifier
+            - market_id (int/str) or id (int/str): Unique market identifier
             - cluster (int): Cluster assignment (-1 for outliers)
             - title (str): Market title/description
             - score (float): Market score from calculate_market_scores()
@@ -411,7 +460,8 @@ def collate_cluster_information(markets_df, novelty_df):
             - traders_count (int): Number of unique traders
             - duration_days (float): Market duration in days
             - resolution (float): Market resolution (0.0-1.0)
-        novelty_df (pd.DataFrame): Novelty data with required columns:
+            - novelty (float): Novelty score (0.0-1.0) - optional if already in markets_df
+        novelty_df (pd.DataFrame, optional): Novelty data with required columns:
             - market_id (int/str): Unique market identifier
             - novelty (float): Novelty score (0.0-1.0)
 
@@ -433,7 +483,7 @@ def collate_cluster_information(markets_df, novelty_df):
             - mean_resolution (float): Average resolution rate
 
     Side Effects:
-        - Merges DataFrames using inner join on market_id
+        - Merges DataFrames using inner join on market_id if novelty_df provided
         - Excludes outlier cluster (-1) from main analysis
         - Applies emoji removal to market titles
         - Returns empty dict if input markets_df is empty
@@ -441,8 +491,15 @@ def collate_cluster_information(markets_df, novelty_df):
     if markets_df.empty:
         return {}
 
-    # Merge with novelty data
-    merged_df = markets_df.merge(novelty_df, on='market_id', how='left')
+    # Check if novelty data is already in markets_df or needs to be merged
+    if 'novelty' in markets_df.columns:
+        merged_df = markets_df
+    elif novelty_df is not None:
+        # Determine the market ID column name
+        market_id_col = 'market_id' if 'market_id' in markets_df.columns else 'id'
+        merged_df = markets_df.merge(novelty_df, left_on=market_id_col, right_on='market_id', how='left')
+    else:
+        raise ValueError("Novelty data must be provided either in markets_df or as separate novelty_df parameter")
 
     cluster_info = {}
 
@@ -476,6 +533,7 @@ def collate_cluster_information(markets_df, novelty_df):
 
         # Statistical aggregations using pandas methods
         info["median_novelty"] = group['novelty'].median()
+        info["median_score"] = group['score'].median()
         info["median_volume_usd"] = group['volume_usd'].median()
         info["median_traders_count"] = group['traders_count'].median()
         info["median_duration_days"] = group['duration_days'].median()
@@ -1220,6 +1278,7 @@ def main():
         - Prints extensive progress information and summary statistics
         - Uses significant memory and CPU for large datasets
         - May take considerable time for large datasets (especially UMAP)
+    .
     """
     parser = argparse.ArgumentParser(description="Market embedding analysis with clustering")
     parser.add_argument("--cache-dir", "-cd", default="./cache",
@@ -1356,7 +1415,7 @@ def main():
     # Step 6: Generate cluster information
     cached_cluster_info = load_dataframe_from_cache(cluster_info_cache)
     if cached_cluster_info is None:
-        cluster_info_dict = collate_cluster_information(clustered_df, novelty_df)
+        cluster_info_dict = collate_cluster_information(clustered_df)
         # Cache cluster statistics (without full market data)
         cluster_stats = []
         for cluster_id, info in cluster_info_dict.items():
@@ -1439,12 +1498,12 @@ def main():
             keywords,
             f"{info.get('top_platform', 'unknown')} ({100.0*info.get('top_platform_pct', 0):.2f}%)",
             f"{info.get('median_novelty', 0):.3f}",
-            f"${info.get('median_volume_usd', 0):.0f}",
+            f"{info.get('median_score', 0):.3f}",
             f"{info.get('mean_resolution', 0):.3f}"
         ])
 
     print(tabulate(cluster_summary,
-                  headers=['ID', 'Count', 'Keywords', 'Top Platform', 'Md Novelty', 'Md Volume', 'Mn Res'],
+                  headers=['ID', 'Count', 'Keywords', 'Top Platform', 'Md Novelty', 'Md Score', 'Mn Res'],
                   tablefmt="github"))
 
 if __name__ == "__main__":
