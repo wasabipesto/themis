@@ -56,7 +56,29 @@ NUM_KEYWORDS = 10
 # warnings.filterwarnings('ignore', category=pd.errors.PerformanceWarning)
 
 def get_data_as_dataframe(endpoint: str, headers={}, params={}, batch_size=DEFAULT_BATCH_SIZE):
-    """Get data from a PostgREST endpoint and return as pandas DataFrame."""
+    """
+    Download data from a PostgREST API endpoint in batches and return as pandas DataFrame.
+
+    This function first queries the total count, then downloads data in configurable batches
+    to handle large datasets efficiently. Includes progress tracking and error handling.
+
+    Args:
+        endpoint (str): PostgREST API endpoint URL
+        headers (dict): HTTP headers to include with requests (default: {})
+        params (dict): Query parameters to include with requests (default: {})
+        batch_size (int): Number of records to download per batch (default: 20,000)
+
+    Returns:
+        pd.DataFrame: Complete dataset from the endpoint
+
+    Raises:
+        ValueError: If no data is available or if downloaded count doesn't match expected count
+
+    Side Effects:
+        - Makes multiple HTTP requests to the endpoint
+        - Prints progress information and error details to stdout
+        - May print JSON error responses for debugging
+    """
     count_response = requests.get(endpoint, headers=headers, params="select=count")
     total_count = count_response.json()[0]["count"]
     if total_count == 0:
@@ -89,7 +111,23 @@ def get_data_as_dataframe(endpoint: str, headers={}, params={}, batch_size=DEFAU
     return pd.DataFrame(result)
 
 def load_dataframe_from_cache(cache_file):
-    """Load DataFrame from JSONL cache file."""
+    """
+    Load a pandas DataFrame from a JSONL (JSON Lines) cache file.
+
+    Efficiently reads cached data with error handling for corrupted or missing files.
+    Uses pandas' optimized JSONL reader for better performance on large files.
+
+    Args:
+        cache_file (str): Path to the JSONL cache file
+
+    Returns:
+        pd.DataFrame or None: Loaded DataFrame if successful, None if file doesn't exist or fails to load
+
+    Side Effects:
+        - Prints loading status and row count to stdout
+        - Prints warning messages for load failures
+        - No modification to the cache file
+    """
     if not os.path.exists(cache_file):
         return None
 
@@ -103,7 +141,25 @@ def load_dataframe_from_cache(cache_file):
         return None
 
 def save_dataframe_to_cache(cache_file, df):
-    """Save DataFrame to JSONL cache file."""
+    """
+    Save a pandas DataFrame to a JSONL (JSON Lines) cache file.
+
+    Creates the directory structure if needed and saves the DataFrame in an efficient
+    JSONL format for fast loading. Handles file system errors gracefully.
+
+    Args:
+        cache_file (str): Path where the JSONL file should be saved
+        df (pd.DataFrame): DataFrame to save to cache
+
+    Returns:
+        None
+
+    Side Effects:
+        - Creates directory structure if it doesn't exist
+        - Writes/overwrites the cache file
+        - Prints save status and row count to stdout
+        - Prints warning messages for save failures
+    """
     os.makedirs(os.path.dirname(cache_file), exist_ok=True)
     try:
         df.to_json(cache_file, orient='records', lines=True)
@@ -113,8 +169,26 @@ def save_dataframe_to_cache(cache_file, df):
 
 def calculate_market_scores(df):
     """
-    Calculate market scores using optimized vectorized operations.
-    Uses numpy for maximum performance.
+    Calculate composite market scores using weighted metrics and vectorized operations.
+
+    Combines volume (USD), trader count, and duration into a single score using predefined
+    coefficients. Uses numpy operations for optimal performance on large datasets.
+
+    Args:
+        df (pd.DataFrame): Market data with required columns:
+            - volume_usd (float): Trading volume in USD
+            - traders_count (int): Number of unique traders
+            - duration_days (float): Market duration in days
+
+    Returns:
+        np.ndarray: Array of calculated market scores (float)
+
+    Formula:
+        score = 0.001 * volume_usd + 10.0 * traders_count + 1.0 * duration_days
+
+    Side Effects:
+        - None (pure computation, no external modifications)
+        - Handles NaN values by converting them to 0.0
     """
     # Constants moved to module level for consistency
     VOLUME_COEF = 0.001
@@ -130,8 +204,30 @@ def calculate_market_scores(df):
 
 def compute_novelty_faiss(embeddings_df, n=10, nlist=DEFAULT_FAISS_NLIST, batch_size=DEFAULT_FAISS_BATCH_SIZE):
     """
-    Optimized novelty computation using FAISS with better memory management.
-    Returns DataFrame with market_id and novelty columns.
+    Compute novelty scores for market embeddings using FAISS for efficient similarity search.
+
+    Novelty is calculated as the average distance to the n nearest neighbors in embedding space.
+    Uses FAISS library for optimized similarity search with automatic index selection based
+    on dataset size. Supports both IVF and flat indices for different scales.
+
+    Args:
+        embeddings_df (pd.DataFrame): Embedding data with required columns:
+            - market_id (int/str): Unique market identifier
+            - embedding (list/np.array): Dense embedding vectors (all same dimension)
+        n (int): Number of nearest neighbors to consider (default: 10)
+        nlist (int): Number of clusters for IVF index (default: 1024)
+        batch_size (int): Batch size for processing (default: 5000)
+
+    Returns:
+        pd.DataFrame: Novelty scores with columns:
+            - market_id: Market identifier from input
+            - novelty (float): Novelty score (0.0 = least novel, 1.0 = most novel)
+
+    Side Effects:
+        - Normalizes input vectors for cosine similarity computation
+        - Uses all available CPU cores via FAISS OpenMP settings
+        - Prints progress information and index statistics to stdout
+        - Temporarily uses significant memory for FAISS index construction
     """
     print(f"Computing novelty for {len(embeddings_df)} embeddings...")
 
@@ -184,8 +280,27 @@ def compute_novelty_faiss(embeddings_df, n=10, nlist=DEFAULT_FAISS_NLIST, batch_
 
 def create_clusters_hdbscan(embeddings_df, min_cluster_size):
     """
-    Cluster markets using HDBSCAN on embeddings.
-    Returns DataFrame with market_id and cluster columns.
+    Perform density-based clustering on market embeddings using HDBSCAN algorithm.
+
+    Applies HDBSCAN clustering to normalized embedding vectors to identify market groups
+    with similar characteristics. HDBSCAN automatically determines the number of clusters
+    and marks outliers as cluster -1.
+
+    Args:
+        embeddings_df (pd.DataFrame): Embedding data with required columns:
+            - market_id (int/str): Unique market identifier
+            - embedding (list/np.array): Dense embedding vectors (all same dimension)
+        min_cluster_size (int): Minimum number of points required to form a cluster
+
+    Returns:
+        pd.DataFrame: Cluster assignments with columns:
+            - market_id: Market identifier from input
+            - cluster (int): Cluster ID (-1 for outliers, 0+ for valid clusters)
+
+    Side Effects:
+        - Normalizes embedding vectors using L2 normalization
+        - Prints clustering progress to stdout
+        - Uses fixed min_samples=10 parameter for HDBSCAN
     """
     market_ids = embeddings_df['market_id'].values
     embedding_vectors = np.stack(embeddings_df['embedding'].values).astype('float32')
@@ -205,8 +320,27 @@ def create_clusters_hdbscan(embeddings_df, min_cluster_size):
 
 def apply_pca_reduction(embeddings_df, target_dim):
     """
-    Apply PCA dimensionality reduction to embeddings DataFrame.
-    Returns updated DataFrame with reduced embeddings.
+    Apply Principal Component Analysis (PCA) to reduce embedding dimensionality.
+
+    Reduces high-dimensional embeddings to a lower-dimensional space while preserving
+    the most important variance. Skips reduction if target dimension is 0 or greater
+    than current dimension.
+
+    Args:
+        embeddings_df (pd.DataFrame): Embedding data with required columns:
+            - embedding (list/np.array): Dense embedding vectors (all same dimension)
+            - (preserves all other columns unchanged)
+        target_dim (int): Target number of dimensions (0 to skip reduction)
+
+    Returns:
+        pd.DataFrame: Updated DataFrame with reduced embeddings:
+            - embedding: Reduced embedding vectors (list format)
+            - (all other columns preserved unchanged)
+
+    Side Effects:
+        - Prints reduction status and explained variance ratio to stdout
+        - Returns original DataFrame unchanged if target_dim is 0 or >= current dimension
+        - Converts embeddings to float32 for memory efficiency
     """
     current_dim = len(embeddings_df['embedding'].iloc[0])
     if target_dim == 0 or target_dim >= current_dim:
@@ -230,6 +364,22 @@ def apply_pca_reduction(embeddings_df, target_dim):
     return result_df
 
 def remove_emoji(string):
+    """
+    Remove emoji characters from a text string using regex pattern matching.
+
+    Removes various categories of Unicode emoji including emoticons, symbols,
+    pictographs, transport symbols, and flags. Used for cleaning market titles
+    in cluster analysis and visualization.
+
+    Args:
+        string (str): Input text that may contain emoji characters
+
+    Returns:
+        str: Text with all emoji characters removed
+
+    Side Effects:
+        - None (pure string transformation function)
+    """
     emoji_pattern = re.compile("["
         u"\U0001F600-\U0001F64F"  # emoticons
         u"\U0001F300-\U0001F5FF"  # symbols & pictographs
@@ -242,9 +392,51 @@ def remove_emoji(string):
 
 def collate_cluster_information(markets_df, novelty_df):
     """
-    Collate comprehensive cluster information using
- pandas groupby operations.
-    Returns dictionary with cluster statistics.
+    Aggregate and compute comprehensive statistics for each market cluster.
+
+    Combines market data with novelty scores and computes detailed statistics
+    for each cluster including top markets, platform distributions, and
+    median values across various metrics. Uses efficient pandas groupby
+    operations for optimal performance.
+
+    Args:
+        markets_df (pd.DataFrame): Market data with required columns:
+            - market_id (int/str): Unique market identifier
+            - cluster (int): Cluster assignment (-1 for outliers)
+            - title (str): Market title/description
+            - score (float): Market score from calculate_market_scores()
+            - platform_slug (str): Platform identifier
+            - open_datetime (datetime): Market opening time
+            - volume_usd (float): Trading volume in USD
+            - traders_count (int): Number of unique traders
+            - duration_days (float): Market duration in days
+            - resolution (float): Market resolution (0.0-1.0)
+        novelty_df (pd.DataFrame): Novelty data with required columns:
+            - market_id (int/str): Unique market identifier
+            - novelty (float): Novelty score (0.0-1.0)
+
+    Returns:
+        dict: Nested dictionary with cluster_id as keys and statistics as values:
+            - market_count (int): Number of markets in cluster
+            - markets (list): All market records as dictionaries
+            - top_market (dict): Highest scoring market in cluster
+            - top_market_title (str): Emoji-cleaned title of top market
+            - first_market (dict): Earliest market by open_datetime
+            - first_market_platform (str): Platform of first market
+            - platform_proportions (dict): Platform distribution ratios
+            - top_platform (str): Most common platform in cluster
+            - top_platform_pct (float): Percentage of top platform
+            - median_novelty (float): Median novelty score
+            - median_volume_usd (float): Median trading volume
+            - median_traders_count (float): Median trader count
+            - median_duration_days (float): Median duration
+            - mean_resolution (float): Average resolution rate
+
+    Side Effects:
+        - Merges DataFrames using inner join on market_id
+        - Excludes outlier cluster (-1) from main analysis
+        - Applies emoji removal to market titles
+        - Returns empty dict if input markets_df is empty
     """
     if markets_df.empty:
         return {}
@@ -295,8 +487,37 @@ def collate_cluster_information(markets_df, novelty_df):
 
 def create_cluster_dashboard(cluster_info_dict, output_dir):
     """
-    Create a comprehensive dashboard showing cluster analysis.
-    All plots on one matplotlib canvas.
+    Generate a comprehensive multi-panel dashboard visualizing cluster statistics.
+
+    Creates a 3x3 grid of matplotlib plots showing various aspects of cluster analysis
+    including market counts, distributions, platform breakdowns, and metric correlations.
+    Saves the complete dashboard as a high-resolution PNG file.
+
+    Args:
+        cluster_info_dict (dict): Cluster information from collate_cluster_information()
+            Must contain cluster statistics with keys like market_count, median_novelty,
+            median_volume_usd, platform_proportions, etc.
+        output_dir (str): Directory path where dashboard PNG will be saved
+
+    Returns:
+        None
+
+    Generated Plots:
+        1. Bar chart of markets per cluster
+        2. Histogram of market count distribution
+        3. Pie chart of overall platform distribution
+        4. Histogram of median novelty scores
+        5. Log-scale histogram of median volumes
+        6. Histogram of median trader counts
+        7. Histogram of median durations
+        8. Histogram of mean resolutions
+        9. Scatter plot of volume vs traders
+
+    Side Effects:
+        - Creates/overwrites cluster_dashboard.png in output_dir
+        - Prints warning if no cluster information available
+        - Handles missing/zero values gracefully in visualizations
+        - Uses tight layout and closes matplotlib figure to free memory
     """
     if not cluster_info_dict:
         print("No cluster information available for dashboard")
@@ -407,8 +628,32 @@ def create_cluster_dashboard(cluster_info_dict, output_dir):
 
 def jitter_duplicate_embeddings(embeddings_df):
     """
-    Efficiently add jitter to duplicate embeddings using vectorized operations.
-    Uses deterministic jitter based on market_id for reproducibility.
+    Add small random noise to duplicate embeddings to ensure uniqueness for visualization.
+
+    Detects embedding vectors that are identical and applies deterministic jitter
+    based on market_id hash for reproducible results. Essential for dimensionality
+    reduction algorithms that may fail with identical input vectors.
+
+    Args:
+        embeddings_df (pd.DataFrame): Embedding data with required columns:
+            - market_id (int/str): Unique market identifier
+            - embedding (list/np.array): Dense embedding vectors
+
+    Returns:
+        pd.DataFrame: Modified DataFrame with jittered embeddings:
+            - Preserves all original columns and structure
+            - Only duplicate embeddings are modified with small noise
+            - Original unique embeddings remain unchanged
+
+    Jitter Details:
+        - Jitter scale: 1e-6 (very small to preserve similarity structure)
+        - Deterministic: Same market_id will always get same jitter
+        - Uses numpy.random with seed based on market_id hash
+
+    Side Effects:
+        - Prints duplicate detection status and count to stdout
+        - Temporarily modifies numpy random state for each duplicate
+        - Returns original DataFrame if no duplicates found
     """
     print("Checking for duplicate embeddings...", end=" ")
 
@@ -442,8 +687,28 @@ def jitter_duplicate_embeddings(embeddings_df):
 
 def dimension_reduction_umap(embeddings_df, n_jobs=6):
     """
-    Reduce embeddings to 2D using UMAP.
-    Returns DataFrame with market_id and 2D embedding.
+    Reduce high-dimensional embeddings to 2D using UMAP algorithm for visualization.
+
+    UMAP (Uniform Manifold Approximation and Projection) preserves both local and
+    global structure of the data, making it excellent for cluster visualization.
+    Automatically applies jitter to handle duplicate embeddings.
+
+    Args:
+        embeddings_df (pd.DataFrame): Embedding data with required columns:
+            - market_id (int/str): Unique market identifier
+            - embedding (list/np.array): Dense embedding vectors (any dimension)
+        n_jobs (int): Number of parallel jobs for UMAP computation (default: 6)
+
+    Returns:
+        pd.DataFrame: 2D embeddings with columns:
+            - market_id: Market identifier from input
+            - embedding (list): 2D coordinates as [x, y] lists
+
+    Side Effects:
+        - Normalizes embedding vectors using L2 normalization
+        - Applies jitter to duplicate embeddings via jitter_duplicate_embeddings()
+        - Prints progress information to stdout
+        - Uses multiple CPU cores for computation
     """
     # Add jitter to handle duplicates
     embeddings_df = jitter_duplicate_embeddings(embeddings_df)
@@ -463,8 +728,27 @@ def dimension_reduction_umap(embeddings_df, n_jobs=6):
 
 def dimension_reduction_tsne(embeddings_df):
     """
-    Reduce embeddings to 2D using t-SNE.
-    Returns DataFrame with market_id and 2D embedding.
+    Reduce high-dimensional embeddings to 2D using t-SNE algorithm for visualization.
+
+    t-SNE (t-distributed Stochastic Neighbor Embedding) excels at preserving local
+    structure and revealing cluster patterns. Automatically adjusts perplexity
+    based on dataset size to avoid errors with small datasets.
+
+    Args:
+        embeddings_df (pd.DataFrame): Embedding data with required columns:
+            - market_id (int/str): Unique market identifier
+            - embedding (list/np.array): Dense embedding vectors (any dimension)
+
+    Returns:
+        pd.DataFrame: 2D embeddings with columns:
+            - market_id: Market identifier from input
+            - embedding (list): 2D coordinates as [x, y] lists
+
+    Side Effects:
+        - Normalizes embedding vectors using L2 normalization
+        - Adjusts perplexity to min(30, dataset_size-1) to prevent errors
+        - Prints progress information to stdout
+        - May take significant time for large datasets (t-SNE is O(n²))
     """
     embedding_vectors = np.stack(embeddings_df['embedding'].values).astype('float32')
     embedding_vectors = embedding_vectors / np.linalg.norm(embedding_vectors, axis=1, keepdims=True)
@@ -481,8 +765,27 @@ def dimension_reduction_tsne(embeddings_df):
 
 def dimension_reduction_pca(embeddings_df):
     """
-    Reduce embeddings to 2D using PCA.
-    Returns DataFrame with market_id and 2D embedding.
+    Reduce high-dimensional embeddings to 2D using PCA for linear dimensionality reduction.
+
+    PCA (Principal Component Analysis) finds the two directions of maximum variance
+    in the data. Fastest of the dimensionality reduction methods but may not capture
+    non-linear cluster structure as well as UMAP or t-SNE.
+
+    Args:
+        embeddings_df (pd.DataFrame): Embedding data with required columns:
+            - market_id (int/str): Unique market identifier
+            - embedding (list/np.array): Dense embedding vectors (any dimension)
+
+    Returns:
+        pd.DataFrame: 2D embeddings with columns:
+            - market_id: Market identifier from input
+            - embedding (list): 2D coordinates as [x, y] lists
+
+    Side Effects:
+        - Normalizes embedding vectors using L2 normalization
+        - Prints explained variance ratio for each component and total
+        - Prints progress information to stdout
+        - Fastest dimensionality reduction method available
     """
     embedding_vectors = np.stack(embeddings_df['embedding'].values).astype('float32')
     embedding_vectors = embedding_vectors / np.linalg.norm(embedding_vectors, axis=1, keepdims=True)
@@ -502,7 +805,37 @@ def dimension_reduction_pca(embeddings_df):
 
 def plot_clusters(method, embeddings_2d_df, clusters_df, output_file, label_top_n_clusters=20):
     """
-    Plot clusters given 2D embeddings and cluster assignments.
+    Create a static scatter plot visualization of clustered embeddings in 2D space.
+
+    Generates a matplotlib scatter plot showing market clusters with different colors,
+    outliers in gray, and labels for the largest clusters. Saves as high-resolution PNG.
+
+    Args:
+        method (str): Dimensionality reduction method name for plot title (e.g., "UMAP", "t-SNE")
+        embeddings_2d_df (pd.DataFrame): 2D embedding data with required columns:
+            - market_id (int/str): Unique market identifier
+            - embedding (list): 2D coordinates as [x, y] lists
+        clusters_df (pd.DataFrame): Cluster assignments with required columns:
+            - market_id (int/str): Unique market identifier
+            - cluster (int): Cluster ID (-1 for outliers, 0+ for valid clusters)
+        output_file (str): Path where the PNG plot will be saved
+        label_top_n_clusters (int): Number of largest clusters to label on plot (default: 20)
+
+    Returns:
+        None
+
+    Plot Features:
+        - Outliers (cluster -1) shown in light gray with low opacity
+        - Regular clusters colored using matplotlib's tab20 colormap
+        - Cluster centroids labeled with "C{cluster_id}" annotations
+        - Colorbar showing cluster ID mapping
+        - High-resolution output (300 DPI)
+
+    Side Effects:
+        - Creates/overwrites the output PNG file
+        - Uses matplotlib figure (10x8 inches) and closes it after saving
+        - Prints warning if no data available for plotting
+        - Merges input DataFrames using inner join on market_id
     """
     # Merge embeddings with cluster data
     plot_data = embeddings_2d_df.merge(clusters_df, on='market_id', how='inner')
@@ -563,7 +896,46 @@ def plot_clusters(method, embeddings_2d_df, clusters_df, output_file, label_top_
 def create_interactive_visualization(method, embeddings_2d_df, clusters_df, markets_df,
                                    cluster_info_dict, output_file, display_prob):
     """
-    Create an interactive HTML visualization with hover tooltips and interactive features.
+    Generate an interactive HTML visualization using Plotly with rich hover tooltips and controls.
+
+    Creates a comprehensive interactive scatter plot with hover information showing market
+    details, cluster keywords, platform information, and interactive controls to toggle
+    outliers on/off. Includes performance optimizations for large datasets.
+
+    Args:
+        method (str): Dimensionality reduction method name for labels and title
+        embeddings_2d_df (pd.DataFrame): 2D embedding data with required columns:
+            - market_id (int/str): Unique market identifier
+            - embedding (list): 2D coordinates as [x, y] lists
+        clusters_df (pd.DataFrame): Cluster assignments with required columns:
+            - market_id (int/str): Unique market identifier
+            - cluster (int): Cluster ID (-1 for outliers, 0+ for valid clusters)
+        markets_df (pd.DataFrame): Market data with required columns:
+            - id (int/str): Market identifier (matches market_id)
+            - title (str): Market title/description
+            - volume_usd (float): Trading volume in USD
+            - platform_slug (str): Platform identifier
+        cluster_info_dict (dict): Cluster information with keywords from generate_cluster_keywords_tfidf()
+        output_file (str): Path where the interactive HTML file will be saved
+        display_prob (float): Probability for sampling data (0.0-1.0) to improve performance
+
+    Returns:
+        None
+
+    Interactive Features:
+        - Hover tooltips with market details, volume, platform, and cluster keywords
+        - Toggle buttons to show/hide outliers
+        - Color-coded clusters with legend
+        - Responsive layout (1200x800 pixels)
+        - Grid lines and clean white background
+
+    Side Effects:
+        - Creates/overwrites the output HTML file with embedded Plotly.js
+        - Samples data based on display_prob for performance (uses random seed 42)
+        - Merges multiple DataFrames with suffix handling for column conflicts
+        - Prints warnings for missing data or merge failures
+        - Falls back gracefully if visualization creation fails
+        - Uses significant memory for large datasets during processing
     """
     try:
         # Merge all data together - handle potential column conflicts
@@ -706,8 +1078,43 @@ def create_interactive_visualization(method, embeddings_2d_df, clusters_df, mark
 
 def generate_cluster_keywords_tfidf(cluster_info_dict, n=NUM_KEYWORDS, use_tfidf=True):
     """
-    Generate keywords for clusters using TF-IDF or frequency analysis.
-    TF-IDF provides better keyword quality by considering term importance across clusters.
+    Extract representative keywords for each cluster using TF-IDF or frequency analysis.
+
+    Analyzes market titles within each cluster to identify the most characteristic terms.
+    TF-IDF approach considers term importance across all clusters for better keyword quality,
+    while frequency analysis serves as a fallback method.
+
+    Args:
+        cluster_info_dict (dict): Cluster information dictionary with structure:
+            - cluster_id (key): Integer cluster identifier
+            - markets (list): List of market dictionaries containing 'title' field
+        n (int): Number of keywords to extract per cluster (default: NUM_KEYWORDS=10)
+        use_tfidf (bool): Whether to use TF-IDF analysis (default: True)
+
+    Returns:
+        dict: Updated cluster_info_dict with added 'keywords' field for each cluster:
+            - All original fields preserved
+            - keywords (str): Comma-separated list of representative terms
+
+    Algorithm Details:
+        TF-IDF Mode:
+        - Combines all titles in each cluster into a single document
+        - Uses scikit-learn TfidfVectorizer with English stop words
+        - Parameters: max_features=1000, max_df=0.8, min_df=1
+        - Extracts top n terms by TF-IDF score per cluster
+
+        Frequency Mode (fallback):
+        - Counts word occurrences within each cluster
+        - Filters out common English words manually
+        - Selects most frequent terms (minimum 3 characters)
+
+    Side Effects:
+        - Modifies cluster_info_dict in-place by adding 'keywords' field
+        - Applies emoji removal to all market titles via remove_emoji()
+        - Prints keyword generation progress to stdout
+        - Falls back to frequency analysis if TF-IDF fails
+        - Handles missing or empty market data gracefully
+        - Sets keywords to 'No markets' or 'No titles' for invalid clusters
     """
     print("Generating cluster keywords...")
 
@@ -779,6 +1186,41 @@ def generate_cluster_keywords_tfidf(cluster_info_dict, n=NUM_KEYWORDS, use_tfidf
     return cluster_info_dict
 
 def main():
+    """
+    Main entry point for market embedding analysis and clustering pipeline.
+
+    Orchestrates the complete analysis workflow including data loading, caching,
+    embedding processing, clustering, visualization, and report generation.
+    Supports extensive command-line configuration and intelligent caching.
+
+    Workflow Steps:
+        1. Load market data from PostgREST API with caching
+        2. Calculate composite market scores using volume/traders/duration
+        3. Load and optionally apply PCA reduction to embeddings
+        4. Compute novelty scores using FAISS similarity search
+        5. Create consolidated master DataFrame with all market data
+        6. Perform HDBSCAN clustering on embeddings
+        7. Generate comprehensive cluster statistics and keywords
+        8. Create dashboard visualizations and interactive plots
+        9. Generate summary reports with top novel markets and cluster analysis
+
+    Output Files:
+        - cluster_dashboard.png: Multi-panel statistical dashboard
+        - clusters_{method}.png: Static cluster visualization
+        - clusters_{method}_interactive.html: Interactive Plotly visualization
+
+    Environment Variables:
+        - PGRST_URL: PostgREST base URL for API endpoints
+
+    Side Effects:
+        - Creates cache and output directories as needed
+        - Downloads data from external APIs (markets, embeddings)
+        - Creates/updates multiple cache files for performance
+        - Generates visualization files in output directory
+        - Prints extensive progress information and summary statistics
+        - Uses significant memory and CPU for large datasets
+        - May take considerable time for large datasets (especially UMAP)
+    """
     parser = argparse.ArgumentParser(description="Market embedding analysis with clustering")
     parser.add_argument("--cache-dir", "-cd", default="./cache",
                        help="Cache directory (default: ./cache)")
