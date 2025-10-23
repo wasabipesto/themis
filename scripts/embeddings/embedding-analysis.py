@@ -45,6 +45,13 @@ Major improvements made by converting from lists/dicts to pandas DataFrames:
    - More efficient novelty computation with batch processing
    - Better handling of duplicate embeddings
 
+5. Consolidated Data Management (main() function):
+   - Single master DataFrame combining markets, embeddings, novelty, and clusters
+   - Eliminated redundant data structures and mapping dictionaries
+   - Reduced multiple merge operations to single consolidated workflow
+   - Streamlined filtering and sampling using DataFrame operations
+   - More efficient memory usage with fewer data copies
+
 The refactor maintains backward compatibility with existing cache files
 and preserves all original functionality while providing significant
 performance and maintainability improvements.
@@ -779,35 +786,34 @@ def main():
     os.makedirs(args.cache_dir, exist_ok=True)
     os.makedirs(args.output_dir, exist_ok=True)
 
-    # Load markets using DataFrames
+    # Step 1: Load and prepare base data
+    print("Loading base market data...")
     markets_df = load_dataframe_from_cache(markets_cache)
     if markets_df is None:
         markets_df = get_data_as_dataframe(f"{postgrest_base}/markets", params={"order": "id"})
         save_dataframe_to_cache(markets_cache, markets_df)
 
-    # Show platform filtering info if specified
+    # Apply platform filtering
     if args.sample_platform:
         original_count = len(markets_df)
         markets_df = markets_df[markets_df["platform_slug"] == args.sample_platform]
-        print(f"Platform filtering active: using only markets from '{args.sample_platform}' platform "
-              f"({len(markets_df)} of {original_count} markets)")
+        print(f"Platform filtering: {len(markets_df)}/{original_count} markets from '{args.sample_platform}'")
 
     # Calculate market scores using vectorized operations
     markets_df['score'] = calculate_market_scores(markets_df)
 
-    # Load market embeddings with PCA cache optimization
-    embeddings_pca_df = load_dataframe_from_cache(market_embeddings_pca_cache) if args.pca_dim > 0 else None
+    # Step 2: Load embeddings
+    print("Loading market embeddings...")
+    if args.pca_dim > 0:
+        embeddings_df = load_dataframe_from_cache(market_embeddings_pca_cache)
+        if embeddings_df is not None:
+            print(f"Loaded PCA-reduced embeddings from cache ({args.pca_dim}D)")
 
-    if embeddings_pca_df is not None:
-        # PCA cache exists and is valid, use it directly
-        embeddings_for_analysis = embeddings_pca_df
-    else:
-        # Need to load original embeddings
+    if args.pca_dim == 0 or embeddings_df is None:
         embeddings_df = load_dataframe_from_cache(market_embeddings_cache)
         if embeddings_df is None:
             print("Loading embeddings from API...")
             raw_embeddings = get_data_as_dataframe(f"{postgrest_base}/market_embeddings", params={"order": "market_id"})
-            # Parse JSON embeddings
             embeddings_df = pd.DataFrame({
                 'market_id': raw_embeddings['market_id'],
                 'embedding': raw_embeddings['embedding'].apply(json.loads)
@@ -816,143 +822,139 @@ def main():
 
         # Apply PCA dimensionality reduction if requested
         if args.pca_dim > 0:
-            embeddings_pca_df = apply_pca_reduction(embeddings_df.copy(), args.pca_dim)
-            save_dataframe_to_cache(market_embeddings_pca_cache, embeddings_pca_df)
-            embeddings_for_analysis = embeddings_pca_df
-        else:
-            embeddings_for_analysis = embeddings_df
+            embeddings_df = apply_pca_reduction(embeddings_df, args.pca_dim)
+            save_dataframe_to_cache(market_embeddings_pca_cache, embeddings_df)
 
-    # Filter embeddings to only include markets we have
-    embeddings_for_analysis = embeddings_for_analysis[embeddings_for_analysis['market_id'].isin(markets_df['id'])]
-    print(f"Using {len(embeddings_for_analysis)} embeddings for analysis")
-
-    # Compute novelty
+    # Step 3: Load novelty scores
+    print("Loading novelty scores...")
     novelty_df = load_dataframe_from_cache(novelty_cache)
     if novelty_df is None:
-        novelty_df = compute_novelty_faiss(embeddings_for_analysis)
+        # Only compute novelty for markets we have
+        analysis_embeddings = embeddings_df[embeddings_df['market_id'].isin(markets_df['id'])]
+        novelty_df = compute_novelty_faiss(analysis_embeddings)
         save_dataframe_to_cache(novelty_cache, novelty_df)
 
-    # Filter novelty to markets we have
-    novelty_df = novelty_df[novelty_df['market_id'].isin(markets_df['id'])]
+    # Step 4: Create master DataFrame with all market data
+    print("Creating consolidated market analysis DataFrame...")
+    master_df = (markets_df
+                 .merge(embeddings_df, left_on='id', right_on='market_id', how='inner')
+                 .merge(novelty_df, left_on='id', right_on='market_id', how='inner', suffixes=('', '_novelty')))
 
-    # Create clusters
+    print(f"Master DataFrame contains {len(master_df)} markets with complete data")
+
+    # Step 5: Create clusters
     clusters_df = load_dataframe_from_cache(cluster_cache)
     if clusters_df is None:
         # Sample for clustering if requested
-        if args.sample_size == 0 or args.sample_size >= len(embeddings_for_analysis):
-            sample_embeddings = embeddings_for_analysis
-            print(f"Using all {len(embeddings_for_analysis)} markets for clustering (no sampling)")
+        if args.sample_size == 0 or args.sample_size >= len(master_df):
+            clustering_data = pd.DataFrame({
+                'market_id': master_df['id'],
+                'embedding': master_df['embedding']
+            })
+            print(f"Using all {len(clustering_data)} markets for clustering")
         else:
-            sample_embeddings = embeddings_for_analysis.sample(n=args.sample_size, random_state=42)
-            print(f"Using sample of {len(sample_embeddings)} markets for clustering")
+            clustering_sample = master_df.sample(n=args.sample_size, random_state=42)
+            clustering_data = pd.DataFrame({
+                'market_id': clustering_sample['id'],
+                'embedding': clustering_sample['embedding']
+            })
+            print(f"Using sample of {len(clustering_data)} markets for clustering")
 
-        clusters_df = create_clusters_hdbscan(sample_embeddings, args.min_cluster_size)
+        clusters_df = create_clusters_hdbscan(clustering_data, args.min_cluster_size)
         save_dataframe_to_cache(cluster_cache, clusters_df)
 
-    # Collate cluster information using pandas groupby
-    cluster_info_dict = {}
+    # Add cluster information to master DataFrame
+    master_df = master_df.merge(clusters_df, left_on='id', right_on='market_id', how='left', suffixes=('', '_cluster'))
+    master_df['cluster'] = master_df['cluster'].fillna(-1).astype(int)  # Non-clustered markets get -1
+    clustered_df = master_df[master_df['cluster'] != -1]
+    print(f"Successfully clustered {len(clustered_df)}/{len(master_df)} markets")
+
+    # Step 6: Generate cluster information
     cached_cluster_info = load_dataframe_from_cache(cluster_info_cache)
-
     if cached_cluster_info is None:
-        # Merge markets with clusters for analysis
-        markets_with_clusters = markets_df.merge(clusters_df, left_on='id', right_on='market_id', how='inner')
-        print(f"Collating information for {len(markets_with_clusters)} clustered markets...")
-
-        cluster_info_dict = collate_cluster_information(markets_with_clusters, novelty_df)
-
-        # Convert to DataFrame for caching
-        cluster_info_list = []
+        cluster_info_dict = collate_cluster_information(clustered_df, novelty_df)
+        # Cache cluster statistics (without full market data)
+        cluster_stats = []
         for cluster_id, info in cluster_info_dict.items():
-            # Don't cache the full markets list, too large
-            info_copy = info.copy()
-            info_copy.pop('markets', None)
-            info_copy.pop('top_market', None)
-            info_copy.pop('first_market', None)
-            cluster_info_list.append({'cluster_id': cluster_id, **info_copy})
-
-        cluster_info_cache_df = pd.DataFrame(cluster_info_list)
-        save_dataframe_to_cache(cluster_info_cache, cluster_info_cache_df)
+            stats = {k: v for k, v in info.items() if k not in ['markets', 'top_market', 'first_market']}
+            stats['cluster_id'] = cluster_id
+            cluster_stats.append(stats)
+        save_dataframe_to_cache(cluster_info_cache, pd.DataFrame(cluster_stats))
     else:
-        # Reconstruct dict from cached DataFrame
+        # Reconstruct cluster info from cache and add current market data
+        cluster_info_dict = {}
         for _, row in cached_cluster_info.iterrows():
             cluster_id = row['cluster_id']
-            info = row.drop('cluster_id').to_dict()
-            cluster_info_dict[cluster_id] = info
+            cluster_info_dict[cluster_id] = row.drop('cluster_id').to_dict()
 
-        # Re-add market data for current run
-        markets_with_clusters = markets_df.merge(clusters_df, left_on='id', right_on='market_id', how='inner')
+        # Add live market data for current run
         for cluster_id in cluster_info_dict.keys():
-            cluster_markets = markets_with_clusters[markets_with_clusters['cluster'] == cluster_id]
+            cluster_markets = clustered_df[clustered_df['cluster'] == cluster_id]
             if len(cluster_markets) > 0:
                 cluster_info_dict[cluster_id]['markets'] = cluster_markets.to_dict(orient='records')  # type: ignore
-                # Find top market by score
-                scores = cluster_markets['score']
-                max_idx = scores.idxmax() if hasattr(scores, 'idxmax') else scores.argmax()  # type: ignore
-                top_market = cluster_markets.loc[max_idx]
-                cluster_info_dict[cluster_id]['top_market'] = top_market.to_dict()
+                top_market_idx = cluster_markets['score'].idxmax() if hasattr(cluster_markets['score'], 'idxmax') else cluster_markets['score'].argmax()  # type: ignore
+                cluster_info_dict[cluster_id]['top_market'] = cluster_markets.loc[top_market_idx].to_dict()  # type: ignore
 
-    # Generate keywords for each cluster
+    # Generate cluster keywords
     cluster_info_dict = generate_cluster_keywords(cluster_info_dict)
 
-    # Create cluster dashboard
+    # Step 7: Create visualizations
     create_cluster_dashboard(cluster_info_dict, args.output_dir)
 
-    # Generate cluster visualization based on selected method
+    # Generate 2D embeddings for visualization
     embeddings_2d_df = load_dataframe_from_cache(embeddings_2d_cache)
     if embeddings_2d_df is None:
-        # Generate new 2D embeddings - use only clustered markets for visualization
-        cluster_market_ids = list(clusters_df['market_id'])
-        mask = embeddings_for_analysis['market_id'].isin(cluster_market_ids)  # type: ignore
-        clustered_embeddings = embeddings_for_analysis[mask]
+        print(f"Generating {args.plot_method.upper()} 2D embeddings for visualization...")
+        viz_embeddings = pd.DataFrame({
+            'market_id': clustered_df['id'],
+            'embedding': clustered_df['embedding']
+        })
 
-        print(f"Generating new {args.plot_method.upper()} embeddings...")
         if args.plot_method == "umap":
-            embeddings_2d_df = dimension_reduction_umap(clustered_embeddings)
+            embeddings_2d_df = dimension_reduction_umap(viz_embeddings)
         elif args.plot_method == "tsne":
-            embeddings_2d_df = dimension_reduction_tsne(clustered_embeddings)
+            embeddings_2d_df = dimension_reduction_tsne(viz_embeddings)
         elif args.plot_method == "pca":
-            embeddings_2d_df = dimension_reduction_pca(clustered_embeddings)
+            embeddings_2d_df = dimension_reduction_pca(viz_embeddings)
         else:
             raise ValueError(f"Invalid plot method: {args.plot_method}")
 
         save_dataframe_to_cache(embeddings_2d_cache, embeddings_2d_df)
-        print(f"Cached {args.plot_method.upper()} embeddings for future use")
 
-    # Plot clusters
-    print("Plotting clusters... ", end="")
+    # Create visualizations
+    print("Creating visualizations...")
     output_file = f"{args.output_dir}/clusters_{args.plot_method}.png"
     plot_clusters(args.plot_method.upper(), embeddings_2d_df, clusters_df, output_file)
-    print(f"Complete. Saved to {output_file}")
+    print(f"Static plot saved to {output_file}")
 
-    # Create interactive HTML visualization
-    print("Creating interactive HTML visualization... ", end="")
     html_output_file = f"{args.output_dir}/clusters_{args.plot_method}_interactive.html"
     display_prob = min(1.0, 50_000 / len(embeddings_2d_df))
     create_interactive_visualization(args.plot_method.upper(), embeddings_2d_df, clusters_df,
-                                   markets_df, cluster_info_dict, html_output_file, display_prob)
-    print(f"Complete. Saved to {html_output_file}")
+                                   master_df, cluster_info_dict, html_output_file, display_prob)
+    print(f"Interactive plot saved to {html_output_file}")
 
-    # Generate summary tables using pandas operations
-    markets_with_novelty = markets_df.merge(novelty_df, left_on='id', right_on='market_id', how='inner')
+    # Step 8: Generate summary reports using consolidated DataFrame
+    print("\n" + "="*80)
+    print("MARKET ANALYSIS SUMMARY")
+    print("="*80)
 
     print("\n| Most Novel Markets")
-    most_novel = markets_with_novelty.nlargest(20, 'novelty')[['market_id', 'title', 'volume_usd', 'novelty']].copy()
-    most_novel_formatted = most_novel.copy()
-    most_novel_formatted['novelty'] = most_novel_formatted['novelty'].apply(lambda x: f"{x:.4f}")  # type: ignore
-    print(tabulate(most_novel_formatted.values, headers=['ID', 'Title', 'Volume', 'Novelty'], tablefmt="github"))
+    most_novel = master_df.nlargest(20, 'novelty')[['id', 'title', 'volume_usd', 'novelty']].copy()
+    most_novel['novelty_fmt'] = most_novel['novelty'].apply(lambda x: f"{x:.4f}")  # type: ignore
+    print(tabulate(most_novel[['id', 'title', 'volume_usd', 'novelty_fmt']].values,  # type: ignore
+                  headers=['ID', 'Title', 'Volume', 'Novelty'], tablefmt="github"))
 
     print("\n| Most Novel Markets, >$10 Volume")
-    high_volume_novel = markets_with_novelty[markets_with_novelty['volume_usd'] > 10].nlargest(20, 'novelty')[
-        ['market_id', 'title', 'volume_usd', 'novelty']].copy()
-    high_volume_formatted = high_volume_novel.copy()
-    high_volume_formatted['novelty'] = high_volume_formatted['novelty'].apply(lambda x: f"{x:.4f}")  # type: ignore
-    print(tabulate(high_volume_formatted.values, headers=['ID', 'Title', 'Volume', 'Novelty'], tablefmt="github"))  # type: ignore
+    high_volume = master_df[master_df['volume_usd'] > 10].nlargest(20, 'novelty')[['id', 'title', 'volume_usd', 'novelty']].copy()
+    high_volume['novelty_fmt'] = high_volume['novelty'].apply(lambda x: f"{x:.4f}")  # type: ignore
+    print(tabulate(high_volume[['id', 'title', 'volume_usd', 'novelty_fmt']].values,  # type: ignore
+                  headers=['ID', 'Title', 'Volume', 'Novelty'], tablefmt="github"))
 
     print("\n| Least Novel Markets")
-    least_novel = markets_with_novelty.nsmallest(10, 'novelty')[['market_id', 'title', 'volume_usd', 'novelty']].copy()
-    least_novel_formatted = least_novel.copy()
-    least_novel_formatted['novelty'] = least_novel_formatted['novelty'].apply(lambda x: f"{x:.4f}")  # type: ignore
-    print(tabulate(least_novel_formatted.values, headers=['ID', 'Title', 'Volume', 'Novelty'], tablefmt="github"))
+    least_novel = master_df.nsmallest(10, 'novelty')[['id', 'title', 'volume_usd', 'novelty']].copy()
+    least_novel['novelty_fmt'] = least_novel['novelty'].apply(lambda x: f"{x:.4f}")  # type: ignore
+    print(tabulate(least_novel[['id', 'title', 'volume_usd', 'novelty_fmt']].values,  # type: ignore
+                  headers=['ID', 'Title', 'Volume', 'Novelty'], tablefmt="github"))
 
     print("\n| Clusters Summary:")
     cluster_summary = []
