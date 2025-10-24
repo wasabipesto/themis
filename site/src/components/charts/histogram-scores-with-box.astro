@@ -57,6 +57,26 @@ const domain = [
   scoresFiltered[scoresFiltered.length - 1]?.score || 0,
 ];
 
+import fs from "fs";
+import path from "path";
+if (
+  platforms.length === 4 &&
+  scoreType === "brier-midpoint" &&
+  caption === "All resolved markets."
+) {
+  fs.writeFileSync(
+    path.resolve("./acc-scores-filtered.json"),
+    JSON.stringify(scoresFiltered, null, 2),
+  );
+  fs.writeFileSync(
+    path.resolve("./acc-scores-stats.json"),
+    JSON.stringify(scoresStats, null, 2),
+  );
+  console.log(
+    "Accuracy scores saved to acc-scores-filtered.json and acc-scores-stats.json",
+  );
+}
+
 // Generate the plot
 const plots = [
   /* Main plot - histogram of scores */

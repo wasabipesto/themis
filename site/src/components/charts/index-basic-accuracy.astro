@@ -38,6 +38,14 @@ let points = platforms.map((p) => {
   };
 });
 
+import fs from "fs";
+import path from "path";
+fs.writeFileSync(
+  path.resolve("./index-basic-accuracy.json"),
+  JSON.stringify(points, null, 2),
+);
+console.log("Basic accuracy plot saved to index-basic-accuracy.json");
+
 // Generate the plot
 const plot = Plot.plot({
   width: width,

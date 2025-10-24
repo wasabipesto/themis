@@ -115,6 +115,19 @@ for (const platform of platforms) {
   }
 }
 
+import fs from "fs";
+import path from "path";
+if (
+  platforms.length === 4 &&
+  caption === "All markets with a duration over 365 days."
+) {
+  fs.writeFileSync(
+    path.resolve("./acc-days-before-close.json"),
+    JSON.stringify(points, null, 2),
+  );
+  console.log("Calibration plot saved to acc-days-before-close.json");
+}
+
 // Generate the plot
 const plot = Plot.plot({
   title: "Accuracy by Days Before Resolution",

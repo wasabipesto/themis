@@ -37,6 +37,20 @@ const points = await calculateCalibrationPoints(
   aggregate,
 );
 
+import fs from "fs";
+import path from "path";
+if (
+  markets.length > 600000 &&
+  caption ===
+    "Calibration plot for all platforms, with market probability at midpoint versus average resolution value. Includes all resolved binary and multiple choice markets."
+) {
+  fs.writeFileSync(
+    path.resolve("./index-calibration-plot.json"),
+    JSON.stringify(points, null, 2),
+  );
+  console.log("Calibration plot saved to index-calibration-plot.json");
+}
+
 let axisTitleX = {
   midpoint: "Prediction (Midpoint)",
   "time-average": "Prediction (Time-Average)",
