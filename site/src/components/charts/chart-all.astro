@@ -82,6 +82,7 @@ let { platforms, markets, scores, probs } = Astro.props;
           platforms: platforms,
           markets: markets,
           scores: scores,
+          caption: "All resolved markets.",
         },
       },
       {
@@ -309,7 +310,13 @@ let { platforms, markets, scores, probs } = Astro.props;
         description:
           "Compare market accuracy by days before resolution (long markets only).",
         component: AccuracyDaysBeforeClose,
-        props: { platforms, markets, probs, onlyLong: true },
+        props: {
+          platforms,
+          markets,
+          probs,
+          onlyLong: true,
+          caption: "All markets with a duration over 365 days.",
+        },
       },
       {
         icon: "mdi:calendar",
