@@ -109,18 +109,87 @@ impl Platform {
                         result.push(item);
                     }
                     Err(err) => {
-                        let err =
-                            format!("Failed to deserialize line {}: {}", line_number + 1, err);
-                        log::error!("{}", err);
+                        let mut err_msg = format!(
+                            "Failed to deserialize file {} line {}: {}",
+                            data_file_path.display(),
+                            line_number + 1,
+                            err
+                        );
+
+                        // Try to extract column number from error message and show context
+                        let err_str = err.to_string();
+
+                        // Extract column number using simple string parsing
+                        if let Some(column_start) = err_str.find("column ") {
+                            let column_substr = &err_str[column_start + 7..];
+                            // Find where the number ends - look for first non-digit or end of string
+                            let column_end = column_substr
+                                .find(|c: char| !c.is_ascii_digit())
+                                .unwrap_or(column_substr.len());
+                            let column_str = &column_substr[..column_end];
+
+                            if !column_str.is_empty() {
+                                if let Ok(column) = column_str.parse::<usize>() {
+                                    if column > 0 && column <= line_content.len() {
+                                        let char_pos = column - 1; // Convert to 0-based index
+
+                                        // Handle UTF-8 properly by working with char boundaries
+                                        let chars: Vec<char> = line_content.chars().collect();
+                                        if char_pos < chars.len() {
+                                            let start_char_pos = char_pos.saturating_sub(25);
+                                            let end_char_pos =
+                                                std::cmp::min(char_pos + 25, chars.len());
+
+                                            let before: String =
+                                                chars[start_char_pos..char_pos].iter().collect();
+                                            let at_pos = chars[char_pos];
+                                            let after: String =
+                                                chars[char_pos + 1..end_char_pos].iter().collect();
+
+                                            err_msg.push_str(&format!(
+                                                " - Context around column {}: `{}[{}]{}`",
+                                                column, before, at_pos, after
+                                            ));
+                                        } else {
+                                            err_msg.push_str(&format!(
+                                                " - Additionally, column {} exceeds character count (chars: {}).",
+                                                column,
+                                                chars.len()
+                                            ));
+                                        }
+                                    } else {
+                                        err_msg.push_str(&format!(
+                                            " - Additionally, column {} out of bounds (line length: {}).",
+                                            column,
+                                            line_content.len()
+                                        ));
+                                    }
+                                } else {
+                                    err_msg.push_str(&format!(
+                                        " - Additionally, could not parse column number from: '{}'",
+                                        column_str
+                                    ));
+                                }
+                            } else {
+                                err_msg.push_str("- Empty column number found in error message.");
+                            }
+                        }
+
+                        log::error!("{}", err_msg);
                         if *fail_fast {
-                            anyhow::bail!(err);
+                            anyhow::bail!(err_msg);
                         }
                     }
                 },
                 Err(err) => {
-                    let err = format!("Failed to deserialize line {}: {}", line_number + 1, err);
-                    log::error!("{}", err);
-                    anyhow::bail!(err);
+                    let err_msg = format!(
+                        "Failed to deserialize file {} line {}: {}",
+                        data_file_path.display(),
+                        line_number + 1,
+                        err
+                    );
+                    log::error!("{}", err_msg);
+                    anyhow::bail!(err_msg);
                 }
             }
         }
@@ -134,6 +203,67 @@ impl Platform {
             PlatformData::Manifold(input) => manifold::standardize(&input),
             PlatformData::Metaculus(input) => metaculus::standardize(&input),
             PlatformData::Polymarket(input) => polymarket::standardize(&input),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_serde_json_error_format() {
+        // Test what serde_json error messages look like with various malformed JSON
+        let test_cases = [
+            r#"{"valid": "json", "but": "missing quote here, "invalid": "field"}"#,
+            r#"{"valid": true, "another": false, "bad_comma":, "field": "value"}"#,
+            r#"{"unclosed": "string"#,
+            r#"{"trailing": "comma",}"#,
+        ];
+
+        for (i, malformed_json) in test_cases.iter().enumerate() {
+            println!("Test case {}: {}", i + 1, malformed_json);
+            let result: Result<serde_json::Value, _> = serde_json::from_str(malformed_json);
+            if let Err(err) = result {
+                println!("  Serde JSON error: {}", err);
+
+                // Test our parsing logic
+                let err_str = err.to_string();
+                if let Some(column_start) = err_str.find("column ") {
+                    let column_substr = &err_str[column_start + 7..];
+                    let column_end = column_substr
+                        .find(|c: char| !c.is_ascii_digit())
+                        .unwrap_or(column_substr.len());
+                    let column_str = &column_substr[..column_end];
+
+                    if !column_str.is_empty() {
+                        if let Ok(column) = column_str.parse::<usize>() {
+                            println!("  Extracted column: {}", column);
+
+                            // Show context like our real code does
+                            if column > 0 && column <= malformed_json.len() {
+                                let chars: Vec<char> = malformed_json.chars().collect();
+                                if column - 1 < chars.len() {
+                                    let char_pos = column - 1;
+                                    let start_char_pos = char_pos.saturating_sub(25);
+                                    let end_char_pos = std::cmp::min(char_pos + 25, chars.len());
+
+                                    let before: String =
+                                        chars[start_char_pos..char_pos].iter().collect();
+                                    let at_pos = chars[char_pos];
+                                    let after: String =
+                                        chars[char_pos + 1..end_char_pos].iter().collect();
+
+                                    println!("  Context: \"{}[{}]{}\"", before, at_pos, after);
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    println!("  No column information found");
+                }
+            }
+            println!();
         }
     }
 }
