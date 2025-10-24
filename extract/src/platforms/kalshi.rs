@@ -154,8 +154,8 @@ pub struct KalshiMarket {
     /// We only care about Finalized.
     pub status: KalshiMarketStatus,
     /// How the market resolved (YES or NO).
-    /// Only blank for non-Finalized markets.
-    pub result: YesNoBlank,
+    /// Only blank or null for non-Finalized markets.
+    pub result: Option<YesNoBlank>,
     /// Type of market, for potential future use.
     /// Currently the only market type is Binary.
     pub market_type: KalshiMarketType,
@@ -290,9 +290,10 @@ pub fn standardize(input: &KalshiData) -> MarketResult<Vec<MarketAndProbs>> {
                     MarketError::ProcessingError(market_id.to_owned(), e.to_string())
                 })?,
                 resolution: match input.market.result {
-                    YesNoBlank::Yes => 1.0,
-                    YesNoBlank::No => 0.0,
-                    YesNoBlank::Blank => return Err(MarketError::MarketCancelled(market_id)),
+                    Some(YesNoBlank::Yes) => 1.0,
+                    Some(YesNoBlank::No) => 0.0,
+                    Some(YesNoBlank::Blank) => return Err(MarketError::MarketCancelled(market_id)),
+                    None => return Err(MarketError::MarketCancelled(market_id)),
                 },
             };
             Ok(vec![MarketAndProbs {
