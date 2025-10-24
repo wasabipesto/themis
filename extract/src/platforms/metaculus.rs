@@ -59,6 +59,7 @@ pub struct MetaculusAggregationTypes {
     // Latest aggregation of forecast data.
     pub latest: Option<MetaculusAggregationHistoryPoint>,
     // pub score_data: MetaculusAggregationScoreData,
+    // pub movement: Unknown,
 }
 
 /// The different aggregation types that Metaculus uses.
@@ -66,13 +67,13 @@ pub struct MetaculusAggregationTypes {
 #[derive(Debug, Clone, Deserialize)]
 pub struct MetaculusAggregationSeries {
     /// The official Metaculus prediction.
-    pub metaculus_prediction: MetaculusAggregationTypes,
+    pub metaculus_prediction: Option<MetaculusAggregationTypes>,
     /// The community prediction, what we use to track predictions.
-    pub recency_weighted: MetaculusAggregationTypes,
+    pub recency_weighted: Option<MetaculusAggregationTypes>,
     /// Unknown, hidden to non-admins.
-    pub single_aggregation: MetaculusAggregationTypes,
+    pub single_aggregation: Option<MetaculusAggregationTypes>,
     /// Raw aggregation.
-    pub unweighted: MetaculusAggregationTypes,
+    pub unweighted: Option<MetaculusAggregationTypes>,
 }
 
 /// Possible question types from the Metaculus API.
@@ -340,8 +341,17 @@ fn standardize_single(
             // Get probability segments. If there are none then skip.
             // Using recency_weighted (community prediction) here, may change in the future.
             // Since this is binary, get the first (and only) prob in the set.
-            let probs = build_prob_segments(&aggregations.recency_weighted.history, 0)
-                .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?;
+            let probs = match &aggregations.recency_weighted {
+                Some(agg) => build_prob_segments(&agg.history, 0).map_err(|e| {
+                    MarketError::ProcessingError(market_id.to_owned(), e.to_string())
+                })?,
+                None => {
+                    return Err(MarketError::DataInvalid(
+                        market_id.to_owned(),
+                        "aggregations.recency_weighted not available".to_string(),
+                    ))
+                }
+            };
             if probs.is_empty() {
                 return Err(MarketError::NoMarketTrades(market_id.to_owned()));
             }
@@ -449,8 +459,17 @@ fn standardize_single(
             // Get probability segments. If there are none then skip.
             // Using recency_weighted (community prediction) here, may change in the future.
             // Since this is multiple choice, we need to use the index of the resolved option.
-            let probs = build_prob_segments(&aggregations.recency_weighted.history, index)
-                .map_err(|e| MarketError::ProcessingError(market_id.to_owned(), e.to_string()))?;
+            let probs = match &aggregations.recency_weighted {
+                Some(agg) => build_prob_segments(&agg.history, index).map_err(|e| {
+                    MarketError::ProcessingError(market_id.to_owned(), e.to_string())
+                })?,
+                None => {
+                    return Err(MarketError::DataInvalid(
+                        market_id.to_owned(),
+                        "aggregations.recency_weighted not available".to_string(),
+                    ))
+                }
+            };
             if probs.is_empty() {
                 return Err(MarketError::NoMarketTrades(market_id.to_owned()));
             }
