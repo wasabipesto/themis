@@ -17,6 +17,7 @@
 #     "pyarrow",
 #     "networkx",
 #     "scipy",
+#     "pygraphviz",
 # ]
 # ///
 
@@ -417,6 +418,7 @@ def create_cluster_hierarchy_dendrogram(
     top_k_clusters=200,
     sampling_per_cluster=25,
     html_filename="hdbscan_cluster_hierarchy.html",
+    dendrogram_filename="hdbscan_dendrogram.png",
     icicle_height=900,
     icicle_width=1400,
 ):
@@ -439,13 +441,12 @@ def create_cluster_hierarchy_dendrogram(
         sampling_per_cluster: number of members per flat cluster to sample when searching
                               for representative condensed-tree node
         html_filename: output HTML filename
+        dendrogram_filename: output scipy dendrogram PNG filename
         icicle_height/icicle_width: size of the interactive figure
 
     Returns:
         label_to_rep_node (dict): mapping flat cluster id -> representative condensed-tree node id (or None)
     """
-    os.makedirs(output_dir, exist_ok=True)
-
     # Basic checks
     if not hasattr(clusterer, "condensed_tree_"):
         raise ValueError("clusterer must have attribute 'condensed_tree_' (a fitted HDBSCAN).")
@@ -642,9 +643,111 @@ def create_cluster_hierarchy_dendrogram(
     fig.write_html(html_path, include_plotlyjs="cdn")
     print(f"[INFO] Interactive cluster hierarchy saved to: {html_path}")
 
-    # Return mapping for downstream annotation or inspection
-    print(label_to_rep_node)
-    return
+    # Create simple tree visualization using matplotlib
+    if len(edges) > 0:
+        try:
+            # Create NetworkX graph from filtered edges
+            G = nx.DiGraph()
+            G.add_edges_from(edges)
+
+            # Find leaf nodes (nodes with cluster labels)
+            leaf_nodes = [node for node in nodes_set if node_to_flat_labels.get(node, [])]
+
+            if len(leaf_nodes) > 0:
+                # Create hierarchical layout
+                plt.figure(figsize=(16, 10))
+
+                # Use hierarchical layout
+                pos = nx.nx_agraph.graphviz_layout(G, prog='dot') if hasattr(nx, 'nx_agraph') else nx.spring_layout(G, k=2, iterations=50)
+
+                # Draw edges
+                nx.draw_networkx_edges(G, pos, edge_color='gray', arrows=True, alpha=0.6, width=1)
+
+                # Prepare node colors and labels
+                node_colors = []
+                node_labels = {}
+
+                for node in G.nodes():
+                    linked_labels = node_to_flat_labels.get(node, [])
+                    if linked_labels:
+                        # This is a leaf cluster node - color it distinctly
+                        node_colors.append('lightblue')
+
+                        # Create compact label with cluster ID and top keywords
+                        label_parts = []
+                        for lab in linked_labels[:1]:  # Just first cluster per node for readability
+                            info = cluster_info_dict.get(int(lab), {})
+                            keywords = info.get("keywords", "")
+                            if isinstance(keywords, list) and keywords:
+                                kw_str = ", ".join(keywords[:2])  # Top 2 keywords
+                            elif isinstance(keywords, str) and keywords:
+                                kw_str = keywords[:20]  # Truncate
+                            else:
+                                kw_str = "no keywords"
+                            label_parts.append(f"C{lab}\n{kw_str}")
+                        node_labels[node] = "\n".join(label_parts)
+                    else:
+                        # Internal node
+                        node_colors.append('lightgray')
+                        node_labels[node] = f"{node}"
+
+                # Draw nodes
+                nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=800, alpha=0.8)
+
+                # Draw labels
+                nx.draw_networkx_labels(G, pos, labels=node_labels, font_size=8, font_weight='bold')
+
+                plt.title(f'HDBSCAN Cluster Hierarchy Tree (Top {len(top_labels)} clusters)', fontsize=14)
+                plt.axis('off')
+                plt.tight_layout()
+
+                # Save tree visualization
+                tree_path = os.path.join(output_dir, dendrogram_filename)
+                plt.savefig(tree_path, dpi=300, bbox_inches='tight', facecolor='white')
+                plt.close()
+
+                print(f"[INFO] Cluster hierarchy tree saved to: {tree_path}")
+            else:
+                print("[WARNING] No leaf clusters found for tree visualization")
+
+        except Exception as e:
+            print(f"[WARNING] Failed to create tree visualization: {str(e)}")
+            # Fallback: create simple text-based tree
+            try:
+                plt.figure(figsize=(12, 8))
+                plt.text(0.1, 0.9, f"Cluster Hierarchy Summary", fontsize=16, fontweight='bold', transform=plt.gca().transAxes)
+
+                y_pos = 0.8
+                for i, (node, labels) in enumerate(node_to_flat_labels.items()):
+                    if i >= 20:  # Limit display
+                        break
+                    info_lines = []
+                    for lab in labels[:2]:
+                        info = cluster_info_dict.get(int(lab), {})
+                        keywords = info.get("keywords", "")
+                        if isinstance(keywords, list):
+                            kw_str = ", ".join(keywords[:3])
+                        else:
+                            kw_str = str(keywords)[:40]
+                        info_lines.append(f"Cluster {lab}: {kw_str}")
+
+                    plt.text(0.1, y_pos, "\n".join(info_lines), fontsize=10, transform=plt.gca().transAxes)
+                    y_pos -= 0.08
+
+                plt.axis('off')
+                plt.tight_layout()
+
+                fallback_path = os.path.join(output_dir, dendrogram_filename)
+                plt.savefig(fallback_path, dpi=300, bbox_inches='tight', facecolor='white')
+                plt.close()
+
+                print(f"[INFO] Fallback cluster summary saved to: {fallback_path}")
+            except:
+                print("[WARNING] Could not create any tree visualization")
+    else:
+        print("[WARNING] No edges found for tree visualization")
+
+    return label_to_rep_node
 
 def apply_pca_reduction(embeddings_df, target_dim):
     """
