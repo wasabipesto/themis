@@ -411,6 +411,438 @@ def create_clusters_hdbscan(embeddings_df, min_cluster_size, output_dir):
         'cluster': cluster_labels
     }), clusterer
 
+def generate_simplified_tree_structure(
+    clusterer,
+    cluster_info_dict,
+    top_k_clusters=200,
+    sampling_per_cluster=25,
+):
+    """
+    Generate a simplified tree structure from an HDBSCAN clusterer.
+
+    This function extracts the most important clusters and builds a hierarchical
+    tree structure containing all relevant information needed for visualization.
+
+    Args:
+        clusterer: fitted HDBSCAN object (must have condensed_tree_ and labels_)
+        cluster_info_dict: dict mapping flat cluster_id -> {'keywords': [...], ...}
+        top_k_clusters: maximum number of flat clusters to include
+        sampling_per_cluster: number of members per cluster to sample when finding
+                             representative condensed-tree nodes
+
+    Returns:
+        dict: Contains all tree structure information with keys:
+            - 'label_to_rep_node': mapping flat cluster id -> representative node id
+            - 'nodes_set': set of all nodes in the simplified tree
+            - 'edges': list of (parent, child) edges in the tree
+            - 'node_info': dict mapping node_id -> {label, hover_text, value, flat_labels}
+            - 'label_to_members': mapping flat cluster id -> list of member indices
+            - 'selection_reason': whether clusters were selected by 'persistence' or 'size'
+            - 'top_labels': list of selected cluster labels
+            - 'condensed_df': the condensed tree dataframe
+    """
+    # Validate input clusterer
+    if not hasattr(clusterer, "condensed_tree_"):
+        raise ValueError("clusterer must have attribute 'condensed_tree_' (a fitted HDBSCAN).")
+    if not hasattr(clusterer, "labels_"):
+        raise ValueError("clusterer must have attribute 'labels_'.")
+
+    labels = np.asarray(clusterer.labels_)
+    n_samples = len(labels)
+    print(f"[INFO] Processing {n_samples} samples from fitted clusterer")
+
+    # Convert condensed tree to DataFrame for easier processing
+    condensed_df = clusterer.condensed_tree_.to_pandas().copy()
+    condensed_df = condensed_df.astype({"parent": int, "child": int, "child_size": int, "lambda_val": float})
+
+    # Extract flat clusters (excluding noise with label -1)
+    flat_labels = labels[labels >= 0]
+    if flat_labels.size == 0:
+        raise ValueError("No non-noise clusters found in clusterer.labels_. Nothing to process.")
+
+    unique_labels = np.unique(flat_labels)
+    label_to_members = {int(lab): np.where(labels == lab)[0].tolist() for lab in unique_labels}
+    print(f"[INFO] Found {len(unique_labels)} non-noise flat clusters")
+
+    # Select top clusters by persistence (preferred) or size (fallback)
+    persistence = getattr(clusterer, "cluster_persistence_", None)
+    if persistence is not None and len(persistence) >= len(unique_labels):
+        # Use cluster persistence for selection (higher persistence = more stable cluster)
+        label_persistence = {int(l): float(persistence[int(l)]) for l in unique_labels if int(l) < len(persistence)}
+        selected_sorted = sorted(label_persistence.items(), key=lambda kv: kv[1], reverse=True)
+        selection_reason = "persistence"
+        print(f"[INFO] Selecting clusters by persistence (stability measure)")
+    else:
+        # Fallback to cluster size
+        label_size = {int(l): len(label_to_members[int(l)]) for l in unique_labels}
+        selected_sorted = sorted(label_size.items(), key=lambda kv: kv[1], reverse=True)
+        selection_reason = "size"
+        print(f"[INFO] Selecting clusters by size (member count)")
+
+    top_labels = [int(k) for k, _ in selected_sorted[:top_k_clusters]]
+    print(f"[INFO] Selected top {len(top_labels)} clusters by {selection_reason}")
+
+    # Build parent-child mapping from condensed tree
+    condensed_parent = condensed_df.set_index("child")["parent"].to_dict()
+
+    # Helper function to find the first cluster ancestor of a data point
+    def first_cluster_ancestor_of_point(pt_idx, max_steps=2000):
+        """
+        Climb from a sample index to the first condensed-tree node >= n_samples.
+        This finds the representative cluster node for a data point.
+        """
+        cur = int(pt_idx)
+        steps = 0
+        visited = set()
+        while True:
+            if cur in visited:
+                return None  # Cycle detected
+            visited.add(cur)
+            if cur >= n_samples:
+                return cur  # Found cluster node
+            if cur not in condensed_parent:
+                return None  # No parent found
+            cur = int(condensed_parent[cur])
+            steps += 1
+            if steps > max_steps:
+                return None  # Safety guard against infinite loops
+
+    # Map each selected flat cluster to a representative condensed-tree node
+    label_to_rep_node = {}
+    for lab in top_labels:
+        members = label_to_members.get(lab, [])
+        if not members:
+            label_to_rep_node[lab] = None
+            continue
+
+        # Sample members to find the most common ancestor node
+        sample = members[:sampling_per_cluster] if len(members) > sampling_per_cluster else members
+        anc_counts = Counter()
+        for m in sample:
+            anc = first_cluster_ancestor_of_point(int(m))
+            if anc is not None:
+                anc_counts[anc] += 1
+
+        if anc_counts:
+            # Choose the ancestor node seen most often among sampled members
+            rep = anc_counts.most_common(1)[0][0]
+            label_to_rep_node[lab] = int(rep)
+        else:
+            label_to_rep_node[lab] = None
+
+    # Build the complete node set: representative nodes + all their ancestors
+    nodes_set = set()
+    for rep in label_to_rep_node.values():
+        if rep is None:
+            continue
+        # Trace up to root, adding all ancestor nodes
+        cur = rep
+        while True:
+            if cur in nodes_set:
+                break  # Already processed this branch
+            nodes_set.add(cur)
+            if cur in condensed_parent:
+                cur = int(condensed_parent[cur])
+            else:
+                break  # Reached root
+
+    if not nodes_set:
+        raise RuntimeError("Could not map any flat cluster to condensed-tree nodes")
+
+    # Extract edges within our simplified tree
+    edges = []
+    for child, parent in condensed_parent.items():
+        child_i, parent_i = int(child), int(parent)
+        if child_i in nodes_set and parent_i in nodes_set:
+            edges.append((parent_i, child_i))
+
+    # Create reverse mapping: condensed node -> flat labels that use it
+    node_to_flat_labels = defaultdict(list)
+    for lab, rep in label_to_rep_node.items():
+        if rep is not None:
+            node_to_flat_labels[rep].append(lab)
+
+    # Generate comprehensive node information
+    node_info = {}
+    for node in nodes_set:
+        if node < n_samples:
+            # Individual data point node
+            info = {
+                'label': f"pt-{node}",
+                'hover_text': f"point {node}",
+                'value': 1,
+                'flat_labels': []
+            }
+        else:
+            linked_labels = node_to_flat_labels.get(node, [])
+            if linked_labels:
+                # Node representing one or more flat clusters
+                sizes = [len(label_to_members.get(l, [])) for l in linked_labels]
+                keywords = []
+                for l in linked_labels:
+                    cluster_info = cluster_info_dict.get(int(l), {})
+                    cluster_keywords = cluster_info.get("keywords", "")
+                    if isinstance(cluster_keywords, list):
+                        keywords.extend(cluster_keywords[:3])  # Top 3 keywords per cluster
+                    elif isinstance(cluster_keywords, str):
+                        keywords.append(cluster_keywords[:40])  # Truncate long strings
+
+                info = {
+                    'label': f"Cluster {'/'.join(str(x) for x in linked_labels)}",
+                    'hover_text': f"flat_labels: {linked_labels}<br>size: {sum(sizes)}<br>keywords: {keywords}",
+                    'value': sum(sizes) if sum(sizes) > 0 else 1,
+                    'flat_labels': linked_labels
+                }
+            else:
+                # Internal tree node without direct flat cluster mapping
+                child_rows = condensed_df[condensed_df["parent"] == node]
+                est_size = int(child_rows["child_size"].sum()) if not child_rows.empty else 1
+
+                info = {
+                    'label': f"Node-{node}",
+                    'hover_text': f"internal node {node}<br>est_size: {est_size}",
+                    'value': est_size,
+                    'flat_labels': []
+                }
+
+        node_info[node] = info
+
+    return {
+        'label_to_rep_node': label_to_rep_node,
+        'nodes_set': nodes_set,
+        'edges': edges,
+        'node_info': node_info,
+        'label_to_members': label_to_members,
+        'selection_reason': selection_reason,
+        'top_labels': top_labels,
+        'condensed_df': condensed_df
+    }
+
+def create_interactive_hierarchy_plot(tree_structure, output_dir, html_filename="hdbscan_cluster_hierarchy.html",
+                                    icicle_height=900, icicle_width=1400):
+    """
+    Create an interactive HTML plot from the simplified tree structure.
+
+    Uses Plotly Icicle chart to create a left-to-right hierarchical visualization
+    with hover information containing cluster details and keywords.
+
+    Args:
+        tree_structure: dict returned from generate_simplified_tree_structure()
+        output_dir: directory where the HTML file will be saved
+        html_filename: name of the output HTML file
+        icicle_height/icicle_width: dimensions of the interactive figure
+
+    Returns:
+        str: path to the saved HTML file
+    """
+    nodes_set = tree_structure['nodes_set']
+    node_info = tree_structure['node_info']
+    selection_reason = tree_structure['selection_reason']
+    top_labels = tree_structure['top_labels']
+    condensed_df = tree_structure['condensed_df']
+
+    # Build parent-child relationships for Plotly
+    condensed_parent = condensed_df.set_index("child")["parent"].to_dict()
+    parent_map = {int(child): int(parent) for child, parent in condensed_parent.items()
+                  if int(child) in nodes_set and int(parent) in nodes_set}
+
+    # Prepare data arrays for Plotly Icicle chart
+    ids = []
+    labels_plot = []
+    parents = []
+    values = []
+    hover_texts = []
+
+    for node in nodes_set:
+        info = node_info[node]
+
+        ids.append(str(node))
+        labels_plot.append(info['label'])
+        values.append(info['value'])
+        hover_texts.append(info['hover_text'])
+
+        # Set parent relationship (empty string for root nodes)
+        parent = parent_map.get(node, "")
+        parents.append(str(parent) if parent != "" else "")
+
+    # Create the interactive Icicle visualization
+    icicle = go.Icicle(
+        ids=ids,
+        labels=labels_plot,
+        parents=parents,
+        values=values,
+        hovertext=hover_texts,
+        hoverinfo="text",
+        tiling=dict(orientation="h"),  # Horizontal (left-to-right) layout
+        branchvalues="total",
+        textinfo="label+value"
+    )
+
+    fig = go.Figure(icicle)
+    fig.update_layout(
+        title=f"HDBSCAN Cluster Hierarchy - Top {len(top_labels)} clusters by {selection_reason}",
+        width=icicle_width,
+        height=icicle_height,
+        margin=dict(t=60, l=20, r=20, b=20)
+    )
+
+    # Save the interactive HTML file
+    html_path = os.path.join(output_dir, html_filename)
+    fig.write_html(html_path, include_plotlyjs="cdn")
+    print(f"[INFO] Interactive cluster hierarchy saved to: {html_path}")
+
+    return html_path
+
+def create_static_tree_plot(tree_structure, cluster_info_dict, output_dir,
+                          dendrogram_filename="hdbscan_dendrogram.png"):
+    """
+    Create a static tree plot using matplotlib and NetworkX.
+
+    Generates a hierarchical tree visualization showing cluster relationships
+    with nodes colored and labeled according to their cluster information.
+
+    Args:
+        tree_structure: dict returned from generate_simplified_tree_structure()
+        cluster_info_dict: dict mapping flat cluster_id -> {'keywords': [...], ...}
+        output_dir: directory where the PNG file will be saved
+        dendrogram_filename: name of the output PNG file
+
+    Returns:
+        str: path to the saved PNG file, or None if creation failed
+    """
+    edges = tree_structure['edges']
+    nodes_set = tree_structure['nodes_set']
+    node_info = tree_structure['node_info']
+    top_labels = tree_structure['top_labels']
+
+    if not edges:
+        print("[WARNING] No edges found for tree visualization")
+        return None
+
+    try:
+        # Create directed graph from the tree edges
+        G = nx.DiGraph()
+        G.add_edges_from(edges)
+
+        # Find nodes that represent actual clusters (have flat_labels)
+        cluster_nodes = [node for node in nodes_set if node_info[node]['flat_labels']]
+
+        if not cluster_nodes:
+            print("[WARNING] No cluster nodes found for tree visualization")
+            return None
+
+        # Set up the plot
+        plt.figure(figsize=(16, 10))
+
+        # Create hierarchical layout (try graphviz first, fallback to spring layout)
+        try:
+            if hasattr(nx, 'nx_agraph'):
+                pos = nx.nx_agraph.graphviz_layout(G, prog='dot')
+            else:
+                raise ImportError("nx_agraph not available")
+        except (ImportError, Exception):
+            print("[INFO] Using spring layout for tree visualization")
+            pos = nx.spring_layout(G, k=2, iterations=50)
+
+        # Draw edges first (so they appear behind nodes)
+        nx.draw_networkx_edges(G, pos, edge_color='gray', arrows=True, alpha=0.6, width=1)
+
+        # Prepare node styling
+        node_colors = []
+        node_labels = {}
+
+        for node in G.nodes():
+            info = node_info[node]
+            flat_labels = info['flat_labels']
+
+            if flat_labels:
+                # Cluster node - color distinctly and add informative label
+                node_colors.append('lightblue')
+
+                # Create compact label with cluster ID and keywords
+                label_parts = []
+                for lab in flat_labels[:1]:  # Limit to first cluster for readability
+                    cluster_info = cluster_info_dict.get(int(lab), {})
+                    keywords = cluster_info.get("keywords", "")
+
+                    if isinstance(keywords, list) and keywords:
+                        kw_str = ", ".join(keywords[:2])  # Top 2 keywords
+                    elif isinstance(keywords, str) and keywords:
+                        kw_str = keywords[:20]  # Truncate long strings
+                    else:
+                        kw_str = "no keywords"
+
+                    label_parts.append(f"C{lab}\n{kw_str}")
+
+                node_labels[node] = "\n".join(label_parts)
+            else:
+                # Internal node - color as gray and use simple label
+                node_colors.append('lightgray')
+                node_labels[node] = f"{node}"
+
+        # Draw nodes
+        nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=800, alpha=0.8)
+
+        # Draw labels
+        nx.draw_networkx_labels(G, pos, labels=node_labels, font_size=8, font_weight='bold')
+
+        plt.title(f'HDBSCAN Cluster Hierarchy Tree (Top {len(top_labels)} clusters)', fontsize=14)
+        plt.axis('off')
+        plt.tight_layout()
+
+        # Save the tree visualization
+        tree_path = os.path.join(output_dir, dendrogram_filename)
+        plt.savefig(tree_path, dpi=300, bbox_inches='tight', facecolor='white')
+        plt.close()
+
+        print(f"[INFO] Cluster hierarchy tree saved to: {tree_path}")
+        return tree_path
+
+    except Exception as e:
+        print(f"[WARNING] Failed to create tree visualization: {str(e)}")
+
+        # Fallback: create simple text-based summary
+        try:
+            plt.figure(figsize=(12, 8))
+            plt.text(0.1, 0.9, "Cluster Hierarchy Summary", fontsize=16, fontweight='bold',
+                    transform=plt.gca().transAxes)
+
+            y_pos = 0.8
+            cluster_count = 0
+            for node in nodes_set:
+                info = node_info[node]
+                if info['flat_labels'] and cluster_count < 20:  # Limit display
+                    info_lines = []
+                    for lab in info['flat_labels'][:2]:  # Max 2 labels per node
+                        cluster_info = cluster_info_dict.get(int(lab), {})
+                        keywords = cluster_info.get("keywords", "")
+
+                        if isinstance(keywords, list):
+                            kw_str = ", ".join(keywords[:3])
+                        else:
+                            kw_str = str(keywords)[:40]
+
+                        info_lines.append(f"Cluster {lab}: {kw_str}")
+
+                    plt.text(0.1, y_pos, "\n".join(info_lines), fontsize=10,
+                            transform=plt.gca().transAxes)
+                    y_pos -= 0.08
+                    cluster_count += 1
+
+            plt.axis('off')
+            plt.tight_layout()
+
+            fallback_path = os.path.join(output_dir, dendrogram_filename)
+            plt.savefig(fallback_path, dpi=300, bbox_inches='tight', facecolor='white')
+            plt.close()
+
+            print(f"[INFO] Fallback cluster summary saved to: {fallback_path}")
+            return fallback_path
+
+        except Exception as fallback_e:
+            print(f"[WARNING] Could not create any tree visualization: {str(fallback_e)}")
+            return None
+
 def create_cluster_hierarchy_dendrogram(
     clusterer,
     cluster_info_dict,
@@ -423,331 +855,76 @@ def create_cluster_hierarchy_dendrogram(
     icicle_width=1400,
 ):
     """
-    Create an interactive left-to-right hierarchical visualization (Plotly Icicle)
-    from an HDBSCAN fitted clusterer, annotated with keywords.
+    Create hierarchical visualizations from an HDBSCAN fitted clusterer.
 
-    Behaviour:
-      - For large datasets it prunes to the top_k_clusters (by persistence or size),
-        maps each flat cluster to a representative condensed-tree node, then
-        builds the ancestor chain for those nodes and draws an Icicle diagram.
-      - Hover text contains flat cluster ID(s), member count and keywords.
-      - Saves an interactive HTML to output_dir and returns a mapping dict.
+    This wrapper function combines three focused operations:
+    1. Generate a simplified tree structure from the clusterer
+    2. Create an interactive HTML plot using Plotly
+    3. Create a static tree plot using matplotlib
 
     Args:
-        clusterer: fitted HDBSCAN object (must have condensed_tree_ and labels_).
+        clusterer: fitted HDBSCAN object (must have condensed_tree_ and labels_)
         cluster_info_dict: dict mapping flat cluster_id -> {'keywords': [...], ...}
-        output_dir: directory where the HTML will be written
-        top_k_clusters: maximum number of flat clusters to include in the summary
-        sampling_per_cluster: number of members per flat cluster to sample when searching
-                              for representative condensed-tree node
-        html_filename: output HTML filename
-        dendrogram_filename: output scipy dendrogram PNG filename
-        icicle_height/icicle_width: size of the interactive figure
+        output_dir: directory where output files will be saved
+        top_k_clusters: maximum number of flat clusters to include
+        sampling_per_cluster: number of members per cluster to sample for node mapping
+        html_filename: output HTML filename for interactive plot
+        dendrogram_filename: output PNG filename for static plot
+        icicle_height/icicle_width: dimensions of the interactive figure
 
     Returns:
-        label_to_rep_node (dict): mapping flat cluster id -> representative condensed-tree node id (or None)
+        dict: Contains the tree structure and file paths:
+            - 'label_to_rep_node': mapping flat cluster id -> representative node id
+            - 'html_path': path to interactive HTML file (or None if failed)
+            - 'tree_path': path to static tree PNG file (or None if failed)
+            - 'tree_structure': complete tree structure dict for further analysis
     """
-    # Basic checks
-    if not hasattr(clusterer, "condensed_tree_"):
-        raise ValueError("clusterer must have attribute 'condensed_tree_' (a fitted HDBSCAN).")
-    if not hasattr(clusterer, "labels_"):
-        raise ValueError("clusterer must have attribute 'labels_'.")
+    print("[INFO] Starting cluster hierarchy visualization generation...")
 
-    labels = np.asarray(clusterer.labels_)
-    n_samples = len(labels)
-    print(f"[INFO] Samples in fitted clusterer: {n_samples}")
-
-    # condensed_tree -> pandas dataframe with columns: parent, child, lambda_val, child_size
-    condensed_df = clusterer.condensed_tree_.to_pandas().copy()
-    # Robust cast
-    condensed_df = condensed_df.astype({"parent": int, "child": int, "child_size": int, "lambda_val": float})
-
-    # Map flat labels -> member indices (exclude noise: label == -1)
-    flat_labels = labels[labels >= 0]
-    if flat_labels.size == 0:
-        raise ValueError("No non-noise clusters found in clusterer.labels_. Nothing to plot.")
-    unique_labels = np.unique(flat_labels)
-    label_to_members = {int(lab): np.where(labels == lab)[0].tolist() for lab in unique_labels}
-    print(f"[INFO] Found {len(unique_labels)} non-noise flat clusters.")
-
-    # Choose top clusters by persistence (preferred) or by size
-    persistence = getattr(clusterer, "cluster_persistence_", None)
-    if persistence is not None and len(persistence) >= len(unique_labels):
-        # persistence array is aligned to 0..n_clusters-1 in standard HDBSCAN
-        label_persistence = {int(l): float(persistence[int(l)]) for l in unique_labels if int(l) < len(persistence)}
-        selected_sorted = sorted(label_persistence.items(), key=lambda kv: kv[1], reverse=True)
-        reason = "persistence"
-    else:
-        # fallback: use cluster size (member count)
-        label_size = {int(l): len(label_to_members[int(l)]) for l in unique_labels}
-        selected_sorted = sorted(label_size.items(), key=lambda kv: kv[1], reverse=True)
-        reason = "size"
-
-    top_labels = [int(k) for k, _ in selected_sorted[:top_k_clusters]]
-    print(f"[INFO] Selected top {len(top_labels)} clusters by {reason} for the summary view.")
-
-    # Build condensed tree parent mapping (child -> parent)
-    condensed_parent = condensed_df.set_index("child")["parent"].to_dict()
-
-    # Helper: climb from a sample index to the first condensed-tree node >= n_samples
-    def first_cluster_ancestor_of_point(pt_idx, max_steps=2000):
-        cur = int(pt_idx)
-        steps = 0
-        visited = set()
-        while True:
-            if cur in visited:
-                return None
-            visited.add(cur)
-            if cur >= n_samples:
-                return cur
-            if cur not in condensed_parent:
-                return None
-            cur = int(condensed_parent[cur])
-            steps += 1
-            if steps > max_steps:
-                # safety guard for malformed trees
-                return None
-
-    # Map each selected flat cluster label to a representative condensed-tree node id
-    label_to_rep_node = {}
-    for lab in top_labels:
-        members = label_to_members.get(lab, [])
-        if not members:
-            label_to_rep_node[lab] = None
-            continue
-        # sample a few members to find common ancestor node
-        sample = members[:sampling_per_cluster] if len(members) > sampling_per_cluster else members
-        anc_counts = Counter()
-        for m in sample:
-            anc = first_cluster_ancestor_of_point(int(m))
-            if anc is not None:
-                anc_counts[anc] += 1
-        if anc_counts:
-            # pick the ancestor seen most often among sampled members
-            rep = anc_counts.most_common(1)[0][0]
-            label_to_rep_node[lab] = int(rep)
-        else:
-            label_to_rep_node[lab] = None
-
-    # Build set of nodes: all representative nodes plus their ancestors up to root
-    nodes_set = set()
-    for rep in label_to_rep_node.values():
-        if rep is None:
-            continue
-        cur = rep
-        while True:
-            if cur in nodes_set:
-                break
-            nodes_set.add(cur)
-            if cur in condensed_parent:
-                cur = int(condensed_parent[cur])
-            else:
-                break
-
-    if not nodes_set:
-        raise RuntimeError("Could not map any flat cluster to condensed-tree nodes. Aborting.")
-
-    # Build parent/child edges restricted to nodes_set
-    edges = []
-    for child, parent in condensed_parent.items():
-        child_i, parent_i = int(child), int(parent)
-        if child_i in nodes_set and parent_i in nodes_set:
-            edges.append((parent_i, child_i))
-
-    # Prepare node labels, parents and hover text for Plotly Icicle
-    node_to_label = {}
-    node_to_hover = {}
-    node_to_value = {}
-
-    # Map condensed node -> flat labels that reference it (can be multiple)
-    node_to_flat_labels = defaultdict(list)
-    for lab, rep in label_to_rep_node.items():
-        if rep is not None:
-            node_to_flat_labels[rep].append(lab)
-
-    # For each node in nodes_set, compute display label, hover text, and an approximate 'value' (size)
-    for node in nodes_set:
-        if node < n_samples:
-            lbl = f"pt-{node}"
-            hover = f"point {node}"
-            value = 1
-        else:
-            linked_labels = node_to_flat_labels.get(node, [])
-            if linked_labels:
-                # Aggregate keywords and sizes for annotated nodes
-                sizes = [len(label_to_members.get(l, [])) for l in linked_labels]
-                keywords = []
-                for l in linked_labels:
-                    info = cluster_info_dict.get(int(l), {})
-                    keywords.append(info.get("keywords", "")[:40])
-                lbl = f"Cluster {'/'.join(str(x) for x in linked_labels)}"
-                hover = f"flat_labels: {linked_labels}<br>size: {sum(sizes)}<br>keywords: {keywords}"
-                value = sum(sizes) if sum(sizes) > 0 else 1
-            else:
-                # internal node without direct flat-label mapping
-                # estimate size by summing child sizes in condensed_df where parent == node
-                child_rows = condensed_df[condensed_df["parent"] == node]
-                est = int(child_rows["child_size"].sum()) if not child_rows.empty else 1
-                lbl = f"Node-{node}"
-                hover = f"internal node {node}<br>est_size: {est}"
-                value = est
-        node_to_label[node] = lbl
-        node_to_hover[node] = hover
-        node_to_value[node] = int(value)
-
-    # Build arrays for Plotly: ids, labels, parents, values, hovertext
-    ids = []
-    labels_plot = []
-    parents = []
-    values = []
-    hover = []
-
-    # Parent map for restricted nodes_set: parent_map[child] = parent
-    parent_map = {int(child): int(parent) for child, parent in condensed_parent.items() if int(child) in nodes_set and int(parent) in nodes_set}
-
-    # Determine root nodes (those with no parent in our restricted set)
-    child_nodes = set(parent_map.keys())
-    root_nodes = [n for n in nodes_set if n not in child_nodes]
-
-    # Populate arrays
-    for node in nodes_set:
-        ids.append(str(node))
-        labels_plot.append(node_to_label[node])
-        parent = parent_map.get(node, "")
-        parents.append(str(parent) if parent != "" else "")
-        values.append(node_to_value[node])
-        hover.append(node_to_hover[node])
-
-    # Create Plotly Icicle (horizontal orientation)
-    icicle = go.Icicle(
-        ids=ids,
-        labels=labels_plot,
-        parents=parents,
-        values=values,
-        hovertext=hover,
-        hoverinfo="text",
-        tiling=dict(orientation="h"),  # left-to-right orientation
-        branchvalues="total",
-        textinfo="label+value"
+    # Step 1: Generate simplified tree structure
+    print("[INFO] Step 1: Generating simplified tree structure...")
+    tree_structure = generate_simplified_tree_structure(
+        clusterer=clusterer,
+        cluster_info_dict=cluster_info_dict,
+        top_k_clusters=top_k_clusters,
+        sampling_per_cluster=sampling_per_cluster
     )
 
-    fig = go.Figure(icicle)
-    fig.update_layout(
-        title=f"HDBSCAN cluster hierarchy (top {len(top_labels)} clusters by {reason})",
-        width=icicle_width,
-        height=icicle_height,
-        margin=dict(t=60, l=20, r=20, b=20)
-    )
+    # Step 2: Create interactive HTML plot
+    print("[INFO] Step 2: Creating interactive HTML plot...")
+    html_path = None
+    try:
+        html_path = create_interactive_hierarchy_plot(
+            tree_structure=tree_structure,
+            output_dir=output_dir,
+            html_filename=html_filename,
+            icicle_height=icicle_height,
+            icicle_width=icicle_width
+        )
+    except Exception as e:
+        print(f"[WARNING] Failed to create interactive plot: {str(e)}")
 
-    html_path = os.path.join(output_dir, html_filename)
-    fig.write_html(html_path, include_plotlyjs="cdn")
-    print(f"[INFO] Interactive cluster hierarchy saved to: {html_path}")
+    # Step 3: Create static tree plot
+    print("[INFO] Step 3: Creating static tree plot...")
+    tree_path = None
+    try:
+        tree_path = create_static_tree_plot(
+            tree_structure=tree_structure,
+            cluster_info_dict=cluster_info_dict,
+            output_dir=output_dir,
+            dendrogram_filename=dendrogram_filename
+        )
+    except Exception as e:
+        print(f"[WARNING] Failed to create static tree plot: {str(e)}")
 
-    # Create simple tree visualization using matplotlib
-    if len(edges) > 0:
-        try:
-            # Create NetworkX graph from filtered edges
-            G = nx.DiGraph()
-            G.add_edges_from(edges)
+    print("[INFO] Cluster hierarchy visualization generation complete!")
 
-            # Find leaf nodes (nodes with cluster labels)
-            leaf_nodes = [node for node in nodes_set if node_to_flat_labels.get(node, [])]
-
-            if len(leaf_nodes) > 0:
-                # Create hierarchical layout
-                plt.figure(figsize=(16, 10))
-
-                # Use hierarchical layout
-                pos = nx.nx_agraph.graphviz_layout(G, prog='dot') if hasattr(nx, 'nx_agraph') else nx.spring_layout(G, k=2, iterations=50)
-
-                # Draw edges
-                nx.draw_networkx_edges(G, pos, edge_color='gray', arrows=True, alpha=0.6, width=1)
-
-                # Prepare node colors and labels
-                node_colors = []
-                node_labels = {}
-
-                for node in G.nodes():
-                    linked_labels = node_to_flat_labels.get(node, [])
-                    if linked_labels:
-                        # This is a leaf cluster node - color it distinctly
-                        node_colors.append('lightblue')
-
-                        # Create compact label with cluster ID and top keywords
-                        label_parts = []
-                        for lab in linked_labels[:1]:  # Just first cluster per node for readability
-                            info = cluster_info_dict.get(int(lab), {})
-                            keywords = info.get("keywords", "")
-                            if isinstance(keywords, list) and keywords:
-                                kw_str = ", ".join(keywords[:2])  # Top 2 keywords
-                            elif isinstance(keywords, str) and keywords:
-                                kw_str = keywords[:20]  # Truncate
-                            else:
-                                kw_str = "no keywords"
-                            label_parts.append(f"C{lab}\n{kw_str}")
-                        node_labels[node] = "\n".join(label_parts)
-                    else:
-                        # Internal node
-                        node_colors.append('lightgray')
-                        node_labels[node] = f"{node}"
-
-                # Draw nodes
-                nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=800, alpha=0.8)
-
-                # Draw labels
-                nx.draw_networkx_labels(G, pos, labels=node_labels, font_size=8, font_weight='bold')
-
-                plt.title(f'HDBSCAN Cluster Hierarchy Tree (Top {len(top_labels)} clusters)', fontsize=14)
-                plt.axis('off')
-                plt.tight_layout()
-
-                # Save tree visualization
-                tree_path = os.path.join(output_dir, dendrogram_filename)
-                plt.savefig(tree_path, dpi=300, bbox_inches='tight', facecolor='white')
-                plt.close()
-
-                print(f"[INFO] Cluster hierarchy tree saved to: {tree_path}")
-            else:
-                print("[WARNING] No leaf clusters found for tree visualization")
-
-        except Exception as e:
-            print(f"[WARNING] Failed to create tree visualization: {str(e)}")
-            # Fallback: create simple text-based tree
-            try:
-                plt.figure(figsize=(12, 8))
-                plt.text(0.1, 0.9, f"Cluster Hierarchy Summary", fontsize=16, fontweight='bold', transform=plt.gca().transAxes)
-
-                y_pos = 0.8
-                for i, (node, labels) in enumerate(node_to_flat_labels.items()):
-                    if i >= 20:  # Limit display
-                        break
-                    info_lines = []
-                    for lab in labels[:2]:
-                        info = cluster_info_dict.get(int(lab), {})
-                        keywords = info.get("keywords", "")
-                        if isinstance(keywords, list):
-                            kw_str = ", ".join(keywords[:3])
-                        else:
-                            kw_str = str(keywords)[:40]
-                        info_lines.append(f"Cluster {lab}: {kw_str}")
-
-                    plt.text(0.1, y_pos, "\n".join(info_lines), fontsize=10, transform=plt.gca().transAxes)
-                    y_pos -= 0.08
-
-                plt.axis('off')
-                plt.tight_layout()
-
-                fallback_path = os.path.join(output_dir, dendrogram_filename)
-                plt.savefig(fallback_path, dpi=300, bbox_inches='tight', facecolor='white')
-                plt.close()
-
-                print(f"[INFO] Fallback cluster summary saved to: {fallback_path}")
-            except:
-                print("[WARNING] Could not create any tree visualization")
-    else:
-        print("[WARNING] No edges found for tree visualization")
-
-    return label_to_rep_node
+    return {
+        'label_to_rep_node': tree_structure['label_to_rep_node'],
+        'html_path': html_path,
+        'tree_path': tree_path,
+        'tree_structure': tree_structure
+    }
 
 def apply_pca_reduction(embeddings_df, target_dim):
     """
