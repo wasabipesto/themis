@@ -16,12 +16,14 @@
 #     "pandas",
 #     "pyarrow",
 #     "networkx",
+#     "scipy",
 # ]
 # ///
 
 import os
 import re
 import json
+import pickle
 import requests
 from dotenv import load_dotenv
 from tqdm import trange, tqdm
@@ -43,6 +45,8 @@ from collections import Counter
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
+from scipy.cluster.hierarchy import dendrogram, linkage
+from scipy.spatial.distance import squareform
 import warnings
 
 # Constants for better maintainability
@@ -345,9 +349,11 @@ def create_clusters_hdbscan(embeddings_df, min_cluster_size, output_dir):
         output_dir (str): Directory path where tree plots will be saved
 
     Returns:
-        pd.DataFrame: Cluster assignments with columns:
-            - market_id: Market identifier from input
-            - cluster (int): Cluster ID (-1 for outliers, 0+ for valid clusters)
+        tuple: (pd.DataFrame, hdbscan.HDBSCAN) containing:
+            - pd.DataFrame: Cluster assignments with columns:
+                - market_id: Market identifier from input
+                - cluster (int): Cluster ID (-1 for outliers, 0+ for valid clusters)
+            - hdbscan.HDBSCAN: Fitted clusterer object with hierarchy information
 
     Side Effects:
         - Normalizes embedding vectors using L2 normalization
@@ -405,7 +411,248 @@ def create_clusters_hdbscan(embeddings_df, min_cluster_size, output_dir):
     return pd.DataFrame({
         'market_id': market_ids,
         'cluster': cluster_labels
-    })
+    }), clusterer
+
+def create_cluster_hierarchy_dendrogram(clusterer, cluster_info_dict, output_dir):
+    """
+    Create an interactive hierarchical dendrogram from HDBSCAN cluster tree with keywords.
+
+    Extracts the HDBSCAN cluster hierarchy and creates both static and interactive
+    dendrograms showing cluster relationships, sizes, and representative keywords.
+
+    Args:
+        clusterer: Fitted HDBSCAN clusterer object with condensed_tree_ attribute
+        cluster_info_dict (dict): Cluster information with keywords for each cluster
+        output_dir (str): Directory path where dendrogram plots will be saved
+
+    Returns:
+        None
+
+    Side Effects:
+        - Saves static dendrogram as PNG file
+        - Saves interactive dendrogram as HTML file
+        - Prints progress information to stdout
+    """
+    print("Creating cluster hierarchy dendrogram...")
+
+    try:
+        # Extract the condensed tree from HDBSCAN
+        condensed_tree = clusterer.condensed_tree_
+
+        # Get cluster hierarchy information
+        cluster_tree_df = condensed_tree.to_pandas()
+
+        # Get cluster persistence (stability) information
+        cluster_persistence = clusterer.cluster_persistence_
+
+        # Create a mapping of cluster IDs to their information
+        cluster_labels = {}
+        cluster_sizes = {}
+        cluster_keywords = {}
+        cluster_persistence_values = {}
+
+        for cluster_id, info in cluster_info_dict.items():
+            if cluster_id != -1:  # Skip outliers
+                cluster_labels[cluster_id] = f"Cluster {cluster_id}"
+                cluster_sizes[cluster_id] = info.get('market_count', 0)
+                keywords = info.get('keywords', 'No keywords')
+                cluster_keywords[cluster_id] = keywords[:60] + '...' if len(keywords) > 60 else keywords
+                # Get persistence from HDBSCAN if available
+                if hasattr(clusterer, 'cluster_persistence_') and cluster_id < len(cluster_persistence):
+                    cluster_persistence_values[cluster_id] = cluster_persistence[cluster_id]
+                else:
+                    cluster_persistence_values[cluster_id] = 0.0
+
+        if not cluster_labels:
+            print("No valid clusters found for dendrogram")
+            return
+
+        # Create static matplotlib dendrogram using HDBSCAN condensed tree structure
+        plt.figure(figsize=(15, 10))
+
+        # Extract the cluster hierarchy from condensed tree
+        cluster_tree_filtered = cluster_tree_df[cluster_tree_df['child_size'] > 1].copy()
+
+        if len(cluster_tree_filtered) == 0:
+            print("No hierarchical structure found in condensed tree")
+            return
+
+        # Create a tree visualization using the condensed tree structure
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 12))
+
+        # Plot 1: HDBSCAN condensed tree (built-in visualization)
+        condensed_tree.plot(axis=ax1, select_clusters=False)
+        ax1.set_title("HDBSCAN Condensed Tree", fontsize=14, pad=10)
+        ax1.set_xlabel("Number of Points")
+        ax1.set_ylabel("Lambda (1/distance)")
+
+        # Plot 2: Custom cluster relationship visualization
+        cluster_ids = sorted(cluster_labels.keys())
+        if len(cluster_ids) > 1:
+            # Simple horizontal layout showing clusters by persistence
+            x_positions = list(range(len(cluster_ids)))
+            y_values = []
+
+            # Get birth lambda for each cluster from the condensed tree
+            for cid in cluster_ids:
+                # Find the lambda value where this cluster becomes stable
+                # Look for entries where the child is this cluster
+                cluster_entries = cluster_tree_df[cluster_tree_df['child'] == cid]
+                if not cluster_entries.empty:
+                    # Use the maximum lambda value (when cluster becomes most stable)
+                    birth_lambda = cluster_entries['lambda_val'].max()
+                else:
+                    # If not found, use persistence value or default
+                    birth_lambda = cluster_persistence_values.get(cid, 0.1)
+                y_values.append(birth_lambda)
+
+            # Draw nodes
+            for i, (cid, y_val) in enumerate(zip(cluster_ids, y_values)):
+                # Draw node
+                size = max(50, np.sqrt(cluster_sizes.get(cid, 1)) * 20)
+                ax2.scatter(i, y_val, s=size, alpha=0.7,
+                           c=cluster_persistence_values.get(cid, 0),
+                           cmap='viridis', edgecolors='black', linewidth=1)
+
+                # Add cluster label
+                ax2.annotate(f'C{cid}\n({cluster_sizes.get(cid, 0)})',
+                           (i, y_val), xytext=(0, 20),
+                           textcoords='offset points', fontsize=8, ha='center',
+                           bbox=dict(boxstyle='round,pad=0.2', facecolor='white', alpha=0.8))
+
+            # Draw connecting lines between adjacent clusters
+            #for i in range(len(cluster_ids) - 1):
+            #    ax2.plot([i, i+1], [y_values[i], y_values[i+1]],
+            #            'k-', alpha=0.3, linewidth=1)
+
+        ax2.set_title("Cluster Hierarchy Relationships", fontsize=14, pad=10)
+        ax2.set_xlabel("Cluster Order (by birth persistence)")
+        ax2.set_ylabel("Lambda (cluster birth level)")
+        ax2.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        plt.savefig(f"{output_dir}/cluster_hierarchy_dendrogram.png",
+                   format="png", bbox_inches="tight", dpi=300)
+        plt.close()
+        print(f"Static cluster hierarchy saved to {output_dir}/cluster_hierarchy_dendrogram.png")
+
+        # Create interactive dendrogram using Plotly
+        print("Creating interactive cluster hierarchy visualization...")
+
+        fig = go.Figure()
+
+        # Add nodes for each cluster with improved positioning
+        cluster_ids = sorted(cluster_labels.keys())
+
+        if len(cluster_ids) > 1:
+            # Calculate positions based on cluster relationships and persistence
+            x_positions = list(range(len(cluster_ids)))
+            y_positions = [cluster_persistence_values.get(cid, 0) for cid in cluster_ids]
+        else:
+            x_positions = [0]
+            y_positions = [1]
+
+        # Create hover text with detailed information
+        hover_text = []
+        for cid in cluster_ids:
+            persistence = cluster_persistence_values.get(cid, 0)
+            hover_text.append(
+                f"<b>Cluster {cid}</b><br>" +
+                f"Markets: {cluster_sizes.get(cid, 0)}<br>" +
+                f"Persistence: {persistence:.3f}<br>" +
+                f"Keywords: {cluster_keywords.get(cid, 'None')}<br>" +
+                f"<extra></extra>"
+            )
+
+        # Add cluster nodes
+        fig.add_trace(go.Scatter(
+            x=x_positions,
+            y=y_positions,
+            mode='markers+text',
+            marker=dict(
+                size=[max(10, np.sqrt(cluster_sizes.get(cid, 1)) * 5) for cid in cluster_ids],
+                color=[cluster_persistence_values.get(cid, 0) for cid in cluster_ids],
+                colorscale='Viridis',
+                showscale=True,
+                colorbar=dict(title="Cluster<br>Persistence"),
+                line=dict(width=2, color='white')
+            ),
+            text=[f"C{cid}" for cid in cluster_ids],
+            textposition="middle center",
+            textfont=dict(color="white", size=11, family="Arial Black"),
+            hovertemplate=hover_text,
+            name="Clusters",
+            showlegend=False
+        ))
+
+        # Add cluster relationship lines from condensed tree
+        if len(cluster_ids) > 1:
+            for _, row in cluster_tree_filtered.iterrows():
+                parent_id = row['parent']
+                child_id = row['child']
+
+                if parent_id in cluster_ids and child_id in cluster_ids:
+                    parent_idx = cluster_ids.index(parent_id)
+                    child_idx = cluster_ids.index(child_id)
+
+                    fig.add_trace(go.Scatter(
+                        x=[x_positions[parent_idx], x_positions[child_idx]],
+                        y=[y_positions[parent_idx] + 0.1, y_positions[child_idx] + 0.1],
+                        mode='lines',
+                        line=dict(color='rgba(100,100,100,0.5)', width=2),
+                        showlegend=False,
+                        hoverinfo='skip'
+                    ))
+
+        fig.update_layout(
+            title=dict(
+                text="Interactive HDBSCAN Cluster Hierarchy<br><sub>Node size ∝ market count, color = persistence (stability), ordered by cluster ID<br>Persistence: Higher values = more stable/confident clusters</sub>",
+                x=0.5,
+                font=dict(size=16)
+            ),
+            xaxis=dict(
+                title="Cluster Index",
+                showgrid=True,
+                tickmode='array',
+                tickvals=x_positions,
+                ticktext=[f"Cluster {cid}" for cid in cluster_ids]
+            ),
+            yaxis=dict(
+                title="Cluster Persistence",
+                showgrid=True
+            ),
+            height=700,
+            hovermode='closest',
+            plot_bgcolor='rgba(240,240,240,0.3)',
+            font=dict(family="Arial", size=12)
+        )
+
+        # Save interactive plot
+        fig.write_html(f"{output_dir}/cluster_hierarchy_interactive.html")
+        print(f"Interactive cluster hierarchy saved to {output_dir}/cluster_hierarchy_interactive.html")
+
+        # Create a detailed hierarchy summary table
+        hierarchy_data = []
+        for cid in cluster_ids:
+            hierarchy_data.append({
+                'Cluster_ID': cid,
+                'Market_Count': cluster_sizes.get(cid, 0),
+                'Persistence': round(cluster_persistence_values.get(cid, 0), 4),
+                'Keywords': cluster_keywords.get(cid, 'None'),
+                'Top_Market': cluster_info_dict.get(cid, {}).get('top_market_title', 'N/A')[:100]
+            })
+
+        hierarchy_df = pd.DataFrame(hierarchy_data)
+        hierarchy_df = hierarchy_df.sort_values('Persistence', ascending=False)  # Sort by most persistent
+        hierarchy_df.to_csv(f"{output_dir}/cluster_hierarchy_summary.csv", index=False)
+        print(f"Cluster hierarchy summary saved to {output_dir}/cluster_hierarchy_summary.csv")
+
+        print(f"Cluster hierarchy analysis completed for {len(cluster_ids)} clusters")
+
+    except Exception as e:
+        print(f"Error creating cluster hierarchy dendrogram: {e}")
+        import traceback
+        traceback.print_exc()
 
 def apply_pca_reduction(embeddings_df, target_dim):
     """
@@ -1323,8 +1570,8 @@ def main():
     parser = argparse.ArgumentParser(description="Market embedding analysis with clustering")
     parser.add_argument("--cache-dir", "-cd", default="./cache",
                        help="Cache directory (default: ./cache)")
-    parser.add_argument("--reset-cache", action="store_true",
-                       help="Reset cache and re-download all data")
+    parser.add_argument("--ignore-cache", action="store_true",
+                       help="Ignore existing cache files and regenerate all data")
     parser.add_argument("--output-dir", "-od", default=".",
                        help="Output directory for PNG files (default: current directory)")
     parser.add_argument("--pca-dim", "-d", type=int, default=300,
@@ -1350,15 +1597,9 @@ def main():
     market_embeddings_pca_cache = f"{args.cache_dir}/market_embeddings_pca_{args.pca_dim}.jsonl"
     novelty_cache = f"{args.cache_dir}/market_novelty.jsonl"
     cluster_cache = f"{args.cache_dir}/market_clusters_{args.sample_size}_{args.min_cluster_size}{platform_suffix}.jsonl"
+    clusterer_cache = f"{args.cache_dir}/clusterer_{args.sample_size}_{args.min_cluster_size}{platform_suffix}.pkl"
     cluster_info_cache = f"{args.cache_dir}/cluster_info_{args.sample_size}_{args.min_cluster_size}{platform_suffix}.jsonl"
     embeddings_2d_cache = f"{args.cache_dir}/embeddings_2d_{args.sample_size}_{args.plot_method}{platform_suffix}.jsonl"
-
-    # Reset cache if requested
-    if args.reset_cache:
-        import shutil
-        if os.path.exists(args.cache_dir):
-            shutil.rmtree(args.cache_dir)
-        print(f"Cache directory {args.cache_dir} cleared.")
 
     # Create cache & output directory if it doesn't exist
     os.makedirs(args.cache_dir, exist_ok=True)
@@ -1366,7 +1607,7 @@ def main():
 
     # Step 1: Load and prepare base data
     print("Loading base market data...")
-    markets_df = load_dataframe_from_cache(markets_cache)
+    markets_df = None if args.ignore_cache else load_dataframe_from_cache(markets_cache)
     if markets_df is None:
         markets_df = get_data_as_dataframe(f"{postgrest_base}/markets", params={"order": "id"})
         save_dataframe_to_cache(markets_cache, markets_df)
@@ -1383,12 +1624,12 @@ def main():
     # Step 2: Load embeddings
     print("Loading market embeddings...")
     if args.pca_dim > 0:
-        embeddings_df = load_dataframe_from_cache(market_embeddings_pca_cache)
+        embeddings_df = None if args.ignore_cache else load_dataframe_from_cache(market_embeddings_pca_cache)
         if embeddings_df is not None:
             print(f"Loaded PCA-reduced embeddings from cache ({args.pca_dim}D)")
 
     if args.pca_dim == 0 or embeddings_df is None:
-        embeddings_df = load_dataframe_from_cache(market_embeddings_cache)
+        embeddings_df = None if args.ignore_cache else load_dataframe_from_cache(market_embeddings_cache)
         if embeddings_df is None:
             print("Loading embeddings from API...")
             raw_embeddings = get_data_as_dataframe(f"{postgrest_base}/market_embeddings", params={"order": "market_id"})
@@ -1408,9 +1649,16 @@ def main():
             embeddings_df = apply_pca_reduction(embeddings_df, args.pca_dim)
             save_dataframe_to_cache(market_embeddings_pca_cache, embeddings_df)
 
+    # Ensure that all markets have embeddings
+    markets_with_embeddings = set(embeddings_df['market_id'])
+    missing_markets = markets_df[~markets_df['id'].isin(markets_with_embeddings)]
+    if not missing_markets.empty:
+        print(f"Warning: {len(missing_markets)} markets are missing embeddings")
+        markets_df = markets_df[markets_df['id'].isin(markets_with_embeddings)]
+
     # Step 3: Load novelty scores
     print("Loading novelty scores...")
-    novelty_df = load_dataframe_from_cache(novelty_cache)
+    novelty_df = None if args.ignore_cache else load_dataframe_from_cache(novelty_cache)
     if novelty_df is None:
         # Only compute novelty for markets we have
         analysis_embeddings = embeddings_df[embeddings_df['market_id'].isin(markets_df['id'])]
@@ -1426,7 +1674,7 @@ def main():
     print(f"Master DataFrame contains {len(master_df)} markets with complete data")
 
     # Step 5: Create clusters
-    clusters_df = load_dataframe_from_cache(cluster_cache)
+    clusters_df = None if args.ignore_cache else load_dataframe_from_cache(cluster_cache)
     if clusters_df is None:
         # Sample for clustering if requested
         if args.sample_size == 0 or args.sample_size >= len(master_df):
@@ -1443,8 +1691,26 @@ def main():
             })
             print(f"Using sample of {len(clustering_data)} markets for clustering")
 
-        clusters_df = create_clusters_hdbscan(clustering_data, args.min_cluster_size, args.output_dir)
+        clusters_df, clusterer = create_clusters_hdbscan(clustering_data, args.min_cluster_size, args.output_dir)
         save_dataframe_to_cache(cluster_cache, clusters_df)
+
+        # Cache the clusterer object using pickle
+        try:
+            with open(clusterer_cache, 'wb') as f:
+                pickle.dump(clusterer, f)
+            print(f"Clusterer saved to cache: {clusterer_cache}")
+        except Exception as e:
+            print(f"Warning: Could not cache clusterer: {e}")
+    else:
+        # Try to load clusterer from cache
+        clusterer = None
+        if not args.ignore_cache:
+            try:
+                with open(clusterer_cache, 'rb') as f:
+                    clusterer = pickle.load(f)
+                print(f"Clusterer loaded from cache: {clusterer_cache}")
+            except Exception as e:
+                print(f"Warning: Could not load clusterer from cache: {e}")
 
     # Add cluster information to master DataFrame
     master_df = master_df.merge(clusters_df, left_on='id', right_on='market_id', how='left', suffixes=('', '_cluster'))
@@ -1453,7 +1719,7 @@ def main():
     print(f"Successfully clustered {len(clustered_df)}/{len(master_df)} markets")
 
     # Step 6: Generate cluster information
-    cached_cluster_info = load_dataframe_from_cache(cluster_info_cache)
+    cached_cluster_info = None if args.ignore_cache else load_dataframe_from_cache(cluster_info_cache)
     if cached_cluster_info is None:
         cluster_info_dict = collate_cluster_information(clustered_df)
         # Cache cluster statistics (without full market data)
@@ -1481,11 +1747,17 @@ def main():
     # Generate cluster keywords
     cluster_info_dict = generate_cluster_keywords_tfidf(cluster_info_dict)
 
+    # Create cluster hierarchy dendrogram
+    if clusterer is not None:
+        create_cluster_hierarchy_dendrogram(clusterer, cluster_info_dict, args.output_dir)
+    else:
+        print("Warning: Clusterer object not available (likely loaded from cache), skipping dendrogram creation")
+
     # Step 7: Create visualizations
     create_cluster_dashboard(cluster_info_dict, args.output_dir)
 
     # Generate 2D embeddings for visualization
-    embeddings_2d_df = load_dataframe_from_cache(embeddings_2d_cache)
+    embeddings_2d_df = None if args.ignore_cache else load_dataframe_from_cache(embeddings_2d_cache)
     if embeddings_2d_df is None:
         print(f"Generating {args.plot_method.upper()} 2D embeddings for visualization...")
         viz_embeddings = pd.DataFrame({
