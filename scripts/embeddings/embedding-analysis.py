@@ -41,7 +41,7 @@ import argparse
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.feature_extraction.text import TfidfVectorizer
-from collections import Counter
+from collections import defaultdict, Counter
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
@@ -57,9 +57,6 @@ JITTER_SCALE = 1e-6
 TITLE_MAX_LENGTH = 100
 DISPLAY_SAMPLE_SIZE = 50_000
 NUM_KEYWORDS = 10
-
-# Suppress pandas warnings for cleaner output
-# warnings.filterwarnings('ignore', category=pd.errors.PerformanceWarning)
 
 def get_data_as_dataframe(endpoint: str, headers={}, params={}, batch_size=DEFAULT_BATCH_SIZE):
     """
@@ -413,246 +410,241 @@ def create_clusters_hdbscan(embeddings_df, min_cluster_size, output_dir):
         'cluster': cluster_labels
     }), clusterer
 
-def create_cluster_hierarchy_dendrogram(clusterer, cluster_info_dict, output_dir):
+def create_cluster_hierarchy_dendrogram(
+    clusterer,
+    cluster_info_dict,
+    output_dir,
+    top_k_clusters=200,
+    sampling_per_cluster=25,
+    html_filename="hdbscan_cluster_hierarchy.html",
+    icicle_height=900,
+    icicle_width=1400,
+):
     """
-    Create an interactive hierarchical dendrogram from HDBSCAN cluster tree with keywords.
+    Create an interactive left-to-right hierarchical visualization (Plotly Icicle)
+    from an HDBSCAN fitted clusterer, annotated with keywords.
 
-    Extracts the HDBSCAN cluster hierarchy and creates both static and interactive
-    dendrograms showing cluster relationships, sizes, and representative keywords.
+    Behaviour:
+      - For large datasets it prunes to the top_k_clusters (by persistence or size),
+        maps each flat cluster to a representative condensed-tree node, then
+        builds the ancestor chain for those nodes and draws an Icicle diagram.
+      - Hover text contains flat cluster ID(s), member count and keywords.
+      - Saves an interactive HTML to output_dir and returns a mapping dict.
 
     Args:
-        clusterer: Fitted HDBSCAN clusterer object with condensed_tree_ attribute
-        cluster_info_dict (dict): Cluster information with keywords for each cluster
-        output_dir (str): Directory path where dendrogram plots will be saved
+        clusterer: fitted HDBSCAN object (must have condensed_tree_ and labels_).
+        cluster_info_dict: dict mapping flat cluster_id -> {'keywords': [...], ...}
+        output_dir: directory where the HTML will be written
+        top_k_clusters: maximum number of flat clusters to include in the summary
+        sampling_per_cluster: number of members per flat cluster to sample when searching
+                              for representative condensed-tree node
+        html_filename: output HTML filename
+        icicle_height/icicle_width: size of the interactive figure
 
     Returns:
-        None
-
-    Side Effects:
-        - Saves static dendrogram as PNG file
-        - Saves interactive dendrogram as HTML file
-        - Prints progress information to stdout
+        label_to_rep_node (dict): mapping flat cluster id -> representative condensed-tree node id (or None)
     """
-    print("Creating cluster hierarchy dendrogram...")
+    os.makedirs(output_dir, exist_ok=True)
 
-    try:
-        # Extract the condensed tree from HDBSCAN
-        condensed_tree = clusterer.condensed_tree_
+    # Basic checks
+    if not hasattr(clusterer, "condensed_tree_"):
+        raise ValueError("clusterer must have attribute 'condensed_tree_' (a fitted HDBSCAN).")
+    if not hasattr(clusterer, "labels_"):
+        raise ValueError("clusterer must have attribute 'labels_'.")
 
-        # Get cluster hierarchy information
-        cluster_tree_df = condensed_tree.to_pandas()
+    labels = np.asarray(clusterer.labels_)
+    n_samples = len(labels)
+    print(f"[INFO] Samples in fitted clusterer: {n_samples}")
 
-        # Get cluster persistence (stability) information
-        cluster_persistence = clusterer.cluster_persistence_
+    # condensed_tree -> pandas dataframe with columns: parent, child, lambda_val, child_size
+    condensed_df = clusterer.condensed_tree_.to_pandas().copy()
+    # Robust cast
+    condensed_df = condensed_df.astype({"parent": int, "child": int, "child_size": int, "lambda_val": float})
 
-        # Create a mapping of cluster IDs to their information
-        cluster_labels = {}
-        cluster_sizes = {}
-        cluster_keywords = {}
-        cluster_persistence_values = {}
+    # Map flat labels -> member indices (exclude noise: label == -1)
+    flat_labels = labels[labels >= 0]
+    if flat_labels.size == 0:
+        raise ValueError("No non-noise clusters found in clusterer.labels_. Nothing to plot.")
+    unique_labels = np.unique(flat_labels)
+    label_to_members = {int(lab): np.where(labels == lab)[0].tolist() for lab in unique_labels}
+    print(f"[INFO] Found {len(unique_labels)} non-noise flat clusters.")
 
-        for cluster_id, info in cluster_info_dict.items():
-            if cluster_id != -1:  # Skip outliers
-                cluster_labels[cluster_id] = f"Cluster {cluster_id}"
-                cluster_sizes[cluster_id] = info.get('market_count', 0)
-                keywords = info.get('keywords', 'No keywords')
-                cluster_keywords[cluster_id] = keywords[:60] + '...' if len(keywords) > 60 else keywords
-                # Get persistence from HDBSCAN if available
-                if hasattr(clusterer, 'cluster_persistence_') and cluster_id < len(cluster_persistence):
-                    cluster_persistence_values[cluster_id] = cluster_persistence[cluster_id]
-                else:
-                    cluster_persistence_values[cluster_id] = 0.0
+    # Choose top clusters by persistence (preferred) or by size
+    persistence = getattr(clusterer, "cluster_persistence_", None)
+    if persistence is not None and len(persistence) >= len(unique_labels):
+        # persistence array is aligned to 0..n_clusters-1 in standard HDBSCAN
+        label_persistence = {int(l): float(persistence[int(l)]) for l in unique_labels if int(l) < len(persistence)}
+        selected_sorted = sorted(label_persistence.items(), key=lambda kv: kv[1], reverse=True)
+        reason = "persistence"
+    else:
+        # fallback: use cluster size (member count)
+        label_size = {int(l): len(label_to_members[int(l)]) for l in unique_labels}
+        selected_sorted = sorted(label_size.items(), key=lambda kv: kv[1], reverse=True)
+        reason = "size"
 
-        if not cluster_labels:
-            print("No valid clusters found for dendrogram")
-            return
+    top_labels = [int(k) for k, _ in selected_sorted[:top_k_clusters]]
+    print(f"[INFO] Selected top {len(top_labels)} clusters by {reason} for the summary view.")
 
-        # Create static matplotlib dendrogram using HDBSCAN condensed tree structure
-        plt.figure(figsize=(15, 10))
+    # Build condensed tree parent mapping (child -> parent)
+    condensed_parent = condensed_df.set_index("child")["parent"].to_dict()
 
-        # Extract the cluster hierarchy from condensed tree
-        cluster_tree_filtered = cluster_tree_df[cluster_tree_df['child_size'] > 1].copy()
+    # Helper: climb from a sample index to the first condensed-tree node >= n_samples
+    def first_cluster_ancestor_of_point(pt_idx, max_steps=2000):
+        cur = int(pt_idx)
+        steps = 0
+        visited = set()
+        while True:
+            if cur in visited:
+                return None
+            visited.add(cur)
+            if cur >= n_samples:
+                return cur
+            if cur not in condensed_parent:
+                return None
+            cur = int(condensed_parent[cur])
+            steps += 1
+            if steps > max_steps:
+                # safety guard for malformed trees
+                return None
 
-        if len(cluster_tree_filtered) == 0:
-            print("No hierarchical structure found in condensed tree")
-            return
-
-        # Create a tree visualization using the condensed tree structure
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 12))
-
-        # Plot 1: HDBSCAN condensed tree (built-in visualization)
-        condensed_tree.plot(axis=ax1, select_clusters=False)
-        ax1.set_title("HDBSCAN Condensed Tree", fontsize=14, pad=10)
-        ax1.set_xlabel("Number of Points")
-        ax1.set_ylabel("Lambda (1/distance)")
-
-        # Plot 2: Custom cluster relationship visualization
-        cluster_ids = sorted(cluster_labels.keys())
-        if len(cluster_ids) > 1:
-            # Simple horizontal layout showing clusters by persistence
-            x_positions = list(range(len(cluster_ids)))
-            y_values = []
-
-            # Get birth lambda for each cluster from the condensed tree
-            for cid in cluster_ids:
-                # Find the lambda value where this cluster becomes stable
-                # Look for entries where the child is this cluster
-                cluster_entries = cluster_tree_df[cluster_tree_df['child'] == cid]
-                if not cluster_entries.empty:
-                    # Use the maximum lambda value (when cluster becomes most stable)
-                    birth_lambda = cluster_entries['lambda_val'].max()
-                else:
-                    # If not found, use persistence value or default
-                    birth_lambda = cluster_persistence_values.get(cid, 0.1)
-                y_values.append(birth_lambda)
-
-            # Draw nodes
-            for i, (cid, y_val) in enumerate(zip(cluster_ids, y_values)):
-                # Draw node
-                size = max(50, np.sqrt(cluster_sizes.get(cid, 1)) * 20)
-                ax2.scatter(i, y_val, s=size, alpha=0.7,
-                           c=cluster_persistence_values.get(cid, 0),
-                           cmap='viridis', edgecolors='black', linewidth=1)
-
-                # Add cluster label
-                ax2.annotate(f'C{cid}\n({cluster_sizes.get(cid, 0)})',
-                           (i, y_val), xytext=(0, 20),
-                           textcoords='offset points', fontsize=8, ha='center',
-                           bbox=dict(boxstyle='round,pad=0.2', facecolor='white', alpha=0.8))
-
-            # Draw connecting lines between adjacent clusters
-            #for i in range(len(cluster_ids) - 1):
-            #    ax2.plot([i, i+1], [y_values[i], y_values[i+1]],
-            #            'k-', alpha=0.3, linewidth=1)
-
-        ax2.set_title("Cluster Hierarchy Relationships", fontsize=14, pad=10)
-        ax2.set_xlabel("Cluster Order (by birth persistence)")
-        ax2.set_ylabel("Lambda (cluster birth level)")
-        ax2.grid(True, alpha=0.3)
-
-        plt.tight_layout()
-        plt.savefig(f"{output_dir}/cluster_hierarchy_dendrogram.png",
-                   format="png", bbox_inches="tight", dpi=300)
-        plt.close()
-        print(f"Static cluster hierarchy saved to {output_dir}/cluster_hierarchy_dendrogram.png")
-
-        # Create interactive dendrogram using Plotly
-        print("Creating interactive cluster hierarchy visualization...")
-
-        fig = go.Figure()
-
-        # Add nodes for each cluster with improved positioning
-        cluster_ids = sorted(cluster_labels.keys())
-
-        if len(cluster_ids) > 1:
-            # Calculate positions based on cluster relationships and persistence
-            x_positions = list(range(len(cluster_ids)))
-            y_positions = [cluster_persistence_values.get(cid, 0) for cid in cluster_ids]
+    # Map each selected flat cluster label to a representative condensed-tree node id
+    label_to_rep_node = {}
+    for lab in top_labels:
+        members = label_to_members.get(lab, [])
+        if not members:
+            label_to_rep_node[lab] = None
+            continue
+        # sample a few members to find common ancestor node
+        sample = members[:sampling_per_cluster] if len(members) > sampling_per_cluster else members
+        anc_counts = Counter()
+        for m in sample:
+            anc = first_cluster_ancestor_of_point(int(m))
+            if anc is not None:
+                anc_counts[anc] += 1
+        if anc_counts:
+            # pick the ancestor seen most often among sampled members
+            rep = anc_counts.most_common(1)[0][0]
+            label_to_rep_node[lab] = int(rep)
         else:
-            x_positions = [0]
-            y_positions = [1]
+            label_to_rep_node[lab] = None
 
-        # Create hover text with detailed information
-        hover_text = []
-        for cid in cluster_ids:
-            persistence = cluster_persistence_values.get(cid, 0)
-            hover_text.append(
-                f"<b>Cluster {cid}</b><br>" +
-                f"Markets: {cluster_sizes.get(cid, 0)}<br>" +
-                f"Persistence: {persistence:.3f}<br>" +
-                f"Keywords: {cluster_keywords.get(cid, 'None')}<br>" +
-                f"<extra></extra>"
-            )
+    # Build set of nodes: all representative nodes plus their ancestors up to root
+    nodes_set = set()
+    for rep in label_to_rep_node.values():
+        if rep is None:
+            continue
+        cur = rep
+        while True:
+            if cur in nodes_set:
+                break
+            nodes_set.add(cur)
+            if cur in condensed_parent:
+                cur = int(condensed_parent[cur])
+            else:
+                break
 
-        # Add cluster nodes
-        fig.add_trace(go.Scatter(
-            x=x_positions,
-            y=y_positions,
-            mode='markers+text',
-            marker=dict(
-                size=[max(10, np.sqrt(cluster_sizes.get(cid, 1)) * 5) for cid in cluster_ids],
-                color=[cluster_persistence_values.get(cid, 0) for cid in cluster_ids],
-                colorscale='Viridis',
-                showscale=True,
-                colorbar=dict(title="Cluster<br>Persistence"),
-                line=dict(width=2, color='white')
-            ),
-            text=[f"C{cid}" for cid in cluster_ids],
-            textposition="middle center",
-            textfont=dict(color="white", size=11, family="Arial Black"),
-            hovertemplate=hover_text,
-            name="Clusters",
-            showlegend=False
-        ))
+    if not nodes_set:
+        raise RuntimeError("Could not map any flat cluster to condensed-tree nodes. Aborting.")
 
-        # Add cluster relationship lines from condensed tree
-        if len(cluster_ids) > 1:
-            for _, row in cluster_tree_filtered.iterrows():
-                parent_id = row['parent']
-                child_id = row['child']
+    # Build parent/child edges restricted to nodes_set
+    edges = []
+    for child, parent in condensed_parent.items():
+        child_i, parent_i = int(child), int(parent)
+        if child_i in nodes_set and parent_i in nodes_set:
+            edges.append((parent_i, child_i))
 
-                if parent_id in cluster_ids and child_id in cluster_ids:
-                    parent_idx = cluster_ids.index(parent_id)
-                    child_idx = cluster_ids.index(child_id)
+    # Prepare node labels, parents and hover text for Plotly Icicle
+    node_to_label = {}
+    node_to_hover = {}
+    node_to_value = {}
 
-                    fig.add_trace(go.Scatter(
-                        x=[x_positions[parent_idx], x_positions[child_idx]],
-                        y=[y_positions[parent_idx] + 0.1, y_positions[child_idx] + 0.1],
-                        mode='lines',
-                        line=dict(color='rgba(100,100,100,0.5)', width=2),
-                        showlegend=False,
-                        hoverinfo='skip'
-                    ))
+    # Map condensed node -> flat labels that reference it (can be multiple)
+    node_to_flat_labels = defaultdict(list)
+    for lab, rep in label_to_rep_node.items():
+        if rep is not None:
+            node_to_flat_labels[rep].append(lab)
 
-        fig.update_layout(
-            title=dict(
-                text="Interactive HDBSCAN Cluster Hierarchy<br><sub>Node size ∝ market count, color = persistence (stability), ordered by cluster ID<br>Persistence: Higher values = more stable/confident clusters</sub>",
-                x=0.5,
-                font=dict(size=16)
-            ),
-            xaxis=dict(
-                title="Cluster Index",
-                showgrid=True,
-                tickmode='array',
-                tickvals=x_positions,
-                ticktext=[f"Cluster {cid}" for cid in cluster_ids]
-            ),
-            yaxis=dict(
-                title="Cluster Persistence",
-                showgrid=True
-            ),
-            height=700,
-            hovermode='closest',
-            plot_bgcolor='rgba(240,240,240,0.3)',
-            font=dict(family="Arial", size=12)
-        )
+    # For each node in nodes_set, compute display label, hover text, and an approximate 'value' (size)
+    for node in nodes_set:
+        if node < n_samples:
+            lbl = f"pt-{node}"
+            hover = f"point {node}"
+            value = 1
+        else:
+            linked_labels = node_to_flat_labels.get(node, [])
+            if linked_labels:
+                # Aggregate keywords and sizes for annotated nodes
+                sizes = [len(label_to_members.get(l, [])) for l in linked_labels]
+                keywords = []
+                for l in linked_labels:
+                    info = cluster_info_dict.get(int(l), {})
+                    keywords.append(info.get("keywords", "")[:40])
+                lbl = f"Cluster {'/'.join(str(x) for x in linked_labels)}"
+                hover = f"flat_labels: {linked_labels}<br>size: {sum(sizes)}<br>keywords: {keywords}"
+                value = sum(sizes) if sum(sizes) > 0 else 1
+            else:
+                # internal node without direct flat-label mapping
+                # estimate size by summing child sizes in condensed_df where parent == node
+                child_rows = condensed_df[condensed_df["parent"] == node]
+                est = int(child_rows["child_size"].sum()) if not child_rows.empty else 1
+                lbl = f"Node-{node}"
+                hover = f"internal node {node}<br>est_size: {est}"
+                value = est
+        node_to_label[node] = lbl
+        node_to_hover[node] = hover
+        node_to_value[node] = int(value)
 
-        # Save interactive plot
-        fig.write_html(f"{output_dir}/cluster_hierarchy_interactive.html")
-        print(f"Interactive cluster hierarchy saved to {output_dir}/cluster_hierarchy_interactive.html")
+    # Build arrays for Plotly: ids, labels, parents, values, hovertext
+    ids = []
+    labels_plot = []
+    parents = []
+    values = []
+    hover = []
 
-        # Create a detailed hierarchy summary table
-        hierarchy_data = []
-        for cid in cluster_ids:
-            hierarchy_data.append({
-                'Cluster_ID': cid,
-                'Market_Count': cluster_sizes.get(cid, 0),
-                'Persistence': round(cluster_persistence_values.get(cid, 0), 4),
-                'Keywords': cluster_keywords.get(cid, 'None'),
-                'Top_Market': cluster_info_dict.get(cid, {}).get('top_market_title', 'N/A')[:100]
-            })
+    # Parent map for restricted nodes_set: parent_map[child] = parent
+    parent_map = {int(child): int(parent) for child, parent in condensed_parent.items() if int(child) in nodes_set and int(parent) in nodes_set}
 
-        hierarchy_df = pd.DataFrame(hierarchy_data)
-        hierarchy_df = hierarchy_df.sort_values('Persistence', ascending=False)  # Sort by most persistent
-        hierarchy_df.to_csv(f"{output_dir}/cluster_hierarchy_summary.csv", index=False)
-        print(f"Cluster hierarchy summary saved to {output_dir}/cluster_hierarchy_summary.csv")
+    # Determine root nodes (those with no parent in our restricted set)
+    child_nodes = set(parent_map.keys())
+    root_nodes = [n for n in nodes_set if n not in child_nodes]
 
-        print(f"Cluster hierarchy analysis completed for {len(cluster_ids)} clusters")
+    # Populate arrays
+    for node in nodes_set:
+        ids.append(str(node))
+        labels_plot.append(node_to_label[node])
+        parent = parent_map.get(node, "")
+        parents.append(str(parent) if parent != "" else "")
+        values.append(node_to_value[node])
+        hover.append(node_to_hover[node])
 
-    except Exception as e:
-        print(f"Error creating cluster hierarchy dendrogram: {e}")
-        import traceback
-        traceback.print_exc()
+    # Create Plotly Icicle (horizontal orientation)
+    icicle = go.Icicle(
+        ids=ids,
+        labels=labels_plot,
+        parents=parents,
+        values=values,
+        hovertext=hover,
+        hoverinfo="text",
+        tiling=dict(orientation="h"),  # left-to-right orientation
+        branchvalues="total",
+        textinfo="label+value"
+    )
+
+    fig = go.Figure(icicle)
+    fig.update_layout(
+        title=f"HDBSCAN cluster hierarchy (top {len(top_labels)} clusters by {reason})",
+        width=icicle_width,
+        height=icicle_height,
+        margin=dict(t=60, l=20, r=20, b=20)
+    )
+
+    html_path = os.path.join(output_dir, html_filename)
+    fig.write_html(html_path, include_plotlyjs="cdn")
+    print(f"[INFO] Interactive cluster hierarchy saved to: {html_path}")
+
+    # Return mapping for downstream annotation or inspection
+    print(label_to_rep_node)
+    return
 
 def apply_pca_reduction(embeddings_df, target_dim):
     """
@@ -1585,6 +1577,8 @@ def main():
     parser.add_argument("--plot-method", "-p", default="tsne",
                        choices=["umap", "tsne", "pca"],
                        help="Plotting method for clusters (default: tsne)")
+    parser.add_argument("--no-tables", action="store_true",
+                       help="Don't print summary tables")
     args = parser.parse_args()
 
     load_dotenv()
@@ -1788,35 +1782,36 @@ def main():
     print(f"Interactive plot saved to {html_output_file}")
 
     # Step 8: Generate summary reports using consolidated DataFrame
-    print("\n" + "="*80)
-    print("MARKET ANALYSIS SUMMARY")
-    print("="*80)
+    if not args.no_tables:
+        print("\n" + "="*80)
+        print("MARKET ANALYSIS SUMMARY")
+        print("="*80)
 
-    print("\nMost Novel Markets:")
-    print(master_df.nlargest(10, 'novelty')[['id', 'title', 'novelty']])
+        print("\nMost Novel Markets:")
+        print(master_df.nlargest(10, 'novelty')[['id', 'title', 'novelty']])
 
-    print("\nLeast Novel Markets:")
-    print(master_df.nsmallest(10, 'novelty')[['id', 'title', 'novelty']])
+        print("\nLeast Novel Markets:")
+        print(master_df.nsmallest(10, 'novelty')[['id', 'title', 'novelty']])
 
-    print("\nClusters Summary:")
-    cluster_summary = []
-    for cluster_id, info in cluster_info_dict.items():
-        keywords = info.get("keywords", "")
-        keywords = keywords[:52] + "..." if len(keywords) > 55 else keywords
+        print("\nClusters Summary:")
+        cluster_summary = []
+        for cluster_id, info in cluster_info_dict.items():
+            keywords = info.get("keywords", "")
+            keywords = keywords[:52] + "..." if len(keywords) > 55 else keywords
 
-        cluster_summary.append([
-            cluster_id,
-            info.get("market_count", 0),
-            keywords,
-            f"{info.get('top_platform', 'unknown')} ({100.0*info.get('top_platform_pct', 0):.2f}%)",
-            f"{info.get('median_novelty', 0):.3f}",
-            f"{info.get('median_score', 0):.3f}",
-            f"{info.get('mean_resolution', 0):.3f}"
-        ])
+            cluster_summary.append([
+                cluster_id,
+                info.get("market_count", 0),
+                keywords,
+                f"{info.get('top_platform', 'unknown')} ({100.0*info.get('top_platform_pct', 0):.2f}%)",
+                f"{info.get('median_novelty', 0):.3f}",
+                f"{info.get('median_score', 0):.3f}",
+                f"{info.get('mean_resolution', 0):.3f}"
+            ])
 
-    print(tabulate(cluster_summary,
-                  headers=['ID', 'Count', 'Keywords', 'Top Platform', 'Md Novelty', 'Md Score', 'Mn Res'],
-                  tablefmt="github"))
+        print(tabulate(cluster_summary,
+                    headers=['ID', 'Count', 'Keywords', 'Top Platform', 'Md Novelty', 'Md Score', 'Mn Res'],
+                    tablefmt="github"))
 
 if __name__ == "__main__":
     main()
