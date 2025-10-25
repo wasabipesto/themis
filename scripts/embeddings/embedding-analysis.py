@@ -415,8 +415,7 @@ def generate_simplified_tree_structure(
     clusterer,
     cluster_info_dict,
     top_k_clusters=200,
-    sampling_per_cluster=25,
-):
+    sampling_per_cluster=25):
     """
     Generate a simplified tree structure from an HDBSCAN clusterer.
 
@@ -618,8 +617,12 @@ def generate_simplified_tree_structure(
         'condensed_df': condensed_df
     }
 
-def create_interactive_hierarchy_plot(tree_structure, output_dir, html_filename="hdbscan_cluster_hierarchy.html",
-                                    icicle_height=900, icicle_width=1400):
+def create_interactive_hierarchy_plot(
+    tree_structure,
+    output_dir,
+    html_filename="hdbscan_cluster_hierarchy.html",
+    icicle_height=900,
+    icicle_width=1400):
     """
     Create an interactive HTML plot from the simplified tree structure.
 
@@ -693,8 +696,11 @@ def create_interactive_hierarchy_plot(tree_structure, output_dir, html_filename=
 
     return html_path
 
-def create_static_tree_plot(tree_structure, cluster_info_dict, output_dir,
-                          dendrogram_filename="hdbscan_dendrogram.png"):
+def create_static_tree_plot(
+    tree_structure,
+    cluster_info_dict,
+    output_dir,
+    gv_program="dot"):
     """
     Create a static tree plot using matplotlib and NetworkX.
 
@@ -705,7 +711,8 @@ def create_static_tree_plot(tree_structure, cluster_info_dict, output_dir,
         tree_structure: dict returned from generate_simplified_tree_structure()
         cluster_info_dict: dict mapping flat cluster_id -> {'keywords': [...], ...}
         output_dir: directory where the PNG file will be saved
-        dendrogram_filename: name of the output PNG file
+        gv_program: NetworkX layout program to use for the tree plot
+            Options: 'dot', 'neato', 'fdp', 'sfdp', 'osage', 'twopi', 'circo'
 
     Returns:
         str: path to the saved PNG file, or None if creation failed
@@ -714,6 +721,7 @@ def create_static_tree_plot(tree_structure, cluster_info_dict, output_dir,
     nodes_set = tree_structure['nodes_set']
     node_info = tree_structure['node_info']
     top_labels = tree_structure['top_labels']
+    dendrogram_filename = f"hdbscan_dendrogram_{gv_program}.png"
 
     if not edges:
         print("[WARNING] No edges found for tree visualization")
@@ -737,7 +745,7 @@ def create_static_tree_plot(tree_structure, cluster_info_dict, output_dir,
         # Create hierarchical layout (try graphviz first, fallback to spring layout)
         try:
             if hasattr(nx, 'nx_agraph'):
-                pos = nx.nx_agraph.graphviz_layout(G, prog='dot')
+                pos = nx.nx_agraph.graphviz_layout(G, prog=gv_program)
             else:
                 raise ImportError("nx_agraph not available")
         except (ImportError, Exception):
@@ -745,7 +753,7 @@ def create_static_tree_plot(tree_structure, cluster_info_dict, output_dir,
             pos = nx.spring_layout(G, k=2, iterations=50)
 
         # Draw edges first (so they appear behind nodes)
-        nx.draw_networkx_edges(G, pos, edge_color='gray', arrows=True, alpha=0.6, width=1)
+        nx.draw_networkx_edges(G, pos, edge_color='gray', arrows=True, alpha=0.6, width=1, node_size=1000, node_shape="H")
 
         # Prepare node styling
         node_colors = []
@@ -768,7 +776,7 @@ def create_static_tree_plot(tree_structure, cluster_info_dict, output_dir,
                     if isinstance(keywords, list) and keywords:
                         kw_str = ", ".join(keywords[:2])  # Top 2 keywords
                     elif isinstance(keywords, str) and keywords:
-                        kw_str = keywords[:20]  # Truncate long strings
+                        kw_str = keywords[:12]  # Truncate long strings
                     else:
                         kw_str = "no keywords"
 
@@ -781,10 +789,10 @@ def create_static_tree_plot(tree_structure, cluster_info_dict, output_dir,
                 node_labels[node] = f"{node}"
 
         # Draw nodes
-        nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=800, alpha=0.8)
+        nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=300, node_shape="H", alpha=0.8)
 
         # Draw labels
-        nx.draw_networkx_labels(G, pos, labels=node_labels, font_size=8, font_weight='bold')
+        nx.draw_networkx_labels(G, pos, labels=node_labels, font_size=2)
 
         plt.title(f'HDBSCAN Cluster Hierarchy Tree (Top {len(top_labels)} clusters)', fontsize=14)
         plt.axis('off')
@@ -843,17 +851,7 @@ def create_static_tree_plot(tree_structure, cluster_info_dict, output_dir,
             print(f"[WARNING] Could not create any tree visualization: {str(fallback_e)}")
             return None
 
-def create_cluster_hierarchy_dendrogram(
-    clusterer,
-    cluster_info_dict,
-    output_dir,
-    top_k_clusters=200,
-    sampling_per_cluster=25,
-    html_filename="hdbscan_cluster_hierarchy.html",
-    dendrogram_filename="hdbscan_dendrogram.png",
-    icicle_height=900,
-    icicle_width=1400,
-):
+def create_cluster_hierarchy_dendrogram(clusterer, cluster_info_dict, output_dir):
     """
     Create hierarchical visualizations from an HDBSCAN fitted clusterer.
 
@@ -868,8 +866,6 @@ def create_cluster_hierarchy_dendrogram(
         output_dir: directory where output files will be saved
         top_k_clusters: maximum number of flat clusters to include
         sampling_per_cluster: number of members per cluster to sample for node mapping
-        html_filename: output HTML filename for interactive plot
-        dendrogram_filename: output PNG filename for static plot
         icicle_height/icicle_width: dimensions of the interactive figure
 
     Returns:
@@ -886,8 +882,6 @@ def create_cluster_hierarchy_dendrogram(
     tree_structure = generate_simplified_tree_structure(
         clusterer=clusterer,
         cluster_info_dict=cluster_info_dict,
-        top_k_clusters=top_k_clusters,
-        sampling_per_cluster=sampling_per_cluster
     )
 
     # Step 2: Create interactive HTML plot
@@ -897,9 +891,6 @@ def create_cluster_hierarchy_dendrogram(
         html_path = create_interactive_hierarchy_plot(
             tree_structure=tree_structure,
             output_dir=output_dir,
-            html_filename=html_filename,
-            icicle_height=icicle_height,
-            icicle_width=icicle_width
         )
     except Exception as e:
         print(f"[WARNING] Failed to create interactive plot: {str(e)}")
@@ -908,12 +899,13 @@ def create_cluster_hierarchy_dendrogram(
     print("[INFO] Step 3: Creating static tree plot...")
     tree_path = None
     try:
-        tree_path = create_static_tree_plot(
-            tree_structure=tree_structure,
-            cluster_info_dict=cluster_info_dict,
-            output_dir=output_dir,
-            dendrogram_filename=dendrogram_filename
-        )
+        for gv_program in ['dot', 'neato', 'fdp', 'sfdp', 'osage', 'twopi', 'circo']:
+            tree_path = create_static_tree_plot(
+                tree_structure=tree_structure,
+                cluster_info_dict=cluster_info_dict,
+                output_dir=output_dir,
+                gv_program=gv_program
+            )
     except Exception as e:
         print(f"[WARNING] Failed to create static tree plot: {str(e)}")
 
