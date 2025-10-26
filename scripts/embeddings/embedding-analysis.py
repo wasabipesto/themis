@@ -331,7 +331,7 @@ def compute_novelty_faiss(embeddings_df, n=10, nlist=DEFAULT_FAISS_NLIST, batch_
         'novelty': novelty_scores
     })
 
-def create_clusters_hdbscan(embeddings_df, min_cluster_size, output_dir):
+def create_clusters_hdbscan(embeddings_df, min_cluster_size, cluster_selection_epsilon):
     """
     Perform density-based clustering on market embeddings using HDBSCAN algorithm.
 
@@ -345,6 +345,7 @@ def create_clusters_hdbscan(embeddings_df, min_cluster_size, output_dir):
             - embedding (list/np.array): Dense embedding vectors (all same dimension)
         min_cluster_size (int): Minimum number of points required to form a cluster
         output_dir (str): Directory path where tree plots will be saved
+        cluster_selection_epsilon (float): Epsilon value for cluster selection
 
     Returns:
         tuple: (pd.DataFrame, hdbscan.HDBSCAN) containing:
@@ -368,43 +369,9 @@ def create_clusters_hdbscan(embeddings_df, min_cluster_size, output_dir):
     clusterer = hdbscan.HDBSCAN(
         min_cluster_size=min_cluster_size,
         min_samples=10,
+        cluster_selection_epsilon=cluster_selection_epsilon,
     )
     cluster_labels = clusterer.fit_predict(embedding_vectors)
-
-    # Plot HDBSCAN trees
-    print("Plotting HDBSCAN condensed tree...")
-    try:
-        plt.figure(figsize=(12, 8))
-        clusterer.condensed_tree_.plot()
-        plt.title("HDBSCAN Condensed Tree")
-        plt.savefig(f"{output_dir}/hdbscan_condensed_tree.png", format="png", bbox_inches="tight", dpi=300)
-        plt.close()
-    except Exception as e:
-        print(f"Error plotting condensed tree: {e}")
-
-    print("Plotting HDBSCAN single linkage tree...")
-    try:
-        plt.figure(figsize=(12, 8))
-        clusterer.single_linkage_tree_.plot()
-        plt.title("HDBSCAN Single Linkage Tree")
-        plt.savefig(f"{output_dir}/hdbscan_single_linkage_tree.png", format="png", bbox_inches="tight", dpi=300)
-        plt.close()
-    except Exception as e:
-        print(f"Error plotting single linkage tree: {e}")
-
-    print("Saving HDBSCAN condensed tree as NetworkX graph...")
-    try:
-        condensed_tree_graph = clusterer.condensed_tree_.to_networkx()
-        nx.write_gexf(condensed_tree_graph, f"{output_dir}/hdbscan_condensed_tree.gexf")
-    except Exception as e:
-        print(f"Error saving condensed tree as NetworkX graph: {e}")
-
-    print("Saving HDBSCAN single linkage tree as NetworkX graph...")
-    try:
-        single_linkage_tree_graph = clusterer.single_linkage_tree_.to_networkx()
-        nx.write_gexf(single_linkage_tree_graph, f"{output_dir}/hdbscan_single_linkage_tree.gexf")
-    except Exception as e:
-        print(f"Error saving single linkage tree as NetworkX graph: {e}")
 
     return pd.DataFrame({
         'market_id': market_ids,
@@ -876,6 +843,42 @@ def create_cluster_hierarchy_dendrogram(clusterer, cluster_info_dict, output_dir
             - 'tree_structure': complete tree structure dict for further analysis
     """
     print("[INFO] Starting cluster hierarchy visualization generation...")
+
+    # Save built-in HDBSCAN trees and exports
+    print("Plotting HDBSCAN condensed tree...")
+    try:
+        plt.figure(figsize=(12, 8))
+        clusterer.condensed_tree_.plot()
+        plt.title("HDBSCAN Condensed Tree")
+        plt.savefig(f"{output_dir}/hdbscan_condensed_tree.png", format="png", bbox_inches="tight", dpi=300)
+        plt.close()
+    except Exception as e:
+        print(f"Error plotting condensed tree: {e}")
+
+    print("Plotting HDBSCAN single linkage tree...")
+    try:
+        plt.figure(figsize=(12, 8))
+        clusterer.single_linkage_tree_.plot()
+        plt.title("HDBSCAN Single Linkage Tree")
+        plt.savefig(f"{output_dir}/hdbscan_single_linkage_tree.png", format="png", bbox_inches="tight", dpi=300)
+        plt.close()
+    except Exception as e:
+        print(f"Error plotting single linkage tree: {e}")
+
+    print("Saving HDBSCAN condensed tree as NetworkX graph...")
+    try:
+        condensed_tree_graph = clusterer.condensed_tree_.to_networkx()
+        nx.write_gexf(condensed_tree_graph, f"{output_dir}/hdbscan_condensed_tree.gexf")
+    except Exception as e:
+        print(f"Error saving condensed tree as NetworkX graph: {e}")
+
+    print("Saving HDBSCAN single linkage tree as NetworkX graph...")
+    try:
+        single_linkage_tree_graph = clusterer.single_linkage_tree_.to_networkx()
+        nx.write_gexf(single_linkage_tree_graph, f"{output_dir}/hdbscan_single_linkage_tree.gexf")
+    except Exception as e:
+        print(f"Error saving single linkage tree as NetworkX graph: {e}")
+
 
     # Step 1: Generate simplified tree structure
     print("[INFO] Step 1: Generating simplified tree structure...")
@@ -1844,8 +1847,10 @@ def main():
                        help="Sample size for clustering (default: all)")
     parser.add_argument("--sample-platform", "-sp", type=str, default=None,
                        help="Filter sample to specific platform_slug (default: all)")
-    parser.add_argument("--min-cluster-size", "-c", type=int, default=250,
-                       help="Minimum cluster size for HDBSCAN (default: 250)")
+    parser.add_argument("--min-cluster-size", "-cs", type=int, default=100,
+                       help="Minimum cluster size for HDBSCAN (default: 100)")
+    parser.add_argument("--cluster-selection-epsilon", "-ce", type=float, default=0,
+                       help="cluster_selection_epsilon size for HDBSCAN (default: 0)")
     parser.add_argument("--plot-method", "-p", default="tsne",
                        choices=["umap", "tsne", "pca"],
                        help="Plotting method for clusters (default: tsne)")
@@ -1957,7 +1962,7 @@ def main():
             })
             print(f"Using sample of {len(clustering_data)} markets for clustering")
 
-        clusters_df, clusterer = create_clusters_hdbscan(clustering_data, args.min_cluster_size, args.output_dir)
+        clusters_df, clusterer = create_clusters_hdbscan(clustering_data, args.min_cluster_size, args.cluster_selection_epsilon)
         save_dataframe_to_cache(cluster_cache, clusters_df)
 
         # Cache the clusterer object using pickle
