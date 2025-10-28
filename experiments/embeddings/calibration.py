@@ -1,12 +1,3 @@
-# /// script
-# requires-python = ">=3.12"
-# dependencies = [
-#     "argparse",
-#     "numpy",
-#     "matplotlib",
-#     "pandas",
-# ]
-# ///
 """
 Prediction Calibration Plot Script
 
@@ -131,11 +122,8 @@ def main():
                        help='Path to input CSV file (default: predictions.csv)')
     parser.add_argument('--bin-width', '-b', type=float, default=0.1,
                        help='Bin width as a fraction (default: 0.1 for 10%%)')
-    parser.add_argument('--output', '-o', type=str, default=None,
-                       help='Output file path for plot (default: show plot)')
-    parser.add_argument('--format', '-f', type=str, default='png',
-                       choices=['png', 'pdf', 'svg', 'eps'],
-                       help='Output format (default: png)')
+    parser.add_argument('--output', '-o', type=str, default="output/calibration-plot.png",
+                       help='Output file path for plot (default: output/calibration-plot.png)')
 
     args = parser.parse_args()
 
@@ -201,9 +189,6 @@ def main():
         # Save or show plot
         if args.output:
             output_path = Path(args.output)
-            if not output_path.suffix:
-                output_path = output_path.with_suffix(f'.{args.format}')
-
             print(f"Saving plot to: {output_path}")
             fig.savefig(output_path, dpi=300, bbox_inches='tight')
             plt.close(fig)

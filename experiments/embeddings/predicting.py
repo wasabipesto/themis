@@ -1,24 +1,8 @@
-# /// script
-# requires-python = ">=3.12"
-# dependencies = [
-#     "dotenv",
-#     "requests",
-#     "argparse",
-#     "tabulate",
-#     "tqdm",
-#     "numpy",
-#     "matplotlib",
-#     "scikit-learn",
-#     "pandas",
-#     "seaborn",
-# ]
-# ///
-
 import os
 import json
 import requests
-import numpy as np
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from dotenv import load_dotenv
@@ -35,11 +19,12 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.preprocessing import StandardScaler, RobustScaler
 from sklearn.decomposition import PCA
 import pickle
-import warnings
-#warnings.filterwarnings('ignore')
+
+from common import *
 
 def get_data(endpoint: str, headers={}, params={}, batch_size=20_000):
     """Get data from a PostgREST endpoint and handle the response."""
+    # TODO: Remove this function, use the get_data_as_dataframe function from common
     count_response = requests.get(endpoint, headers=headers, params="select=count")
     total_count = count_response.json()[0]["count"]
     if total_count == 0:
@@ -73,6 +58,7 @@ def get_data(endpoint: str, headers={}, params={}, batch_size=20_000):
 
 def load_from_cache(cache_path):
     """Load data from cache file."""
+    # TODO: Remove this function, use the load_dataframe_from_cache function from common
     if os.path.exists(cache_path):
         with open(cache_path, "r") as f:
             return json.load(f)
@@ -80,12 +66,14 @@ def load_from_cache(cache_path):
 
 def save_to_cache(cache_path, data):
     """Save data to cache file."""
+    # TODO: Remove this function, use the save_dataframe_to_cache function from common
     os.makedirs(os.path.dirname(cache_path), exist_ok=True)
     with open(cache_path, "w") as f:
         json.dump(data, f)
 
 def prepare_features(markets, market_embeddings_mapped, include_market_features=True):
     """Prepare feature matrix from market embeddings and optional market metadata."""
+    # TODO: Expect markets to be in a dataframe
     # Filter markets that have both embeddings and valid resolution values
     valid_markets = []
     for market in markets:
@@ -110,10 +98,6 @@ def prepare_features(markets, market_embeddings_mapped, include_market_features=
         market_features = []
         for m in valid_markets:
             features = [
-                m.get("volume_usd", 0) or 0,
-                m.get("traders_count", 0) or 0,
-                m.get("duration_days", 0) or 0,
-                len(m.get("title", "")),
                 1 if m.get("platform_slug") == "manifold" else 0,
                 1 if m.get("platform_slug") == "metaculus" else 0,
                 1 if m.get("platform_slug") == "polymarket" else 0,
@@ -138,20 +122,20 @@ def train_models(X_train, y_train, X_test, y_test):
     """Train multiple models and compare their performance."""
     models = {
         'Linear Regression': LinearRegression(),
-        #'Ridge': Ridge(alpha=1.0),
-        #'Lasso': Lasso(alpha=0.1, max_iter=2000),
-        #'ElasticNet': ElasticNet(alpha=0.1, l1_ratio=0.5, max_iter=2000),
-        #'Random Forest': RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1),
-        #'Gradient Boosting': GradientBoostingRegressor(n_estimators=100, random_state=42),
-        #'SVR': SVR(kernel='rbf', C=1.0),
-        #'MLP': MLPRegressor(hidden_layer_sizes=(100, 50), max_iter=1000, random_state=42)
-        #.
+        'Ridge': Ridge(alpha=1.0),
+        'Lasso': Lasso(alpha=0.1, max_iter=2000),
+        'ElasticNet': ElasticNet(alpha=0.1, l1_ratio=0.5, max_iter=2000),
+        'Random Forest': RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1),
+        'Gradient Boosting': GradientBoostingRegressor(n_estimators=100, random_state=42),
+        'SVR': SVR(kernel='rbf', C=1.0),
+        'MLP': MLPRegressor(hidden_layer_sizes=(100, 50), max_iter=1000, random_state=42)
     }
 
     results = {}
     trained_models = {}
 
     for name, model in tqdm(models.items(), desc="Training models"):
+        # TODO: Instead of tqdm, say which model is being trained and how long each took
         try:
             # Train model
             model.fit(X_train, y_train)
@@ -218,7 +202,7 @@ def plot_results(results, y_test, output_dir):
     ax4.set_title(f'Best Model: {best_model}\nR² = {results[best_model]["test_r2"]:.3f}')
 
     plt.tight_layout()
-    plt.savefig(f"{output_dir}/resolution_prediction_results.png", dpi=300, bbox_inches='tight')
+    plt.savefig(f"{output_dir}/prediction_resolution_results.png", dpi=300, bbox_inches='tight')
     plt.close()
 
     # Residual plot for best model
@@ -229,7 +213,7 @@ def plot_results(results, y_test, output_dir):
     plt.xlabel('Predicted Resolution')
     plt.ylabel('Residuals')
     plt.title(f'Residual Plot - {best_model}')
-    plt.savefig(f"{output_dir}/residual_plot.png", dpi=300, bbox_inches='tight')
+    plt.savefig(f"{output_dir}/prediction_resolution_residual_plot.png", dpi=300, bbox_inches='tight')
     plt.close()
 
 def analyze_feature_importance(model, feature_names, output_dir, top_n=20):
@@ -246,7 +230,7 @@ def analyze_feature_importance(model, feature_names, output_dir, top_n=20):
                   [feature_names[i] for i in indices[:top_n]], rotation=45, ha='right')
         plt.ylabel('Importance')
         plt.tight_layout()
-        plt.savefig(f"{output_dir}/feature_importance.png", dpi=300, bbox_inches='tight')
+        plt.savefig(f"{output_dir}/prediction_resolution_feature_importance.png", dpi=300, bbox_inches='tight')
         plt.close()
 
         # Print top features
@@ -305,10 +289,10 @@ def save_model(model, scaler, feature_names, output_dir, model_name):
         'model_name': model_name
     }
 
-    with open(f"{output_dir}/resolution_prediction_model.pkl", 'wb') as f:
+    with open(f"{output_dir}/prediction_resolution_model.pkl", 'wb') as f:
         pickle.dump(model_data, f)
 
-    print(f"Model saved to {output_dir}/resolution_prediction_model.pkl")
+    print(f"Model saved to {output_dir}/prediction_resolution_model.pkl")
 
 def load_model(model_path):
     """Load saved model and preprocessing components."""
@@ -331,10 +315,10 @@ def predict_resolution(model_data, embeddings, market_features=None):
 
 def main():
     parser = argparse.ArgumentParser(description="Predict market resolution values using embeddings")
-    parser.add_argument("--cache-dir", "-cd", default="cache/embedding-analysis",
-                       help="Cache directory (default: cache/embedding-analysis)")
-    parser.add_argument("--output-dir", "-od", default=".",
-                       help="Output directory for results (default: current directory)")
+    parser.add_argument("--cache-dir", "-cd", default="./cache",
+                       help="Cache directory (default: ./cache)")
+    parser.add_argument("--output-dir", "-od", default="./output",
+                       help="Output directory for results (default: ./output)")
     parser.add_argument("--reset-cache", action="store_true",
                        help="Reset cache and re-download all data")
     parser.add_argument("--pca-dim", "-d", type=int, default=100,
@@ -345,8 +329,6 @@ def main():
                        help="Test set size (default: 0.2)")
     parser.add_argument("--tune-hyperparameters", action="store_true",
                        help="Perform hyperparameter tuning on best model")
-    parser.add_argument("--save-model", action="store_true",
-                       help="Save the best trained model")
     parser.add_argument("--scale-features", action="store_true",
                        help="Apply feature scaling")
 
@@ -386,6 +368,11 @@ def main():
         save_to_cache(embeddings_cache, market_embeddings)
 
     market_embeddings_mapped = {m["market_id"]: m["embedding"] for m in market_embeddings}
+
+    # TODO: Sample down markets
+    # Add arg --sample-platform foo: Get markets with platform_slug foo
+    # Add arg --sample-size n: Get n random markets
+    # Implement similarly to ./embedding-analysis.py
 
     # Prepare features and targets
     print("Preparing features and targets...")
@@ -471,9 +458,9 @@ def main():
     if hasattr(best_model, 'feature_importances_'):
         analyze_feature_importance(best_model, feature_names, args.output_dir)
 
-    # Save model if requested
-    if args.save_model:
-        save_model(best_model, scaler, feature_names, args.output_dir, best_model_name)
+    # Save top model
+    # TODO: Save all models
+    save_model(best_model, scaler, feature_names, args.output_dir, best_model_name)
 
     # Resolution distribution analysis
     print("\n" + "="*50)
