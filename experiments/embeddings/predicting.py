@@ -1,10 +1,10 @@
 import os
 import json
-import requests
+import time
+from slugify import slugify
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 from dotenv import load_dotenv
 from tqdm import trange, tqdm
 from tabulate import tabulate
@@ -22,103 +22,49 @@ import pickle
 
 from common import *
 
-def get_data(endpoint: str, headers={}, params={}, batch_size=20_000):
-    """Get data from a PostgREST endpoint and handle the response."""
-    # TODO: Remove this function, use the get_data_as_dataframe function from common
-    count_response = requests.get(endpoint, headers=headers, params="select=count")
-    total_count = count_response.json()[0]["count"]
-    if total_count == 0:
-        raise ValueError(f"No data available at {endpoint}")
-
-    result = []
-    num_batches = math.ceil(total_count / batch_size)
-    for i in trange(num_batches, desc=f"Downloading {endpoint.split('/')[-1]}"):
-        params["limit"] = batch_size
-        params["offset"] = len(result)
-        response = requests.get(endpoint, headers=headers, params=params)
-        if response.ok:
-            data = response.json()
-            result += data
-        else:
-            print(f"Download returned code {response.status_code} for {endpoint}")
-            try:
-                error_data = response.json()
-                print(json.dumps(error_data, indent=2), "\n")
-            except Exception as e:
-                print("Could not parse JSON response:", e)
-                print("Raw response:", response.text, "\n")
-            raise ValueError()
-
-    if total_count != len(result):
-        raise ValueError(
-            f"Data missing at {endpoint}: {total_count} expected, {len(result)} received"
-        )
-
-    return result
-
-def load_from_cache(cache_path):
-    """Load data from cache file."""
-    # TODO: Remove this function, use the load_dataframe_from_cache function from common
-    if os.path.exists(cache_path):
-        with open(cache_path, "r") as f:
-            return json.load(f)
-    return None
-
-def save_to_cache(cache_path, data):
-    """Save data to cache file."""
-    # TODO: Remove this function, use the save_dataframe_to_cache function from common
-    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-    with open(cache_path, "w") as f:
-        json.dump(data, f)
-
-def prepare_features(markets, market_embeddings_mapped, include_market_features=True):
+def prepare_features(markets_df, market_embeddings_mapped):
     """Prepare feature matrix from market embeddings and optional market metadata."""
-    # TODO: Expect markets to be in a dataframe
     # Filter markets that have both embeddings and valid resolution values
-    valid_markets = []
-    for market in markets:
-        if (market["id"] in market_embeddings_mapped and
-            market.get("resolution") is not None and
-            not np.isnan(market.get("resolution", np.nan))):
-            valid_markets.append(market)
+    valid_mask = (
+        markets_df['id'].isin(market_embeddings_mapped.keys()) &
+        markets_df['resolution'].notna() &
+        ~np.isnan(markets_df['resolution'])
+    )
+    valid_markets_df = markets_df[valid_mask].copy()
 
-    print(f"Found {len(valid_markets)} markets with valid embeddings and resolution values")
+    print(f"Found {len(valid_markets_df)} markets with valid embeddings and resolution values")
 
-    if len(valid_markets) == 0:
+    if len(valid_markets_df) == 0:
         raise ValueError("No markets found with both embeddings and resolution values")
 
     # Prepare embedding features
-    embedding_features = np.array([market_embeddings_mapped[m["id"]] for m in valid_markets])
+    embedding_features = np.array([market_embeddings_mapped[market_id] for market_id in valid_markets_df['id']])
 
     # Prepare targets
-    targets = np.array([m["resolution"] for m in valid_markets])
+    targets = valid_markets_df['resolution'].values
 
-    # Prepare additional market features if requested
-    if include_market_features:
-        market_features = []
-        for m in valid_markets:
-            features = [
-                1 if m.get("platform_slug") == "manifold" else 0,
-                1 if m.get("platform_slug") == "metaculus" else 0,
-                1 if m.get("platform_slug") == "polymarket" else 0,
-            ]
-            market_features.append(features)
-
-        market_features = np.array(market_features)
-        # Combine embedding and market features
-        all_features = np.hstack([embedding_features, market_features])
-
-        feature_names = [f"emb_{i}" for i in range(embedding_features.shape[1])] + [
-            "volume_usd", "traders_count", "duration_days", "title_length",
-            "is_manifold", "is_metaculus", "is_polymarket"
+    # Add indicator for platform
+    market_features = []
+    for _, row in valid_markets_df.iterrows():
+        features = [
+            1 if row.get('platform_slug') == 'manifold' else 0,
+            1 if row.get('platform_slug') == 'metaculus' else 0,
+            1 if row.get('platform_slug') == 'polymarket' else 0,
+            1 if row.get('platform_slug') == 'kalshi' else 0,
         ]
-    else:
-        all_features = embedding_features
-        feature_names = [f"emb_{i}" for i in range(embedding_features.shape[1])]
+        market_features.append(features)
+    market_features = np.array(market_features)
 
-    return all_features, targets, valid_markets, feature_names
+    # Combine embedding and market features
+    all_features = np.hstack([embedding_features, market_features])
 
-def train_models(X_train, y_train, X_test, y_test):
+    feature_names = [f"emb_{i}" for i in range(embedding_features.shape[1])] + [
+        "is_manifold", "is_metaculus", "is_polymarket", "is_kalshi"
+    ]
+
+    return all_features, targets, valid_markets_df.to_dict('records'), feature_names
+
+def train_models(X_train, y_train, X_test, y_test, output_dir):
     """Train multiple models and compare their performance."""
     models = {
         'Linear Regression': LinearRegression(),
@@ -134,8 +80,9 @@ def train_models(X_train, y_train, X_test, y_test):
     results = {}
     trained_models = {}
 
-    for name, model in tqdm(models.items(), desc="Training models"):
-        # TODO: Instead of tqdm, say which model is being trained and how long each took
+    for name, model in models.items():
+        print(f"Training {name}...", end="")
+        start_time = time.time()
         try:
             # Train model
             model.fit(X_train, y_train)
@@ -155,6 +102,13 @@ def train_models(X_train, y_train, X_test, y_test):
                 'test_r2': r2_score(y_test, y_pred_test),
                 'predictions': y_pred_test
             }
+
+            # Print timing information
+            end_time = time.time()
+            duration = end_time - start_time
+            save_model(model, None, None, output_dir, name)
+            print(f" Completed in {duration:.2f} seconds (R² = {results[name]['test_r2']:.4f})")
+
         except Exception as e:
             print(f"Error training {name}: {e}")
             continue
@@ -289,10 +243,10 @@ def save_model(model, scaler, feature_names, output_dir, model_name):
         'model_name': model_name
     }
 
-    with open(f"{output_dir}/prediction_resolution_model.pkl", 'wb') as f:
-        pickle.dump(model_data, f)
+    filename = f"{slugify(model_name)}-{int(time.time())}"
 
-    print(f"Model saved to {output_dir}/prediction_resolution_model.pkl")
+    with open(f"{output_dir}/models/{filename}.pkl", 'wb') as f:
+        pickle.dump(model_data, f)
 
 def load_model(model_path):
     """Load saved model and preprocessing components."""
@@ -331,6 +285,10 @@ def main():
                        help="Perform hyperparameter tuning on best model")
     parser.add_argument("--scale-features", action="store_true",
                        help="Apply feature scaling")
+    parser.add_argument("--sample-platform", "-sp", type=str,
+                       help="Sample markets from specific platform slug")
+    parser.add_argument("--sample-size", "-ss", type=int,
+                       help="Random sample size of markets to use")
 
     args = parser.parse_args()
 
@@ -340,6 +298,7 @@ def main():
     # Create directories
     os.makedirs(args.cache_dir, exist_ok=True)
     os.makedirs(args.output_dir, exist_ok=True)
+    os.makedirs(f"{args.output_dir}/models", exist_ok=True)
 
     # Reset cache if requested
     if args.reset_cache:
@@ -349,36 +308,47 @@ def main():
         print(f"Cache directory {args.cache_dir} cleared.")
 
     # Cache file names
-    markets_cache = f"{args.cache_dir}/markets.json"
-    embeddings_cache = f"{args.cache_dir}/market_embeddings.json"
+    markets_cache = f"{args.cache_dir}/markets.jsonl"
+    embeddings_cache = f"{args.cache_dir}/market_embeddings.jsonl"
 
     # Load markets
     print("Loading markets...")
-    markets = load_from_cache(markets_cache)
-    if markets is None:
-        markets = get_data(f"{postgrest_base}/markets", params={"order": "id"})
-        save_to_cache(markets_cache, markets)
+    markets_df = load_dataframe_from_cache(markets_cache)
+    if markets_df is None:
+        markets_df = get_data_as_dataframe(f"{postgrest_base}/markets", params={"order": "id"})
+        save_dataframe_to_cache(markets_cache, markets_df)
 
     # Load market embeddings
     print("Loading market embeddings...")
-    market_embeddings = load_from_cache(embeddings_cache)
-    if market_embeddings is None:
-        market_embeddings = get_data(f"{postgrest_base}/market_embeddings", params={"order": "market_id"})
-        market_embeddings = [{"market_id": i["market_id"], "embedding": json.loads(i["embedding"])} for i in market_embeddings]
-        save_to_cache(embeddings_cache, market_embeddings)
+    market_embeddings_df = load_dataframe_from_cache(embeddings_cache)
+    if market_embeddings_df is None:
+        market_embeddings_df = get_data_as_dataframe(f"{postgrest_base}/market_embeddings", params={"order": "market_id"})
+        # Parse embeddings from JSON strings
+        market_embeddings_df['embedding'] = market_embeddings_df['embedding'].apply(json.loads)
+        save_dataframe_to_cache(embeddings_cache, market_embeddings_df)
+    else:
+        # If loaded from cache, embeddings might already be lists or need parsing
+        if isinstance(market_embeddings_df['embedding'].iloc[0], str):
+            market_embeddings_df['embedding'] = market_embeddings_df['embedding'].apply(json.loads)
 
-    market_embeddings_mapped = {m["market_id"]: m["embedding"] for m in market_embeddings}
+    # Create mapping for efficient lookup
+    market_embeddings_mapped = dict(zip(market_embeddings_df['market_id'], market_embeddings_df['embedding']))
 
-    # TODO: Sample down markets
-    # Add arg --sample-platform foo: Get markets with platform_slug foo
-    # Add arg --sample-size n: Get n random markets
-    # Implement similarly to ./embedding-analysis.py
+    # Sample down markets if requested
+    if args.sample_platform:
+        print(f"Filtering markets by platform: {args.sample_platform}")
+        markets_df = markets_df[markets_df['platform_slug'] == args.sample_platform]
+        print(f"Found {len(markets_df)} markets for platform {args.sample_platform}")
+
+    if args.sample_size and len(markets_df) > args.sample_size:
+        print(f"Randomly sampling {args.sample_size} markets from {len(markets_df)} total")
+        markets_df = markets_df.sample(n=args.sample_size, random_state=42)
+        print(f"Using {len(markets_df)} sampled markets")
 
     # Prepare features and targets
     print("Preparing features and targets...")
-    X, y, valid_markets, feature_names = prepare_features(
-        markets, market_embeddings_mapped, args.include_market_features
-    )
+    X, y, valid_markets, feature_names = prepare_features(markets_df, market_embeddings_mapped)
+
 
     print(f"Feature matrix shape: {X.shape}")
     print(f"Target vector shape: {y.shape}")
@@ -407,7 +377,8 @@ def main():
 
     # Train models
     print("Training models...")
-    results, trained_models = train_models(X_train, y_train, X_test, y_test)
+    print(f"Training feature matrix shape: {X_train.shape}")
+    results, trained_models = train_models(X_train, y_train, X_test, y_test, args.output_dir)
 
     # Display results
     print("\n" + "="*80)
@@ -424,13 +395,20 @@ def main():
             f"{result['train_r2']:.4f}"
         ])
 
-    print(tabulate(
-        sorted(results_table, key=lambda x: float(x[3]), reverse=True),
-        headers=['Model', 'Test MSE', 'Test MAE', 'Test R²', 'Train R²'],
-        tablefmt="github"
-    ))
+    if results_table:
+        print(tabulate(
+            sorted(results_table, key=lambda x: float(x[3]), reverse=True),
+            headers=['Model', 'Test MSE', 'Test MAE', 'Test R²', 'Train R²'],
+            tablefmt="github"
+        ))
+    else:
+        print("No models were successfully trained - results table is empty!")
 
     # Find best model
+    if not results:
+        print("Error: No models were successfully trained!")
+        return
+
     best_model_name = max(results.keys(), key=lambda x: results[x]['test_r2'])
     best_model = trained_models[best_model_name]
     print(f"\nBest model: {best_model_name} (R² = {results[best_model_name]['test_r2']:.4f})")
@@ -458,10 +436,6 @@ def main():
     if hasattr(best_model, 'feature_importances_'):
         analyze_feature_importance(best_model, feature_names, args.output_dir)
 
-    # Save top model
-    # TODO: Save all models
-    save_model(best_model, scaler, feature_names, args.output_dir, best_model_name)
-
     # Resolution distribution analysis
     print("\n" + "="*50)
     print("RESOLUTION ANALYSIS")
@@ -479,14 +453,17 @@ def main():
     print(platform_stats)
 
     # Save detailed predictions
-    predictions = best_model.predict(X_test if scaler is None else scaler.transform(X_test) if scaler else X_test)
+    X_test_for_prediction = X_test
+    if scaler is not None:
+        X_test_for_prediction = X_test  # X_test is already scaled in main function
+    predictions = best_model.predict(X_test_for_prediction)
     prediction_df = pd.DataFrame({
         'actual': y_test,
         'predicted': predictions,
         'error': y_test - predictions,
         'abs_error': np.abs(y_test - predictions)
     })
-    prediction_df.to_csv(f"{args.output_dir}/predictions.csv", index=False)
+    prediction_df.to_csv(f"{args.output_dir}/{slugify(best_model_name)}-{int(time.time())}-predictions.csv", index=False)
 
     print(f"\nDetailed predictions saved to {args.output_dir}/predictions.csv")
     print(f"Plots saved to {args.output_dir}/")

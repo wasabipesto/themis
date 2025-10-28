@@ -6,3 +6,5 @@ saved
 *.csv
 *.gexf
 *.pkl
+*.egg-info
+__pycache__
