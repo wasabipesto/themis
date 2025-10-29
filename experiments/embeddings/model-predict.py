@@ -57,7 +57,12 @@ def predict_single_market(market, models):
 
     # Make predictions with each model
     for model_name, model_data in models.items():
-        features = prepare_features_for_prediction(market, model_data)
+        try:
+            features = prepare_features_for_prediction(market, model_data)
+        except Exception as e:
+            print(f"  Warning: Could not prepare features for {model_name}: {e}")
+            continue
+
         try:
             prediction = model_data['model'].predict(features)[0]
 
@@ -67,7 +72,6 @@ def predict_single_market(market, models):
             # Add actual value if available
             if target_column in market and pd.notna(market[target_column]):
                 predictions[f'actual_{target_column}'] = market[target_column]
-                #predictions[f'error_{target_column}'] = market[target_column] - prediction
 
         except Exception as e:
             print(f"  Warning: Could not predict {model_data['target_column']}: {e}")
