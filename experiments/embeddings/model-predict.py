@@ -22,7 +22,7 @@ def load_model(model_path):
     with open(model_path, 'rb') as f:
         model_data = pickle.load(f)
 
-    print(f"  Loaded model freom {model_path}, predicts {model_data['target_column']} via {model_data['model_name']}")
+    print(f"  Loaded model from {model_path}, predicts {model_data['target_column']} via {model_data['model_name']}")
     return model_data
 
 
@@ -120,6 +120,20 @@ def get_market_from_manifold(url):
     return market
 
 
+def faux_market_from_question(question):
+    """Creates a fake market from a question."""
+    embeddings = generate_embeddings(question, "")
+    market = {
+        "id": f"faux:question",
+        "platform_slug": "faux",
+        "title": question,
+        "description": "",
+        "url": "[blank]",
+        "embeddings": embeddings
+    }
+    return market
+
+
 def prepare_features_for_prediction(market, model_data):
     """
     Prepare features for prediction using the same feature preparation as training.
@@ -182,10 +196,24 @@ def main():
                        help="Predict for a single market ID")
     parser.add_argument("--live-url", "-url", type=str,
                        help="Predict for a live market")
+    parser.add_argument("--question", "-q", type=str,
+                       help="Ask a question instead of providing a market")
     parser.add_argument("--models", "-m", type=str, action='append',
                        help="Specific model file(s) to use. Can specify multiple times. If not specified, uses all models in model-dir")
 
     args = parser.parse_args()
+
+    # Get market information
+    if args.market_id:
+        market = get_market_from_db(args.market_id)
+    elif args.live_url:
+        if "manifold.markets" in args.live_url:
+            market = get_market_from_manifold(args.live_url)
+    elif args.question:
+        market = faux_market_from_question(args.question)
+    else:
+        print("Error: No market specified")
+        return
 
     # Load models
     print("\nLoading models...")
@@ -194,16 +222,7 @@ def main():
         print("Error: No models loaded")
         return
 
-    # Get market information
-    if args.market_id:
-        market = get_market_from_db(args.market_id)
-    elif args.live_url:
-        if "manifold.markets" in args.live_url:
-            market = get_market_from_manifold(args.live_url)
-    else:
-        print("Error: No market specified")
-        return
-
+    # Predict
     print(f"Predicting for market {market['id']}...", end="")
     result = predict_single_market(market, models)
     print(" done.")
@@ -219,11 +238,11 @@ def main():
                 target = key.replace('predicted_', '')
                 if target == "high_volume" and value > 0.6:
                     print("  This market will have a high trade volume.")
-                if target == "high_volume" and value < 0.4:
+                if target == "high_volume" and value < 0.3:
                     print("  This market will have a low trade volume.")
                 if target == "high_traders" and value > 0.6:
                     print("  This market will attract a lot of traders.")
-                if target == "high_traders" and value < 0.4:
+                if target == "high_traders" and value < 0.3:
                     print("  This market will not attract many traders.")
                 if target == "resolution" and value > 0.6:
                     print("  This market will resolve YES.")
@@ -234,8 +253,7 @@ def main():
         for key, value in result.items():
             if key.startswith('predicted_'):
                 target = key.replace('predicted_', '')
-                print(f"  {target}:")
-                print(f"    Predicted: {value:.4f}")
+                print(f"  {target}: {value:.4f}")
                 if f'actual_{target}' in result:
                     print(f"    Actual: {result[f'actual_{target}']:.4f}")
 
