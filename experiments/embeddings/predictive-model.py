@@ -68,111 +68,62 @@ def prepare_features(markets_df, market_embeddings_mapped, target_column):
 
     return all_features, targets, valid_markets_df.to_dict('records'), feature_names
 
-def train_models(X_train, y_train, X_test, y_test, output_dir, target_column):
-    """Train multiple models and compare their performance."""
+def get_model(model_name):
+    """Get the specified model instance."""
     models = {
-        'Linear Regression': LinearRegression(),
-        'Ridge': Ridge(alpha=1.0),
-        'Lasso': Lasso(alpha=0.1, max_iter=2000),
-        'ElasticNet': ElasticNet(alpha=0.1, l1_ratio=0.5, max_iter=2000),
-        'Random Forest': RandomForestRegressor(n_estimators=200, min_samples_split=10, min_samples_leaf=4, random_state=42, n_jobs=-1),
-        #'Gradient Boosting': GradientBoostingRegressor(n_estimators=100, random_state=42),
-        #'SVR': SVR(kernel='rbf', C=1.0),
-        #'MLP': MLPRegressor(hidden_layer_sizes=(100, 50), max_iter=1000, random_state=42)
+        'random_forest': RandomForestRegressor(n_estimators=200, min_samples_split=10, min_samples_leaf=4, random_state=42, n_jobs=-1),
+        'linear_regression': LinearRegression(),
+        'ridge': Ridge(alpha=1.0),
+        'lasso': Lasso(alpha=0.1, max_iter=2000),
+        'elasticnet': ElasticNet(alpha=0.1, l1_ratio=0.5, max_iter=2000),
+        'gradient_boosting': GradientBoostingRegressor(n_estimators=100, random_state=42),
+        'svr': SVR(kernel='rbf', C=1.0),
+        'mlp': MLPRegressor(hidden_layer_sizes=(100, 50), max_iter=1000, random_state=42)
     }
 
-    results = {}
-    trained_models = {}
+    if model_name not in models:
+        available_models = ', '.join(models.keys())
+        raise ValueError(f"Model '{model_name}' not available. Choose from: {available_models}")
 
-    for name, model in models.items():
-        print(f"Training {name}...", end="")
-        start_time = time.time()
-        try:
-            # Train model
-            model.fit(X_train, y_train)
-            trained_models[name] = model
+    return models[model_name]
 
-            # Make predictions
-            y_pred_train = model.predict(X_train)
-            y_pred_test = model.predict(X_test)
+def train_model(X_train, y_train, X_test, y_test, model_name, output_dir, target_column):
+    """Train a single model and evaluate its performance."""
+    model = get_model(model_name)
 
-            # Calculate metrics
-            results[name] = {
-                'train_mse': mean_squared_error(y_train, y_pred_train),
-                'test_mse': mean_squared_error(y_test, y_pred_test),
-                'train_mae': mean_absolute_error(y_train, y_pred_train),
-                'test_mae': mean_absolute_error(y_test, y_pred_test),
-                'train_r2': r2_score(y_train, y_pred_train),
-                'test_r2': r2_score(y_test, y_pred_test),
-                'predictions': y_pred_test
-            }
+    print(f"Training {model_name}...", end="")
+    start_time = time.time()
 
-            # Print timing information
-            end_time = time.time()
-            duration = end_time - start_time
-            save_model(model, None, None, output_dir, name, target_column)
-            print(f" Completed in {duration:.2f} seconds (R² = {results[name]['test_r2']:.4f})")
+    try:
+        # Train model
+        model.fit(X_train, y_train)
 
-        except Exception as e:
-            print(f"Error training {name}: {e}")
-            continue
+        # Make predictions
+        y_pred_train = model.predict(X_train)
+        y_pred_test = model.predict(X_test)
 
-    return results, trained_models
+        # Calculate metrics
+        result = {
+            'train_mse': mean_squared_error(y_train, y_pred_train),
+            'test_mse': mean_squared_error(y_test, y_pred_test),
+            'train_mae': mean_absolute_error(y_train, y_pred_train),
+            'test_mae': mean_absolute_error(y_test, y_pred_test),
+            'train_r2': r2_score(y_train, y_pred_train),
+            'test_r2': r2_score(y_test, y_pred_test),
+            'predictions': y_pred_test
+        }
 
-def plot_results(results, y_test, output_dir):
-    """Plot model comparison and prediction accuracy."""
-    # Model comparison plot
-    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 10))
+        # Print timing information
+        end_time = time.time()
+        duration = end_time - start_time
+        save_model(model, None, None, output_dir, model_name, target_column)
+        print(f" Completed in {duration:.2f} seconds (R² = {result['test_r2']:.4f})")
 
-    model_names = list(results.keys())
+        return result, model
 
-    # Test MSE comparison
-    test_mses = [results[name]['test_mse'] for name in model_names]
-    ax1.bar(model_names, test_mses)
-    ax1.set_title('Test MSE by Model')
-    ax1.set_ylabel('MSE')
-    ax1.tick_params(axis='x', rotation=45)
-
-    # Test R² comparison
-    test_r2s = [results[name]['test_r2'] for name in model_names]
-    ax2.bar(model_names, test_r2s)
-    ax2.set_title('Test R² by Model')
-    ax2.set_ylabel('R²')
-    ax2.tick_params(axis='x', rotation=45)
-
-    # Test MAE comparison
-    test_maes = [results[name]['test_mae'] for name in model_names]
-    ax3.bar(model_names, test_maes)
-    ax3.set_title('Test MAE by Model')
-    ax3.set_ylabel('MAE')
-    ax3.tick_params(axis='x', rotation=45)
-
-    # Best model predictions vs actual
-    best_model = max(model_names, key=lambda x: results[x]['test_r2'])
-    predictions = results[best_model]['predictions']
-
-    ax4.scatter(y_test, predictions, alpha=0.6)
-    min_val = min(y_test.min(), predictions.min())
-    max_val = max(y_test.max(), predictions.max())
-    ax4.plot([min_val, max_val], [min_val, max_val], 'r--', lw=2)
-    ax4.set_xlabel('Actual Resolution')
-    ax4.set_ylabel('Predicted Resolution')
-    ax4.set_title(f'Best Model: {best_model}\nR² = {results[best_model]["test_r2"]:.3f}')
-
-    plt.tight_layout()
-    plt.savefig(f"{output_dir}/prediction_resolution_results.png", dpi=300, bbox_inches='tight')
-    plt.close()
-
-    # Residual plot for best model
-    residuals = y_test - predictions
-    plt.figure(figsize=(10, 6))
-    plt.scatter(predictions, residuals, alpha=0.6)
-    plt.axhline(y=0, color='r', linestyle='--')
-    plt.xlabel('Predicted Resolution')
-    plt.ylabel('Residuals')
-    plt.title(f'Residual Plot - {best_model}')
-    plt.savefig(f"{output_dir}/prediction_resolution_residual_plot.png", dpi=300, bbox_inches='tight')
-    plt.close()
+    except Exception as e:
+        print(f"Error training {model_name}: {e}")
+        raise
 
 def plot_predicted_vs_actual(actual_values, predicted_values, model_name, target_column, output_dir, r2_score_val=None, n_bins=10):
     """
@@ -327,43 +278,33 @@ def plot_predicted_vs_actual(actual_values, predicted_values, model_name, target
     print(f"Scatterplot with box plot saved to: {filename}")
 
 def analyze_feature_importance(model, feature_names, output_dir):
-    """Analyze and plot feature importance for tree-based models."""
-    if hasattr(model, 'feature_importances_'):
-        importances = model.feature_importances_
-        indices = np.argsort(importances)[::-1]
-        top_n = min(50, len(importances))
+    """Analyze and plot feature importance."""
+    if not hasattr(model, 'feature_importances_'):
+        print("Model does not support feature importance analysis.")
+        return
 
-        plt.figure(figsize=(12, 8))
-        plt.title("Feature Importance")
-        plt.bar(range(top_n),
-                importances[indices[:top_n]])
-        plt.xticks(range(top_n),
-                  [feature_names[i] for i in indices[:top_n]], rotation=45, ha='right')
-        plt.ylabel('Importance')
-        plt.tight_layout()
-        plt.savefig(f"{output_dir}/prediction_resolution_feature_importance.png", dpi=300, bbox_inches='tight')
-        plt.close()
+    importances = model.feature_importances_
+    indices = np.argsort(importances)[::-1]
 
-        # Print top features
-        top_n = 5
-        print(f"\nTop {top_n} Most Important Features:")
-        for i in range(min(top_n, len(importances))):
-            idx = indices[i]
-            print(f"{i+1:2d}. {feature_names[idx]:25s}: {importances[idx]:.4f}")
+    # Display top 5 most important features
+    print("\nTop 5 Most Important Features:")
+    for i in range(min(5, len(feature_names))):
+        idx = indices[i]
+        print(f"{i+1:2d}. {feature_names[idx]:20s} ({importances[idx]:.6f})")
 
-def save_model(model, scaler, feature_names, output_dir, model_name, target_column):
-    """Save trained model and preprocessing components."""
+def save_model(model, X_scaler, y_scaler, output_dir, model_name, target_column):
+    """Save trained model and scalers."""
     model_data = {
         'model': model,
-        'scaler': scaler,
-        'feature_names': feature_names,
+        'X_scaler': X_scaler,
+        'y_scaler': y_scaler,
         'model_name': model_name,
-        'target_column': target_column
+        'target_column': target_column,
+        'timestamp': time.time()
     }
 
-    filename = f"{slugify(model_name)}-{slugify(target_column)}-{int(time.time())}"
-
-    with open(f"{output_dir}/models/{filename}.pkl", 'wb') as f:
+    filename = f"{output_dir}/models/{slugify(model_name)}-{slugify(target_column)}-{int(time.time())}.pkl"
+    with open(filename, 'wb') as f:
         pickle.dump(model_data, f)
 
 def main():
@@ -386,6 +327,8 @@ def main():
                        help="Random sample size of markets to use")
     parser.add_argument("--target", "-t", type=str, default='resolution',
                        help="Target column to predict (default: resolution). Examples: resolution, volume_usd, traders_count")
+    parser.add_argument("--model", "-m", type=str, default='random_forest',
+                       help="Model to use (default: random_forest). Options: random_forest, linear_regression, ridge, lasso, elasticnet, gradient_boosting, svr, mlp")
 
     args = parser.parse_args()
 
@@ -446,6 +389,7 @@ def main():
     # Prepare features and targets
     print("Preparing features and targets...")
     print(f"Target column: {args.target}")
+    print(f"Model: {args.model}")
     X, y, valid_markets, feature_names = prepare_features(markets_df, market_embeddings_mapped, args.target)
 
     print(f"Feature matrix shape: {X.shape}")
@@ -470,63 +414,31 @@ def main():
     train_markets, test_markets = train_test_split(
         valid_markets, test_size=args.test_size, random_state=random_state
     )
-    # Double-check that the split is consistent
-    for i, market in enumerate(test_markets):
-        if args.target in market and not market[args.target] == y_test[i]:
-            print(f"Warning: Market {market['id']} ({market[args.target]}) has a different {args.target} than the corresponding #{i} y_test value ({y_test[i]})")
 
-    # Train models
-    print("Training models...")
+    # Train model
+    print("Training model...")
     print(f"Training feature matrix shape: {X_train.shape}")
-    results, trained_models = train_models(X_train, y_train, X_test, y_test, args.output_dir, args.target)
+    result, trained_model = train_model(X_train, y_train, X_test, y_test, args.model, args.output_dir, args.target)
 
     # Display results
-    print("\n" + "="*80)
-    print(f"MODEL COMPARISON RESULTS - Target: {args.target}")
-    print("="*80)
+    print(f"\nMODEL RESULTS - Target: {args.target}, Model: {args.model}")
 
-    results_table = []
-    for name, result in results.items():
-        results_table.append([
-            name,
-            f"{result['test_mse']:.4f}",
-            f"{result['test_mae']:.4f}",
-            f"{result['test_r2']:.4f}",
-            f"{result['train_r2']:.4f}"
-        ])
-
-    if results_table:
-        headers = ['Model', 'Test MSE', 'Test MAE', 'Test R²', 'Train R²']
-        print(tabulate(
-            sorted(results_table, key=lambda row: row[3], reverse=True),  # type: ignore
-            headers=headers,
-            tablefmt="github"
-        ))
-    else:
-        print("No models were successfully trained - results table is empty!")
-
-    # Find best model
-    if not results:
-        print("Error: No models were successfully trained!")
-        return
-
-    best_model_name = max(results.keys(), key=lambda x: results[x]['test_r2'])
-    best_model = trained_models[best_model_name]
-    print(f"\nBest model: {best_model_name} (R² = {results[best_model_name]['test_r2']:.4f})")
+    print(f"Test MSE: {result['test_mse']:.4f}")
+    print(f"Test MAE: {result['test_mae']:.4f}")
+    print(f"Test R²:  {result['test_r2']:.4f}")
+    print(f"Train R²: {result['train_r2']:.4f}")
 
     # Generate plots
     print("Generating plots...")
-    plot_results(results, y_test, args.output_dir)
-
-    # Generate detailed predicted vs actual plot for the best model
-    print("Generating detailed predicted vs actual plot...")
-    best_predictions = results[best_model_name]['predictions']
-    plot_predicted_vs_actual(y_test, best_predictions, best_model_name, args.target,
-                            args.output_dir, results[best_model_name]['test_r2'])
-
-    # Analyze feature importance
-    if hasattr(best_model, 'feature_importances_'):
-        analyze_feature_importance(best_model, feature_names, args.output_dir)
+    plot_predicted_vs_actual(
+        y_test,
+        result['predictions'],
+        args.model,
+        args.target,
+        args.output_dir,
+        result['test_r2']
+    )
+    analyze_feature_importance(trained_model, feature_names, args.output_dir)
 
     # Target distribution analysis
     analysis_df = pd.DataFrame({
@@ -540,7 +452,7 @@ def main():
     print(platform_stats)
 
     # Save detailed predictions
-    predictions = best_model.predict(X_test)
+    predictions = trained_model.predict(X_test)
 
     prediction_df = pd.DataFrame({
         'market_id': [market['id'] for market in test_markets],
@@ -553,7 +465,7 @@ def main():
         f'abs_error_{args.target}': np.abs(y_test - predictions)
     })
 
-    prediction_df.to_csv(f"{args.output_dir}/{slugify(best_model_name)}-{slugify(args.target)}-{int(time.time())}-predictions.csv", index=False)
+    prediction_df.to_csv(f"{args.output_dir}/{slugify(args.model)}-{slugify(args.target)}-{int(time.time())}-predictions.csv", index=False)
     prediction_df.to_csv(f"{args.output_dir}/latest-predictions-{slugify(args.target)}.csv", index=False)
     print(f"\nDetailed predictions saved to {args.output_dir}/latest-predictions-{slugify(args.target)}.csv")
 
