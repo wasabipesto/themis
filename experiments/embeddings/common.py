@@ -73,7 +73,7 @@ def get_data_as_dataframe(endpoint: str, headers={}, params={}, batch_size=DEFAU
 
     return pd.DataFrame(result)
 
-def get_single_item(endpoint, headers, params):
+def get_single_item(endpoint, headers={}, params={}):
     response = requests.get(endpoint, headers=headers, params=params)
     response.raise_for_status()
     return response.json()
