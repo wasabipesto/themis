@@ -132,17 +132,16 @@ def save_dataframe_to_cache(cache_file, df):
 
 def calculate_market_scores(df):
     """
-    Calculate composite market scores using logarithmic scaling and distribution-aware normalization.
+    Calculate composite market scores using logarithmic scaling and weighted averaging.
 
-    Combines volume (USD), trader count, and duration into a single score using logarithmic
-    transformations and statistical normalization to prevent extreme values from washing
-    out the signal. Handles NaN traders gracefully by using median imputation.
+    Combines volume (USD) and trader count into a single score using logarithmic
+    transformations. Uses weighted averaging where NaN values are ignored rather
+    than replaced. If both values are missing, uses a hardcoded value.
 
     Args:
         df (pd.DataFrame): Market data with required columns:
             - volume_usd (float): Trading volume in USD
             - traders_count (int): Number of unique traders
-            - duration_days (float): Market duration in days
 
     Returns:
         np.ndarray: Array of calculated market scores (float)
@@ -150,67 +149,54 @@ def calculate_market_scores(df):
     Formula:
         For each metric:
         1. Apply log1p transformation to handle skewness
-        2. Normalize using robust scaling (median and IQR)
-        3. Combine with balanced coefficients
+        2. Compute weighted average ignoring NaN values
+        3. Use hardcoded value if both metrics are missing
 
     Side Effects:
         - None (pure computation, no external modifications)
-        - Imputes NaN trader counts with median value
     """
-    # Coefficients for balanced contribution after normalization
+    # Coefficients for balanced contribution
     VOLUME_COEF = 1.0
-    TRADERS_COEF = 1.0
-    #DURATION_COEF = 0.5
+    TRADERS_COEF = 5.0
 
-    # Extract arrays and handle missing values
+    # Extract arrays
     volume_arr = df['volume_usd'].values.copy()
     traders_arr = df['traders_count'].values.copy()
-    #duration_arr = df['duration_days'].values.copy()
 
-    # Handle volume: replace NaN/negative with small positive value
-    volume_mask = np.isnan(volume_arr) | (volume_arr <= 0)
-    volume_arr[volume_mask] = 1.0  # $1 minimum for log transform
+    # Identify valid (non-NaN, positive) values
+    volume_valid = ~(np.isnan(volume_arr) | (volume_arr <= 0))
+    traders_valid = ~np.isnan(traders_arr)
 
-    # Handle traders: impute NaN with median (more graceful than 0)
-    traders_mask = np.isnan(traders_arr)
-    if np.any(~traders_mask):  # If we have any valid trader counts
-        median_traders = np.median(traders_arr[~traders_mask])
-        traders_arr[traders_mask] = median_traders
-    else:
-        traders_arr[traders_mask] = 1.0  # Fallback if all NaN
-    traders_arr = np.maximum(traders_arr, 1.0)  # Ensure minimum of 1 trader
+    # Apply logarithmic transformation to valid values only
+    log_volume = np.full_like(volume_arr, np.nan)
+    log_traders = np.full_like(traders_arr, np.nan)
 
-    # Handle duration: replace NaN/negative with small positive value
-    #duration_mask = np.isnan(duration_arr) | (duration_arr <= 0)
-    #duration_arr[duration_mask] = 0.1  # 0.1 days minimum
+    log_volume[volume_valid] = np.log1p(volume_arr[volume_valid])
+    log_traders[traders_valid] = np.log1p(traders_arr[traders_valid])
 
-    # Apply logarithmic transformation to reduce skewness
-    log_volume = np.log1p(volume_arr)  # log(1 + x) handles values near 0
-    log_traders = np.log1p(traders_arr)
-    #log_duration = np.log1p(duration_arr)
+    # Calculate weighted average, ignoring NaN values
+    scores = np.full(len(df), 0.0)  # Default value when both are missing
 
-    # Robust normalization using median and IQR to handle outliers
-    def robust_normalize(arr):
-        median_val = np.median(arr)
-        q75, q25 = np.percentile(arr, [75, 25])
-        iqr = q75 - q25
-        if iqr == 0:  # Handle case where all values are the same
-            return np.zeros_like(arr)
-        return (arr - median_val) / iqr
+    for i in range(len(df)):
+        valid_components = []
+        weights = []
 
-    norm_volume = robust_normalize(log_volume)
-    norm_traders = robust_normalize(log_traders)
-    #norm_duration = robust_normalize(log_duration)
+        if volume_valid[i]:
+            valid_components.append(log_volume[i])
+            weights.append(VOLUME_COEF)
 
-    # Combine normalized components
-    scores = (VOLUME_COEF * norm_volume +
-             TRADERS_COEF * norm_traders)
-             #DURATION_COEF * norm_duration)
+        if traders_valid[i]:
+            valid_components.append(log_traders[i])
+            weights.append(TRADERS_COEF)
+
+        if valid_components:
+            # Weighted average of valid components
+            scores[i] = np.average(valid_components, weights=weights)
 
     # Shift to ensure positive scores for easier interpretation
     min_score = np.min(scores)
     if min_score < 0:
-        scores = scores - min_score + 1.0
+        scores = scores - min_score
 
     return scores
 
