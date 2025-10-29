@@ -22,7 +22,7 @@ import pickle
 
 from common import *
 
-def prepare_features(markets_df, market_embeddings_mapped, target_column='resolution'):
+def prepare_features(markets_df, market_embeddings_mapped, target_column):
     """Prepare feature matrix from market embeddings and optional market metadata."""
     # Filter markets that have both embeddings and valid target values
     valid_mask = (
@@ -68,7 +68,7 @@ def prepare_features(markets_df, market_embeddings_mapped, target_column='resolu
 
     return all_features, targets, valid_markets_df.to_dict('records'), feature_names
 
-def train_models(X_train, y_train, X_test, y_test, output_dir, target_column='resolution'):
+def train_models(X_train, y_train, X_test, y_test, output_dir, target_column):
     """Train multiple models and compare their performance."""
     models = {
         'Linear Regression': LinearRegression(),
@@ -351,38 +351,7 @@ def analyze_feature_importance(model, feature_names, output_dir):
             idx = indices[i]
             print(f"{i+1:2d}. {feature_names[idx]:25s}: {importances[idx]:.4f}")
 
-def hyperparameter_tuning(X_train, y_train, model_name):
-    """Perform hyperparameter tuning for the specified model."""
-    print(f"Performing hyperparameter tuning for {model_name}...")
-
-    if model_name == 'Random Forest':
-        model = RandomForestRegressor(random_state=42, n_jobs=-1)
-        param_grid = {
-            'n_estimators': [50, 100, 200],
-            'max_depth': [10, 20, None],
-            'min_samples_split': [2, 5, 10],
-            'min_samples_leaf': [1, 2, 4]
-        }
-    elif model_name == 'Gradient Boosting':
-        model = GradientBoostingRegressor(random_state=42)
-        param_grid = {
-            'n_estimators': [50, 100, 200],
-            'learning_rate': [0.01, 0.1, 0.2],
-            'max_depth': [3, 5, 7],
-            'subsample': [0.8, 0.9, 1.0]
-        }
-    else:
-        raise ValueError(f"Hyperparameter tuning not implemented for {model_name}")
-
-    grid_search = GridSearchCV(model, param_grid, cv=5, scoring='r2', n_jobs=-1)
-    grid_search.fit(X_train, y_train)
-
-    print(f"Best parameters: {grid_search.best_params_}")
-    print(f"Best cross-validation score: {grid_search.best_score_:.4f}")
-
-    return grid_search.best_estimator_
-
-def save_model(model, scaler, feature_names, output_dir, model_name, target_column='resolution'):
+def save_model(model, scaler, feature_names, output_dir, model_name, target_column):
     """Save trained model and preprocessing components."""
     model_data = {
         'model': model,
@@ -411,10 +380,6 @@ def main():
                        help="Include market metadata features alongside embeddings")
     parser.add_argument("--test-size", "-ts", type=float, default=0.2,
                        help="Test set size (default: 0.2)")
-    parser.add_argument("--tune-hyperparameters", action="store_true",
-                       help="Perform hyperparameter tuning on best model")
-    parser.add_argument("--scale-features", action="store_true",
-                       help="Apply feature scaling")
     parser.add_argument("--sample-platform", "-sp", type=str,
                        help="Sample markets from specific platform slug")
     parser.add_argument("--sample-size", "-ss", type=int,
@@ -510,14 +475,6 @@ def main():
         if args.target in market and not market[args.target] == y_test[i]:
             print(f"Warning: Market {market['id']} ({market[args.target]}) has a different {args.target} than the corresponding #{i} y_test value ({y_test[i]})")
 
-    # Scale features if requested
-    scaler = None
-    if args.scale_features:
-        print("Scaling features...")
-        scaler = RobustScaler()
-        X_train = scaler.fit_transform(X_train)
-        X_test = scaler.transform(X_test)
-
     # Train models
     print("Training models...")
     print(f"Training feature matrix shape: {X_train.shape}")
@@ -556,21 +513,6 @@ def main():
     best_model_name = max(results.keys(), key=lambda x: results[x]['test_r2'])
     best_model = trained_models[best_model_name]
     print(f"\nBest model: {best_model_name} (R² = {results[best_model_name]['test_r2']:.4f})")
-
-    # Hyperparameter tuning if requested
-    if args.tune_hyperparameters:
-        tuned_model = hyperparameter_tuning(X_train, y_train, best_model_name)
-
-        # Evaluate tuned model
-        y_pred_tuned = tuned_model.predict(X_test)
-        tuned_r2 = r2_score(y_test, y_pred_tuned)
-        print(f"Tuned model R²: {tuned_r2:.4f}")
-
-        if tuned_r2 > results[best_model_name]['test_r2']:
-            print("Tuned model performs better, using tuned version")
-            best_model = tuned_model
-        else:
-            print("Original model performs better, keeping original")
 
     # Generate plots
     print("Generating plots...")
