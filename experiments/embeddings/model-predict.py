@@ -36,7 +36,7 @@ def prepare_features_for_prediction(market, model_data):
         1 if market.get('platform_slug') == 'polymarket' else 0,
         1 if market.get('platform_slug') == 'kalshi' else 0,
     ]
-    all_features = np.append(platform_features, market["embeddings"])
+    all_features = np.append(market["embeddings"], platform_features)
     all_features = all_features.reshape(1, -1)
 
     # Apply PCA if it was used during training
@@ -145,9 +145,8 @@ def main():
     print("Downloading market embeddings...", end="")
     market_with_embeddings = market
     market_embeddings = get_single_item(f"{postgrest_base}/market_embeddings", {}, {"market_id": f"eq.{args.market_id}"})[0]
-    market_with_embeddings["embeddings"] = np.array([json.loads(market_embeddings["embedding"])])
+    market_with_embeddings["embeddings"] = json.loads(market_embeddings["embedding"])
     print(" done.")
-    print(f"Embeddings shape: {market_with_embeddings["embeddings"].shape}")
 
     # Make predictions
     print("\n" + "="*80)
