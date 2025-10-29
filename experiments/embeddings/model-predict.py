@@ -148,20 +148,17 @@ def main():
     market_with_embeddings["embeddings"] = json.loads(market_embeddings["embedding"])
     print(" done.")
 
-    # Make predictions
-    print("\n" + "="*80)
-    print("Making Predictions")
-    print("="*80)
-
-    print(f"\nPredicting for market {market['id']}:")
+    print(f"Predicting for market {market['id']}...", end="")
     result = predict_single_market(market_with_embeddings, models)
-    if result:
-        print("\nPredictions:")
-        print(f"  Market: {result['title']}")
-        print(f"  Platform: {result['platform']}")
-        print(f"  URL: {result['url']}")
-        print()
+    print(" done.")
 
+    if result:
+        print(f"\nMarket: {market['id']}")
+        print(f"  Title: {market['title']}")
+        print(f"  Description: \"{market['description'][:60]}...\"")
+        print(f"  URL: {market['url']}")
+
+        print("\nPredictions:")
         for key, value in result.items():
             if key.startswith('predicted_'):
                 target = key.replace('predicted_', '')
