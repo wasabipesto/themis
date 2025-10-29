@@ -73,8 +73,8 @@ def train_models(X_train, y_train, X_test, y_test, output_dir):
         'ElasticNet': ElasticNet(alpha=0.1, l1_ratio=0.5, max_iter=2000),
         'Random Forest': RandomForestRegressor(n_estimators=200, min_samples_split=10, min_samples_leaf=4, random_state=42, n_jobs=-1),
         #'Gradient Boosting': GradientBoostingRegressor(n_estimators=100, random_state=42),
-        'SVR': SVR(kernel='rbf', C=1.0),
-        'MLP': MLPRegressor(hidden_layer_sizes=(100, 50), max_iter=1000, random_state=42)
+        #'SVR': SVR(kernel='rbf', C=1.0),
+        #'MLP': MLPRegressor(hidden_layer_sizes=(100, 50), max_iter=1000, random_state=42)
     }
 
     results = {}
@@ -175,7 +175,7 @@ def analyze_feature_importance(model, feature_names, output_dir):
     if hasattr(model, 'feature_importances_'):
         importances = model.feature_importances_
         indices = np.argsort(importances)[::-1]
-        top_n = min(20, len(importances))
+        top_n = min(50, len(importances))
 
         plt.figure(figsize=(12, 8))
         plt.title("Feature Importance")
@@ -195,7 +195,7 @@ def analyze_feature_importance(model, feature_names, output_dir):
             idx = indices[i]
             print(f"{i+1:2d}. {feature_names[idx]:25s}: {importances[idx]:.4f}")
 
-def hyperparameter_tuning(X_train, y_train, model_name='Random Forest'):
+def hyperparameter_tuning(X_train, y_train, model_name):
     """Perform hyperparameter tuning for the specified model."""
     print(f"Performing hyperparameter tuning for {model_name}...")
 
@@ -416,7 +416,7 @@ def main():
     print(f"\nBest model: {best_model_name} (R² = {results[best_model_name]['test_r2']:.4f})")
 
     # Hyperparameter tuning if requested
-    if args.tune_hyperparameters and best_model_name in ['Random Forest', 'Gradient Boosting']:
+    if args.tune_hyperparameters:
         tuned_model = hyperparameter_tuning(X_train, y_train, best_model_name)
 
         # Evaluate tuned model
