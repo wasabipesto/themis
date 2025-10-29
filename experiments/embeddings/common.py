@@ -73,6 +73,11 @@ def get_data_as_dataframe(endpoint: str, headers={}, params={}, batch_size=DEFAU
 
     return pd.DataFrame(result)
 
+def get_single_item(endpoint, headers, params):
+    response = requests.get(endpoint, headers=headers, params=params)
+    response.raise_for_status()
+    return response.json()
+
 def load_dataframe_from_cache(cache_file):
     """
     Load a pandas DataFrame from a JSONL (JSON Lines) cache file.

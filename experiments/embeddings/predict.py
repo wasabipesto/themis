@@ -26,7 +26,6 @@ def load_model(model_path):
 
     print(f"  Loaded model: {model_data['model_name']}")
     print(f"  Target: {model_data['target_column']}")
-    print(f"  Training R²: {model_data.get('metadata', {}).get('test_r2', 'N/A'):.4f}")
 
     return model_data
 
@@ -181,7 +180,7 @@ def main():
                        help="Directory containing trained models (default: ./output/models)")
     parser.add_argument("--ignore-cache", action="store_true",
                        help="Ignore cache and re-download all data")
-    parser.add_argument("--market-id", "-id", type=int,
+    parser.add_argument("--market-id", "-id", type=str,
                        help="Predict for a single market ID")
     parser.add_argument("--sample-size", "-ss", type=int,
                        help="Random sample size of markets to predict on")
