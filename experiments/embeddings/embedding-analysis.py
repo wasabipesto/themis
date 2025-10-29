@@ -116,7 +116,7 @@ def generate_simplified_tree_structure(
         raise ValueError("No non-noise clusters found in clusterer.labels_. Nothing to process.")
 
     unique_labels = np.unique(flat_labels)
-    label_to_members: dict[int, list[int]] = {int(lab): np.where(labels == lab)[0].tolist() for lab in unique_labels}
+    label_to_members: dict[int, list[int]] = {int(lab): np.where(labels == lab)[0].tolist() for lab in unique_labels} # type: ignore
     print(f"[INFO] Found {len(unique_labels)} non-noise flat clusters")
 
     # Select top clusters by persistence (preferred) or size (fallback)

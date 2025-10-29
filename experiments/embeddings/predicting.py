@@ -15,7 +15,7 @@ from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
 from sklearn.svm import SVR
 from sklearn.neural_network import MLPRegressor
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, accuracy_score, precision_score, recall_score, f1_score
 from sklearn.preprocessing import StandardScaler, RobustScaler
 from sklearn.decomposition import PCA
 import pickle
@@ -179,6 +179,8 @@ def plot_predicted_vs_actual(actual_values, predicted_values, model_name, target
     Create a detailed scatterplot of predicted vs actual values from the test set,
     with a box plot showing binned trends underneath.
 
+    Handles both continuous and boolean values. Boolean values are mapped to 0/1.
+
     Args:
         y_test: Array of actual test values
         predictions: Array of predicted values
@@ -188,44 +190,86 @@ def plot_predicted_vs_actual(actual_values, predicted_values, model_name, target
         r2_score_val: Optional R² score to display on the plot
         n_bins: Number of bins for the box plot (default: 10)
     """
+    # Check if values are boolean and convert actual values to numeric
+    is_boolean = False
+    original_predicted_values = predicted_values.copy()  # Keep original for x-axis
+    if actual_values.dtype == bool or np.all(np.isin(actual_values, [0, 1, True, False])):
+        is_boolean = True
+        actual_values = actual_values.astype(int)
+        # Only convert predicted values if they are also boolean, otherwise keep as probabilities
+        if hasattr(predicted_values, 'dtype') and predicted_values.dtype == bool:
+            # For metrics calculation, convert boolean predictions to int
+            predicted_values_for_metrics = predicted_values.astype(int)
+        elif is_boolean:
+            # For metrics calculation, round continuous predictions to nearest integer
+            predicted_values_for_metrics = np.round(np.clip(predicted_values, 0, 1)).astype(int)
+    else:
+        predicted_values_for_metrics = predicted_values
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 12), height_ratios=[2, 1])
 
     # Upper subplot: Scatterplot
-    ax1.scatter(predicted_values, actual_values, alpha=0.6, s=50, edgecolors='black', linewidth=0.5)
+    if is_boolean:
+        # For boolean values, add jitter to avoid overlapping points
+        jitter_strength = 0.05
+        actual_jitter = actual_values + np.random.normal(0, jitter_strength, len(actual_values))
+        predicted_jitter = original_predicted_values + np.random.normal(0, jitter_strength, len(original_predicted_values))
+        ax1.scatter(predicted_jitter, actual_jitter, alpha=0.6, s=50, edgecolors='black', linewidth=0.5)
+
+        # Set y-axis to show boolean labels, but keep x-axis showing predicted values
+        ax1.set_yticks([0, 1])
+        ax1.set_yticklabels(['False', 'True'])
+        # Let x-axis show the actual predicted values for calibration
+    else:
+        ax1.scatter(predicted_values, actual_values, alpha=0.6, s=50, edgecolors='black', linewidth=0.5)
 
     # Add perfect prediction line (diagonal)
-    min_val = min(actual_values.min(), predicted_values.min())
-    max_val = max(actual_values.max(), predicted_values.max())
+    if is_boolean:
+        min_val = min(actual_values.min(), original_predicted_values.min())
+        max_val = max(actual_values.max(), original_predicted_values.max())
+    else:
+        min_val = min(actual_values.min(), predicted_values.min())
+        max_val = max(actual_values.max(), predicted_values.max())
     ax1.plot([min_val, max_val], [min_val, max_val], 'r--', lw=2, label='Perfect Prediction')
 
     # Calculate and display metrics
-    mse = mean_squared_error(actual_values, predicted_values)
-    mae = mean_absolute_error(actual_values, predicted_values)
-    if r2_score_val is None:
-        r2_score_val = r2_score(actual_values, predicted_values)
+    if is_boolean:
+        # Use classification metrics for boolean values
+        accuracy = accuracy_score(actual_values, predicted_values_for_metrics)
+        precision = precision_score(actual_values, predicted_values_for_metrics, zero_division=0)
+        recall = recall_score(actual_values, predicted_values_for_metrics, zero_division=0)
+        f1 = f1_score(actual_values, predicted_values_for_metrics, zero_division=0)
+        stats_text = f'Accuracy = {accuracy:.4f}\nPrecision = {precision:.4f}\nRecall = {recall:.4f}\nF1 = {f1:.4f}\nN = {len(actual_values)}'
+    else:
+        # Use regression metrics for continuous values
+        mse = mean_squared_error(actual_values, predicted_values)
+        mae = mean_absolute_error(actual_values, predicted_values)
+        if r2_score_val is None:
+            r2_score_val = r2_score(actual_values, predicted_values)
+        stats_text = f'R² = {r2_score_val:.4f}\nMSE = {mse:.4f}\nMAE = {mae:.4f}\nN = {len(actual_values)}'
 
     # Add labels and title
     ax1.set_ylabel(f'Actual {target_column.replace("_", " ").title()}', fontsize=12)
     ax1.set_title(f'Predicted vs Actual Values\nModel: {model_name}', fontsize=14, fontweight='bold')
 
     # Add statistics text box
-    stats_text = f'R² = {r2_score_val:.4f}\nMSE = {mse:.4f}\nMAE = {mae:.4f}\nN = {len(actual_values)}'
     ax1.text(0.02, 0.95, stats_text, transform=ax1.transAxes,
              verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8),
              fontsize=10)
 
     # Make plot square and add grid
-    ax1.axis('equal')
+    if not is_boolean:
+        ax1.axis('equal')
     ax1.grid(True, alpha=0.3)
 
-    # Lower subplot: Box plot of actual values binned by predicted values
-    # Create bins based on predicted values
-    bin_edges = np.linspace(predicted_values.min(), predicted_values.max(), n_bins + 1)
+    # Lower subplot: For boolean data show calibration bins, for continuous show box plot
+    # Create bins based on predicted values (use original predicted values for boolean)
+    pred_vals_for_binning = original_predicted_values if is_boolean else predicted_values
+    bin_edges = np.linspace(pred_vals_for_binning.min(), pred_vals_for_binning.max(), n_bins + 1)
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
     bin_labels = [f'{bin_edges[i]:.2f}-{bin_edges[i+1]:.2f}' for i in range(len(bin_edges)-1)]
 
     # Assign each point to a bin
-    bin_indices = np.digitize(predicted_values, bin_edges) - 1
+    bin_indices = np.digitize(pred_vals_for_binning, bin_edges) - 1
     bin_indices = np.clip(bin_indices, 0, n_bins - 1)  # Ensure all indices are valid
 
     # Group actual values by bin
@@ -237,19 +281,41 @@ def plot_predicted_vs_actual(actual_values, predicted_values, model_name, target
             binned_actuals.append(actual_values[mask])
             predicted_bin_centers.append(bin_centers[i])
 
-    # Create box plot
-    if binned_actuals:  # Only create box plot if we have data
-        bp = ax2.boxplot(binned_actuals, positions=predicted_bin_centers, tick_labels=bin_labels, widths=(bin_edges[1] - bin_edges[0]) * 0.8)
+    # Create appropriate visualization based on data type
+    if binned_actuals:  # Only create plot if we have data
+        if is_boolean:
+            # For boolean data, show calibration: mean actual value per predicted bin
+            bin_means = [np.mean(bin_vals) for bin_vals in binned_actuals]
+            bin_counts = [len(bin_vals) for bin_vals in binned_actuals]
 
-        # Add perfect prediction line to box plot
+            # Create bar plot showing calibration
+            bars = ax2.bar(predicted_bin_centers, bin_means,
+                          width=(bin_edges[1] - bin_edges[0]) * 0.8,
+                          alpha=0.7, edgecolor='black', color='skyblue')
+
+            # Add count labels on bars
+            for bar, count, mean_val in zip(bars, bin_counts, bin_means):
+                height = bar.get_height()
+                ax2.text(bar.get_x() + bar.get_width()/2., height + 0.02,
+                        f'n={count}', ha='center', va='bottom', fontsize=9)
+
+            ax2.set_ylabel('Actual Rate (0=False, 1=True)', fontsize=12)
+            ax2.set_xlabel(f'Predicted {target_column.replace("_", " ").title()}', fontsize=12)
+            ax2.set_title('Calibration Plot', fontsize=12)
+            ax2.set_ylim(-0.1, 1.1)
+            ax2.set_yticks([0, 0.5, 1])
+            ax2.set_yticklabels(['0%', '50%', '100%'])
+
+        else:
+            # For continuous data, use box plot
+            bp = ax2.boxplot(binned_actuals, positions=predicted_bin_centers,
+                           tick_labels=bin_labels, widths=(bin_edges[1] - bin_edges[0]) * 0.8)
+            ax2.set_xlabel(f'Predicted {target_column.replace("_", " ").title()}', fontsize=12)
+            ax2.set_ylabel(f'Actual {target_column.replace("_", " ").title()}', fontsize=12)
+
+        # Add perfect prediction line
         ax2.plot([min_val, max_val], [min_val, max_val], 'r--', lw=2, alpha=0.7)
-
-        # Customize box plot
-        ax2.set_xlabel(f'Predicted {target_column.replace("_", " ").title()}', fontsize=12)
-        ax2.set_ylabel(f'Actual {target_column.replace("_", " ").title()}', fontsize=12)
         ax2.grid(True, alpha=0.3)
-
-        # Set x-axis limits to match the scatterplot
         ax2.set_xlim(ax1.get_xlim())
 
     # Adjust layout and save
@@ -406,10 +472,11 @@ def main():
 
     # Calculate market scores and some indicators
     markets_df['score'] = calculate_market_scores(markets_df)
-    markets_df['high_score'] = markets_df['score'] > markets_df['score'].quantile(0.75)
-    markets_df['high_volume'] = markets_df['volume_usd'] > markets_df['volume_usd'].quantile(0.75)
-    markets_df['high_traders'] = markets_df['traders_count'] > markets_df['traders_count'].quantile(0.75)
-    markets_df['high_duration'] = markets_df['duration_days'] > markets_df['duration_days'].quantile(0.75)
+    markets_df['high_score'] = markets_df['score'] > markets_df['score'].quantile(0.5)
+    markets_df['high_volume'] = markets_df['volume_usd'] > markets_df['volume_usd'].quantile(0.5)
+    markets_df['high_traders'] = markets_df['traders_count'] > markets_df['traders_count'].quantile(0.5)
+    markets_df['high_duration'] = markets_df['duration_days'] > markets_df['duration_days'].quantile(0.5)
+    markets_df['resolution_bool'] = markets_df['resolution'] == 1.0
 
     # Prepare features and targets
     print("Preparing features and targets...")
