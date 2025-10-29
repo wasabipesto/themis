@@ -116,7 +116,6 @@ def train_model(X_train, y_train, X_test, y_test, model_name, output_dir, target
         # Print timing information
         end_time = time.time()
         duration = end_time - start_time
-        save_model(model, None, None, output_dir, model_name, target_column)
         print(f" Completed in {duration:.2f} seconds (R² = {result['test_r2']:.4f})")
 
         return result, model
@@ -277,7 +276,7 @@ def plot_predicted_vs_actual(actual_values, predicted_values, model_name, target
 
     print(f"Scatterplot with box plot saved to: {filename}")
 
-def analyze_feature_importance(model, feature_names, output_dir):
+def analyze_feature_importance(model, feature_names):
     """Analyze and plot feature importance."""
     if not hasattr(model, 'feature_importances_'):
         print("Model does not support feature importance analysis.")
@@ -292,20 +291,23 @@ def analyze_feature_importance(model, feature_names, output_dir):
         idx = indices[i]
         print(f"{i+1:2d}. {feature_names[idx]:20s} ({importances[idx]:.6f})")
 
-def save_model(model, X_scaler, y_scaler, output_dir, model_name, target_column):
-    """Save trained model and scalers."""
+def save_model(model, output_dir, model_name, target_column, pca, feature_names):
+    """Save trained model, scalers, and metadata for prediction."""
     model_data = {
         'model': model,
-        'X_scaler': X_scaler,
-        'y_scaler': y_scaler,
         'model_name': model_name,
         'target_column': target_column,
+        'pca': pca,
+        'feature_names': feature_names,
         'timestamp': time.time()
     }
 
-    filename = f"{output_dir}/models/{slugify(model_name)}-{slugify(target_column)}-{int(time.time())}.pkl"
+    filename = f"{output_dir}/models/{slugify(model_name)}-{slugify(target_column)}.pkl"
     with open(filename, 'wb') as f:
         pickle.dump(model_data, f)
+
+    print(f"Model saved to: {filename}")
+    return filename
 
 def main():
     parser = argparse.ArgumentParser(description="Predict market values using embeddings")
@@ -403,6 +405,8 @@ def main():
         pca = PCA(n_components=args.pca_dim)
         X = pca.fit_transform(X)
         print(f"Explained variance ratio: {pca.explained_variance_ratio_.sum():.3f}")
+    else:
+        pca = None
 
     # Split data between test and train
     # Set a static random state for consistency
@@ -428,6 +432,9 @@ def main():
     print(f"Test R²:  {result['test_r2']:.4f}")
     print(f"Train R²: {result['train_r2']:.4f}")
 
+    # Save model with metadata
+    save_model(trained_model, args.output_dir, args.model, args.target, pca=pca, feature_names=feature_names)
+
     # Generate plots
     print("Generating plots...")
     plot_predicted_vs_actual(
@@ -438,7 +445,7 @@ def main():
         args.output_dir,
         result['test_r2']
     )
-    analyze_feature_importance(trained_model, feature_names, args.output_dir)
+    analyze_feature_importance(trained_model, feature_names)
 
     # Target distribution analysis
     analysis_df = pd.DataFrame({
