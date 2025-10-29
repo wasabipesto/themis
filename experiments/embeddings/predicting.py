@@ -67,13 +67,13 @@ def prepare_features(markets_df, market_embeddings_mapped):
 def train_models(X_train, y_train, X_test, y_test, output_dir):
     """Train multiple models and compare their performance."""
     models = {
-        #'Linear Regression': LinearRegression(),
-        #'Ridge': Ridge(alpha=1.0),
-        #'Lasso': Lasso(alpha=0.1, max_iter=2000),
-        #'ElasticNet': ElasticNet(alpha=0.1, l1_ratio=0.5, max_iter=2000),
+        'Linear Regression': LinearRegression(),
+        'Ridge': Ridge(alpha=1.0),
+        'Lasso': Lasso(alpha=0.1, max_iter=2000),
+        'ElasticNet': ElasticNet(alpha=0.1, l1_ratio=0.5, max_iter=2000),
         'Random Forest': RandomForestRegressor(n_estimators=200, min_samples_split=10, min_samples_leaf=4, random_state=42, n_jobs=-1),
         #'Gradient Boosting': GradientBoostingRegressor(n_estimators=100, random_state=42),
-        #'SVR': SVR(kernel='rbf', C=1.0),
+        'SVR': SVR(kernel='rbf', C=1.0),
         'MLP': MLPRegressor(hidden_layer_sizes=(100, 50), max_iter=1000, random_state=42)
     }
 
@@ -267,8 +267,8 @@ def main():
                        help="Output directory for results (default: ./output)")
     parser.add_argument("--reset-cache", action="store_true",
                        help="Reset cache and re-download all data")
-    parser.add_argument("--pca-dim", "-d", type=int, default=100,
-                       help="PCA dimensionality reduction (default: 100, 0 to skip)")
+    parser.add_argument("--pca-dim", "-d", type=int, default=50,
+                       help="PCA dimensionality reduction (default: 50, 0 to skip)")
     parser.add_argument("--include-market-features", action="store_true",
                        help="Include market metadata features alongside embeddings")
     parser.add_argument("--test-size", type=float, default=0.2,
@@ -354,10 +354,20 @@ def main():
         X = pca.fit_transform(X)
         print(f"Explained variance ratio: {pca.explained_variance_ratio_.sum():.3f}")
 
-    # Split data
+    # Split data between test and train
+    # Set a static random state for consistency
+    random_state = 42
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=args.test_size, random_state=42
+        X, y, test_size=args.test_size, random_state=random_state
     )
+    # Keep track of test set markets by splitting the markets list directly
+    train_markets, test_markets = train_test_split(
+        valid_markets, test_size=args.test_size, random_state=random_state
+    )
+    # Double-check that the split is consistent
+    for i, market in enumerate(test_markets):
+        if not market["resolution"] == y_test[i]:
+            print(f"Warning: Market {market['id']} ({market["resolution"]}) has a different resolution than the corresponding #{i} y_test value ({y_test[i]})")
 
     # Scale features if requested
     scaler = None
@@ -429,15 +439,10 @@ def main():
         analyze_feature_importance(best_model, feature_names, args.output_dir)
 
     # Resolution distribution analysis
-    print("\n" + "="*50)
-    print("RESOLUTION ANALYSIS")
-    print("="*50)
-
     resolution_df = pd.DataFrame({
         'market_id': [m['id'] for m in valid_markets],
         'resolution': y,
-        'platform': [m.get('platform_slug', 'unknown') for m in valid_markets],
-        'volume_usd': [m.get('volume_usd', 0) or 0 for m in valid_markets]
+        'platform': [m.get('platform_slug', 'unknown') for m in valid_markets]
     })
 
     print("\nResolution by Platform:")
@@ -445,11 +450,12 @@ def main():
     print(platform_stats)
 
     # Save detailed predictions
-    X_test_for_prediction = X_test
-    if scaler is not None:
-        X_test_for_prediction = X_test  # X_test is already scaled in main function
-    predictions = best_model.predict(X_test_for_prediction)
+    predictions = best_model.predict(X_test)
     prediction_df = pd.DataFrame({
+        'market_id': [market['id'] for market in test_markets],
+        'platform': [market['platform_slug'] for market in test_markets],
+        'title': [market.get('title', 'N/A') for market in test_markets],
+        'url': [market.get('url', 'N/A') for market in test_markets],
         'actual': y_test,
         'predicted': predictions,
         'error': y_test - predictions,
@@ -457,9 +463,10 @@ def main():
     })
     prediction_df.to_csv(f"{args.output_dir}/{slugify(best_model_name)}-{int(time.time())}-predictions.csv", index=False)
     prediction_df.to_csv(f"{args.output_dir}/latest-predictions.csv", index=False)
-
     print(f"\nDetailed predictions saved to {args.output_dir}/latest-predictions.csv")
-    print(f"Plots saved to {args.output_dir}/")
+
+    print("\nSample Market Predictions:")
+    print(prediction_df.head(20)[['title', 'actual', 'predicted']])
 
 if __name__ == "__main__":
     main()
