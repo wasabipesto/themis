@@ -67,13 +67,13 @@ def prepare_features(markets_df, market_embeddings_mapped):
 def train_models(X_train, y_train, X_test, y_test, output_dir):
     """Train multiple models and compare their performance."""
     models = {
-        'Linear Regression': LinearRegression(),
-        'Ridge': Ridge(alpha=1.0),
-        'Lasso': Lasso(alpha=0.1, max_iter=2000),
-        'ElasticNet': ElasticNet(alpha=0.1, l1_ratio=0.5, max_iter=2000),
-        'Random Forest': RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1),
-        'Gradient Boosting': GradientBoostingRegressor(n_estimators=100, random_state=42),
-        'SVR': SVR(kernel='rbf', C=1.0),
+        #'Linear Regression': LinearRegression(),
+        #'Ridge': Ridge(alpha=1.0),
+        #'Lasso': Lasso(alpha=0.1, max_iter=2000),
+        #'ElasticNet': ElasticNet(alpha=0.1, l1_ratio=0.5, max_iter=2000),
+        'Random Forest': RandomForestRegressor(n_estimators=200, min_samples_split=10, min_samples_leaf=4, random_state=42, n_jobs=-1),
+        #'Gradient Boosting': GradientBoostingRegressor(n_estimators=100, random_state=42),
+        #'SVR': SVR(kernel='rbf', C=1.0),
         'MLP': MLPRegressor(hidden_layer_sizes=(100, 50), max_iter=1000, random_state=42)
     }
 
@@ -170,17 +170,18 @@ def plot_results(results, y_test, output_dir):
     plt.savefig(f"{output_dir}/prediction_resolution_residual_plot.png", dpi=300, bbox_inches='tight')
     plt.close()
 
-def analyze_feature_importance(model, feature_names, output_dir, top_n=20):
+def analyze_feature_importance(model, feature_names, output_dir):
     """Analyze and plot feature importance for tree-based models."""
     if hasattr(model, 'feature_importances_'):
         importances = model.feature_importances_
         indices = np.argsort(importances)[::-1]
+        top_n = min(20, len(importances))
 
         plt.figure(figsize=(12, 8))
         plt.title("Feature Importance")
-        plt.bar(range(min(top_n, len(importances))),
+        plt.bar(range(top_n),
                 importances[indices[:top_n]])
-        plt.xticks(range(min(top_n, len(importances))),
+        plt.xticks(range(top_n),
                   [feature_names[i] for i in indices[:top_n]], rotation=45, ha='right')
         plt.ylabel('Importance')
         plt.tight_layout()
@@ -188,6 +189,7 @@ def analyze_feature_importance(model, feature_names, output_dir, top_n=20):
         plt.close()
 
         # Print top features
+        top_n = 5
         print(f"\nTop {top_n} Most Important Features:")
         for i in range(min(top_n, len(importances))):
             idx = indices[i]
@@ -215,16 +217,6 @@ def hyperparameter_tuning(X_train, y_train, model_name='Random Forest'):
         }
     else:
         raise ValueError(f"Hyperparameter tuning not implemented for {model_name}")
-
-    # Use smaller parameter grid if dataset is large
-    if len(X_train) > 10000:
-        print("Large dataset detected, using reduced parameter grid...")
-        if model_name == 'Random Forest':
-            param_grid = {
-                'n_estimators': [100, 200],
-                'max_depth': [10, None],
-                'min_samples_split': [2, 5]
-            }
 
     grid_search = GridSearchCV(model, param_grid, cv=5, scoring='r2', n_jobs=-1)
     grid_search.fit(X_train, y_train)
@@ -464,8 +456,9 @@ def main():
         'abs_error': np.abs(y_test - predictions)
     })
     prediction_df.to_csv(f"{args.output_dir}/{slugify(best_model_name)}-{int(time.time())}-predictions.csv", index=False)
+    prediction_df.to_csv(f"{args.output_dir}/latest-predictions.csv", index=False)
 
-    print(f"\nDetailed predictions saved to {args.output_dir}/predictions.csv")
+    print(f"\nDetailed predictions saved to {args.output_dir}/latest-predictions.csv")
     print(f"Plots saved to {args.output_dir}/")
 
 if __name__ == "__main__":

@@ -65,40 +65,36 @@ def create_calibration_plot(df, bin_width=0.1):
     fig, ax = plt.subplots(1, 1, figsize=(10, 8))
 
     # Plot perfect calibration line
-    ax.plot([0, 1], [0, 1], 'k--', alpha=0.75, label='Perfect Calibration', linewidth=2)
+    ax.plot([0, 1], [0, 1], 'k--', alpha=0.5, label='Perfect Calibration', linewidth=2)
 
     # Plot calibration curve with error bars
     ax.errorbar(stats_df['mean_predicted'], stats_df['mean_actual'],
                 yerr=[stats_df['mean_actual'] - stats_df['ci_lower'],
                       stats_df['ci_upper'] - stats_df['mean_actual']],
-                fmt='o-', color='red', capsize=5, capthick=2,
-                label='Observed Calibration', linewidth=2, markersize=8)
+                fmt='o:', color='tab:blue', capsize=2, capthick=1,
+                label='Observed Calibration', linewidth=1, markersize=8)
 
     # Add count annotations
     for _, row in stats_df.iterrows():
-        ax.annotate(f"n={row['count']}",
+        ax.annotate(f"n={int(row['count'])}",
                    (row['mean_predicted'], row['mean_actual']),
-                   xytext=(5, 5), textcoords='offset points',
+                   xytext=(10, -10), textcoords='offset points',
                    fontsize=9, alpha=0.7)
 
     # Formatting
-    ax.set_xlabel('Mean Predicted Probability', fontsize=12)
-    ax.set_ylabel('Actual Rate', fontsize=12)
+    ax.set_xlabel('Predicted Probability', fontsize=12)
+    ax.set_ylabel('Actual Resolution', fontsize=12)
     ax.set_title(f'Calibration Plot (Bin Width: {bin_width:.1%})', fontsize=14, fontweight='bold')
     ax.set_xlim([0, 1])
     ax.set_ylim([0, 1])
     ax.grid(True, alpha=0.3)
-    ax.legend(fontsize=11)
+    ax.legend(fontsize=10)
 
     # Add summary statistics
     total_samples = len(df)
     mean_predicted = df['predicted'].mean()
     mean_actual = df['actual'].mean()
-
-    # Calculate Brier score
     brier_score = ((df['predicted'] - df['actual']) ** 2).mean()
-
-    # Calculate calibration error (Expected Calibration Error)
     weights = stats_df['count'] / total_samples
     calibration_error = (weights * np.abs(stats_df['mean_predicted'] - stats_df['mean_actual'])).sum()
 
@@ -110,7 +106,7 @@ Brier Score: {brier_score:.3f}
 ECE: {calibration_error:.3f}"""
 
     ax.text(0.02, 0.98, stats_text, transform=ax.transAxes, fontsize=10,
-            verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+            verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 
     plt.tight_layout()
     return fig, ax
@@ -118,13 +114,12 @@ ECE: {calibration_error:.3f}"""
 def main():
     """Main function to handle command line arguments and create the plot."""
     parser = argparse.ArgumentParser(description='Create calibration plot for predictions')
-    parser.add_argument('--input', '-i', type=str, default='predictions.csv',
-                       help='Path to input CSV file (default: predictions.csv)')
-    parser.add_argument('--bin-width', '-b', type=float, default=0.1,
-                       help='Bin width as a fraction (default: 0.1 for 10%%)')
+    parser.add_argument('--input', '-i', type=str, default='output/latest-predictions.csv',
+                       help='Path to input CSV file (default: output/latest-predictions.csv)')
     parser.add_argument('--output', '-o', type=str, default="output/calibration-plot.png",
                        help='Output file path for plot (default: output/calibration-plot.png)')
-
+    parser.add_argument('--bin-width', '-b', type=float, default=0.1,
+                       help='Bin width as a fraction (default: 0.1 for 10%%)')
     args = parser.parse_args()
 
     # Validate bin width
