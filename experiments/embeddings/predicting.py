@@ -174,6 +174,92 @@ def plot_results(results, y_test, output_dir):
     plt.savefig(f"{output_dir}/prediction_resolution_residual_plot.png", dpi=300, bbox_inches='tight')
     plt.close()
 
+def plot_predicted_vs_actual(actual_values, predicted_values, model_name, target_column, output_dir, r2_score_val=None, n_bins=10):
+    """
+    Create a detailed scatterplot of predicted vs actual values from the test set,
+    with a box plot showing binned trends underneath.
+
+    Args:
+        y_test: Array of actual test values
+        predictions: Array of predicted values
+        model_name: Name of the model used for predictions
+        target_column: Name of the target column being predicted
+        output_dir: Directory to save the plot
+        r2_score_val: Optional R² score to display on the plot
+        n_bins: Number of bins for the box plot (default: 10)
+    """
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 12), height_ratios=[2, 1])
+
+    # Upper subplot: Scatterplot
+    ax1.scatter(predicted_values, actual_values, alpha=0.6, s=50, edgecolors='black', linewidth=0.5)
+
+    # Add perfect prediction line (diagonal)
+    min_val = min(actual_values.min(), predicted_values.min())
+    max_val = max(actual_values.max(), predicted_values.max())
+    ax1.plot([min_val, max_val], [min_val, max_val], 'r--', lw=2, label='Perfect Prediction')
+
+    # Calculate and display metrics
+    mse = mean_squared_error(actual_values, predicted_values)
+    mae = mean_absolute_error(actual_values, predicted_values)
+    if r2_score_val is None:
+        r2_score_val = r2_score(actual_values, predicted_values)
+
+    # Add labels and title
+    ax1.set_ylabel(f'Actual {target_column.replace("_", " ").title()}', fontsize=12)
+    ax1.set_title(f'Predicted vs Actual Values\nModel: {model_name}', fontsize=14, fontweight='bold')
+
+    # Add statistics text box
+    stats_text = f'R² = {r2_score_val:.4f}\nMSE = {mse:.4f}\nMAE = {mae:.4f}\nN = {len(actual_values)}'
+    ax1.text(0.02, 0.95, stats_text, transform=ax1.transAxes,
+             verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8),
+             fontsize=10)
+
+    # Make plot square and add grid
+    ax1.axis('equal')
+    ax1.grid(True, alpha=0.3)
+
+    # Lower subplot: Box plot of actual values binned by predicted values
+    # Create bins based on predicted values
+    bin_edges = np.linspace(predicted_values.min(), predicted_values.max(), n_bins + 1)
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+    bin_labels = [f'{bin_edges[i]:.2f}-{bin_edges[i+1]:.2f}' for i in range(len(bin_edges)-1)]
+
+    # Assign each point to a bin
+    bin_indices = np.digitize(predicted_values, bin_edges) - 1
+    bin_indices = np.clip(bin_indices, 0, n_bins - 1)  # Ensure all indices are valid
+
+    # Group actual values by bin
+    binned_actuals = []
+    predicted_bin_centers = []
+    for i in range(n_bins):
+        mask = bin_indices == i
+        if np.sum(mask) > 0:  # Only include bins with data
+            binned_actuals.append(actual_values[mask])
+            predicted_bin_centers.append(bin_centers[i])
+
+    # Create box plot
+    if binned_actuals:  # Only create box plot if we have data
+        bp = ax2.boxplot(binned_actuals, positions=predicted_bin_centers, tick_labels=bin_labels, widths=(bin_edges[1] - bin_edges[0]) * 0.8)
+
+        # Add perfect prediction line to box plot
+        ax2.plot([min_val, max_val], [min_val, max_val], 'r--', lw=2, alpha=0.7)
+
+        # Customize box plot
+        ax2.set_xlabel(f'Predicted {target_column.replace("_", " ").title()}', fontsize=12)
+        ax2.set_ylabel(f'Actual {target_column.replace("_", " ").title()}', fontsize=12)
+        ax2.grid(True, alpha=0.3)
+
+        # Set x-axis limits to match the scatterplot
+        ax2.set_xlim(ax1.get_xlim())
+
+    # Adjust layout and save
+    plt.tight_layout()
+    filename = f"{output_dir}/predicted_vs_actual_{slugify(model_name)}_{slugify(target_column)}.png"
+    plt.savefig(filename, dpi=300, bbox_inches='tight')
+    plt.close()
+
+    print(f"Scatterplot with box plot saved to: {filename}")
+
 def analyze_feature_importance(model, feature_names, output_dir):
     """Analyze and plot feature importance for tree-based models."""
     if hasattr(model, 'feature_importances_'):
@@ -257,7 +343,7 @@ def main():
                        help="PCA dimensionality reduction (default: 50, 0 to skip)")
     parser.add_argument("--include-market-features", action="store_true",
                        help="Include market metadata features alongside embeddings")
-    parser.add_argument("--test-size", type=float, default=0.2,
+    parser.add_argument("--test-size", "-ts", type=float, default=0.2,
                        help="Test set size (default: 0.2)")
     parser.add_argument("--tune-hyperparameters", action="store_true",
                        help="Perform hyperparameter tuning on best model")
@@ -422,6 +508,12 @@ def main():
     # Generate plots
     print("Generating plots...")
     plot_results(results, y_test, args.output_dir)
+
+    # Generate detailed predicted vs actual plot for the best model
+    print("Generating detailed predicted vs actual plot...")
+    best_predictions = results[best_model_name]['predictions']
+    plot_predicted_vs_actual(y_test, best_predictions, best_model_name, args.target,
+                            args.output_dir, results[best_model_name]['test_r2'])
 
     # Analyze feature importance
     if hasattr(best_model, 'feature_importances_'):
