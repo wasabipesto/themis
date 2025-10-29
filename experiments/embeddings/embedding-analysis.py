@@ -1506,7 +1506,7 @@ def main():
         markets_df = markets_df[markets_df["platform_slug"] == args.sample_platform]
         print(f"Platform filtering: {len(markets_df)}/{original_count} markets from '{args.sample_platform}'")
 
-    # Calculate market scores using vectorized operations
+    # Calculate market scores
     markets_df['score'] = calculate_market_scores(markets_df)
 
     # Step 2: Load embeddings

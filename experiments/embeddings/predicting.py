@@ -22,26 +22,30 @@ import pickle
 
 from common import *
 
-def prepare_features(markets_df, market_embeddings_mapped):
+def prepare_features(markets_df, market_embeddings_mapped, target_column='resolution'):
     """Prepare feature matrix from market embeddings and optional market metadata."""
-    # Filter markets that have both embeddings and valid resolution values
+    # Filter markets that have both embeddings and valid target values
     valid_mask = (
         markets_df['id'].isin(market_embeddings_mapped.keys()) &
-        markets_df['resolution'].notna() &
-        ~np.isnan(markets_df['resolution'])
+        markets_df[target_column].notna()
     )
+
+    # Handle numeric columns
+    if markets_df[target_column].dtype in ['float64', 'int64']:
+        valid_mask = valid_mask & ~np.isnan(markets_df[target_column])
+
     valid_markets_df = markets_df[valid_mask].copy()
 
-    print(f"Found {len(valid_markets_df)} markets with valid embeddings and resolution values")
+    print(f"Found {len(valid_markets_df)} markets with valid embeddings and {target_column} values")
 
     if len(valid_markets_df) == 0:
-        raise ValueError("No markets found with both embeddings and resolution values")
+        raise ValueError(f"No markets found with both embeddings and {target_column} values")
 
     # Prepare embedding features
     embedding_features = np.array([market_embeddings_mapped[market_id] for market_id in valid_markets_df['id']])
 
     # Prepare targets
-    targets = valid_markets_df['resolution'].values
+    targets = valid_markets_df[target_column].values
 
     # Add indicator for platform
     market_features = []
@@ -64,7 +68,7 @@ def prepare_features(markets_df, market_embeddings_mapped):
 
     return all_features, targets, valid_markets_df.to_dict('records'), feature_names
 
-def train_models(X_train, y_train, X_test, y_test, output_dir):
+def train_models(X_train, y_train, X_test, y_test, output_dir, target_column='resolution'):
     """Train multiple models and compare their performance."""
     models = {
         'Linear Regression': LinearRegression(),
@@ -106,7 +110,7 @@ def train_models(X_train, y_train, X_test, y_test, output_dir):
             # Print timing information
             end_time = time.time()
             duration = end_time - start_time
-            save_model(model, None, None, output_dir, name)
+            save_model(model, None, None, output_dir, name, target_column)
             print(f" Completed in {duration:.2f} seconds (R² = {results[name]['test_r2']:.4f})")
 
         except Exception as e:
@@ -226,47 +230,29 @@ def hyperparameter_tuning(X_train, y_train, model_name):
 
     return grid_search.best_estimator_
 
-def save_model(model, scaler, feature_names, output_dir, model_name):
+def save_model(model, scaler, feature_names, output_dir, model_name, target_column='resolution'):
     """Save trained model and preprocessing components."""
     model_data = {
         'model': model,
         'scaler': scaler,
         'feature_names': feature_names,
-        'model_name': model_name
+        'model_name': model_name,
+        'target_column': target_column
     }
 
-    filename = f"{slugify(model_name)}-{int(time.time())}"
+    filename = f"{slugify(model_name)}-{slugify(target_column)}-{int(time.time())}"
 
     with open(f"{output_dir}/models/{filename}.pkl", 'wb') as f:
         pickle.dump(model_data, f)
 
-def load_model(model_path):
-    """Load saved model and preprocessing components."""
-    with open(model_path, 'rb') as f:
-        model_data = pickle.load(f)
-    return model_data
-
-def predict_resolution(model_data, embeddings, market_features=None):
-    """Make resolution predictions for new markets."""
-    if market_features is not None:
-        features = np.hstack([embeddings, market_features])
-    else:
-        features = embeddings
-
-    if model_data['scaler'] is not None:
-        features = model_data['scaler'].transform(features)
-
-    predictions = model_data['model'].predict(features)
-    return predictions
-
 def main():
-    parser = argparse.ArgumentParser(description="Predict market resolution values using embeddings")
+    parser = argparse.ArgumentParser(description="Predict market values using embeddings")
     parser.add_argument("--cache-dir", "-cd", default="./cache",
                        help="Cache directory (default: ./cache)")
     parser.add_argument("--output-dir", "-od", default="./output",
                        help="Output directory for results (default: ./output)")
-    parser.add_argument("--reset-cache", action="store_true",
-                       help="Reset cache and re-download all data")
+    parser.add_argument("--ignore-cache", action="store_true",
+                       help="Ignore cache and re-download all data")
     parser.add_argument("--pca-dim", "-d", type=int, default=50,
                        help="PCA dimensionality reduction (default: 50, 0 to skip)")
     parser.add_argument("--include-market-features", action="store_true",
@@ -281,6 +267,8 @@ def main():
                        help="Sample markets from specific platform slug")
     parser.add_argument("--sample-size", "-ss", type=int,
                        help="Random sample size of markets to use")
+    parser.add_argument("--target", "-t", type=str, default='resolution',
+                       help="Target column to predict (default: resolution). Examples: resolution, volume_usd, traders_count")
 
     args = parser.parse_args()
 
@@ -292,13 +280,6 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
     os.makedirs(f"{args.output_dir}/models", exist_ok=True)
 
-    # Reset cache if requested
-    if args.reset_cache:
-        import shutil
-        if os.path.exists(args.cache_dir):
-            shutil.rmtree(args.cache_dir)
-        print(f"Cache directory {args.cache_dir} cleared.")
-
     # Cache file names
     markets_cache = f"{args.cache_dir}/markets.jsonl"
     embeddings_cache = f"{args.cache_dir}/market_embeddings.jsonl"
@@ -306,14 +287,14 @@ def main():
     # Load markets
     print("Loading markets...")
     markets_df = load_dataframe_from_cache(markets_cache)
-    if markets_df is None:
+    if markets_df is None or args.ignore_cache:
         markets_df = get_data_as_dataframe(f"{postgrest_base}/markets", params={"order": "id"})
         save_dataframe_to_cache(markets_cache, markets_df)
 
     # Load market embeddings
     print("Loading market embeddings...")
     market_embeddings_df = load_dataframe_from_cache(embeddings_cache)
-    if market_embeddings_df is None:
+    if market_embeddings_df is None or args.ignore_cache:
         market_embeddings_df = get_data_as_dataframe(f"{postgrest_base}/market_embeddings", params={"order": "market_id"})
         # Parse embeddings from JSON strings
         market_embeddings_df['embedding'] = market_embeddings_df['embedding'].apply(json.loads)
@@ -337,15 +318,22 @@ def main():
         markets_df = markets_df.sample(n=args.sample_size, random_state=42)
         print(f"Using {len(markets_df)} sampled markets")
 
+    # Calculate market scores and some indicators
+    markets_df['score'] = calculate_market_scores(markets_df)
+    markets_df['high_score'] = markets_df['score'] > markets_df['score'].quantile(0.75)
+    markets_df['high_volume'] = markets_df['volume_usd'] > markets_df['volume_usd'].quantile(0.75)
+    markets_df['high_traders'] = markets_df['traders_count'] > markets_df['traders_count'].quantile(0.75)
+    markets_df['high_duration'] = markets_df['duration_days'] > markets_df['duration_days'].quantile(0.75)
+
     # Prepare features and targets
     print("Preparing features and targets...")
-    X, y, valid_markets, feature_names = prepare_features(markets_df, market_embeddings_mapped)
-
+    print(f"Target column: {args.target}")
+    X, y, valid_markets, feature_names = prepare_features(markets_df, market_embeddings_mapped, args.target)
 
     print(f"Feature matrix shape: {X.shape}")
     print(f"Target vector shape: {y.shape}")
-    print(f"Resolution value range: {y.min():.3f} to {y.max():.3f}")
-    print(f"Mean resolution: {y.mean():.3f} ± {y.std():.3f}")
+    print(f"{args.target} value range: {y.min():.3f} to {y.max():.3f}")
+    print(f"Mean {args.target}: {y.mean():.3f} ± {y.std():.3f}")
 
     # Apply PCA if requested
     if args.pca_dim > 0 and args.pca_dim < X.shape[1]:
@@ -366,8 +354,8 @@ def main():
     )
     # Double-check that the split is consistent
     for i, market in enumerate(test_markets):
-        if not market["resolution"] == y_test[i]:
-            print(f"Warning: Market {market['id']} ({market["resolution"]}) has a different resolution than the corresponding #{i} y_test value ({y_test[i]})")
+        if args.target in market and not market[args.target] == y_test[i]:
+            print(f"Warning: Market {market['id']} ({market[args.target]}) has a different {args.target} than the corresponding #{i} y_test value ({y_test[i]})")
 
     # Scale features if requested
     scaler = None
@@ -380,11 +368,11 @@ def main():
     # Train models
     print("Training models...")
     print(f"Training feature matrix shape: {X_train.shape}")
-    results, trained_models = train_models(X_train, y_train, X_test, y_test, args.output_dir)
+    results, trained_models = train_models(X_train, y_train, X_test, y_test, args.output_dir, args.target)
 
     # Display results
     print("\n" + "="*80)
-    print("MODEL COMPARISON RESULTS")
+    print(f"MODEL COMPARISON RESULTS - Target: {args.target}")
     print("="*80)
 
     results_table = []
@@ -398,9 +386,10 @@ def main():
         ])
 
     if results_table:
+        headers = ['Model', 'Test MSE', 'Test MAE', 'Test R²', 'Train R²']
         print(tabulate(
-            sorted(results_table, key=lambda x: float(x[3]), reverse=True),
-            headers=['Model', 'Test MSE', 'Test MAE', 'Test R²', 'Train R²'],
+            sorted(results_table, key=lambda row: row[3], reverse=True),  # type: ignore
+            headers=headers,
             tablefmt="github"
         ))
     else:
@@ -438,35 +427,38 @@ def main():
     if hasattr(best_model, 'feature_importances_'):
         analyze_feature_importance(best_model, feature_names, args.output_dir)
 
-    # Resolution distribution analysis
-    resolution_df = pd.DataFrame({
+    # Target distribution analysis
+    analysis_df = pd.DataFrame({
         'market_id': [m['id'] for m in valid_markets],
-        'resolution': y,
+        args.target: y,
         'platform': [m.get('platform_slug', 'unknown') for m in valid_markets]
     })
 
-    print("\nResolution by Platform:")
-    platform_stats = resolution_df.groupby('platform')['resolution'].agg(['count', 'mean', 'std']).round(3)
+    print(f"\n{args.target.upper()} by Platform:")
+    platform_stats = analysis_df.groupby('platform')[args.target].agg(['count', 'mean', 'std']).round(3)
     print(platform_stats)
 
     # Save detailed predictions
     predictions = best_model.predict(X_test)
+
     prediction_df = pd.DataFrame({
         'market_id': [market['id'] for market in test_markets],
         'platform': [market['platform_slug'] for market in test_markets],
         'title': [market.get('title', 'N/A') for market in test_markets],
         'url': [market.get('url', 'N/A') for market in test_markets],
-        'actual': y_test,
-        'predicted': predictions,
-        'error': y_test - predictions,
-        'abs_error': np.abs(y_test - predictions)
+        f'actual_{args.target}': y_test,
+        f'predicted_{args.target}': predictions,
+        f'error_{args.target}': y_test - predictions,
+        f'abs_error_{args.target}': np.abs(y_test - predictions)
     })
-    prediction_df.to_csv(f"{args.output_dir}/{slugify(best_model_name)}-{int(time.time())}-predictions.csv", index=False)
-    prediction_df.to_csv(f"{args.output_dir}/latest-predictions.csv", index=False)
-    print(f"\nDetailed predictions saved to {args.output_dir}/latest-predictions.csv")
+
+    prediction_df.to_csv(f"{args.output_dir}/{slugify(best_model_name)}-{slugify(args.target)}-{int(time.time())}-predictions.csv", index=False)
+    prediction_df.to_csv(f"{args.output_dir}/latest-predictions-{slugify(args.target)}.csv", index=False)
+    print(f"\nDetailed predictions saved to {args.output_dir}/latest-predictions-{slugify(args.target)}.csv")
 
     print("\nSample Market Predictions:")
-    print(prediction_df.head(20)[['title', 'actual', 'predicted']])
+    display_cols = ['title', f'actual_{args.target}', f'predicted_{args.target}']
+    print(prediction_df.head(20)[display_cols])
 
 if __name__ == "__main__":
     main()

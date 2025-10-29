@@ -160,12 +160,12 @@ def calculate_market_scores(df):
     # Coefficients for balanced contribution after normalization
     VOLUME_COEF = 1.0
     TRADERS_COEF = 1.0
-    DURATION_COEF = 0.5
+    #DURATION_COEF = 0.5
 
     # Extract arrays and handle missing values
     volume_arr = df['volume_usd'].values.copy()
     traders_arr = df['traders_count'].values.copy()
-    duration_arr = df['duration_days'].values.copy()
+    #duration_arr = df['duration_days'].values.copy()
 
     # Handle volume: replace NaN/negative with small positive value
     volume_mask = np.isnan(volume_arr) | (volume_arr <= 0)
@@ -181,13 +181,13 @@ def calculate_market_scores(df):
     traders_arr = np.maximum(traders_arr, 1.0)  # Ensure minimum of 1 trader
 
     # Handle duration: replace NaN/negative with small positive value
-    duration_mask = np.isnan(duration_arr) | (duration_arr <= 0)
-    duration_arr[duration_mask] = 0.1  # 0.1 days minimum
+    #duration_mask = np.isnan(duration_arr) | (duration_arr <= 0)
+    #duration_arr[duration_mask] = 0.1  # 0.1 days minimum
 
     # Apply logarithmic transformation to reduce skewness
     log_volume = np.log1p(volume_arr)  # log(1 + x) handles values near 0
     log_traders = np.log1p(traders_arr)
-    log_duration = np.log1p(duration_arr)
+    #log_duration = np.log1p(duration_arr)
 
     # Robust normalization using median and IQR to handle outliers
     def robust_normalize(arr):
@@ -200,12 +200,12 @@ def calculate_market_scores(df):
 
     norm_volume = robust_normalize(log_volume)
     norm_traders = robust_normalize(log_traders)
-    norm_duration = robust_normalize(log_duration)
+    #norm_duration = robust_normalize(log_duration)
 
     # Combine normalized components
     scores = (VOLUME_COEF * norm_volume +
-             TRADERS_COEF * norm_traders +
-             DURATION_COEF * norm_duration)
+             TRADERS_COEF * norm_traders)
+             #DURATION_COEF * norm_duration)
 
     # Shift to ensure positive scores for easier interpretation
     min_score = np.min(scores)
