@@ -1,10 +1,7 @@
-import json
 import pickle
 import numpy as np
-from collections import Counter
 from nltk import ngrams, word_tokenize
 from nltk.corpus import stopwords
-import argparse
 import os
 
 # Download stopwords if not already present
@@ -14,7 +11,7 @@ nltk.download('punkt_tab', quiet=True)
 nltk.download('stopwords', quiet=True)
 
 class NGramPredictor:
-    def __init__(self, ngram_data_path="cache/ngram_counts.pkl"):
+    def __init__(self, ngram_data_path="models/ngram_counts.pkl"):
         """
         Initialize the N-gram predictor.
 
@@ -205,9 +202,10 @@ class NGramPredictor:
         return result
 
 def main():
+    import argparse
     parser = argparse.ArgumentParser(description='Predict market resolution based on title n-grams')
     parser.add_argument('title', help='Title to predict resolution for')
-    parser.add_argument('--data-path', default='cache/ngram_counts.pkl',
+    parser.add_argument('--data-path', default='models/ngram_counts.pkl',
                        help='Path to n-gram data file')
     parser.add_argument('--verbose', '-v', action='store_true',
                        help='Show detailed analysis')
