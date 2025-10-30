@@ -319,8 +319,6 @@ def main():
                        help="Ignore cache and re-download all data")
     parser.add_argument("--pca-dim", "-d", type=int, default=50,
                        help="PCA dimensionality reduction (default: 50, 0 to skip)")
-    parser.add_argument("--include-market-features", action="store_true",
-                       help="Include market metadata features alongside embeddings")
     parser.add_argument("--test-size", "-ts", type=float, default=0.2,
                        help="Test set size (default: 0.2)")
     parser.add_argument("--sample-platform", "-sp", type=str,
