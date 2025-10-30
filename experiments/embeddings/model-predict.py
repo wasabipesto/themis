@@ -223,12 +223,13 @@ def main():
         return
 
     # Predict
-    print(f"Predicting for market {market['id']}...", end="")
+    print(f"\nPredicting for market {market['id']}...", end="")
     result = predict_single_market(market, models)
     print(" done.")
 
     if result:
-        print(f"\nMarket: {market['id']}")
+        print("\nMarket Results:")
+        print(f"  Market ID: {market['id']}")
         print(f"  Title: {market['title']}")
         print(f"  URL: {market['url']}")
 
@@ -244,6 +245,10 @@ def main():
                     print("  This market will attract a lot of traders.")
                 if target == "high_traders" and value < 0.3:
                     print("  This market will not attract many traders.")
+                if target == "high_duration" and value > 0.6:
+                    print("  This market will be open for a while.")
+                if target == "high_duration" and value < 0.3:
+                    print("  This market will not be open for very long.")
                 if target == "resolution" and value > 0.6:
                     print("  This market will resolve YES.")
                 if target == "resolution" and value < 0.4:
