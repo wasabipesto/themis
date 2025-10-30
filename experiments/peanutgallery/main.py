@@ -5,7 +5,7 @@ Simple Flask API for making predictions on market questions using trained models
 """
 
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from dotenv import load_dotenv
 from utils.position_predictor import *
 from utils.ngram_predictor import NGramPredictor
@@ -18,7 +18,12 @@ position_predictor = None
 embedding_predictor = None
 ngram_predictor = None
 
-@app.route('/charlie', methods=['POST'])
+@app.route('/', methods=['GET'])
+def homepage():
+    """Serve the main webpage."""
+    return render_template('index.html')
+
+@app.route('/api/charlie', methods=['POST'])
 def charlie():
     """
     Predict resolution based on Manifold user positions and profit.
@@ -56,7 +61,7 @@ def charlie():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/sally', methods=['POST'])
+@app.route('/api/sally', methods=['POST'])
 def sally():
     """
     Predict resolution and metadata based on models trained on natural language embeddings.
@@ -94,7 +99,7 @@ def sally():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/joe', methods=['POST'])
+@app.route('/api/joe', methods=['POST'])
 def joe():
     """
     Predict resolution based on title word frequency analysis (n-grams).
@@ -136,7 +141,7 @@ def joe():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/health', methods=['GET'])
+@app.route('/api/health', methods=['GET'])
 def health_check():
     """Simple health check endpoint."""
     position_predictor_stats = position_predictor.get_cache_stats() if position_predictor else None
@@ -149,18 +154,18 @@ def health_check():
         "ngram_predictor_stats": ngram_stats
     })
 
-@app.route('/', methods=['GET'])
-def index():
+@app.route('/api', methods=['GET'])
+def api_info():
     """API information endpoint."""
     return jsonify({
         "name": "The Peanut Gallery",
         "version": "0.1.0",
         "endpoints": {
-            "/": "GET - This information",
-            "/health": "GET - Health check",
-            "/charlie": "POST - Predict resolution based on Manifold user positions and profit",
-            "/sally": "POST - Predict resolution and metadata based on models trained on natural language embeddings",
-            "/joe": "POST - Predict resolution based on title word frequency analysis (n-grams)",
+            "/api": "GET - This information",
+            "/api/health": "GET - Health check",
+            "/api/charlie": "POST - Predict resolution based on Manifold user positions and profit",
+            "/api/sally": "POST - Predict resolution and metadata based on models trained on natural language embeddings",
+            "/api/joe": "POST - Predict resolution based on title word frequency analysis (n-grams)",
         },
         "embedding_models_loaded": len(embedding_predictor.models) if embedding_predictor else 0,
         "ngram_predictor_loaded": ngram_predictor is not None

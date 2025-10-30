@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>The Peanut Gallery</title>
+        <!-- Favicon will be added when icon is ready -->
+        <style>
+            /* Reset and base styles */
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: "Comic Sans MS", cursive, sans-serif;
+                background: #000;
+                color: #fff;
+                min-height: 100vh;
+                overflow-x: hidden;
+            }
+
+            /* Neobrutalist background pattern */
+            .background-pattern {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: -1;
+                background:
+                    radial-gradient(
+                        circle at 20% 30%,
+                        #ffd700 0%,
+                        transparent 25%
+                    ),
+                    radial-gradient(
+                        circle at 80% 70%,
+                        #ffd700 0%,
+                        transparent 25%
+                    ),
+                    linear-gradient(45deg, #000 25%, transparent 25%),
+                    linear-gradient(-45deg, #000 25%, transparent 25%);
+                background-size:
+                    200px 200px,
+                    200px 200px,
+                    40px 40px,
+                    40px 40px;
+                opacity: 0.1;
+            }
+
+            /* Header */
+            .header {
+                text-align: center;
+                padding: 2rem 1rem;
+                border-bottom: 8px solid #ffd700;
+                background: #fff;
+                color: #000;
+                position: relative;
+            }
+
+            .header::after {
+                content: "";
+                position: absolute;
+                bottom: -8px;
+                right: -8px;
+                width: 100%;
+                height: 100%;
+                background: #ffd700;
+                z-index: -1;
+            }
+
+            .logo {
+                width: 80px;
+                height: 80px;
+                background: #ffd700;
+                border: 4px solid #000;
+                border-radius: 50%;
+                margin: 0 auto 1rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 2rem;
+                font-weight: bold;
+                color: #000;
+            }
+
+            h1 {
+                font-size: 3rem;
+                font-weight: 900;
+                text-transform: uppercase;
+                letter-spacing: 3px;
+                text-shadow: 4px 4px 0 #ffd700;
+                margin-bottom: 0.5rem;
+            }
+
+            .tagline {
+                font-size: 1.2rem;
+                font-weight: bold;
+                color: #666;
+            }
+
+            /* Main container */
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 2rem 1rem;
+            }
+
+            /* Omnibar section */
+            .omnibar-section {
+                background: #fff;
+                border: 6px solid #000;
+                border-radius: 0;
+                padding: 2rem;
+                margin-bottom: 2rem;
+                position: relative;
+                box-shadow: 12px 12px 0 #ffd700;
+            }
+
+            .omnibar-label {
+                font-size: 1.5rem;
+                font-weight: bold;
+                color: #000;
+                margin-bottom: 1rem;
+            }
+
+            .omnibar-container {
+                display: flex;
+                gap: 1rem;
+                margin-bottom: 1rem;
+            }
+
+            .omnibar {
+                flex: 1;
+                padding: 1rem 1.5rem;
+                font-size: 1.1rem;
+                border: 4px solid #000;
+                background: #fff;
+                color: #000;
+                font-family: inherit;
+                border-radius: 0;
+            }
+
+            .omnibar:focus {
+                outline: none;
+                box-shadow: inset 4px 4px 0 #ffd700;
+            }
+
+            .submit-btn {
+                padding: 1rem 2rem;
+                font-size: 1.1rem;
+                font-weight: bold;
+                background: #ffd700;
+                color: #000;
+                border: 4px solid #000;
+                cursor: pointer;
+                font-family: inherit;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                transition: all 0.1s;
+                border-radius: 0;
+            }
+
+            .submit-btn:hover {
+                background: #000;
+                color: #ffd700;
+                transform: translate(2px, 2px);
+            }
+
+            .submit-btn:active {
+                transform: translate(4px, 4px);
+            }
+
+            .submit-btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                transform: none;
+            }
+
+            /* Market info display */
+            .market-info {
+                background: #ffd700;
+                color: #000;
+                padding: 1rem;
+                border: 4px solid #000;
+                margin-top: 1rem;
+                font-weight: bold;
+                display: none;
+            }
+
+            .market-info.show {
+                display: block;
+            }
+
+            .market-warning {
+                background: #ff6b6b;
+                color: #fff;
+                padding: 1rem;
+                border: 4px solid #000;
+                margin-top: 1rem;
+                font-weight: bold;
+                display: none;
+            }
+
+            .market-warning.show {
+                display: block;
+            }
+
+            /* Character gallery */
+            .character-gallery {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+                gap: 2rem;
+                margin-top: 2rem;
+            }
+
+            .character-card {
+                background: #fff;
+                border: 6px solid #000;
+                color: #000;
+                position: relative;
+                min-height: 300px;
+            }
+
+            .character-card::after {
+                content: "";
+                position: absolute;
+                top: 8px;
+                left: 8px;
+                width: 100%;
+                height: 100%;
+                background: #ffd700;
+                z-index: -1;
+            }
+
+            .character-header {
+                background: #000;
+                color: #ffd700;
+                padding: 1rem;
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                font-weight: bold;
+                font-size: 1.2rem;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+
+            .character-portrait {
+                width: 60px;
+                height: 60px;
+                background: #ffd700;
+                border: 3px solid #ffd700;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.5rem;
+                color: #000;
+            }
+
+            .character-body {
+                padding: 1.5rem;
+                font-size: 1.1rem;
+                line-height: 1.5;
+                min-height: 200px;
+                position: relative;
+            }
+
+            .speech-bubble {
+                background: #fff;
+                border: 3px solid #000;
+                padding: 1rem;
+                position: relative;
+                border-radius: 20px;
+                margin-top: 1rem;
+            }
+
+            .speech-bubble::before {
+                content: "";
+                position: absolute;
+                bottom: -15px;
+                left: 30px;
+                width: 0;
+                height: 0;
+                border-left: 15px solid transparent;
+                border-right: 15px solid transparent;
+                border-top: 15px solid #000;
+            }
+
+            .speech-bubble::after {
+                content: "";
+                position: absolute;
+                bottom: -12px;
+                left: 32px;
+                width: 0;
+                height: 0;
+                border-left: 13px solid transparent;
+                border-right: 13px solid transparent;
+                border-top: 13px solid #fff;
+            }
+
+            /* Character states */
+            .character-thinking {
+                opacity: 0.8;
+                animation: pulse 1.5s infinite;
+            }
+
+            @keyframes pulse {
+                0%,
+                100% {
+                    opacity: 0.8;
+                }
+                50% {
+                    opacity: 1;
+                }
+            }
+
+            .character-error .character-card::after {
+                background: #ff6b6b;
+            }
+
+            .character-error .character-header {
+                background: #ff6b6b;
+                color: #fff;
+            }
+
+            /* Loading spinner */
+            .spinner {
+                border: 4px solid #000;
+                border-top: 4px solid #ffd700;
+                border-radius: 50%;
+                width: 40px;
+                height: 40px;
+                animation: spin 1s linear infinite;
+                margin: 1rem auto;
+            }
+
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+
+            /* Responsive design */
+            @media (max-width: 768px) {
+                h1 {
+                    font-size: 2rem;
+                }
+
+                .omnibar-container {
+                    flex-direction: column;
+                }
+
+                .character-gallery {
+                    grid-template-columns: 1fr;
+                    gap: 1rem;
+                }
+
+                .character-card {
+                    min-height: 250px;
+                }
+
+                .character-body {
+                    min-height: 150px;
+                    padding: 1rem;
+                }
+
+                .container {
+                    padding: 1rem;
+                }
+            }
+
+            /* Utility classes */
+            .hidden {
+                display: none !important;
+            }
+
+            .show {
+                display: block !important;
+            }
+
+            .bold {
+                font-weight: bold;
+            }
+
+            .center {
+                text-align: center;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="background-pattern"></div>
+
+        <header class="header">
+            <div class="logo">🥜</div>
+            <h1>The Peanut Gallery</h1>
+            <div class="tagline">
+                Get advice from the gallery on your prediction markets
+            </div>
+        </header>
+
+        <main class="container">
+            <section class="omnibar-section">
+                <div class="omnibar-label">
+                    Drop a Manifold URL or ask your question:
+                </div>
+                <div class="omnibar-container">
+                    <input
+                        type="text"
+                        id="omnibar"
+                        class="omnibar"
+                        placeholder="https://manifold.markets/... or 'Will it rain tomorrow?'"
+                        autocomplete="off"
+                    />
+                    <button id="submit-btn" class="submit-btn">
+                        Ask the Gallery
+                    </button>
+                </div>
+
+                <div id="market-info" class="market-info">
+                    <div id="market-details"></div>
+                </div>
+
+                <div id="market-warning" class="market-warning">
+                    <strong>⚠️ Warning:</strong> This market isn't binary. Some
+                    characters may not be able to give predictions, but they'll
+                    try their best!
+                </div>
+            </section>
+
+            <section class="character-gallery">
+                <!-- Charlie - Position Predictor -->
+                <div class="character-container" data-character="charlie">
+                    <div class="character-card">
+                        <div class="character-header">
+                            <div
+                                class="character-portrait"
+                                data-state="welcome"
+                            >
+                                👤
+                            </div>
+                            <div>Charlie</div>
+                        </div>
+                        <div class="character-body">
+                            <div class="speech-bubble">
+                                <div class="character-text">
+                                    I keep a close eye on market participants
+                                    and their positions. Show me a Manifold
+                                    market and I'll tell you what the smart
+                                    money is doing! 💰
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sally - Embedding Predictor -->
+                <div class="character-container" data-character="sally">
+                    <div class="character-card">
+                        <div class="character-header">
+                            <div
+                                class="character-portrait"
+                                data-state="welcome"
+                            >
+                                🤖
+                            </div>
+                            <div>Sally</div>
+                        </div>
+                        <div class="character-body">
+                            <div class="speech-bubble">
+                                <div class="character-text">
+                                    I analyze questions using advanced language
+                                    understanding. Give me any question text and
+                                    I'll dive deep into the semantic patterns!
+                                    📊
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Joe - N-gram Predictor -->
+                <div class="character-container" data-character="joe">
+                    <div class="character-card">
+                        <div class="character-header">
+                            <div
+                                class="character-portrait"
+                                data-state="welcome"
+                            >
+                                📝
+                            </div>
+                            <div>Joe</div>
+                        </div>
+                        <div class="character-body">
+                            <div class="speech-bubble">
+                                <div class="character-text">
+                                    I look for patterns in words and phrases.
+                                    The way questions are worded tells me a lot
+                                    about how they'll resolve! 🔤
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <script>
+            // Global state
+            let currentMarket = null;
+            let isQuerying = false;
+
+            // Character configurations
+            const characters = {
+                charlie: {
+                    name: "Charlie",
+                    endpoint: "/api/charlie",
+                    requiresSlug: true,
+                    welcomeMessage:
+                        "I keep a close eye on market participants and their positions. Show me a Manifold market and I'll tell you what the smart money is doing! 💰",
+                    thinkingMessage:
+                        "Let me check what the traders are up to...",
+                    portraits: {
+                        welcome: "👤",
+                        thinking: "🔍",
+                        response: "💰",
+                        error: "😵",
+                    },
+                },
+                sally: {
+                    name: "Sally",
+                    endpoint: "/api/sally",
+                    requiresSlug: false,
+                    welcomeMessage:
+                        "I analyze questions using advanced language understanding. Give me any question text and I'll dive deep into the semantic patterns! 📊",
+                    thinkingMessage: "Processing the semantic patterns...",
+                    portraits: {
+                        welcome: "🤖",
+                        thinking: "⚡",
+                        response: "🎯",
+                        error: "😵",
+                    },
+                },
+                joe: {
+                    name: "Joe",
+                    endpoint: "/api/joe",
+                    requiresSlug: false,
+                    welcomeMessage:
+                        "I look for patterns in words and phrases. The way questions are worded tells me a lot about how they'll resolve! 🔤",
+                    thinkingMessage:
+                        "Analyzing word patterns and frequencies...",
+                    portraits: {
+                        welcome: "📝",
+                        thinking: "🔤",
+                        response: "📈",
+                        error: "😵",
+                    },
+                },
+            };
+
+            // DOM elements
+            const omnibar = document.getElementById("omnibar");
+            const submitBtn = document.getElementById("submit-btn");
+            const marketInfo = document.getElementById("market-info");
+            const marketDetails = document.getElementById("market-details");
+            const marketWarning = document.getElementById("market-warning");
+
+            // Event listeners
+            omnibar.addEventListener("keypress", (e) => {
+                if (e.key === "Enter" && !isQuerying) {
+                    handleSubmit();
+                }
+            });
+
+            submitBtn.addEventListener("click", handleSubmit);
+
+            // Utility functions
+            function isManifoldUrl(text) {
+                return (
+                    text.includes("manifold.markets") ||
+                    text.includes("manifold.com")
+                );
+            }
+
+            function extractSlugFromUrl(url) {
+                const match = url.match(
+                    /manifold\.(?:markets|com)\/([^/?#]+)\/([^/?#]+)/,
+                );
+                return match ? match[2] : null;
+            }
+
+            function setCharacterState(characterId, state, message = null) {
+                const container = document.querySelector(
+                    `[data-character="${characterId}"]`,
+                );
+                const card = container.querySelector(".character-card");
+                const portrait = container.querySelector(".character-portrait");
+                const textElement = container.querySelector(".character-text");
+                const character = characters[characterId];
+
+                // Remove all state classes
+                container.classList.remove(
+                    "character-thinking",
+                    "character-error",
+                );
+
+                // Add new state class
+                if (state === "thinking") {
+                    container.classList.add("character-thinking");
+                } else if (state === "error") {
+                    container.classList.add("character-error");
+                }
+
+                // Update portrait
+                portrait.textContent = character.portraits[state];
+                portrait.setAttribute("data-state", state);
+
+                // Update message
+                if (message) {
+                    textElement.textContent = message;
+                } else if (state === "welcome") {
+                    textElement.textContent = character.welcomeMessage;
+                } else if (state === "thinking") {
+                    textElement.textContent = character.thinkingMessage;
+                }
+
+                // Add spinner for thinking state
+                if (state === "thinking") {
+                    if (!container.querySelector(".spinner")) {
+                        const spinner = document.createElement("div");
+                        spinner.className = "spinner";
+                        container
+                            .querySelector(".character-body")
+                            .appendChild(spinner);
+                    }
+                } else {
+                    const spinner = container.querySelector(".spinner");
+                    if (spinner) {
+                        spinner.remove();
+                    }
+                }
+            }
+
+            function resetAllCharacters() {
+                Object.keys(characters).forEach((characterId) => {
+                    setCharacterState(characterId, "welcome");
+                });
+            }
+
+            async function fetchMarketInfo(slug) {
+                try {
+                    const response = await fetch(
+                        `https://api.manifold.markets/v0/slug/${slug}`,
+                    );
+                    if (!response.ok) {
+                        throw new Error("Market not found");
+                    }
+                    const market = await response.json();
+                    return market;
+                } catch (error) {
+                    throw new Error(
+                        `Failed to fetch market info: ${error.message}`,
+                    );
+                }
+            }
+
+            function displayMarketInfo(market) {
+                currentMarket = market;
+                const probability = market.probability
+                    ? Math.round(market.probability * 100)
+                    : "N/A";
+                const isBinary = market.outcomeType === "BINARY";
+
+                marketDetails.innerHTML = `
+                <strong>${market.question}</strong><br>
+                Current probability: <strong>${probability}%</strong> ${isBinary ? "YES" : ""}
+                ${market.creatorName ? `<br>Created by: ${market.creatorName}` : ""}
+            `;
+
+                marketInfo.classList.add("show");
+
+                if (!isBinary) {
+                    marketWarning.classList.add("show");
+                } else {
+                    marketWarning.classList.remove("show");
+                }
+            }
+
+            function hideMarketInfo() {
+                marketInfo.classList.remove("show");
+                marketWarning.classList.remove("show");
+                currentMarket = null;
+            }
+
+            async function queryCharacter(characterId, input) {
+                const character = characters[characterId];
+
+                try {
+                    setCharacterState(characterId, "thinking");
+
+                    // Prepare request body
+                    let requestBody;
+                    if (character.requiresSlug && currentMarket) {
+                        requestBody = { slug: extractSlugFromUrl(input) };
+                    } else if (!character.requiresSlug) {
+                        // For non-slug characters, use market question if available, otherwise use input
+                        requestBody = {
+                            question: currentMarket
+                                ? currentMarket.question
+                                : input,
+                        };
+                    } else {
+                        throw new Error(
+                            "This character needs a Manifold market URL",
+                        );
+                    }
+
+                    const response = await fetch(character.endpoint, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify(requestBody),
+                    });
+
+                    const result = await response.json();
+
+                    if (result.status === "error") {
+                        throw new Error(result.message);
+                    }
+
+                    // Format response based on character type
+                    let responseMessage = formatCharacterResponse(
+                        characterId,
+                        result.results,
+                    );
+                    setCharacterState(characterId, "response", responseMessage);
+                } catch (error) {
+                    setCharacterState(
+                        characterId,
+                        "error",
+                        `Oops! ${error.message}`,
+                    );
+                }
+            }
+
+            function formatCharacterResponse(characterId, results) {
+                switch (characterId) {
+                    case "charlie":
+                        const charlieConfidence = Math.round(
+                            (1 - results.uncertainty) * 100,
+                        );
+                        const charliePrediction =
+                            results.predicted_outcome > 0.5 ? "YES" : "NO";
+                        const charlieProbability = Math.round(
+                            results.predicted_outcome * 100,
+                        );
+
+                        let charlieMessage = `I'm ${charlieConfidence}% confident this will resolve ${charliePrediction} (${charlieProbability}% probability). `;
+
+                        if (results.top_weighted_user) {
+                            const user = results.top_weighted_user;
+                            charlieMessage += `The most influential trader is ${user.displayName || user.username} `;
+                            charlieMessage += `with ${user.profit > 0 ? "profits" : "losses"} of M$${Math.abs(user.profit).toFixed(0)}!`;
+                        }
+
+                        charlieMessage += ` Based on ${results.total_positions} position(s).`;
+                        return charlieMessage;
+
+                    case "sally":
+                        if (results.resolution !== undefined) {
+                            const sallyPrediction =
+                                results.resolution > 0.5 ? "YES" : "NO";
+                            const sallyConfidence = Math.round(
+                                results.resolution * 100,
+                            );
+                            let sallyMessage = `My semantic analysis suggests this will resolve ${sallyPrediction} with ${sallyConfidence}% confidence. `;
+
+                            // Add any additional metadata if available
+                            if (results.popularity) {
+                                sallyMessage += `I predict this market will have ${results.popularity} interest level.`;
+                            }
+
+                            return sallyMessage;
+                        } else {
+                            return "I analyzed the semantic patterns, but the results were inconclusive. The question might be outside my training domain.";
+                        }
+
+                    case "joe":
+                        const joeConfidence = Math.round(
+                            results.confidence * 100,
+                        );
+                        const joePrediction =
+                            results.prediction === 1 ? "YES" : "NO";
+
+                        let joeMessage = `Based on word patterns, I predict this will resolve ${joePrediction} `;
+                        joeMessage += `with ${joeConfidence}% confidence. `;
+
+                        if (results.evidence && results.evidence.length > 0) {
+                            const topEvidence = results.evidence[0];
+                            joeMessage += `Key phrase: "${topEvidence.phrase}" (appears in ${topEvidence.resolution === 1 ? "YES" : "NO"} markets).`;
+                        }
+
+                        return joeMessage;
+
+                    default:
+                        return "I analyzed your question, but I'm not sure how to interpret the results.";
+                }
+            }
+
+            async function handleSubmit() {
+                if (isQuerying) return;
+
+                const input = omnibar.value.trim();
+                if (!input) return;
+
+                isQuerying = true;
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Thinking...";
+
+                try {
+                    // Check if input is a Manifold URL
+                    if (isManifoldUrl(input)) {
+                        const slug = extractSlugFromUrl(input);
+                        if (!slug) {
+                            throw new Error(
+                                "Could not extract market slug from URL",
+                            );
+                        }
+
+                        // Fetch market info
+                        const market = await fetchMarketInfo(slug);
+                        displayMarketInfo(market);
+                    } else {
+                        // Hide market info for text questions
+                        hideMarketInfo();
+                    }
+
+                    // Query all characters
+                    const characterPromises = Object.keys(characters).map(
+                        (characterId) => {
+                            const character = characters[characterId];
+
+                            // Skip Charlie if no Manifold URL provided
+                            if (character.requiresSlug && !currentMarket) {
+                                setCharacterState(
+                                    characterId,
+                                    "error",
+                                    "I need a Manifold market URL to analyze trader positions!",
+                                );
+                                return Promise.resolve();
+                            }
+
+                            return queryCharacter(characterId, input);
+                        },
+                    );
+
+                    await Promise.all(characterPromises);
+                } catch (error) {
+                    // Show error in market info if URL-related
+                    if (isManifoldUrl(input)) {
+                        marketDetails.innerHTML = `<strong>Error:</strong> ${error.message}`;
+                        marketInfo.classList.add("show");
+                    }
+
+                    // Set all characters to error state
+                    Object.keys(characters).forEach((characterId) => {
+                        setCharacterState(
+                            characterId,
+                            "error",
+                            `Oops! ${error.message}`,
+                        );
+                    });
+                }
+
+                isQuerying = false;
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Ask the Gallery";
+            }
+
+            // Initialize
+            resetAllCharacters();
+        </script>
+    </body>
+</html>
