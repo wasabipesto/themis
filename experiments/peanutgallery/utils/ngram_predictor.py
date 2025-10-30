@@ -30,6 +30,43 @@ class NGramPredictor:
         with open(data_path, "rb") as f:
             return pickle.load(f)
 
+    def get_stats(self):
+        """
+        Get statistics about the loaded n-gram data.
+
+        Returns:
+            dict: Statistics including total ngrams, counts per resolution, etc.
+        """
+        stats = {
+            'total_ngrams': 0,
+            'resolutions': {},
+            'ngram_sizes': {},
+            'max_n': self.max_n,
+            'exclude_stop_words': len(self.stop_words) > 0
+        }
+
+        # Initialize counters
+        for res in self.ngram_counts:
+            stats['resolutions'][res] = {'total': 0, 'by_size': {}}
+
+        for n in range(1, self.max_n + 1):
+            stats['ngram_sizes'][n] = {'total': 0, 'by_resolution': {}}
+            for res in self.ngram_counts:
+                stats['ngram_sizes'][n]['by_resolution'][res] = 0
+
+        # Count ngrams
+        for res in self.ngram_counts:
+            for n in range(1, self.max_n + 1):
+                if n in self.ngram_counts[res]:
+                    count = len(self.ngram_counts[res][n])
+                    stats['resolutions'][res]['total'] += count
+                    stats['resolutions'][res]['by_size'][n] = count
+                    stats['ngram_sizes'][n]['total'] += count
+                    stats['ngram_sizes'][n]['by_resolution'][res] = count
+                    stats['total_ngrams'] += count
+
+        return stats
+
     def preprocess_title(self, title):
         """Preprocess a title to extract tokens."""
         text = title.lower()
@@ -92,16 +129,27 @@ class NGramPredictor:
         return scores, ngram_evidence
 
     def find_strongest_evidence(self, evidence, predicted_resolution):
-        """Find the single strongest piece of evidence for the predicted resolution."""
+        """
+        Find the single strongest piece of evidence for the predicted resolution.
+        Takes into account the weighting scheme used in predictions.
+        """
         strongest = None
-        max_prob = 0
+        max_weighted_score = 0
+
+        # Use the same weighting scheme as in predict_resolution
+        weights = {n: n**2 for n in range(1, self.max_n + 1)}
 
         for n in range(1, self.max_n + 1):
             for ev in evidence[predicted_resolution][n]:
-                if ev['prob'] > max_prob:
-                    max_prob = ev['prob']
+                # Calculate weighted score: probability * weight
+                weighted_score = ev['prob'] * weights[n]
+
+                if weighted_score > max_weighted_score:
+                    max_weighted_score = weighted_score
                     strongest = ev.copy()
                     strongest['ngram_size'] = n
+                    strongest['weight'] = weights[n]
+                    strongest['weighted_score'] = weighted_score
 
         return strongest
 
@@ -204,16 +252,54 @@ class NGramPredictor:
 def main():
     import argparse
     parser = argparse.ArgumentParser(description='Predict market resolution based on title n-grams')
-    parser.add_argument('title', help='Title to predict resolution for')
+    parser.add_argument('title', nargs='?', help='Title to predict resolution for')
     parser.add_argument('--data-path', default='models/ngram_counts.pkl',
                        help='Path to n-gram data file')
     parser.add_argument('--verbose', '-v', action='store_true',
                        help='Show detailed analysis')
+    parser.add_argument('--stats', '-s', action='store_true',
+                       help='Show statistics about loaded n-gram data')
 
     args = parser.parse_args()
 
     try:
         predictor = NGramPredictor(args.data_path)
+
+        # Show stats if requested
+        if args.stats:
+            stats = predictor.get_stats()
+            print("=== N-gram Data Statistics ===")
+            print(f"Total N-grams: {stats['total_ngrams']:,}")
+            print(f"Max N-gram size: {stats['max_n']}")
+            print(f"Stop words excluded: {stats['exclude_stop_words']}")
+            print()
+
+            print("By Resolution:")
+            for res in sorted(stats['resolutions'].keys()):
+                res_stats = stats['resolutions'][res]
+                print(f"  Resolution {res}: {res_stats['total']:,} n-grams")
+                for n in sorted(res_stats['by_size'].keys()):
+                    count = res_stats['by_size'][n]
+                    print(f"    {n}-grams: {count:,}")
+            print()
+
+            print("By N-gram Size:")
+            for n in sorted(stats['ngram_sizes'].keys()):
+                size_stats = stats['ngram_sizes'][n]
+                print(f"  {n}-grams: {size_stats['total']:,} total")
+                for res in sorted(size_stats['by_resolution'].keys()):
+                    count = size_stats['by_resolution'][res]
+                    print(f"    Resolution {res}: {count:,}")
+            print()
+
+        # If no title provided and only stats requested, exit here
+        if not args.title and args.stats:
+            return
+
+        # Require title for prediction
+        if not args.title:
+            parser.error("Title is required for prediction (or use --stats to see data statistics)")
+
         result = predictor.predict_resolution(args.title, verbose=args.verbose)
 
         if 'error' in result:
@@ -232,7 +318,7 @@ def main():
         # Show strongest evidence in non-verbose mode
         if not args.verbose and result['strongest_evidence']:
             ev = result['strongest_evidence']
-            print(f"Strongest Evidence: '{ev['ngram']}' ({ev['ngram_size']}-gram) - P={ev['prob']:.3f} ({ev['count']}/{ev['total']})")
+            print(f"Strongest Evidence: '{ev['ngram']}' ({ev['ngram_size']}-gram) - P={ev['prob']:.3f} ({ev['count']}/{ev['total']}) [weighted score: {ev['weighted_score']:.3f}]")
 
         if args.verbose and 'detailed_evidence' in result:
             print("\n--- Detailed Evidence ---")

@@ -79,22 +79,11 @@ def joe():
 
         try:
             # Get prediction from ngram predictor
-            prediction_result = ngram_predictor.predict_resolution(question)
+            results = ngram_predictor.predict_resolution(question)
 
             # Check if prediction was successful
-            if prediction_result.get('error'):
-                return jsonify({"status": "error", "message": prediction_result['error']}), 500
-
-            # Format results to match the expected output format
-            results = {
-                "resolution_prediction": prediction_result['prediction'],
-                "prob_resolution_0": prediction_result['prob_resolution_0'],
-                "prob_resolution_1": prediction_result['prob_resolution_1'],
-                "confidence": prediction_result['confidence'],
-                "uncertainty": prediction_result['uncertainty'],
-                "evidence_count": prediction_result['evidence_count'],
-                "strongest_evidence": prediction_result.get('strongest_evidence')
-            }
+            if results.get('error'):
+                return jsonify({"status": "error", "message": results['error']}), 500
 
         except Exception as e:
             return jsonify({"status": "error", "message": f"N-gram prediction failed: {str(e)}"}), 500
@@ -111,11 +100,11 @@ def joe():
 def health_check():
     """Simple health check endpoint."""
     embedding_models_count = len(embedding_predictor.models) if embedding_predictor else 0
-    ngram_loaded = ngram_predictor is not None
+    ngram_stats = ngram_predictor.get_stats() if ngram_predictor else None
     return jsonify({
         "status": "healthy",
         "embedding_models_loaded": embedding_models_count,
-        "ngram_predictor_loaded": ngram_loaded
+        "ngram_predictor_stats": ngram_stats
     })
 
 @app.route('/', methods=['GET'])
