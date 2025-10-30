@@ -11,14 +11,14 @@ nltk.download('punkt_tab', quiet=True)
 nltk.download('stopwords', quiet=True)
 
 class NGramPredictor:
-    def __init__(self, ngram_data_path="models/ngram_counts.pkl"):
+    def __init__(self, ngram_data_path="models/ngram_counts.pkl", exclude_stop_words=False):
         """
         Initialize the N-gram predictor.
 
         Args:
             ngram_data_path: Path to the pickled n-gram counts file
         """
-        self.stop_words = set(stopwords.words("english"))
+        self.stop_words = set(stopwords.words("english")) if exclude_stop_words else set()
         self.ngram_counts = self.load_ngram_data(ngram_data_path)
         self.max_n = max(max(self.ngram_counts[res].keys()) for res in self.ngram_counts)
 
@@ -135,7 +135,7 @@ class NGramPredictor:
         evidence_count = 0
 
         # Weight higher n-grams more heavily (they're more specific)
-        weights = {n: n for n in range(1, self.max_n + 1)}
+        weights = {n: n**2 for n in range(1, self.max_n + 1)}
 
         for res in [0, 1]:
             weighted_sum = 0

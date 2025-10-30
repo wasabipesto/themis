@@ -12,7 +12,7 @@ nltk.download('punkt')
 nltk.download('punkt_tab')
 nltk.download('stopwords')
 
-def load_and_process_data(input_file, max_n=3, min_freq=5, platforms=["manifold"]):
+def load_and_process_data(input_file, exclude_stop_words=False, max_n=3, min_freq=5, platforms=["manifold"]):
     """
     Load and process market data to generate n-grams by resolution.
 
@@ -25,7 +25,7 @@ def load_and_process_data(input_file, max_n=3, min_freq=5, platforms=["manifold"
     Returns:
         Dictionary of n-gram counts by resolution
     """
-    stop_words = set(stopwords.words("english"))
+    stop_words = set(stopwords.words("english")) if exclude_stop_words else set()
 
     # Count total lines first for tqdm
     with open(input_file, "r", encoding="utf-8") as f:
@@ -117,9 +117,9 @@ def main():
     """Main function to process market data and generate n-grams."""
     # Parameters
     input_file = "cache/markets.jsonl"
-    max_n = 3          # unigrams, bigrams, trigrams
-    min_freq = 5       # ignore extremely rare n-grams
-    platforms = ["manifold"]  # platforms to analyze
+    max_n = 4
+    min_freq = 5
+    platforms = ["manifold"]
 
     print("Loading and processing market data...")
     ngram_counts = load_and_process_data(
