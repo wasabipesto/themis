@@ -241,8 +241,9 @@ class PositionPredictor:
 
         # ---- Balance weighting (log-scaled, up to 500k normalization) ----
         if weighting_config['balance_weight'] > 0:
-            balance_factor = math.log1p(max(user.balance, 0)) / math.log1p(500_000)
-            weight_multiplier += weighting_config['balance_weight'] * balance_factor
+            normalized_balance = (max(user.balance, 0) / 500_000) ** 0.5
+            normalized_balance = min(normalized_balance, 1.0)
+            weight_multiplier += weighting_config['balance_weight'] * normalized_balance
 
         # ---- Account age weighting (up to 1 year normalized) ----
         if weighting_config['age_weight'] > 0:
@@ -254,10 +255,10 @@ class PositionPredictor:
         # ---- Profit weighting (log-scaled, penalize losses) ----
         if weighting_config['profit_weight'] > 0 and user.profit is not None:
             # Allow negative influence for losses
-            profit_factor = math.copysign(
-                math.log1p(abs(user.profit)) / math.log1p(500_000),
-                user.profit
-            )
+            profit_magnitude = abs(user.profit)
+            normalized_profit = (profit_magnitude / 500_000) ** 0.5
+            normalized_profit = min(normalized_profit, 1.0)
+            profit_factor = math.copysign(normalized_profit, user.profit)
             weight_multiplier += weighting_config['profit_weight'] * profit_factor
 
         return base_weight * weight_multiplier
