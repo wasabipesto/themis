@@ -1,12 +1,11 @@
 import os
-import json
 import time
+import math
 import pickle
 import requests
 import argparse
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
-from datetime import datetime, timedelta
 
 
 @dataclass
@@ -227,76 +226,64 @@ class PositionPredictor:
         """
         if weighting_config is None:
             weighting_config = {
-                'balance_weight': 0.5,
+                'balance_weight': 2.0,
                 'shares_weight': 1.0,
-                'age_weight': 1.0,
-                'profit_weight': 1.0,
+                'age_weight': 2.0,
+                'profit_weight': 5.0,
             }
 
         # Base weight: shares * balance
         total_shares = sum(abs(shares) for shares in position.shares.values())
-        base_weight = total_shares * user.balance
+        base_weight = total_shares * weighting_config['shares_weight']
 
-        # Additional weighting factors
+        # Initialize weight multiplier
         weight_multiplier = 1.0
 
-        # Account age weighting (older accounts get slight boost)
+        # ---- Balance weighting (log-scaled, up to 500k normalization) ----
+        if weighting_config['balance_weight'] > 0:
+            balance_factor = math.log1p(max(user.balance, 0)) / math.log1p(500_000)
+            weight_multiplier += weighting_config['balance_weight'] * balance_factor
+
+        # ---- Account age weighting (up to 1 year normalized) ----
         if weighting_config['age_weight'] > 0:
+            # Expect user.created_time in milliseconds; convert to days
             account_age_days = (time.time() * 1000 - user.created_time) / (1000 * 24 * 3600)
-            age_factor = min(account_age_days / 365, 2.0)  # Cap at 2x for 1+ year accounts
+            age_factor = min(account_age_days / 365.0, 1.0)  # capped at 1 year = 1.0
             weight_multiplier += weighting_config['age_weight'] * age_factor
 
-        # Profit weighting (more successful traders get boost)
+        # ---- Profit weighting (log-scaled, penalize losses) ----
         if weighting_config['profit_weight'] > 0 and user.profit is not None:
-            profit_factor = max(0, min(user.profit / 10000, 1.0))  # Normalize profit
+            # Allow negative influence for losses
+            profit_factor = math.copysign(
+                math.log1p(abs(user.profit)) / math.log1p(500_000),
+                user.profit
+            )
             weight_multiplier += weighting_config['profit_weight'] * profit_factor
 
         return base_weight * weight_multiplier
 
+
     def predict_outcome(self, market_slug: str,
-                       weighting_config: Optional[Dict[str, float]] = None,
-                       verbose: bool = False) -> PredictionResult:
+                        weighting_config: Optional[Dict[str, float]] = None,
+                        verbose: bool = False) -> PredictionResult:
         """
-        Predict the outcome of a market based on user positions.
-
-        Args:
-            market_slug: The market slug to predict
-            weighting_config: Optional configuration for position weighting
-            verbose: Whether to show detailed information
-
-        Returns:
-            PredictionResult with prediction and metadata
+        Predict outcome using improved exposure-based and robustly normalized weighting.
         """
         self._ensure_users_loaded()
 
         if verbose:
             print(f"Predicting outcome for market: {market_slug}")
 
-        # Fetch market positions
         positions = self._fetch_market_positions(market_slug)
-
         if not positions:
-            return PredictionResult(
-                predicted_outcome=0.5,  # Default to 50/50
-                uncertainty=1.0,  # Maximum uncertainty
-                top_weighted_user=None,
-                total_positions=0,
-                total_weighted_value=0.0
-            )
+            return PredictionResult(0.5, 1.0, None, 0, 0.0)
 
-        # Calculate weighted outcomes
-        weighted_yes = 0.0
-        weighted_no = 0.0
-        total_weight = 0.0
+        weighted_yes, weighted_no, total_weight = 0.0, 0.0, 0.0
         user_weights = []
 
         for position in positions:
             user = self.users_cache.get(position.user_id)
-            if not user:
-                continue  # Skip users not in cache
-
-            # Skip bot accounts for cleaner predictions
-            if user.is_bot:
+            if not user or user.is_bot:
                 continue
 
             weight = self._calculate_user_weight(user, position, weighting_config)
@@ -327,59 +314,48 @@ class PositionPredictor:
                 total_weighted_value=0.0
             )
 
-        # Calculate predicted probability
-        total_weighted_outcome = weighted_yes + weighted_no
-        if total_weighted_outcome > 0:
-            predicted_prob = weighted_yes / total_weighted_outcome
-        else:
-            predicted_prob = 0.5
+        predicted_prob = weighted_yes / (weighted_yes + weighted_no)
 
-        # Calculate uncertainty
-        # Higher uncertainty when:
-        # 1. Fewer positions
-        # 2. More balanced between YES/NO
-        # 3. Lower total weight (less confident users)
+        # --- Improved uncertainty (scaled by weight and balance) ---
+        n_positions = len(positions)
+        balance_uncertainty = 1 - abs(predicted_prob - 0.5) * 2
+        weight_uncertainty = 1 / (1 + math.log1p(total_weight / 10000))
+        sample_uncertainty = 1 / (1 + math.log1p(n_positions))
+        uncertainty = min(1.0, (balance_uncertainty + weight_uncertainty + sample_uncertainty) / 3)
 
-        position_uncertainty = max(0, 1 - len(positions) / 100)  # Less uncertain with more positions
-        balance_uncertainty = 1 - abs(predicted_prob - 0.5) * 2  # More uncertain when close to 50/50
-        weight_uncertainty = max(0, 1 - total_weight / 1000000)  # Less uncertain with higher total weight
-
-        uncertainty = (position_uncertainty + balance_uncertainty + weight_uncertainty) / 3
-        uncertainty = max(0.0, min(1.0, uncertainty))  # Clamp to [0, 1]
-
-        # Find top weighted user
+        # --- Find top user by weight ---
         top_user = None
         if user_weights:
-            top_weighted = max(user_weights, key=lambda x: x['weight'])
+            top_entry = max(user_weights, key=lambda x: x['weight'])
             top_user = {
-                'user_id': top_weighted['user'].id,
-                'username': top_weighted['user'].username,
-                'name': top_weighted['user'].name,
-                'weight': top_weighted['weight'],
-                'balance': top_weighted['user'].balance,
-                'yes_shares': top_weighted['yes_shares'],
-                'no_shares': top_weighted['no_shares']
+                'user_id': top_entry['user'].id,
+                'username': top_entry['user'].username,
+                'name': top_entry['user'].name,
+                'weight': top_entry['weight'],
+                'position': top_entry['position'],
+                'balance': top_entry['user'].balance,
+                'profit': top_entry['user'].profit,
+                'yes_shares': top_entry['yes_shares'],
+                'no_shares': top_entry['no_shares']
             }
 
         result = PredictionResult(
             predicted_outcome=predicted_prob,
             uncertainty=uncertainty,
             top_weighted_user=top_user,
-            total_positions=len(positions),
+            total_positions=n_positions,
             total_weighted_value=total_weight
         )
 
         if verbose:
-            print(f"Processed {len(positions)} positions")
-            print(f"Weighted YES: {weighted_yes:,.0f}")
-            print(f"Weighted NO: {weighted_no:,.0f}")
-            print(f"Total weight: {total_weight:,.0f}")
+            print(f"Processed {n_positions} positions")
             print(f"Predicted probability: {predicted_prob:.3f}")
             print(f"Uncertainty: {uncertainty:.3f}")
             if top_user:
-                print(f"Top weighted user: {top_user['username']} (weight: {top_user['weight']:,.0f})")
+                print(f"Top user: {top_user['username']} (weight: {top_user['weight']:.1f})")
 
         return result
+
 
     def refresh_user_cache(self) -> None:
         """Force refresh of user cache."""
@@ -414,11 +390,11 @@ def main():
                        help='Show cache statistics')
     parser.add_argument('--verbose', '-v', action='store_true',
                        help='Show detailed analysis')
-    parser.add_argument('--balance-weight', type=float, default=0.5,
+    parser.add_argument('--balance-weight', type=float, default=2.0,
                        help='Weight for user balance in calculations')
-    parser.add_argument('--age-weight', type=float, default=1.0,
+    parser.add_argument('--age-weight', type=float, default=2.0,
                        help='Weight for account age in calculations')
-    parser.add_argument('--profit-weight', type=float, default=1.0,
+    parser.add_argument('--profit-weight', type=float, default=5.0,
                        help='Weight for user profit in calculations')
 
     args = parser.parse_args()
