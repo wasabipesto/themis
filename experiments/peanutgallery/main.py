@@ -7,14 +7,54 @@ Simple Flask API for making predictions on market questions using trained models
 import os
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
+from utils.position_predictor import *
 from utils.ngram_predictor import NGramPredictor
 from utils.embedding_predictor import EmbeddingPredictor
 
 app = Flask(__name__)
 
 # Global variables to store predictors
+position_predictor = None
 embedding_predictor = None
 ngram_predictor = None
+
+@app.route('/charlie', methods=['POST'])
+def charlie():
+    """
+    Predict resolution based on Manifold user positions and profit.
+    Requires a manifold slug for lookup.
+    """
+    try:
+        # Parse request
+        if not request.is_json:
+            return jsonify({"status": "error", "message": "Request must be JSON"}), 400
+
+        data = request.get_json()
+        if not data or 'slug' not in data:
+            return jsonify({"status": "error", "message": "Missing 'slug' field"}), 400
+
+        slug = data['slug'].strip()
+        if not slug:
+            return jsonify({"status": "error", "message": "Slug cannot be empty"}), 400
+
+        # Check if predictor is loaded
+        if position_predictor is None:
+            return jsonify({"status": "error", "message": "Position predictor not loaded"}), 500
+
+        try:
+            # Get prediction from position predictor
+            results = position_predictor.predict_outcome(slug)
+
+        except Exception as e:
+            return jsonify({"status": "error", "message": f"Position prediction failed: {str(e)}"}), 500
+
+        return jsonify({
+            "status": "success",
+            "results": results
+        })
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/sally', methods=['POST'])
 def sally():
@@ -35,7 +75,7 @@ def sally():
         if not question:
             return jsonify({"status": "error", "message": "Question cannot be empty"}), 400
 
-        # Check if embedding predictor is loaded
+        # Check if predictor is loaded
         if embedding_predictor is None:
             return jsonify({"status": "error", "message": "Embedding predictor not loaded"}), 500
 
@@ -73,7 +113,7 @@ def joe():
         if not question:
             return jsonify({"status": "error", "message": "Question cannot be empty"}), 400
 
-        # Check if ngram predictor is loaded
+        # Check if predictor is loaded
         if ngram_predictor is None:
             return jsonify({"status": "error", "message": "N-gram predictor not loaded"}), 500
 
@@ -99,10 +139,12 @@ def joe():
 @app.route('/health', methods=['GET'])
 def health_check():
     """Simple health check endpoint."""
+    position_predictor_stats = position_predictor.get_cache_stats() if position_predictor else None
     embedding_models_count = len(embedding_predictor.models) if embedding_predictor else 0
     ngram_stats = ngram_predictor.get_stats() if ngram_predictor else None
     return jsonify({
         "status": "healthy",
+        "position_predictor_stats": position_predictor_stats,
         "embedding_models_loaded": embedding_models_count,
         "ngram_predictor_stats": ngram_stats
     })
@@ -116,8 +158,9 @@ def index():
         "endpoints": {
             "/": "GET - This information",
             "/health": "GET - Health check",
+            "/charlie": "POST - Predict resolution based on Manifold user positions and profit",
             "/sally": "POST - Predict resolution and metadata based on models trained on natural language embeddings",
-            "/joe": "POST - Predict resolution based on title word frequency analysis (n-grams).",
+            "/joe": "POST - Predict resolution based on title word frequency analysis (n-grams)",
         },
         "embedding_models_loaded": len(embedding_predictor.models) if embedding_predictor else 0,
         "ngram_predictor_loaded": ngram_predictor is not None
@@ -129,7 +172,16 @@ def main():
     load_dotenv()
 
     # Load predictors on startup
-    global embedding_predictor, ngram_predictor
+    global position_predictor, embedding_predictor, ngram_predictor
+
+    # Load position predictor
+    try:
+        cache_dir = os.path.join(os.path.dirname(__file__), 'cache')
+        position_predictor = PositionPredictor(cache_dir)
+        print(f"Positions predictor loaded successfully")
+    except Exception as e:
+        print(f"Warning: Could not load positions predictor: {e}")
+        position_predictor = None
 
     # Load embedding predictor
     try:
