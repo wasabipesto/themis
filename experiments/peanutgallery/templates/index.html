@@ -4,7 +4,29 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>The Peanut Gallery</title>
-        <!-- Favicon will be added when icon is ready -->
+        <link
+            rel="apple-touch-icon"
+            sizes="180x180"
+            href="/static/apple-touch-icon.png"
+        />
+        <link
+            rel="icon"
+            type="image/png"
+            sizes="32x32"
+            href="/static/favicon-32x32.png"
+        />
+        <link
+            rel="icon"
+            type="image/png"
+            sizes="16x16"
+            href="/static/favicon-16x16.png"
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Coming+Soon&display=swap"
+            rel="stylesheet"
+        />
         <style>
             /* Reset and base styles */
             * {
@@ -14,49 +36,21 @@
             }
 
             body {
-                font-family: "Comic Sans MS", cursive, sans-serif;
-                background: #000;
-                color: #fff;
+                font-family: "Coming Soon", cursive, sans-serif;
+                font-weight: 400;
+                background: #f3722c;
+                color: #f1faee;
                 min-height: 100vh;
                 overflow-x: hidden;
-            }
-
-            /* Neobrutalist background pattern */
-            .background-pattern {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                z-index: -1;
-                background:
-                    radial-gradient(
-                        circle at 20% 30%,
-                        #ffd700 0%,
-                        transparent 25%
-                    ),
-                    radial-gradient(
-                        circle at 80% 70%,
-                        #ffd700 0%,
-                        transparent 25%
-                    ),
-                    linear-gradient(45deg, #000 25%, transparent 25%),
-                    linear-gradient(-45deg, #000 25%, transparent 25%);
-                background-size:
-                    200px 200px,
-                    200px 200px,
-                    40px 40px,
-                    40px 40px;
-                opacity: 0.1;
             }
 
             /* Header */
             .header {
                 text-align: center;
                 padding: 2rem 1rem;
-                border-bottom: 8px solid #ffd700;
-                background: #fff;
-                color: #000;
+                border-bottom: 8px solid #f9c74f;
+                background: #f1faee;
+                color: #222222;
                 position: relative;
             }
 
@@ -67,15 +61,15 @@
                 right: -8px;
                 width: 100%;
                 height: 100%;
-                background: #ffd700;
+                background: #f9c74f;
                 z-index: -1;
             }
 
             .logo {
                 width: 80px;
                 height: 80px;
-                background: #ffd700;
-                border: 4px solid #000;
+                background: #f9c74f;
+                border: 4px solid #222222;
                 border-radius: 50%;
                 margin: 0 auto 1rem;
                 display: flex;
@@ -83,7 +77,7 @@
                 justify-content: center;
                 font-size: 2rem;
                 font-weight: bold;
-                color: #000;
+                color: #222222;
             }
 
             h1 {
@@ -91,7 +85,7 @@
                 font-weight: 900;
                 text-transform: uppercase;
                 letter-spacing: 3px;
-                text-shadow: 4px 4px 0 #ffd700;
+                text-shadow: 4px 4px 0 #f9c74f;
                 margin-bottom: 0.5rem;
             }
 
@@ -110,19 +104,19 @@
 
             /* Omnibar section */
             .omnibar-section {
-                background: #fff;
-                border: 6px solid #000;
+                background: #f1faee;
+                border: 6px solid #222222;
                 border-radius: 0;
                 padding: 2rem;
                 margin-bottom: 2rem;
                 position: relative;
-                box-shadow: 12px 12px 0 #ffd700;
+                box-shadow: 12px 12px 0 #f9c74f;
             }
 
             .omnibar-label {
                 font-size: 1.5rem;
                 font-weight: bold;
-                color: #000;
+                color: #222222;
                 margin-bottom: 1rem;
             }
 
@@ -136,25 +130,25 @@
                 flex: 1;
                 padding: 1rem 1.5rem;
                 font-size: 1.1rem;
-                border: 4px solid #000;
-                background: #fff;
-                color: #000;
+                border: 4px solid #222222;
+                background: #f1faee;
+                color: #222222;
                 font-family: inherit;
                 border-radius: 0;
             }
 
             .omnibar:focus {
                 outline: none;
-                box-shadow: inset 4px 4px 0 #ffd700;
+                box-shadow: inset 4px 4px 0 #f9c74f;
             }
 
             .submit-btn {
                 padding: 1rem 2rem;
                 font-size: 1.1rem;
                 font-weight: bold;
-                background: #ffd700;
-                color: #000;
-                border: 4px solid #000;
+                background: #f9c74f;
+                color: #222222;
+                border: 4px solid #222222;
                 cursor: pointer;
                 font-family: inherit;
                 text-transform: uppercase;
@@ -164,8 +158,8 @@
             }
 
             .submit-btn:hover {
-                background: #000;
-                color: #ffd700;
+                background: #222222;
+                color: #f9c74f;
                 transform: translate(2px, 2px);
             }
 
@@ -181,10 +175,10 @@
 
             /* Market info display */
             .market-info {
-                background: #ffd700;
-                color: #000;
+                background: #f9c74f;
+                color: #222222;
                 padding: 1rem;
-                border: 4px solid #000;
+                border: 4px solid #222222;
                 margin-top: 1rem;
                 font-weight: bold;
                 display: none;
@@ -196,9 +190,9 @@
 
             .market-warning {
                 background: #ff6b6b;
-                color: #fff;
+                color: #f1faee;
                 padding: 1rem;
-                border: 4px solid #000;
+                border: 4px solid #222222;
                 margin-top: 1rem;
                 font-weight: bold;
                 display: none;
@@ -217,9 +211,9 @@
             }
 
             .character-card {
-                background: #fff;
-                border: 6px solid #000;
-                color: #000;
+                background: #f1faee;
+                border: 6px solid #222222;
+                color: #222222;
                 position: relative;
                 min-height: 300px;
             }
@@ -231,13 +225,13 @@
                 left: 8px;
                 width: 100%;
                 height: 100%;
-                background: #ffd700;
+                background: #f9c74f;
                 z-index: -1;
             }
 
             .character-header {
-                background: #000;
-                color: #ffd700;
+                background: #222222;
+                color: #f9c74f;
                 padding: 1rem;
                 display: flex;
                 align-items: center;
@@ -251,14 +245,14 @@
             .character-portrait {
                 width: 60px;
                 height: 60px;
-                background: #ffd700;
-                border: 3px solid #ffd700;
+                background: #f9c74f;
+                border: 3px solid #f9c74f;
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 font-size: 1.5rem;
-                color: #000;
+                color: #222222;
             }
 
             .character-body {
@@ -270,8 +264,8 @@
             }
 
             .speech-bubble {
-                background: #fff;
-                border: 3px solid #000;
+                background: #f1faee;
+                border: 3px solid #222222;
                 padding: 1rem;
                 position: relative;
                 border-radius: 20px;
@@ -287,7 +281,7 @@
                 height: 0;
                 border-left: 15px solid transparent;
                 border-right: 15px solid transparent;
-                border-top: 15px solid #000;
+                border-top: 15px solid #222222;
             }
 
             .speech-bubble::after {
@@ -299,7 +293,7 @@
                 height: 0;
                 border-left: 13px solid transparent;
                 border-right: 13px solid transparent;
-                border-top: 13px solid #fff;
+                border-top: 13px solid #f1faee;
             }
 
             /* Character states */
@@ -324,13 +318,13 @@
 
             .character-error .character-header {
                 background: #ff6b6b;
-                color: #fff;
+                color: #f1faee;
             }
 
             /* Loading spinner */
             .spinner {
-                border: 4px solid #000;
-                border-top: 4px solid #ffd700;
+                border: 4px solid #222222;
+                border-top: 4px solid #f9c74f;
                 border-radius: 50%;
                 width: 40px;
                 height: 40px;
@@ -395,13 +389,11 @@
         </style>
     </head>
     <body>
-        <div class="background-pattern"></div>
-
         <header class="header">
             <div class="logo">🥜</div>
             <h1>The Peanut Gallery</h1>
             <div class="tagline">
-                Get advice from the gallery on your prediction markets
+                Get advice from the gallery on your markets
             </div>
         </header>
 
@@ -449,12 +441,7 @@
                         </div>
                         <div class="character-body">
                             <div class="speech-bubble">
-                                <div class="character-text">
-                                    I keep a close eye on market participants
-                                    and their positions. Show me a Manifold
-                                    market and I'll tell you what the smart
-                                    money is doing! 💰
-                                </div>
+                                <div class="character-text"></div>
                             </div>
                         </div>
                     </div>
@@ -474,12 +461,7 @@
                         </div>
                         <div class="character-body">
                             <div class="speech-bubble">
-                                <div class="character-text">
-                                    I analyze questions using advanced language
-                                    understanding. Give me any question text and
-                                    I'll dive deep into the semantic patterns!
-                                    📊
-                                </div>
+                                <div class="character-text"></div>
                             </div>
                         </div>
                     </div>
@@ -499,11 +481,7 @@
                         </div>
                         <div class="character-body">
                             <div class="speech-bubble">
-                                <div class="character-text">
-                                    I look for patterns in words and phrases.
-                                    The way questions are worded tells me a lot
-                                    about how they'll resolve! 🔤
-                                </div>
+                                <div class="character-text"></div>
                             </div>
                         </div>
                     </div>
@@ -523,7 +501,7 @@
                     endpoint: "/api/charlie",
                     requiresSlug: true,
                     welcomeMessage:
-                        "I keep a close eye on market participants and their positions. Show me a Manifold market and I'll tell you what the smart money is doing! 💰",
+                        "I keep a close eye on market participants and their positions. Show me a Manifold market and I'll look at who's holding shares and weight them based on how much I trust them.",
                     thinkingMessage:
                         "Let me check what the traders are up to...",
                     portraits: {
@@ -538,7 +516,7 @@
                     endpoint: "/api/sally",
                     requiresSlug: false,
                     welcomeMessage:
-                        "I analyze questions using advanced language understanding. Give me any question text and I'll dive deep into the semantic patterns! 📊",
+                        "I analyze questions using natural languange embeddings! Give me any question and I'll calculate the embedding features for the title and description, then run them through the models I built to predict things like the market activity and resolution!",
                     thinkingMessage: "Processing the semantic patterns...",
                     portraits: {
                         welcome: "🤖",
@@ -552,7 +530,7 @@
                     endpoint: "/api/joe",
                     requiresSlug: false,
                     welcomeMessage:
-                        "I look for patterns in words and phrases. The way questions are worded tells me a lot about how they'll resolve! 🔤",
+                        "I look for patterns in words and phrases! I have a long list of market title n-grams and I've correlated them with market resolution values.",
                     thinkingMessage:
                         "Analyzing word patterns and frequencies...",
                     portraits: {
@@ -582,10 +560,7 @@
 
             // Utility functions
             function isManifoldUrl(text) {
-                return (
-                    text.includes("manifold.markets") ||
-                    text.includes("manifold.com")
-                );
+                return text.includes("manifold.markets");
             }
 
             function extractSlugFromUrl(url) {
@@ -676,12 +651,18 @@
                     ? Math.round(market.probability * 100)
                     : "N/A";
                 const isBinary = market.outcomeType === "BINARY";
+                const descriptionShort = market.textDescription.length
+                    ? market.textDescription.length > 250
+                        ? market.textDescription.substring(0, 250) + "..."
+                        : market.textDescription
+                    : "N/A";
 
                 marketDetails.innerHTML = `
-                <strong>${market.question}</strong><br>
-                Current probability: <strong>${probability}%</strong> ${isBinary ? "YES" : ""}
-                ${market.creatorName ? `<br>Created by: ${market.creatorName}` : ""}
-            `;
+                    <a href="${market.url}"><strong>${market.question}</strong><a/>
+                    (${probability}%)<br>
+                    ${market.creatorName ? `Created by: ${market.creatorName}<br>` : ""}
+                    Description: ${descriptionShort}
+                `;
 
                 marketInfo.classList.add("show");
 
@@ -756,21 +737,30 @@
                         const charlieConfidence = Math.round(
                             (1 - results.uncertainty) * 100,
                         );
-                        const charliePrediction =
-                            results.predicted_outcome > 0.5 ? "YES" : "NO";
+                        const charlieConfidenceText =
+                            charlieConfidence > 90
+                                ? "very high"
+                                : charlieConfidence > 70
+                                  ? "high"
+                                  : charlieConfidence > 50
+                                    ? "moderate"
+                                    : charlieConfidence > 30
+                                      ? "low"
+                                      : "very low";
                         const charlieProbability = Math.round(
                             results.predicted_outcome * 100,
                         );
-
-                        let charlieMessage = `I'm ${charlieConfidence}% confident this will resolve ${charliePrediction} (${charlieProbability}% probability). `;
+                        let charlieMessage =
+                            charlieProbability > 70
+                                ? `I predict this will resolve YES (${charlieProbability}%) with ${charlieConfidenceText} confidence.`
+                                : charlieProbability < 30
+                                  ? `I predict this will resolve NO (${charlieProbability}%) with ${charlieConfidenceText} confidence.`
+                                  : `I'm conflicted about how this will resolve, but if I had to guess I would say ${charlieProbability}%.`;
 
                         if (results.top_weighted_user) {
                             const user = results.top_weighted_user;
-                            charlieMessage += `The most influential trader is ${user.displayName || user.username} `;
-                            charlieMessage += `with ${user.profit > 0 ? "profits" : "losses"} of M$${Math.abs(user.profit).toFixed(0)}!`;
+                            charlieMessage += ` Out of ${results.total_positions} positions, I think the most influential trader is ${user.name || user.username} who spent M$${Math.round(user.invested)} on ${Math.round(user.shares)} ${user.direction} shares!`;
                         }
-
-                        charlieMessage += ` Based on ${results.total_positions} position(s).`;
                         return charlieMessage;
 
                     case "sally":

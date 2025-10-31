@@ -334,10 +334,14 @@ class PositionPredictor:
                 'name': top_entry['user'].name,
                 'weight': top_entry['weight'],
                 'position': top_entry['position'],
+                'position_profit': top_entry['position'].profit,
+                'invested': top_entry['position'].invested,
                 'balance': top_entry['user'].balance,
                 'profit': top_entry['user'].profit,
                 'yes_shares': top_entry['yes_shares'],
-                'no_shares': top_entry['no_shares']
+                'no_shares': top_entry['no_shares'],
+                'shares': top_entry['yes_shares']+top_entry['no_shares'],
+                'direction': "YES" if top_entry['yes_shares'] > 0 else "NO"
             }
 
         result = PredictionResult(
@@ -449,8 +453,10 @@ def main():
             print(f"Top Weighted User: {user['username']} ({user['name']})")
             print(f"  Weight: {user['weight']:,.0f}")
             print(f"  Balance: {user['balance']:,.0f}")
-            print(f"  YES Shares: {user['yes_shares']:,.0f}")
-            print(f"  NO Shares: {user['no_shares']:,.0f}")
+            print(f"  Invested: {user['invested']:,.0f}")
+            print(f"  Shares: {user['shares']:,.0f}")
+            print(f"  Direction: {user['direction']}")
+            print(f"  All details: {user}")
 
     except Exception as e:
         print(f"Error: {e}")

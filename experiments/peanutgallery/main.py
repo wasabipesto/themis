@@ -210,9 +210,9 @@ def main():
         ngram_predictor = None
 
     # Start Flask app
-    port = int(os.environ.get('PORT', 5000))
-    host = os.environ.get('HOST', '0.0.0.0')
-    debug = os.environ.get('DEBUG', 'False').lower() == 'true'
+    host = os.environ.get('FLASK_HOST', '0.0.0.0')
+    port = int(os.environ.get('FLASK_PORT', 5000))
+    debug = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
 
     print(f"Starting PeanutGallery API on http://{host}:{port}")
     app.run(host=host, port=port, debug=debug)

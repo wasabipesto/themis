@@ -1,0 +1,4 @@
+set dotenv-load
+
+run:
+    uv run main.py
