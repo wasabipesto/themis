@@ -679,6 +679,38 @@
                 currentMarket = null;
             }
 
+            function buildCharacterRequestBody(
+                characterId,
+                currentMarket,
+                input,
+            ) {
+                switch (characterId) {
+                    case "charlie":
+                        if (currentMarket) {
+                            return {
+                                slug: extractSlugFromUrl(input),
+                            };
+                        } else
+                            throw new Error(
+                                "This character needs a Manifold market URL",
+                            );
+                    case "sally":
+                        return {
+                            question: currentMarket
+                                ? currentMarket.question +
+                                  " \n " +
+                                  currentMarket.textDescription
+                                : input,
+                        };
+                    case "joe":
+                        return {
+                            question: currentMarket
+                                ? currentMarket.question
+                                : input,
+                        };
+                }
+            }
+
             async function queryCharacter(characterId, input) {
                 const character = characters[characterId];
 
@@ -686,22 +718,11 @@
                     setCharacterState(characterId, "thinking");
 
                     // Prepare request body
-                    let requestBody;
-                    if (character.requiresSlug && currentMarket) {
-                        requestBody = { slug: extractSlugFromUrl(input) };
-                    } else if (!character.requiresSlug) {
-                        // For non-slug characters, use market question if available, otherwise use input
-                        requestBody = {
-                            question: currentMarket
-                                ? currentMarket.question
-                                : input,
-                        };
-                    } else {
-                        throw new Error(
-                            "This character needs a Manifold market URL",
-                        );
-                    }
-
+                    const requestBody = buildCharacterRequestBody(
+                        characterId,
+                        currentMarket,
+                        input,
+                    );
                     const response = await fetch(character.endpoint, {
                         method: "POST",
                         headers: {
@@ -752,55 +773,74 @@
                         );
                         let charlieMessage =
                             charlieProbability > 70
-                                ? `I predict this will resolve YES (${charlieProbability}%) with ${charlieConfidenceText} confidence.`
+                                ? `I predict this will resolve YES (${charlieProbability}%) with ${charlieConfidenceText} confidence. `
                                 : charlieProbability < 30
-                                  ? `I predict this will resolve NO (${charlieProbability}%) with ${charlieConfidenceText} confidence.`
-                                  : `I'm conflicted about how this will resolve, but if I had to guess I would say ${charlieProbability}%.`;
+                                  ? `I predict this will resolve NO (${charlieProbability}%) with ${charlieConfidenceText} confidence. `
+                                  : `I'm conflicted about how this will resolve. `;
 
                         if (results.top_weighted_user) {
                             const user = results.top_weighted_user;
-                            charlieMessage += ` Out of ${results.total_positions} positions, I think the most influential trader is ${user.name || user.username} who spent M$${Math.round(user.invested)} on ${Math.round(user.shares)} ${user.direction} shares!`;
+                            const userShares = Math.round(
+                                user.shares,
+                            ).toLocaleString();
+                            const userInvested = Math.round(
+                                user.invested,
+                            ).toLocaleString();
+                            charlieMessage += `Out of ${results.total_positions} positions, I think the most influential trader is ${user.name || user.username} who spent M$${userInvested} on ${userShares} ${user.direction} shares.`;
                         }
                         return charlieMessage;
 
                     case "sally":
-                        if (results.resolution !== undefined) {
-                            const sallyPrediction =
-                                results.resolution > 0.5 ? "YES" : "NO";
-                            const sallyConfidence = Math.round(
-                                results.resolution * 100,
-                            );
-                            let sallyMessage = `My semantic analysis suggests this will resolve ${sallyPrediction} with ${sallyConfidence}% confidence. `;
+                        const highVolume = results.high_volume > 0.7;
+                        const volumePrediction =
+                            Math.round(results.volume_usd) * 100;
 
-                            // Add any additional metadata if available
-                            if (results.popularity) {
-                                sallyMessage += `I predict this market will have ${results.popularity} interest level.`;
-                            }
+                        const highTraders = results.high_traders > 0.7;
+                        const tradersPrediction = Math.round(
+                            results.traders_count,
+                        );
 
-                            return sallyMessage;
+                        const yesResolution = results.resolution > 0.7;
+                        const noResolution = results.resolution < 0.3;
+                        const resolutionPrediction = Math.round(
+                            results.resolution * 100,
+                        );
+
+                        let sallyMessage = `Based on my semantic models, `;
+                        if (yesResolution) {
+                            sallyMessage += `I'm leaning towards a YES outcome (${resolutionPrediction}%). `;
+                        } else if (noResolution) {
+                            sallyMessage += `I'm leaning towards a NO outcome (${resolutionPrediction}%). `;
                         } else {
-                            return "I analyzed the semantic patterns, but the results were inconclusive. The question might be outside my training domain.";
+                            sallyMessage += `the outcome is up in the air (${resolutionPrediction}%). `;
                         }
 
+                        if (highTraders && highVolume) {
+                            sallyMessage += `As far as trading activity, I believe there will be a lot of traders (~${tradersPrediction}) and trader volume (~M$${volumePrediction})`;
+                        } else if (highTraders) {
+                            sallyMessage += `As far as trading activity, I believe there will be a lot of traders (~${tradersPrediction}) but not a ton of volume.`;
+                        } else if (highVolume) {
+                            sallyMessage += `As far as trading activity, I believe there will be a lot of trade volume (~M$${volumePrediction}) but maybe not a lot of traders.`;
+                        } else {
+                            sallyMessage += `Unfortunately, I don't think there will be much trading activity on this market.`;
+                        }
+
+                        return sallyMessage;
+
                     case "joe":
+                        const joePrediction =
+                            results.prediction === 1 ? "YES" : "NO";
                         const joeConfidence = Math.round(
                             results.confidence * 100,
                         );
-                        const joePrediction =
-                            results.prediction === 1 ? "YES" : "NO";
+                        const joeEvidence = results.strongest_evidence;
 
-                        let joeMessage = `Based on word patterns, I predict this will resolve ${joePrediction} `;
-                        joeMessage += `with ${joeConfidence}% confidence. `;
-
-                        if (results.evidence && results.evidence.length > 0) {
-                            const topEvidence = results.evidence[0];
-                            joeMessage += `Key phrase: "${topEvidence.phrase}" (appears in ${topEvidence.resolution === 1 ? "YES" : "NO"} markets).`;
-                        }
+                        let joeMessage = `Based on word patterns, I predict this will resolve ${joePrediction} with ${joeConfidence}% confidence. The strongest evidence is the phrase "${joeEvidence.ngram}" - ${Math.round(joeEvidence.prob * 100)}% (${joeEvidence.count}/${joeEvidence.total}) of the time it occurs, the market ends up resolving ${joePrediction}.`;
 
                         return joeMessage;
 
                     default:
-                        return "I analyzed your question, but I'm not sure how to interpret the results.";
+                        return "I analyzed your question, but I'm not sure how to interpret the results because wasabipesto forgot to set up my character!";
                 }
             }
 
