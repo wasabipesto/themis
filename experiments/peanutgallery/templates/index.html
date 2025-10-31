@@ -501,7 +501,7 @@
                     endpoint: "/api/charlie",
                     requiresSlug: true,
                     welcomeMessage:
-                        "I keep a close eye on market participants and their positions. Show me a Manifold market and I'll look at who's holding shares and weight them based on how much I trust them.",
+                        "I keep a close eye on market participants and their positions. Show me a Manifold market and I'll look at who's holding shares and weight each participant based on how much I trust them.",
                     thinkingMessage:
                         "Let me check what the traders are up to...",
                     portraits: {
@@ -530,7 +530,7 @@
                     endpoint: "/api/joe",
                     requiresSlug: false,
                     welcomeMessage:
-                        "I look for patterns in words and phrases! I have a long list of market title n-grams and I've correlated them with market resolution values.",
+                        "I look for patterns in words and phrases! I have a long list of market title n-grams and I've correlated them with market resolution values. I'm also a strong believer in \"nothing ever happens\"-ism.",
                     thinkingMessage:
                         "Analyzing word patterns and frequencies...",
                     portraits: {
@@ -656,11 +656,18 @@
                         ? market.textDescription.substring(0, 250) + "..."
                         : market.textDescription
                     : "N/A";
+                const volume = Math.round(market.volume).toLocaleString();
+                const volume24Hours = Math.round(
+                    market.volume24Hours,
+                ).toLocaleString();
+                const traders = market.uniqueBettorCount.toLocaleString();
 
                 marketDetails.innerHTML = `
                     <a href="${market.url}"><strong>${market.question}</strong><a/>
                     (${probability}%)<br>
                     ${market.creatorName ? `Created by: ${market.creatorName}<br>` : ""}
+                    Activity: M$${volume} volume (M$${volume24Hours} in last 24h) and ${traders} traders<br>
+                    ${market.isResolved ? `Resolved: ${market.resolution}<br>` : ""}
                     Description: ${descriptionShort}
                 `;
 
