@@ -54,7 +54,7 @@ class EmbeddingPredictor:
         except Exception as e:
             raise Exception(f"Failed to generate embeddings: {e}")
 
-    def predict_all(self, question):
+    def predict_all(self, question, embeddings=None):
         """
         Predict resolution and metadata for all loaded models based on the question.
 
@@ -76,13 +76,14 @@ class EmbeddingPredictor:
 
         results = {}
 
-        try:
-            # Generate embeddings from scratch
-            embeddings = self.generate_embeddings(question)
-        except Exception as e:
-            return {
-                'error': f'Failed to generate embeddings: {str(e)}'
-            }
+        # Generate embeddings if not provided
+        if not embeddings:
+            try:
+                embeddings = self.generate_embeddings(question)
+            except Exception as e:
+                return {
+                    'error': f'Failed to generate embeddings: {str(e)}'
+                }
 
         # Make predictions with each model
         for model in self.models:
@@ -114,7 +115,7 @@ class EmbeddingPredictor:
 
         return results
 
-    def predict_single(self, question, target_column):
+    def predict_single(self, question, target_column, embeddings=None):
         """
         Predict a specific target column for the given question.
 
@@ -143,8 +144,9 @@ class EmbeddingPredictor:
             }
 
         try:
-            # Generate embeddings from scratch
-            embeddings = self.generate_embeddings(question)
+            # Generate embeddings if not provided
+            if not embeddings:
+                embeddings = self.generate_embeddings(question)
 
             # Add platform indicators (Manifold only)
             platform_features = [1, 0, 0, 0]
