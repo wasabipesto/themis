@@ -17,7 +17,7 @@ The webpage features:
 - **Character Gallery**: Three characters with different prediction approaches:
   - **Charlie**: Analyzes Manifold user positions and profits (requires market URL)
   - **Sally**: Uses natural language embeddings to understand question semantics
-  - **Joe**: Analyzes word patterns and n-grams in question text
+  - **Linus**: Analyzes word patterns and n-grams in question text
 
 When you provide a Manifold URL, the app fetches market info and shows current probability. All characters will analyze the market and share their predictions with supporting details.
 
@@ -29,7 +29,7 @@ Make direct API requests:
 # Charlie - Position-based predictions (requires Manifold slug)
 curl -sfX POST http://localhost:5000/api/charlie \
   -H "Content-Type: application/json" \
-  -d '{"slug": "will-ai-achieve-agi-by-2030"}' \
+  -d '{"slug": "will-we-get-agi-before-2030"}' \
   | jq
 
 # Sally - Embedding-based predictions
@@ -38,8 +38,8 @@ curl -sfX POST http://localhost:5000/api/sally \
   -d '{"question": "Will AI achieve AGI by 2030?"}' \
   | jq
 
-# Joe - N-gram pattern predictions
-curl -sfX POST http://localhost:5000/api/joe \
+# Linus - N-gram pattern predictions
+curl -sfX POST http://localhost:5000/api/linus \
   -H "Content-Type: application/json" \
   -d '{"question": "Will AI achieve AGI by 2030?"}' \
   | jq

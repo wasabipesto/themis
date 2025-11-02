@@ -99,8 +99,8 @@ def sally():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/api/joe', methods=['POST'])
-def joe():
+@app.route('/api/linus', methods=['POST'])
+def linus():
     """
     Predict resolution based on title word frequency analysis (n-grams).
     Requires market title or any question text.
@@ -165,7 +165,7 @@ def api_info():
             "/api/health": "GET - Health check",
             "/api/charlie": "POST - Predict resolution based on Manifold user positions and profit",
             "/api/sally": "POST - Predict resolution and metadata based on models trained on natural language embeddings",
-            "/api/joe": "POST - Predict resolution based on title word frequency analysis (n-grams)",
+            "/api/linus": "POST - Predict resolution based on title word frequency analysis (n-grams)",
         },
         "embedding_models_loaded": len(embedding_predictor.models) if embedding_predictor else 0,
         "ngram_predictor_loaded": ngram_predictor is not None

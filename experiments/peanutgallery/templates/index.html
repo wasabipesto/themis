@@ -28,6 +28,8 @@
             rel="stylesheet"
         />
         <style>
+            /* Color styles from here: https://colorany.com/color-palettes/neobrutalism-color-palettes/ */
+
             /* Reset and base styles */
             * {
                 margin: 0;
@@ -269,31 +271,31 @@
                 padding: 1rem;
                 position: relative;
                 border-radius: 20px;
-                margin-top: 1rem;
+                /*margin-top: 1rem;*/
             }
 
             .speech-bubble::before {
                 content: "";
                 position: absolute;
-                bottom: -15px;
+                top: -15px;
                 left: 30px;
                 width: 0;
                 height: 0;
                 border-left: 15px solid transparent;
                 border-right: 15px solid transparent;
-                border-top: 15px solid #222222;
+                border-bottom: 15px solid #222222;
             }
 
             .speech-bubble::after {
                 content: "";
                 position: absolute;
-                bottom: -12px;
+                top: -12px;
                 left: 32px;
                 width: 0;
                 height: 0;
                 border-left: 13px solid transparent;
                 border-right: 13px solid transparent;
-                border-top: 13px solid #f1faee;
+                border-bottom: 13px solid #f1faee;
             }
 
             /* Character states */
@@ -435,7 +437,16 @@
                                 class="character-portrait"
                                 data-state="welcome"
                             >
-                                👤
+                                <img
+                                    src="/static/characters/charlie-welcome.png"
+                                    alt="Charlie welcome"
+                                    style="
+                                        width: 100%;
+                                        height: 100%;
+                                        object-fit: cover;
+                                        border-radius: 50%;
+                                    "
+                                />
                             </div>
                             <div>Charlie</div>
                         </div>
@@ -455,7 +466,16 @@
                                 class="character-portrait"
                                 data-state="welcome"
                             >
-                                🤖
+                                <img
+                                    src="/static/characters/sally-welcome.png"
+                                    alt="Sally welcome"
+                                    style="
+                                        width: 100%;
+                                        height: 100%;
+                                        object-fit: cover;
+                                        border-radius: 50%;
+                                    "
+                                />
                             </div>
                             <div>Sally</div>
                         </div>
@@ -467,17 +487,26 @@
                     </div>
                 </div>
 
-                <!-- Joe - N-gram Predictor -->
-                <div class="character-container" data-character="joe">
+                <!-- Linus - N-gram Predictor -->
+                <div class="character-container" data-character="linus">
                     <div class="character-card">
                         <div class="character-header">
                             <div
                                 class="character-portrait"
                                 data-state="welcome"
                             >
-                                📝
+                                <img
+                                    src="/static/characters/linus-welcome.png"
+                                    alt="Linus welcome"
+                                    style="
+                                        width: 100%;
+                                        height: 100%;
+                                        object-fit: cover;
+                                        border-radius: 50%;
+                                    "
+                                />
                             </div>
-                            <div>Joe</div>
+                            <div>Linus</div>
                         </div>
                         <div class="character-body">
                             <div class="speech-bubble">
@@ -505,10 +534,10 @@
                     thinkingMessage:
                         "Let me check what the traders are up to...",
                     portraits: {
-                        welcome: "👤",
-                        thinking: "🔍",
-                        response: "💰",
-                        error: "😵",
+                        welcome: "/static/characters/charlie-welcome.png",
+                        thinking: "/static/characters/charlie-thinking.png",
+                        response: "/static/characters/charlie-response.png",
+                        error: "/static/characters/charlie-error.png",
                     },
                 },
                 sally: {
@@ -519,25 +548,25 @@
                         "I analyze questions using natural languange embeddings! Give me any question and I'll calculate the embedding features for the title and description, then run them through the models I built to predict things like the market activity and resolution!",
                     thinkingMessage: "Processing the semantic patterns...",
                     portraits: {
-                        welcome: "🤖",
-                        thinking: "⚡",
-                        response: "🎯",
-                        error: "😵",
+                        welcome: "/static/characters/sally-welcome.png",
+                        thinking: "/static/characters/sally-thinking.png",
+                        response: "/static/characters/sally-response.png",
+                        error: "/static/characters/sally-error.png",
                     },
                 },
-                joe: {
-                    name: "Joe",
-                    endpoint: "/api/joe",
+                linus: {
+                    name: "Linus",
+                    endpoint: "/api/linus",
                     requiresSlug: false,
                     welcomeMessage:
                         "I look for patterns in words and phrases! I have a long list of market title n-grams and I've correlated them with market resolution values. I'm also a strong believer in \"nothing ever happens\"-ism.",
                     thinkingMessage:
                         "Analyzing word patterns and frequencies...",
                     portraits: {
-                        welcome: "📝",
-                        thinking: "🔤",
-                        response: "📈",
-                        error: "😵",
+                        welcome: "/static/characters/linus-welcome.png",
+                        thinking: "/static/characters/linus-thinking.png",
+                        response: "/static/characters/linus-response.png",
+                        error: "/static/characters/linus-error.png",
                     },
                 },
             };
@@ -593,7 +622,11 @@
                 }
 
                 // Update portrait
-                portrait.textContent = character.portraits[state];
+                const img = portrait.querySelector("img");
+                if (img) {
+                    img.src = character.portraits[state];
+                    img.alt = `${character.name} ${state}`;
+                }
                 portrait.setAttribute("data-state", state);
 
                 // Update message
@@ -709,7 +742,7 @@
                                   currentMarket.textDescription
                                 : input,
                         };
-                    case "joe":
+                    case "linus":
                         return {
                             question: currentMarket
                                 ? currentMarket.question
@@ -834,17 +867,17 @@
 
                         return sallyMessage;
 
-                    case "joe":
-                        const joePrediction =
+                    case "linus":
+                        const linusPrediction =
                             results.prediction === 1 ? "YES" : "NO";
-                        const joeConfidence = Math.round(
+                        const linusConfidence = Math.round(
                             results.confidence * 100,
                         );
-                        const joeEvidence = results.strongest_evidence;
+                        const linusEvidence = results.strongest_evidence;
 
-                        let joeMessage = `Based on word patterns, I predict this will resolve ${joePrediction} with ${joeConfidence}% confidence. The strongest evidence is the phrase "${joeEvidence.ngram}" - ${Math.round(joeEvidence.prob * 100)}% (${joeEvidence.count}/${joeEvidence.total}) of the time it occurs, the market ends up resolving ${joePrediction}.`;
+                        let linusMessage = `Based on word patterns, I predict this will resolve ${linusPrediction} with ${linusConfidence}% confidence. The strongest evidence is the phrase "${linusEvidence.ngram}" - ${Math.round(linusEvidence.prob * 100)}% (${linusEvidence.count}/${linusEvidence.total}) of the time it occurs, the market ends up resolving ${linusPrediction}.`;
 
-                        return joeMessage;
+                        return linusMessage;
 
                     default:
                         return "I analyzed your question, but I'm not sure how to interpret the results because wasabipesto forgot to set up my character!";
