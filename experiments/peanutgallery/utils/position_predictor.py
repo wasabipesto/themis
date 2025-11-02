@@ -254,8 +254,6 @@ class PositionPredictor:
             profit_factor = math.copysign(profit_factor, user.profit)
             weight_multiplier += weighting_config['profit_weight'] * profit_factor
 
-        if total_invested * weight_multiplier > 1e3:
-            print(f"Info for user {user.name}: M${total_invested:.0f} invested, {weight_multiplier:.2f} weight, {total_invested * weight_multiplier} total")
         return total_invested * weight_multiplier
 
 
@@ -337,11 +335,6 @@ class PositionPredictor:
                 'shares': top_entry['yes_shares']+top_entry['no_shares'],
                 'direction': "YES" if top_entry['yes_shares'] > 0 else "NO"
             }
-
-        # Print top 10 users
-        print("Top 10 users:")
-        for uw in sorted(user_weights, key=lambda x: x['weight'], reverse=True)[:10]:
-            print(f"{uw['user'].name} (weight: {uw['weight']:.1f})")
 
         result = PredictionResult(
             predicted_outcome=predicted_prob,
