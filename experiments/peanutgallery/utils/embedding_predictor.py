@@ -1,6 +1,7 @@
 import os
 import pickle
-import numpy as np
+import numpy as
+from pathlib import Path
 import ollama
 
 
@@ -197,7 +198,8 @@ class EmbeddingPredictor:
 
 
 def main():
-    import argparse
+    import
+import numpy as np
     parser = argparse.ArgumentParser(description='Predict market outcomes using embedding models')
     parser.add_argument('question', help='Question to predict outcomes for')
     parser.add_argument('--model-dir', default='./models/embeddings',
