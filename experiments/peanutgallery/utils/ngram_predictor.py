@@ -21,6 +21,7 @@ class NGramPredictor:
         self.stop_words = set(stopwords.words("english")) if exclude_stop_words else set()
         self.ngram_counts = self.load_ngram_data(ngram_data_path)
         self.max_n = max(max(self.ngram_counts[res].keys()) for res in self.ngram_counts)
+        print(f"NGramPredictor initialized. Max n-gram size: {self.max_n}; Stop words {'excluded' if exclude_stop_words else 'included'}")
 
     def load_ngram_data(self, data_path):
         """Load the n-gram counts from the saved file."""

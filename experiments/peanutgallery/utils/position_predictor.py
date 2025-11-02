@@ -38,8 +38,6 @@ class PredictionResult:
     top_weighted_user: Optional[Dict[str, Any]]  # Most influential user
     total_positions: int
     total_weighted_value: float
-    methodology: str = "position_weighted"
-
 
 class PositionPredictor:
     def __init__(self, cache_dir: str = "cache", cache_expiry_hours: int = 24):
@@ -225,42 +223,40 @@ class PositionPredictor:
         """
         if weighting_config is None:
             weighting_config = {
-                'balance_weight': 2.0,
-                'shares_weight': 1.0,
-                'age_weight': 2.0,
-                'profit_weight': 5.0,
+                'age_weight': 1.0,
+                'balance_weight': 500.0,
+                'profit_weight': 500.0,
             }
 
-        # Base weight: shares * balance
-        total_shares = sum(abs(shares) for shares in position.shares.values())
-        base_weight = total_shares * weighting_config['shares_weight']
-
-        # Initialize weight multiplier
+        # Base weight: shares
+        total_invested = position.invested
         weight_multiplier = 1.0
 
-        # ---- Balance weighting (log-scaled, up to 500k normalization) ----
-        if weighting_config['balance_weight'] > 0:
-            normalized_balance = (max(user.balance, 0) / 500_000) ** 0.5
-            normalized_balance = min(normalized_balance, 1.0)
-            weight_multiplier += weighting_config['balance_weight'] * normalized_balance
-
-        # ---- Account age weighting (up to 1 year normalized) ----
+        # ---- Account age weighting ----
         if weighting_config['age_weight'] > 0:
             # Expect user.created_time in milliseconds; convert to days
             account_age_days = (time.time() * 1000 - user.created_time) / (1000 * 24 * 3600)
             age_factor = min(account_age_days / 365.0, 1.0)  # capped at 1 year = 1.0
             weight_multiplier += weighting_config['age_weight'] * age_factor
 
-        # ---- Profit weighting (log-scaled, penalize losses) ----
+        # ---- Balance weighting ----
+        if weighting_config['balance_weight'] > 0:
+            normalized_balance = (user.balance / 1e7) ** 2.0
+            balance_factor = min(normalized_balance, 1.0)
+            weight_multiplier += weighting_config['balance_weight'] * balance_factor
+
+        # ---- Profit weighting ----
         if weighting_config['profit_weight'] > 0 and user.profit is not None:
             # Allow negative influence for losses
             profit_magnitude = abs(user.profit)
-            normalized_profit = (profit_magnitude / 500_000) ** 0.5
-            normalized_profit = min(normalized_profit, 1.0)
-            profit_factor = math.copysign(normalized_profit, user.profit)
+            normalized_profit = (profit_magnitude / 1e7) ** 2.0
+            profit_factor = min(normalized_profit, 1.0)
+            profit_factor = math.copysign(profit_factor, user.profit)
             weight_multiplier += weighting_config['profit_weight'] * profit_factor
 
-        return base_weight * weight_multiplier
+        if total_invested * weight_multiplier > 1e3:
+            print(f"Info for user {user.name}: M${total_invested:.0f} invested, {weight_multiplier:.2f} weight, {total_invested * weight_multiplier} total")
+        return total_invested * weight_multiplier
 
 
     def predict_outcome(self, market_slug: str,
@@ -332,7 +328,6 @@ class PositionPredictor:
                 'username': top_entry['user'].username,
                 'name': top_entry['user'].name,
                 'weight': top_entry['weight'],
-                'position': top_entry['position'],
                 'position_profit': top_entry['position'].profit,
                 'invested': top_entry['position'].invested,
                 'balance': top_entry['user'].balance,
@@ -342,6 +337,11 @@ class PositionPredictor:
                 'shares': top_entry['yes_shares']+top_entry['no_shares'],
                 'direction': "YES" if top_entry['yes_shares'] > 0 else "NO"
             }
+
+        # Print top 10 users
+        print("Top 10 users:")
+        for uw in sorted(user_weights, key=lambda x: x['weight'], reverse=True)[:10]:
+            print(f"{uw['user'].name} (weight: {uw['weight']:.1f})")
 
         result = PredictionResult(
             predicted_outcome=predicted_prob,
@@ -395,13 +395,12 @@ def main():
                        help='Show cache statistics')
     parser.add_argument('--verbose', '-v', action='store_true',
                        help='Show detailed analysis')
-    parser.add_argument('--balance-weight', type=float, default=2.0,
-                       help='Weight for user balance in calculations')
-    parser.add_argument('--age-weight', type=float, default=2.0,
+    parser.add_argument('--age-weight', type=float, default=1.0,
                        help='Weight for account age in calculations')
+    parser.add_argument('--balance-weight', type=float, default=5.0,
+                       help='Weight for user balance in calculations')
     parser.add_argument('--profit-weight', type=float, default=5.0,
                        help='Weight for user profit in calculations')
-
     args = parser.parse_args()
 
     try:
@@ -433,9 +432,8 @@ def main():
 
         # Set up weighting configuration
         weighting_config = {
-            'balance_weight': args.balance_weight,
-            'shares_weight': 1.0,  # Always weight by shares
             'age_weight': args.age_weight,
+            'balance_weight': args.balance_weight,
             'profit_weight': args.profit_weight
         }
 

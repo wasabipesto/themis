@@ -3,6 +3,7 @@ import re
 import math
 import json
 import requests
+from pathlib import Path
 from tqdm import trange, tqdm
 import pandas as pd
 import numpy as np
@@ -74,6 +75,7 @@ def get_data_as_dataframe(endpoint: str, headers={}, params={}, batch_size=DEFAU
     return pd.DataFrame(result)
 
 def get_single_item(endpoint, headers={}, params={}):
+    """Fetch a single item from an API endpoint."""
     response = requests.get(endpoint, headers=headers, params=params)
     response.raise_for_status()
     return response.json()
@@ -134,6 +136,16 @@ def save_dataframe_to_cache(cache_file, df):
         print(f"Saved {len(df)} rows to {os.path.basename(cache_file)}")
     except OSError as e:
         print(f"Warning: Failed to save cache file ({e}).")
+
+def append_line_to_file(file, row):
+    """Append a row to a JSONL file."""
+    Path(file).touch()
+    try:
+        with open(file, "a") as f:
+            json.dump(row, f)
+            f.write("\n")
+    except OSError as e:
+        print(f"Warning: Failed to append row to cache file ({e}).")
 
 def calculate_market_scores(df):
     """

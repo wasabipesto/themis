@@ -1,8 +1,9 @@
+import time
 import argparse
 from dotenv import load_dotenv
 
 from common import *
-from utils.position_predictor import *
+from utils.position_predictor import PositionPredictor
 from utils.ngram_predictor import NGramPredictor
 from utils.embedding_predictor import EmbeddingPredictor
 
@@ -35,6 +36,7 @@ def main():
     # File names and paths
     markets_cache = f"{args.cache_dir}/markets.jsonl"
     embeddings_cache = f"{args.cache_dir}/market_embeddings.jsonl"
+    results_file = f"{args.output_dir}/predictions-{int(time.time())}.jsonl"
 
     # Load markets
     print("Loading markets...")
@@ -86,7 +88,7 @@ def main():
     print(f"Everything loaded in {time.time() - start_time:.2f} seconds.")
 
     print("\nGenerating predictions...")
-    for _, market in markets_df.iterrows():
+    for _, market in tqdm(markets_df.iterrows(), total=markets_df.shape[0]):
         # Get market info
         market_id = market['id']
         market_title = market['title']
@@ -97,17 +99,15 @@ def main():
         # Make predictions
         try:
             row = {}
-            row["market"] = market.copy()
-            row["charlie"] = position_predictor.predict_outcome(market_slug)
+            row["market"] = market.to_dict()
+            row["charlie"] = position_predictor.predict_outcome(market_slug).__dict__
             row["sally"] = embedding_predictor.predict_all(title_and_description, embeddings=embeddings)
             row["linus"] = ngram_predictor.predict_resolution(market_title)
-
-            with open(f"{args.output_dir}/predictions.jsonl", "a") as f:
-                json.dump(row, f)
-                f.write("\n")
-            print(f"Predictions complete for market {market_id}")
+            append_line_to_file(results_file, row)
         except Exception as e:
-            print(f"Warning: Could not load positions predictor for market {market_id}: {e}")
+            print(f"Warning: Could not predict market {market_id}: {e}")
+
+    print("All predictions complete.")
 
 if __name__ == "__main__":
     main()
