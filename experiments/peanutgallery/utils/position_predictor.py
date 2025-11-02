@@ -3,7 +3,6 @@ import time
 import math
 import pickle
 import requests
-import argparse
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 
@@ -386,6 +385,7 @@ class PositionPredictor:
 
 
 def main():
+    import argparse
     parser = argparse.ArgumentParser(description='Predict market outcomes based on user positions')
     parser.add_argument('market_slug', nargs='?', help='Market slug to predict outcome for')
     parser.add_argument('--cache-dir', default='cache', help='Directory for user cache')
