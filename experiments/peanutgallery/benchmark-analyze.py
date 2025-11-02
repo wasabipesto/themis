@@ -125,20 +125,26 @@ def main():
             "predicted": i["charlie"]["predicted_outcome"],
             "actual": i["market"]["resolution"],
             "confidence": 1 - i["charlie"]["uncertainty"],
+            "high_volume": i["market"]["high_volume"],
         } for i in data
     ])
     create_calibration_plot(charlie, args.output_dir, "Charlie Calibration")
     charlie_confident = charlie[charlie["confidence"] > 0.75]
     create_calibration_plot(charlie_confident, args.output_dir, "Charlie Calibration (Confident)")
+    charlie_important = charlie[charlie["high_volume"]]
+    create_calibration_plot(charlie_important, args.output_dir, "Charlie Calibration (Important)")
 
     # Sally analysis
     sally = pd.DataFrame([
         {
             "predicted": i["sally"]["resolution"],
             "actual": i["market"]["resolution"],
+            "high_volume": i["market"]["high_volume"],
         } for i in data if i["sally"].get("resolution", None) is not None
     ])
     create_calibration_plot(sally, args.output_dir, "Sally Calibration")
+    sally_important = sally[sally["high_volume"]]
+    create_calibration_plot(sally_important, args.output_dir, "Sally Calibration (Important)")
     sally_volume = pd.DataFrame([
         {
             "predicted": i["sally"]["high_volume"],
@@ -160,11 +166,14 @@ def main():
             "predicted": i["linus"]["prob_resolution_1"],
             "actual": i["market"]["resolution"],
             "confidence": i["linus"]["confidence"],
+            "high_volume": i["market"]["high_volume"],
         } for i in data if i["linus"].get("prob_resolution_1", None) is not None
     ])
     create_calibration_plot(linus, args.output_dir, "Linus Calibration")
     linus_confident = linus[linus["confidence"] > 0.75]
     create_calibration_plot(linus_confident, args.output_dir, "Linus Calibration (Confident)")
+    linus_important = linus[linus["high_volume"]]
+    create_calibration_plot(linus_important, args.output_dir, "Linus Calibration (Important)")
 
     return 0
 
