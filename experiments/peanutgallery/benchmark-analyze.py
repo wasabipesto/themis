@@ -175,6 +175,18 @@ def main():
     linus_important = linus[linus["high_volume"]]
     create_calibration_plot(linus_important, args.output_dir, "Linus Calibration (Important)")
 
+    # Mean analysis
+    mean = pd.DataFrame([
+        {
+            "predicted": (i["charlie"]["predicted_outcome"] + i["sally"]["resolution"] + i["linus"]["prob_resolution_1"])/3.0,
+            "actual": i["market"]["resolution"],
+            "high_volume": i["market"]["high_volume"],
+        } for i in data if i["sally"].get("high_traders", None) is not None and i["linus"].get("prob_resolution_1", None) is not None
+    ])
+    create_calibration_plot(mean, args.output_dir, "Mean Calibration")
+    mean_important = mean[mean["high_volume"]]
+    create_calibration_plot(mean_important, args.output_dir, "Mean Calibration (Important)")
+
     return 0
 
 if __name__ == '__main__':
