@@ -27,9 +27,9 @@ def main():
     # Skim data and collect stats
     market_stats = []
     for m in data:
-        if m["market"]["outcomeType"] != "BINARY":
+        if m["market"].get("outcomeType") != "BINARY":
             continue
-        if m["market"].get("isResolved", False) is False:
+        if m["market"].get("isResolved", True) is True:
             continue
         if m["market"].get("probability", None) is None:
             continue
@@ -58,9 +58,18 @@ def main():
     used = []
 
     # Show top results
-    print("Furthest by Consensus:")
+    print("Furthest by Consensus, High Volume:")
     market_stats.sort(key=lambda x: x["mean_pred_delta"], reverse=True)
-    top = market_stats[:10]
+    top = [i for i in market_stats if i["volume"] > 1e4][:10]
+    for stat in top:
+        print(f"{stat['mean_pred_delta']*100:.2f}% delta ({stat['mean_pred']*100:.1f}% vs {stat['current_prob']*100:.1f}% actual)")
+        print(f"       {stat['title']}")
+        print(f"       {stat['url']}")
+    used.append(top)
+
+    print("\nFurthest by Consensus:")
+    market_stats.sort(key=lambda x: x["mean_pred_delta"], reverse=True)
+    top = [i for i in market_stats if not i in used][:10]
     for stat in top:
         print(f"{stat['mean_pred_delta']*100:.2f}% delta ({stat['mean_pred']*100:.1f}% vs {stat['current_prob']*100:.1f}% actual)")
         print(f"       {stat['title']}")

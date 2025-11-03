@@ -105,6 +105,11 @@ def main():
             market_slug = market["url"].split("/")[-1]
             title_and_description = market["question"] + " \n " + market["textDescription"]
 
+            if market.get("outcomeType") != "BINARY":
+                continue
+            if market.get("isResolved", True) is True:
+                continue
+
             # Make predictions
             try:
                 row = {}
