@@ -388,6 +388,50 @@
             .center {
                 text-align: center;
             }
+
+            /* Footer */
+            .footer {
+                background: #f1faee;
+                border-top: 6px solid #222222;
+                border-bottom: 6px solid #222222;
+                color: #222222;
+                text-align: center;
+                padding: 1rem;
+                margin-top: 6rem;
+                position: relative;
+                box-shadow: 0 -12px 0 #f9c74f;
+            }
+
+            .footer::before {
+                content: "";
+                position: absolute;
+                top: -6px;
+                left: -8px;
+                width: 100%;
+                height: 100%;
+                background: #f9c74f;
+                z-index: -1;
+            }
+
+            .footer a {
+                color: #222222;
+                text-decoration: none;
+                border-bottom: 3px solid #f9c74f;
+                transition: all 0.1s;
+            }
+
+            .footer a:hover {
+                background: #222222;
+                color: #f9c74f;
+                transform: translate(1px, 1px);
+                display: inline-block;
+                border-bottom: 3px solid #222222;
+            }
+
+            .heart {
+                color: #ff6b6b;
+                display: inline-block;
+            }
         </style>
     </head>
     <body>
@@ -517,6 +561,11 @@
                 </div>
             </section>
         </main>
+
+        <footer class="footer">
+            Made with <span class="heart">❤️</span> by
+            <a href="https://wasabipesto.com" target="_blank">wasabipesto</a>
+        </footer>
 
         <script>
             // Global state
