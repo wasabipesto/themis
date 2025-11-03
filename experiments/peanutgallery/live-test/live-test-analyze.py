@@ -33,9 +33,9 @@ def main():
             continue
         if m["market"].get("probability", None) is None:
             continue
-        if m["sally"].get("resolution", None) is None:
+        if m.get("sally") is None or m["sally"].get("resolution") is None:
             continue
-        if m["linus"].get("prob_resolution_1", None) is None:
+        if m.get("linus") is None or m["linus"].get("prob_resolution_1") is None:
             continue
 
         stats = {

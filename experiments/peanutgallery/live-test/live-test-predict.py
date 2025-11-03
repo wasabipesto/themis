@@ -52,22 +52,52 @@ def main():
     # Start getting markets
     last_market_id = None
     while True:
-        # Get market batch
-        response = requests.get(
-            "https://api.manifold.markets/v0/markets",
-            params={"limit": 1000, "before": last_market_id},
-        )
-        response.raise_for_status()
-        markets = response.json()
+        # Get market batch with retry
+        try:
+            response = requests.get(
+                "https://api.manifold.markets/v0/markets",
+                params={"limit": 1000, "before": last_market_id},
+            )
+            response.raise_for_status()
+            markets = response.json()
+        except Exception as e:
+            print(f"Failed to get market batch: {e}")
+            try:
+                print("Retrying in 3 seconds...")
+                time.sleep(3)
+                response = requests.get(
+                    "https://api.manifold.markets/v0/markets",
+                    params={"limit": 1000, "before": last_market_id},
+                )
+                response.raise_for_status()
+                markets = response.json()
+            except Exception as retry_e:
+                print(f"Retry failed: {retry_e}. Exiting...")
+                break
+
         last_market_id = markets[-1]["id"]
 
         for market_lite in tqdm(markets):
-            # Get extended market details
-            response = requests.get(
-                f"https://api.manifold.markets/v0/market/{market_lite['id']}"
-            )
-            response.raise_for_status()
-            market = response.json()
+            # Get extended market details with retry
+            try:
+                response = requests.get(
+                    f"https://api.manifold.markets/v0/market/{market_lite['id']}"
+                )
+                response.raise_for_status()
+                market = response.json()
+            except Exception as e:
+                print(f"Failed to get market {market_lite['id']}: {e}")
+                try:
+                    print(f"Retrying market {market_lite['id']} in 2 seconds...")
+                    time.sleep(2)
+                    response = requests.get(
+                        f"https://api.manifold.markets/v0/market/{market_lite['id']}"
+                    )
+                    response.raise_for_status()
+                    market = response.json()
+                except Exception as retry_e:
+                    print(f"Retry failed for market {market_lite['id']}: {retry_e}. Skipping...")
+                    continue
 
             # Get market info
             market_id = market["id"]
