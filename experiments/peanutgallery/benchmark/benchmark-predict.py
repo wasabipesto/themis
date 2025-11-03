@@ -1,7 +1,11 @@
+import os
+import sys
 import time
 import argparse
+from tqdm import tqdm
 from dotenv import load_dotenv
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from common import *
 from utils.position_predictor import PositionPredictor
 from utils.ngram_predictor import NGramPredictor

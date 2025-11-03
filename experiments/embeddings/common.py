@@ -5,6 +5,7 @@ import json
 import requests
 from pathlib import Path
 from tqdm import trange, tqdm
+from pathlib import Path
 import pandas as pd
 import numpy as np
 from sklearn.decomposition import PCA
