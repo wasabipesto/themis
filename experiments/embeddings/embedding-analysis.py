@@ -19,7 +19,18 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.manifold import TSNE
 from tabulate import tabulate
 
-from common import *
+from common import (
+    DISPLAY_SAMPLE_SIZE,
+    JITTER_SCALE,
+    NUM_KEYWORDS,
+    apply_pca_reduction,
+    calculate_market_scores,
+    compute_novelty_faiss,
+    get_data_as_dataframe,
+    load_dataframe_from_cache,
+    remove_emoji,
+    save_dataframe_to_cache,
+)
 
 
 def create_clusters_hdbscan(embeddings_df, min_cluster_size, cluster_selection_epsilon):
@@ -132,21 +143,23 @@ def generate_simplified_tree_structure(
     if persistence is not None and len(persistence) >= len(unique_labels):
         # Use cluster persistence for selection (higher persistence = more stable cluster)
         label_persistence = {
-            int(l): float(persistence[int(l)])
-            for l in unique_labels
-            if int(l) < len(persistence)
+            int(label): float(persistence[int(label)])
+            for label in unique_labels
+            if int(label) < len(persistence)
         }
         selected_sorted = sorted(
             label_persistence.items(), key=lambda kv: kv[1], reverse=True
         )
         selection_reason = "persistence"
-        print(f"[INFO] Selecting clusters by persistence (stability measure)")
+        print("[INFO] Selecting clusters by persistence (stability measure)")
     else:
         # Fallback to cluster size
-        label_size = {int(l): len(label_to_members[int(l)]) for l in unique_labels}
+        label_size = {
+            int(label): len(label_to_members[int(label)]) for label in unique_labels
+        }
         selected_sorted = sorted(label_size.items(), key=lambda kv: kv[1], reverse=True)
         selection_reason = "size"
-        print(f"[INFO] Selecting clusters by size (member count)")
+        print("[INFO] Selecting clusters by size (member count)")
 
     top_labels = [int(k) for k, _ in selected_sorted[:top_k_clusters]]
     print(f"[INFO] Selected top {len(top_labels)} clusters by {selection_reason}")
@@ -250,10 +263,12 @@ def generate_simplified_tree_structure(
             linked_labels = node_to_flat_labels.get(node, [])
             if linked_labels:
                 # Node representing one or more flat clusters
-                sizes = [len(label_to_members.get(l, [])) for l in linked_labels]
+                sizes = [
+                    len(label_to_members.get(label, [])) for label in linked_labels
+                ]
                 keywords = []
-                for l in linked_labels:
-                    cluster_info = cluster_info_dict.get(int(l), {})
+                for label in linked_labels:
+                    cluster_info = cluster_info_dict.get(int(label), {})
                     cluster_keywords = cluster_info.get("keywords", "")
                     if isinstance(cluster_keywords, list):
                         keywords.extend(
@@ -827,7 +842,7 @@ def create_cluster_dashboard(cluster_info_dict, output_dir):
         print("No cluster information available for dashboard")
         return
 
-    fig = plt.figure(figsize=(20, 15))
+    _fig = plt.figure(figsize=(20, 15))
 
     # Convert cluster info to DataFrame for easier manipulation
     cluster_data = []
@@ -1061,7 +1076,7 @@ def dimension_reduction_umap(embeddings_df, n_jobs=6):
     return pd.DataFrame(
         {
             "market_id": embeddings_df["market_id"],
-            "embedding": [row.tolist() for row in embedding_2d],
+            "embedding": [row.tolist() for row in embedding_2d],  # type: ignore
         }
     )
 
@@ -1357,7 +1372,7 @@ def create_interactive_visualization(
             print(f"DEBUG: Available columns: {list(viz_data.columns)}")
 
         # Extract coordinates and prepare data
-        coordinates = np.stack(viz_data["embedding_2d"].values)
+        _coordinates = np.stack(viz_data["embedding_2d"].values)
 
         # Create the main scatter plot
         fig = go.Figure()
@@ -1577,7 +1592,7 @@ def generate_cluster_keywords_tfidf(cluster_info_dict, n=NUM_KEYWORDS, use_tfidf
                 top_words = [
                     feature_names[idx] for idx in top_indices if scores[idx] > 0
                 ]
-                cluster_info_dict[cluster_id]["keywords"] = ", ".join(top_words[:n])
+                cluster_info_dict[cluster_id]["keywords"] = ", ".join(top_words[:n])  # type: ignore
 
         except ValueError:
             # Fall back to frequency analysis if TF-IDF fails
