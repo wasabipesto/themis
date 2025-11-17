@@ -81,7 +81,8 @@ def main():
             # Get extended market details with retry
             try:
                 response = requests.get(
-                    f"https://api.manifold.markets/v0/market/{market_lite['id']}"
+                    f"https://api.manifold.markets/v0/market/{market_lite['id']}",
+                    timeout=10
                 )
                 response.raise_for_status()
                 market = response.json()
@@ -91,7 +92,8 @@ def main():
                     print(f"Retrying market {market_lite['id']} in 2 seconds...")
                     time.sleep(2)
                     response = requests.get(
-                        f"https://api.manifold.markets/v0/market/{market_lite['id']}"
+                        f"https://api.manifold.markets/v0/market/{market_lite['id']}",
+                        timeout=30
                     )
                     response.raise_for_status()
                     market = response.json()
