@@ -1,1 +1,1 @@
-This folder has some exploratory data analysis scripts mainly focused on natural language embeddings from Manifold and other prediction market sites.
+This folder has some exploratory data analysis scripts mainly focused on natural language embeddings from Manifold and other prediction market sites. As an experiment this was mostly vibe-coded and is not explicitly supported.

@@ -2,6 +2,8 @@
 
 A fun, lighthearted web application and API for getting advice from the "peanut gallery" - a group of characters who give their thoughts on prediction markets using different ML approaches.
 
+Requires some data from the sibling `embeddings` experiment in order to build the models for use. As an experiment this was mostly vibe-coded and is not explicitly supported.
+
 ## Usage
 
 ### Web Interface
@@ -44,11 +46,3 @@ curl -sfX POST http://localhost:5000/api/linus \
   -d '{"question": "Will AI achieve AGI by 2030?"}' \
   | jq
 ```
-
-## Features
-
-- **Neobrutalist Design**: Bold, cartoonish interface inspired by Peanuts comics
-- **Responsive Layout**: Works on desktop and mobile devices
-- **Real-time Market Data**: Fetches current Manifold market information
-- **Character Personalities**: Each predictor has a unique voice and approach
-- **Error Handling**: Graceful handling of API errors and invalid inputs
