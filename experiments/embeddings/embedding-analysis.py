@@ -1740,9 +1740,9 @@ def main():
         f"{args.cache_dir}/market_embeddings_pca_{args.pca_dim}.jsonl"
     )
     novelty_cache = f"{args.cache_dir}/market_novelty.jsonl"
-    cluster_cache = f"{args.cache_dir}/market_clusters_{args.sample_size}_{args.min_cluster_size}{platform_suffix}.jsonl"
-    clusterer_cache = f"{args.cache_dir}/clusterer_{args.sample_size}_{args.min_cluster_size}{platform_suffix}.pkl"
-    cluster_info_cache = f"{args.cache_dir}/cluster_info_{args.sample_size}_{args.min_cluster_size}{platform_suffix}.jsonl"
+    cluster_cache = f"{args.cache_dir}/market_clusters_{args.sample_size}_{args.min_cluster_size}_{args.cluster_selection_epsilon}{platform_suffix}.jsonl"
+    clusterer_cache = f"{args.cache_dir}/clusterer_{args.sample_size}_{args.min_cluster_size}_{args.cluster_selection_epsilon}{platform_suffix}.pkl"
+    cluster_info_cache = f"{args.cache_dir}/cluster_info_{args.sample_size}_{args.min_cluster_size}_{args.cluster_selection_epsilon}{platform_suffix}.jsonl"
     embeddings_2d_cache = f"{args.cache_dir}/embeddings_2d_{args.sample_size}_{args.plot_method}{platform_suffix}.jsonl"
 
     # Create cache & output directory if it doesn't exist
