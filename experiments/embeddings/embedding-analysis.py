@@ -1707,8 +1707,8 @@ def main():
         "--min-cluster-size",
         "-cs",
         type=int,
-        default=100,
-        help="Minimum cluster size for HDBSCAN (default: 100)",
+        default=20,
+        help="Minimum cluster size for HDBSCAN (default: 20)",
     )
     parser.add_argument(
         "--cluster-selection-epsilon",
@@ -1917,6 +1917,9 @@ def main():
             }
             stats["cluster_id"] = cluster_id
             cluster_stats.append(stats)
+        # Generate cluster keywords
+        cluster_info_dict = generate_cluster_keywords_tfidf(cluster_info_dict)
+        # Save it
         save_dataframe_to_cache(cluster_info_cache, pd.DataFrame(cluster_stats))
     else:
         # Reconstruct cluster info from cache and add current market data
@@ -1940,9 +1943,6 @@ def main():
                 cluster_info_dict[cluster_id]["top_market"] = cluster_markets.loc[
                     top_market_idx
                 ].to_dict()  # type: ignore
-
-    # Generate cluster keywords
-    cluster_info_dict = generate_cluster_keywords_tfidf(cluster_info_dict)
 
     # Create cluster hierarchy dendrogram
     if clusterer is not None:
