@@ -3,7 +3,9 @@ import json
 import os
 import pickle
 import re
+import time
 from collections import Counter, defaultdict
+from datetime import datetime, timedelta
 
 import hdbscan
 import matplotlib.pyplot as plt
@@ -14,9 +16,13 @@ import plotly.express as px
 import plotly.graph_objects as go
 import umap
 from dotenv import load_dotenv
+from scipy.spatial import ConvexHull
+from scipy.spatial.distance import pdist, squareform
+from scipy.stats import entropy
 from sklearn.decomposition import PCA
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.manifold import TSNE
+from sklearn.neighbors import LocalOutlierFactor, NearestNeighbors
 from tabulate import tabulate
 
 from common import (
@@ -1499,7 +1505,6 @@ def create_interactive_visualization(
         print(f"Error creating interactive visualization: {e}")
         print("Falling back to static visualization only")
 
-
 def generate_cluster_keywords_tfidf(cluster_info_dict, n=NUM_KEYWORDS, use_tfidf=True):
     """
     Extract representative keywords for each cluster using TF-IDF or frequency analysis.
@@ -1623,6 +1628,563 @@ def generate_cluster_keywords_tfidf(cluster_info_dict, n=NUM_KEYWORDS, use_tfidf
             cluster_info_dict[cluster_id]["keywords"] = ", ".join(top_words)
 
     return cluster_info_dict
+
+def timer_print(timers, key):
+    """Utility function to track and print elapsed time for tasks."""
+    if not key in timers:
+        timers[key] = time.time()
+        print(f"Started:  {key}")
+    else:
+        elapsed_time = time.time() - timers[key]
+        print(f"Complete: {key} in {elapsed_time:.2f} seconds")
+    return timers
+
+def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None):
+    """
+    Calculate comprehensive platform-level metrics for diversity, novelty, innovation, and competition analysis.
+
+    Args:
+        master_df: DataFrame with columns: id, platform_slug, embedding, cluster, created_time, novelty
+        clusterer: Fitted HDBSCAN clusterer object (optional, for persistence scores)
+        cluster_info_dict: Dictionary of cluster information (optional)
+
+    Returns:
+        dict: Platform metrics organized by category
+    """
+    print("Calculating comprehensive platform metrics...")
+
+    # Create a copy to avoid SettingWithCopyWarning and reset index
+    master_df = master_df.copy().reset_index(drop=True)
+
+    # Initialize results dictionary
+    metrics = {
+        'diversity': {},
+        'novelty': {},
+        'innovation': {},
+        'competition': {},
+        'platform_stats': {}
+    }
+
+    # Initialize timers
+    timers = {}
+    timers = timer_print(timers, "Metric Initialization")
+
+    # Get unique platforms
+    platforms = master_df['platform_slug'].unique()
+
+    # Prepare embedding vectors
+    embedding_vectors = np.stack(master_df['embedding'].values).astype('float32')
+    embedding_vectors_norm = embedding_vectors / np.linalg.norm(embedding_vectors, axis=1, keepdims=True)
+
+    # Convert created_time to datetime if it's not already
+    if 'open_datetime' in master_df.columns and not 'created_datetime' in master_df.columns:
+        print("Converting open_datetime to created_datetime")
+        master_df['created_datetime'] = pd.to_datetime(master_df['open_datetime'], format='ISO8601')
+    elif not 'open_datetime' in master_df.columns:
+        print("Market open_datetime missing, innovation metrics will be missing.")
+
+    timers = timer_print(timers, "Metric Initialization")
+
+    # ================== DIVERSITY METRICS ==================
+    print("Computing diversity metrics...")
+
+    for platform in platforms:
+        platform_mask = master_df['platform_slug'] == platform
+        platform_df = master_df[platform_mask]
+        platform_embeddings = embedding_vectors_norm[platform_mask]
+
+        if len(platform_df) < 3:  # Need at least 3 points for convex hull
+            continue
+
+        platform_metrics = {}
+
+        # Skip full-dim hull for now
+        if False:
+        # 1. Convex Hull Volume (full dimensionality)
+            timers = timer_print(timers, f"Convex Hull Volume (768d) ({platform})")
+            try:
+                if len(platform_embeddings) > platform_embeddings.shape[1]:
+                    hull = ConvexHull(platform_embeddings)
+                    platform_metrics['convex_hull_volume_full'] = hull.volume
+                else:
+                    platform_metrics['convex_hull_volume_full'] = 0.0
+            except:
+                platform_metrics['convex_hull_volume_full'] = 0.0
+            timers = timer_print(timers, f"Convex Hull Volume (768d) ({platform})")
+
+        # 2. Convex Hull Volume (reduced dimensionality - 300D via PCA)
+        timers = timer_print(timers, f"Convex Hull Volume (300d) ({platform})")
+        try:
+            if platform_embeddings.shape[1] > 300:
+                pca = PCA(n_components=min(300, len(platform_embeddings)-1))
+                reduced_embeddings = pca.fit_transform(platform_embeddings)
+                if len(reduced_embeddings) > reduced_embeddings.shape[1]:
+                    hull_reduced = ConvexHull(reduced_embeddings)
+                    platform_metrics['convex_hull_volume_300d'] = hull_reduced.volume
+                else:
+                    platform_metrics['convex_hull_volume_300d'] = 0.0
+            else:
+                platform_metrics['convex_hull_volume_300d'] = platform_metrics.get('convex_hull_volume_full', 0.0)
+        except:
+            platform_metrics['convex_hull_volume_300d'] = 0.0
+        timers = timer_print(timers, f"Convex Hull Volume (300d) ({platform})")
+
+        # 3. Trimmed Mean Pairwise Distance
+        timers = timer_print(timers, f"Mean Pairwise Distance ({platform})")
+        if len(platform_embeddings) > 1:
+            pairwise_dists = pdist(platform_embeddings, metric='euclidean')
+            if len(pairwise_dists) > 0:
+                # Middle 80%
+                sorted_dists = np.sort(pairwise_dists)
+                trim_start = int(len(sorted_dists) * 0.1)
+                trim_end = int(len(sorted_dists) * 0.9)
+                platform_metrics['trimmed_mean_distance_80'] = np.mean(sorted_dists[trim_start:trim_end]) if trim_end > trim_start else np.mean(sorted_dists)
+
+                # Bottom 90%
+                trim_end_90 = int(len(sorted_dists) * 0.9)
+                platform_metrics['trimmed_mean_distance_90'] = np.mean(sorted_dists[:trim_end_90]) if trim_end_90 > 0 else np.mean(sorted_dists)
+
+                # All markets
+                platform_metrics['mean_pairwise_distance'] = np.mean(pairwise_dists)
+        timers = timer_print(timers, f"Mean Pairwise Distance ({platform})")
+
+        # 4. Cluster Diversity Score (Entropy)
+        timers = timer_print(timers, f"Cluster Diversity Score ({platform})")
+        platform_clusters = platform_df[platform_df['cluster'] != -1]['cluster'].values
+        if len(platform_clusters) > 0:
+            cluster_counts = np.bincount(platform_clusters[platform_clusters >= 0])
+            cluster_probs = cluster_counts[cluster_counts > 0] / len(platform_clusters)
+            platform_metrics['cluster_entropy'] = entropy(cluster_probs)
+
+            # Participation-weighted version (if clusterer available)
+            if clusterer is not None and hasattr(clusterer, 'probabilities_'):
+                platform_indices = np.where(platform_mask)[0]
+                valid_indices = platform_indices[platform_df['cluster'].values != -1]
+                if len(valid_indices) > 0:
+                    weighted_counts = {}
+                    for idx, cluster_id in zip(valid_indices, platform_df[platform_df['cluster'] != -1]['cluster'].values):
+                        if cluster_id not in weighted_counts:
+                            weighted_counts[cluster_id] = 0
+                        weighted_counts[cluster_id] += clusterer.probabilities_[idx] if idx < len(clusterer.probabilities_) else 1.0
+
+                    total_weight = sum(weighted_counts.values())
+                    if total_weight > 0:
+                        weighted_probs = np.array(list(weighted_counts.values())) / total_weight
+                        platform_metrics['cluster_entropy_weighted'] = entropy(weighted_probs)
+        timers = timer_print(timers, f"Cluster Diversity Score ({platform})")
+
+        # 5. Effective Topic Reach
+        timers = timer_print(timers, f"Effective Topic Reach ({platform})")
+        cluster_representation = {}
+        for cluster_id in platform_df[platform_df['cluster'] != -1]['cluster'].unique():
+            cluster_total = len(master_df[master_df['cluster'] == cluster_id])
+            platform_count = len(platform_df[platform_df['cluster'] == cluster_id])
+            cluster_representation[cluster_id] = platform_count / cluster_total if cluster_total > 0 else 0
+
+        # Different thresholds
+        platform_metrics['effective_reach_5pct'] = sum(1 for r in cluster_representation.values() if r >= 0.05)
+        platform_metrics['effective_reach_10pct'] = sum(1 for r in cluster_representation.values() if r >= 0.10)
+        platform_metrics['effective_reach_20pct'] = sum(1 for r in cluster_representation.values() if r >= 0.20)
+
+        # Count thresholds
+        cluster_counts_dict = platform_df[platform_df['cluster'] != -1]['cluster'].value_counts().to_dict()
+        platform_metrics['effective_reach_1market'] = sum(1 for count in cluster_counts_dict.values() if count >= 1)
+        platform_metrics['effective_reach_5markets'] = sum(1 for count in cluster_counts_dict.values() if count >= 5)
+        platform_metrics['effective_reach_10markets'] = sum(1 for count in cluster_counts_dict.values() if count >= 10)
+        timers = timer_print(timers, f"Effective Topic Reach ({platform})")
+
+        # 6. Topic Concentration Coefficient (Gini)
+        timers = timer_print(timers, f"Topic Concentration Coefficient ({platform})")
+        if len(cluster_counts_dict) > 0:
+            counts = np.array(list(cluster_counts_dict.values()))
+            sorted_counts = np.sort(counts)
+            n = len(sorted_counts)
+            index = np.arange(1, n + 1)
+            gini = (2 * index - n - 1).dot(sorted_counts) / (n * sorted_counts.sum())
+            platform_metrics['topic_gini_coefficient'] = gini
+        timers = timer_print(timers, f"Topic Concentration Coefficient ({platform})")
+
+        # 7. Outlier Count
+        timers = timer_print(timers, f"Outlier Count ({platform})")
+        platform_metrics['outlier_count'] = len(platform_df[platform_df['cluster'] == -1])
+        platform_metrics['outlier_proportion'] = platform_metrics['outlier_count'] / len(platform_df) if len(platform_df) > 0 else 0
+        timers = timer_print(timers, f"Outlier Count ({platform})")
+
+        # 8. Cross-Platform Isolation Score
+        timers = timer_print(timers, f"Cross-Platform Isolation Score ({platform})")
+        other_mask = ~platform_mask
+        if np.any(other_mask):
+            other_embeddings = embedding_vectors_norm[other_mask]
+            isolation_scores = []
+            for emb in platform_embeddings[:min(100, len(platform_embeddings))]:  # Sample for efficiency
+                dists = np.linalg.norm(other_embeddings - emb, axis=1)
+                nearest_10 = np.sort(dists)[:10]
+                isolation_scores.append(np.mean(nearest_10))
+            platform_metrics['cross_platform_isolation'] = np.mean(isolation_scores) if isolation_scores else 0
+        timers = timer_print(timers, f"Cross-Platform Isolation Score ({platform})")
+
+        metrics['diversity'][platform] = platform_metrics
+
+    # ================== CLUSTER DOMINANCE METRICS ==================
+    print("Computing cluster dominance metrics...")
+    timers = timer_print(timers, "Dominance Initialization")
+
+    # Calculate cluster platform distributions
+    cluster_platform_dist = {}
+    for cluster_id in master_df[master_df['cluster'] != -1]['cluster'].unique():
+        cluster_df = master_df[master_df['cluster'] == cluster_id]
+        platform_counts = cluster_df['platform_slug'].value_counts()
+        total = len(cluster_df)
+        cluster_platform_dist[cluster_id] = {
+            'counts': platform_counts.to_dict(),
+            'proportions': (platform_counts / total).to_dict(),
+            'total': total,
+            'dominant_platform': platform_counts.index[0],
+            'dominant_proportion': platform_counts.values[0] / total
+        }
+    timers = timer_print(timers, "Dominance Initialization")
+
+    # Calculate majority cluster counts and unique topic proportions
+    timers = timer_print(timers, "Majority Cluster Counts")
+    for threshold in [0.5, 0.75, 0.8, 0.9, 0.95]:
+        threshold_key = f"majority_clusters_{int(threshold*100)}pct"
+        unique_key = f"unique_topic_proportion_{int(threshold*100)}pct"
+
+        for platform in platforms:
+            majority_clusters = []
+            for cluster_id, dist in cluster_platform_dist.items():
+                if dist['proportions'].get(platform, 0) > threshold:
+                    majority_clusters.append(cluster_id)
+
+            platform_df = master_df[master_df['platform_slug'] == platform]
+            platform_in_majority = platform_df[platform_df['cluster'].isin(majority_clusters)]
+
+            if platform not in metrics['diversity']:
+                metrics['diversity'][platform] = {}
+
+            metrics['diversity'][platform][threshold_key] = len(majority_clusters)
+            metrics['diversity'][platform][unique_key] = len(platform_in_majority) / len(platform_df) if len(platform_df) > 0 else 0
+    timers = timer_print(timers, "Majority Cluster Counts")
+
+    # Cluster Exclusivity Index
+    timers = timer_print(timers, "Cluster Exclusivity Index")
+    for platform in platforms:
+        exclusivity_scores = []
+        for cluster_id, dist in cluster_platform_dist.items():
+            prop = dist['proportions'].get(platform, 0)
+            exclusivity_scores.append(max(0, prop - 0.5))
+        metrics['diversity'][platform]['cluster_exclusivity_index_50'] = sum(exclusivity_scores)
+
+        # Variations with different thresholds
+        exclusivity_70 = sum(max(0, dist['proportions'].get(platform, 0) - 0.7) for _, dist in cluster_platform_dist.items())
+        exclusivity_80 = sum(max(0, dist['proportions'].get(platform, 0) - 0.8) for _, dist in cluster_platform_dist.items())
+        metrics['diversity'][platform]['cluster_exclusivity_index_70'] = exclusivity_70
+        metrics['diversity'][platform]['cluster_exclusivity_index_80'] = exclusivity_80
+    timers = timer_print(timers, "Cluster Exclusivity Index")
+
+    # ================== NOVELTY METRICS ==================
+    print("Computing novelty metrics...")
+    timers = timer_print(timers, "Novelty Initialization")
+
+    # Build KNN model for novelty calculations
+    nbrs = NearestNeighbors(n_neighbors=21, metric='euclidean')  # 21 to exclude self
+    nbrs.fit(embedding_vectors_norm)
+    timers = timer_print(timers, "Novelty Initialization")
+
+    for platform in platforms:
+        platform_mask = master_df['platform_slug'] == platform
+        platform_df = master_df[platform_mask]
+        platform_indices = np.where(platform_mask)[0]
+
+        if len(platform_df) == 0:
+            continue
+
+        novelty_metrics = {}
+
+        # Average Novelty Score (k-NN distance)
+        timers = timer_print(timers, f"Average Novelty Score ({platform})")
+        for k in [10, 20, 25]:
+            if k < len(embedding_vectors_norm):
+                nbrs_k = NearestNeighbors(n_neighbors=k+1, metric='euclidean')
+                nbrs_k.fit(embedding_vectors_norm)
+                distances, _ = nbrs_k.kneighbors(embedding_vectors_norm[platform_mask])
+                avg_distances = np.mean(distances[:, 1:], axis=1)  # Exclude self
+                novelty_metrics[f'average_novelty_k{k}'] = np.mean(avg_distances)
+        timers = timer_print(timers, f"Average Novelty Score ({platform})")
+
+        # High-Novelty Market Count
+        timers = timer_print(timers, f"High-Novelty Market Count ({platform})")
+        distances_20, _ = nbrs.kneighbors(embedding_vectors_norm)
+        dist_to_20th = distances_20[:, 20]  # 20th neighbor (excluding self)
+
+        for percentile in [80, 90, 95, 98]:
+            threshold = np.percentile(dist_to_20th, percentile)
+            platform_high_novelty = dist_to_20th[platform_mask] > threshold
+            novelty_metrics[f'high_novelty_count_p{percentile}'] = np.sum(platform_high_novelty)
+        timers = timer_print(timers, f"High-Novelty Market Count ({platform})")
+
+        # Local Outlier Factor
+        timers = timer_print(timers, f"Local Outlier Factor ({platform})")
+        lof = LocalOutlierFactor(n_neighbors=20, contamination=0.1)
+        lof.fit_predict(embedding_vectors_norm)
+        lof_scores = -lof.negative_outlier_factor_  # Convert to positive scores
+        platform_lof = lof_scores[platform_mask]
+        novelty_metrics['lof_outliers_1.5'] = np.sum(platform_lof > 1.5)
+        novelty_metrics['lof_outliers_2.0'] = np.sum(platform_lof > 2.0)
+        novelty_metrics['mean_lof_score'] = np.mean(platform_lof)
+        timers = timer_print(timers, f"Local Outlier Factor ({platform})")
+
+        # Novelty-Weighted Unique Coverage
+        timers = timer_print(timers, f"Novelty-Weighted Unique Coverage ({platform})")
+        local_density = 1.0 / (dist_to_20th + 1e-10)  # Inverse distance as density
+        density_threshold = np.percentile(local_density, 20)
+
+        weights = np.ones(len(master_df))
+        weights[local_density < density_threshold] = 2.0  # Double weight for sparse areas
+
+        weighted_coverage = 0
+        for cluster_id in cluster_platform_dist:
+            if cluster_platform_dist[cluster_id]['proportions'].get(platform, 0) > 0.5:
+                cluster_mask = master_df['cluster'] == cluster_id
+                platform_cluster_mask = cluster_mask & platform_mask
+                weighted_coverage += np.sum(weights[platform_cluster_mask])
+
+        novelty_metrics['novelty_weighted_coverage'] = weighted_coverage
+        timers = timer_print(timers, f"Novelty-Weighted Unique Coverage ({platform})")
+
+        metrics['novelty'][platform] = novelty_metrics
+
+    # ================== INNOVATION METRICS ==================
+    timers = timer_print(timers, "Innovation Initialization")
+    if 'created_datetime' in master_df.columns:
+        print("Computing innovation metrics...")
+
+        # Get cluster temporal information
+        timers = timer_print(timers, "Temporal Setup")
+        cluster_temporal = {}
+        for cluster_id in master_df[master_df['cluster'] != -1]['cluster'].unique():
+            cluster_df = master_df[master_df['cluster'] == cluster_id]
+            cluster_df_sorted = cluster_df.sort_values('created_datetime')
+
+            first_market = cluster_df_sorted.iloc[0]
+            cluster_temporal[cluster_id] = {
+                'first_market_id': first_market['id'],
+                'first_platform': first_market['platform_slug'],
+                'first_timestamp': first_market['created_datetime'],
+                'size': len(cluster_df),
+                'platforms_temporal': cluster_df_sorted.groupby('platform_slug')['created_datetime'].agg(['min', 'median', 'count']).to_dict('index')
+            }
+
+            # Calculate centroid
+            cluster_embeddings = embedding_vectors_norm[master_df['cluster'] == cluster_id]
+            cluster_temporal[cluster_id]['centroid'] = np.mean(cluster_embeddings, axis=0)
+
+            # Distance from first market to centroid
+            first_market_idx = master_df[master_df['id'] == first_market['id']].index[0]
+            first_market_emb = embedding_vectors_norm[first_market_idx]
+            cluster_temporal[cluster_id]['first_to_centroid_dist'] = np.linalg.norm(
+                first_market_emb - cluster_temporal[cluster_id]['centroid']
+            )
+
+            # Cluster persistence (if clusterer available)
+            if clusterer is not None and hasattr(clusterer, 'cluster_persistence_'):
+                cluster_temporal[cluster_id]['persistence'] = clusterer.cluster_persistence_[cluster_id] if cluster_id < len(clusterer.cluster_persistence_) else 1.0
+            else:
+                cluster_temporal[cluster_id]['persistence'] = 1.0
+        timers = timer_print(timers, "Temporal Setup")
+
+        for platform in platforms:
+            innovation_metrics = {}
+
+            # Cluster Founder Count (Simple)
+            timers = timer_print(timers, f"Cluster Founder Count ({platform})")
+            founded_clusters = [cid for cid, info in cluster_temporal.items() if info['first_platform'] == platform]
+            innovation_metrics['clusters_founded'] = len(founded_clusters)
+
+            # Cluster Founder Count (Centrality-Weighted)
+            centrality_score = 0
+            for cluster_id in founded_clusters:
+                dist = cluster_temporal[cluster_id]['first_to_centroid_dist']
+                size = cluster_temporal[cluster_id]['size']
+                centrality_score += (1 / (1 + dist)) * np.log1p(size)
+            innovation_metrics['clusters_founded_centrality_weighted'] = centrality_score
+            timers = timer_print(timers, f"Cluster Founder Count ({platform})")
+
+            # Growth Catalyst Score
+            timers = timer_print(timers, f"Growth Catalyst Score ({platform})")
+            catalyst_scores = []
+            for window_days in [3, 7, 14, 30]:
+                window_score = 0
+                for cluster_id, info in cluster_temporal.items():
+                    if info['size'] > 50:  # Only large clusters
+                        window_end = info['first_timestamp'] + timedelta(days=window_days)
+                        early_markets = master_df[
+                            (master_df['cluster'] == cluster_id) &
+                            (master_df['platform_slug'] == platform) &
+                            (master_df['created_datetime'] <= window_end)
+                        ]
+
+                        if len(early_markets) > 0:
+                            # Score by proximity to centroid
+                            early_indices = early_markets.index
+                            early_embeddings = embedding_vectors_norm[early_indices]
+                            distances = np.linalg.norm(early_embeddings - info['centroid'], axis=1)
+                            proximity_scores = 1 / (1 + distances)
+
+                            # Weight by cluster persistence
+                            persistence = info.get('persistence', 1.0)
+                            window_score += np.sum(proximity_scores) * persistence
+
+                catalyst_scores.append(window_score)
+                innovation_metrics[f'growth_catalyst_{window_days}d'] = window_score
+            timers = timer_print(timers, f"Growth Catalyst Score ({platform})")
+
+            # Innovation Index
+            timers = timer_print(timers, f"Innovation Index ({platform})")
+            platform_df = master_df[master_df['platform_slug'] == platform]
+            if len(platform_df) > 0 and len(founded_clusters) > 0:
+                avg_persistence = np.mean([cluster_temporal[cid].get('persistence', 1.0) for cid in founded_clusters])
+                innovation_metrics['innovation_index'] = (len(founded_clusters) / len(platform_df)) * avg_persistence
+            else:
+                innovation_metrics['innovation_index'] = 0
+            timers = timer_print(timers, f"Innovation Index ({platform})")
+
+            # Temporal Cluster Precedence
+            timers = timer_print(timers, f"Temporal Cluster Precedence ({platform})")
+            precedence_counts = {'first': 0, 'median': 0, 'fifth': 0}
+            participated_clusters = 0
+
+            for cluster_id, info in cluster_temporal.items():
+                if platform in info['platforms_temporal']:
+                    participated_clusters += 1
+                    platform_times = info['platforms_temporal']
+
+                    # Check if platform was first (by median)
+                    all_medians = {p: times['median'] for p, times in platform_times.items()}
+                    if platform == min(all_medians.keys(), key=lambda p: all_medians[p]):
+                        precedence_counts['median'] += 1
+
+                    # Check if platform was first (by first market)
+                    all_firsts = {p: times['min'] for p, times in platform_times.items()}
+                    if platform == min(all_firsts.keys(), key=lambda p: all_firsts[p]):
+                        precedence_counts['first'] += 1
+
+                    # Check if platform was in first 5
+                    cluster_df_time = master_df[master_df['cluster'] == cluster_id].sort_values('created_datetime')
+                    if len(cluster_df_time) >= 5:
+                        first_5_platforms = cluster_df_time.iloc[:5]['platform_slug'].values
+                        if platform in first_5_platforms:
+                            precedence_counts['fifth'] += 1
+
+            if participated_clusters > 0:
+                innovation_metrics['temporal_precedence_first'] = precedence_counts['first'] / participated_clusters
+                innovation_metrics['temporal_precedence_median'] = precedence_counts['median'] / participated_clusters
+                innovation_metrics['temporal_precedence_fifth'] = precedence_counts['fifth'] / participated_clusters
+            timers = timer_print(timers, f"Temporal Cluster Precedence ({platform})")
+
+            metrics['innovation'][platform] = innovation_metrics
+
+    # ================== COMPETITION METRICS ==================
+    print("Computing competition metrics...")
+
+    # Cross-Platform Topic Flow
+    timers = timer_print(timers, "Cross-Platform Topic Flow")
+    if 'created_datetime' in master_df.columns:
+        topic_flow = defaultdict(lambda: defaultdict(int))
+
+        for cluster_id, info in cluster_temporal.items():
+            platforms_in_cluster = list(info['platforms_temporal'].keys())
+            if len(platforms_in_cluster) > 1:
+                # Sort platforms by entry time
+                sorted_platforms = sorted(platforms_in_cluster,
+                                        key=lambda p: info['platforms_temporal'][p]['min'])
+
+                # Record flows
+                for i in range(len(sorted_platforms) - 1):
+                    topic_flow[sorted_platforms[i]][sorted_platforms[i+1]] += 1
+
+        # Calculate in-degree and out-degree
+        for platform in platforms:
+            in_degree = sum(topic_flow[other][platform] for other in platforms if other != platform)
+            out_degree = sum(topic_flow[platform][other] for other in platforms if other != platform)
+
+            if platform not in metrics['competition']:
+                metrics['competition'][platform] = {}
+
+            metrics['competition'][platform]['topic_flow_in_degree'] = in_degree
+            metrics['competition'][platform]['topic_flow_out_degree'] = out_degree
+            metrics['competition'][platform]['topic_flow_ratio'] = out_degree / (in_degree + 1)  # Avoid division by zero
+    timers = timer_print(timers, "Cross-Platform Topic Flow")
+
+    # Platform Overlap Matrix
+    timers = timer_print(timers, "Platform Overlap Matrix")
+    platform_overlap_matrix = {}
+    for p1 in platforms:
+        platform_overlap_matrix[p1] = {}
+        p1_clusters = set(master_df[(master_df['platform_slug'] == p1) & (master_df['cluster'] != -1)]['cluster'].unique())
+
+        for p2 in platforms:
+            if p1 == p2:
+                platform_overlap_matrix[p1][p2] = 1.0
+            else:
+                p2_clusters = set(master_df[(master_df['platform_slug'] == p2) & (master_df['cluster'] != -1)]['cluster'].unique())
+
+                # Jaccard similarity
+                intersection = p1_clusters & p2_clusters
+                union = p1_clusters | p2_clusters
+
+                if len(union) > 0:
+                    # Weighted version
+                    weighted_intersection = 0
+                    weighted_union = 0
+
+                    for cluster_id in union:
+                        p1_count = len(master_df[(master_df['platform_slug'] == p1) & (master_df['cluster'] == cluster_id)])
+                        p2_count = len(master_df[(master_df['platform_slug'] == p2) & (master_df['cluster'] == cluster_id)])
+
+                        if cluster_id in intersection:
+                            weighted_intersection += min(p1_count, p2_count)
+                        weighted_union += max(p1_count, p2_count)
+
+                    platform_overlap_matrix[p1][p2] = weighted_intersection / weighted_union if weighted_union > 0 else 0
+
+                    # Unweighted version
+                    metrics['competition'].setdefault(p1, {})
+                    metrics['competition'][p1][f'overlap_with_{p2}_unweighted'] = len(intersection) / len(union)
+                else:
+                    platform_overlap_matrix[p1][p2] = 0
+
+    metrics['competition']['overlap_matrix_weighted'] = platform_overlap_matrix
+    timers = timer_print(timers, "Platform Overlap Matrix")
+
+    # Topic Competition Intensity (HHI per cluster)
+    timers = timer_print(timers, "Topic Competition Intensity")
+    hhi_scores = []
+    for cluster_id, dist in cluster_platform_dist.items():
+        proportions = list(dist['proportions'].values())
+        hhi = sum(p**2 for p in proportions)
+        hhi_scores.append({'cluster_id': cluster_id, 'hhi': hhi, 'size': dist['total']})
+
+    metrics['competition']['cluster_hhi_scores'] = sorted(hhi_scores, key=lambda x: x['hhi'])
+    metrics['competition']['mean_hhi'] = np.mean([h['hhi'] for h in hhi_scores])
+    metrics['competition']['weighted_mean_hhi'] = np.average(
+        [h['hhi'] for h in hhi_scores],
+        weights=[h['size'] for h in hhi_scores]
+    )
+    timers = timer_print(timers, "Topic Competition Intensity")
+
+    # ================== PLATFORM STATISTICS ==================
+    for platform in platforms:
+        platform_df = master_df[master_df['platform_slug'] == platform]
+        metrics['platform_stats'][platform] = {
+            'total_markets': len(platform_df),
+            'clustered_markets': len(platform_df[platform_df['cluster'] != -1]),
+            'unique_clusters': len(platform_df[platform_df['cluster'] != -1]['cluster'].unique()),
+            'mean_novelty': platform_df['novelty'].mean() if 'novelty' in platform_df.columns else 0,
+            'median_novelty': platform_df['novelty'].median() if 'novelty' in platform_df.columns else 0,
+        }
+
+    return metrics
 
 
 def main():
@@ -1853,6 +2415,8 @@ def main():
             clustering_data = pd.DataFrame(
                 {"market_id": master_df["id"], "embedding": master_df["embedding"]}
             )
+            # Keep track of all market IDs when not sampling
+            sampled_market_ids = set(master_df["id"])
             print(f"Using all {len(clustering_data)} markets for clustering")
         else:
             clustering_sample = master_df.sample(n=args.sample_size, random_state=42)
@@ -1862,6 +2426,8 @@ def main():
                     "embedding": clustering_sample["embedding"],
                 }
             )
+            # Keep track of sampled market IDs for filtering later
+            sampled_market_ids = set(clustering_sample["id"])
             print(f"Using sample of {len(clustering_data)} markets for clustering")
 
         clusters_df, clusterer = create_clusters_hdbscan(
@@ -1877,6 +2443,11 @@ def main():
         except Exception as e:
             print(f"Warning: Could not cache clusterer: {e}")
     else:
+        # When loading from cache, reconstruct sampled_market_ids from cached cluster data
+        # The cached clusters_df contains only the markets that were in the original sample
+        sampled_market_ids = set(clusters_df["market_id"])
+        print(f"Reconstructed sample of {len(sampled_market_ids)} markets from cache")
+
         # Try to load clusterer from cache
         clusterer = None
         if not args.ignore_cache:
@@ -1943,19 +2514,6 @@ def main():
                 cluster_info_dict[cluster_id]["top_market"] = cluster_markets.loc[
                     top_market_idx
                 ].to_dict()  # type: ignore
-
-    # Create cluster hierarchy dendrogram
-    if clusterer is not None:
-        create_cluster_hierarchy_dendrogram(
-            clusterer, cluster_info_dict, args.output_dir
-        )
-    else:
-        print(
-            "Warning: Clusterer object not available (likely loaded from cache), skipping dendrogram creation"
-        )
-
-    # Step 7: Create visualizations
-    create_cluster_dashboard(cluster_info_dict, args.output_dir)
 
     # Generate 2D embeddings for visualization
     embeddings_2d_df = (
@@ -2040,6 +2598,64 @@ def main():
                     "Md Score",
                     "Mn Res",
                 ],
+                tablefmt="github",
+            )
+        )
+
+    # Step 9: Calculate comprehensive platform metrics
+    # Filter master_df to only include markets that were part of the clustering sample
+    filtered_master_df = master_df[master_df["id"].isin(sampled_market_ids)]
+    print(f"\nCalculating platform metrics on {len(filtered_master_df)}/{len(master_df)} markets (filtered to clustering sample)")
+    platform_metrics = calculate_platform_metrics(filtered_master_df, clusterer, cluster_info_dict)
+
+    # Save metrics to file
+    metrics_output_file = f"{args.output_dir}/platform_metrics.json"
+    with open(metrics_output_file, 'w') as f:
+        # Convert numpy types to Python types for JSON serialization
+        def convert_to_serializable(obj):
+            if isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, (np.integer, np.int64, np.int32)):
+                return int(obj)
+            elif isinstance(obj, (np.floating, np.float64, np.float32)):
+                return float(obj)
+            elif isinstance(obj, dict):
+                return {k: convert_to_serializable(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_to_serializable(v) for v in obj]
+            elif isinstance(obj, pd.Timestamp):
+                return obj.isoformat()
+            else:
+                return obj
+
+        serializable_metrics = convert_to_serializable(platform_metrics)
+        json.dump(serializable_metrics, f, indent=2)
+    print(f"\nPlatform metrics saved to {metrics_output_file}")
+
+    # Print summary of key metrics
+    if not args.no_tables:
+        print("\n" + "=" * 80)
+        print("PLATFORM METRICS SUMMARY")
+        print("=" * 80)
+
+        # Create summary table
+        summary_data = []
+        for platform in platform_metrics['platform_stats'].keys():
+            row = [
+                platform,
+                platform_metrics['platform_stats'][platform]['total_markets'],
+                platform_metrics['platform_stats'][platform]['unique_clusters'],
+                f"{platform_metrics['diversity'].get(platform, {}).get('cluster_entropy', 0):.2f}",
+                f"{platform_metrics['diversity'].get(platform, {}).get('effective_reach_10pct', 0)}",
+                f"{platform_metrics['innovation'].get(platform, {}).get('clusters_founded', 0)}",
+                f"{platform_metrics['novelty'].get(platform, {}).get('average_novelty_k20', 0):.3f}",
+            ]
+            summary_data.append(row)
+
+        print(
+            tabulate(
+                summary_data,
+                headers=["Platform", "Markets", "Clusters", "Entropy", "Reach(10%)", "Founded", "Avg Novelty"],
                 tablefmt="github",
             )
         )
