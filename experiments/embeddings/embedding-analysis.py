@@ -1698,9 +1698,11 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
 
         platform_metrics = {}
 
-        # Skip full-dim hull for now
+        # These convex hull calcs are segfaulting, exit code 139.
+        # Turns out Qhull doesn't appreciate my dimensionality.
+        # Skipping these for now, using a 3d set for hull volume.
         if False:
-        # 1. Convex Hull Volume (full dimensionality)
+            # 1. Convex Hull Volume (full dimensionality)
             timers = timer_print(timers, f"Convex Hull Volume (768d) ({platform})")
             try:
                 if len(platform_embeddings) > platform_embeddings.shape[1]:
@@ -1711,27 +1713,64 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
             except:
                 platform_metrics['convex_hull_volume_full'] = 0.0
             timers = timer_print(timers, f"Convex Hull Volume (768d) ({platform})")
+
+            # 2. Convex Hull Volume (reduced dimensionality - 300D via PCA)
+            timers = timer_print(timers, f"Convex Hull Volume (300d) ({platform})")
+            try:
+                if len(platform_embeddings) > platform_embeddings.shape[1]:
+                    try:
+                        hull = ConvexHull(platform_embeddings)
+                        platform_metrics['convex_hull_volume_300d'] = hull.volume
+                    except Exception as e:
+                        print(f"Error calculating convex hull for {platform}: {e}")
+                        platform_metrics['convex_hull_volume_300d'] = 0.0
+                else:
+                    print(f"Skipping convex hull volume calculation for {platform} due to insufficient points: {len(platform_embeddings)} points for {platform_embeddings.shape[1]}D space")
+                    platform_metrics['convex_hull_volume_300d'] = 0.0
+            except Exception as e:
+                print(f"Error calculating convex hull volume for {platform}: {e}")
+                platform_metrics['convex_hull_volume_300d'] = 0.0
+            timers = timer_print(timers, f"Convex Hull Volume (300d) ({platform})")
         else:
             platform_metrics['convex_hull_volume_full'] = 0.0
-
-        # 2. Convex Hull Volume (reduced dimensionality - 300D via PCA)
-        timers = timer_print(timers, f"Convex Hull Volume (300d) ({platform})")
-        try:
-            if platform_embeddings.shape[1] > 300:
-                pca = PCA(n_components=min(300, len(platform_embeddings)-1))
-                reduced_embeddings = pca.fit_transform(platform_embeddings)
-                if len(reduced_embeddings) > reduced_embeddings.shape[1]:
-                    hull_reduced = ConvexHull(reduced_embeddings)
-                    platform_metrics['convex_hull_volume_300d'] = hull_reduced.volume
-                else:
-                    platform_metrics['convex_hull_volume_300d'] = 0.0
-            else:
-                platform_metrics['convex_hull_volume_300d'] = platform_metrics.get('convex_hull_volume_full', 0.0)
-        except:
             platform_metrics['convex_hull_volume_300d'] = 0.0
-        timers = timer_print(timers, f"Convex Hull Volume (300d) ({platform})")
+
+        # 2.5. Convex Hull Volume (reduced dimensionality via PCA)
+        num_dimensions = 5
+        timers = timer_print(timers, f"Convex Hull Volume ({num_dimensions}d) ({platform})")
+        try:
+            if platform_embeddings.shape[1] > num_dimensions:
+                # Apply PCA reduction
+                timers = timer_print(timers, f"Convex Hull PCA Reduction ({num_dimensions}d) ({platform})")
+                pca_lowdim = PCA(n_components=min(num_dimensions, len(platform_embeddings)-1))
+                reduced_embeddings_lowdim = pca_lowdim.fit_transform(platform_embeddings)
+                timers = timer_print(timers, f"Convex Hull PCA Reduction ({num_dimensions}d) ({platform})")
+
+                if len(reduced_embeddings_lowdim) > reduced_embeddings_lowdim.shape[1]:
+                    timers = timer_print(timers, f"Convex Hull Generation ({num_dimensions}d) ({platform})")
+                    hull_lowdim = ConvexHull(reduced_embeddings_lowdim)
+                    platform_metrics['convex_hull_volume_lowdim'] = hull_lowdim.volume
+                    timers = timer_print(timers, f"Convex Hull Generation ({num_dimensions}d) ({platform})")
+                else:
+                    print(f"Skipping convex hull volume ({num_dimensions}d) calculation for {platform} due to insufficient points: {len(reduced_embeddings_lowdim)} points for {reduced_embeddings_lowdim.shape[1]}D space")
+                    platform_metrics['convex_hull_volume_lowdim'] = 0.0
+            else:
+                # Embeddings are already reduced, use them directly
+                if len(platform_embeddings) > platform_embeddings.shape[1]:
+                    timers = timer_print(timers, f"Convex Hull Generation ({num_dimensions}d) ({platform})")
+                    hull_lowdim = ConvexHull(platform_embeddings)
+                    platform_metrics['convex_hull_volume_lowdim'] = hull_lowdim.volume
+                    timers = timer_print(timers, f"Convex Hull Generation ({num_dimensions}d) ({platform})")
+                else:
+                    print(f"Skipping convex hull volume ({num_dimensions}d) calculation for {platform} due to insufficient points: {len(platform_embeddings)} points for {platform_embeddings.shape[1]}D space")
+                    platform_metrics['convex_hull_volume_lowdim'] = 0.0
+        except Exception as e:
+            print(f"Error calculating convex hull volume ({num_dimensions}d) for {platform}: {e}")
+            platform_metrics['convex_hull_volume_lowdim'] = 0.0
+        timers = timer_print(timers, f"Convex Hull Volume ({num_dimensions}d) ({platform})")
 
         # 3. Trimmed Mean Pairwise Distance
+        # Skip for now, takes too much memory
         if False:
             timers = timer_print(timers, f"Mean Pairwise Distance ({platform})")
             if len(platform_embeddings) > 1:
@@ -1932,7 +1971,7 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
 
         # Local Outlier Factor
         timers = timer_print(timers, f"Local Outlier Factor ({platform})")
-        lof = LocalOutlierFactor(n_neighbors=20, contamination=0.1)
+        lof = LocalOutlierFactor(n_neighbors=50, contamination=0.1)
         lof.fit_predict(embedding_vectors_norm)
         lof_scores = -lof.negative_outlier_factor_  # Convert to positive scores
         platform_lof = lof_scores[platform_mask]
