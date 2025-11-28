@@ -22,7 +22,7 @@ from scipy.stats import entropy
 from sklearn.decomposition import PCA
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.manifold import TSNE
-from sklearn.neighbors import LocalOutlierFactor, NearestNeighbors
+
 from tabulate import tabulate
 
 from common import (
@@ -1736,31 +1736,25 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
             platform_metrics['convex_hull_volume_300d'] = 0.0
 
         # 2.5. Convex Hull Volume (reduced dimensionality via PCA)
-        num_dimensions = 5
+        num_dimensions = 6
         timers = timer_print(timers, f"Convex Hull Volume ({num_dimensions}d) ({platform})")
         try:
             if platform_embeddings.shape[1] > num_dimensions:
                 # Apply PCA reduction
-                timers = timer_print(timers, f"Convex Hull PCA Reduction ({num_dimensions}d) ({platform})")
                 pca_lowdim = PCA(n_components=min(num_dimensions, len(platform_embeddings)-1))
                 reduced_embeddings_lowdim = pca_lowdim.fit_transform(platform_embeddings)
-                timers = timer_print(timers, f"Convex Hull PCA Reduction ({num_dimensions}d) ({platform})")
 
                 if len(reduced_embeddings_lowdim) > reduced_embeddings_lowdim.shape[1]:
-                    timers = timer_print(timers, f"Convex Hull Generation ({num_dimensions}d) ({platform})")
                     hull_lowdim = ConvexHull(reduced_embeddings_lowdim)
                     platform_metrics['convex_hull_volume_lowdim'] = hull_lowdim.volume
-                    timers = timer_print(timers, f"Convex Hull Generation ({num_dimensions}d) ({platform})")
                 else:
                     print(f"Skipping convex hull volume ({num_dimensions}d) calculation for {platform} due to insufficient points: {len(reduced_embeddings_lowdim)} points for {reduced_embeddings_lowdim.shape[1]}D space")
                     platform_metrics['convex_hull_volume_lowdim'] = 0.0
             else:
                 # Embeddings are already reduced, use them directly
                 if len(platform_embeddings) > platform_embeddings.shape[1]:
-                    timers = timer_print(timers, f"Convex Hull Generation ({num_dimensions}d) ({platform})")
                     hull_lowdim = ConvexHull(platform_embeddings)
                     platform_metrics['convex_hull_volume_lowdim'] = hull_lowdim.volume
-                    timers = timer_print(timers, f"Convex Hull Generation ({num_dimensions}d) ({platform})")
                 else:
                     print(f"Skipping convex hull volume ({num_dimensions}d) calculation for {platform} due to insufficient points: {len(platform_embeddings)} points for {platform_embeddings.shape[1]}D space")
                     platform_metrics['convex_hull_volume_lowdim'] = 0.0
@@ -1932,61 +1926,41 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
     print("Computing novelty metrics...")
     timers = timer_print(timers, "Novelty Initialization")
 
-    # Build KNN model for novelty calculations
-    nbrs = NearestNeighbors(n_neighbors=21, metric='euclidean')  # 21 to exclude self
-    nbrs.fit(embedding_vectors_norm)
-    timers = timer_print(timers, "Novelty Initialization")
+    # Use pre-existing novelty values from master_df
+    all_novelty_values = master_df['novelty'].values
 
     for platform in platforms:
         platform_mask = master_df['platform_slug'] == platform
         platform_df = master_df[platform_mask]
-        platform_indices = np.where(platform_mask)[0]
+        platform_novelty = master_df.loc[platform_mask, 'novelty'].values
 
         if len(platform_df) == 0:
             continue
 
         novelty_metrics = {}
 
-        # Average Novelty Score (k-NN distance)
+        # Average Novelty Score (using pre-computed novelty values)
         timers = timer_print(timers, f"Average Novelty Score ({platform})")
-        for k in [10, 20]:
-            if k < len(embedding_vectors_norm):
-                nbrs_k = NearestNeighbors(n_neighbors=k+1, metric='euclidean')
-                nbrs_k.fit(embedding_vectors_norm)
-                distances, _ = nbrs_k.kneighbors(embedding_vectors_norm[platform_mask])
-                avg_distances = np.mean(distances[:, 1:], axis=1)  # Exclude self
-                novelty_metrics[f'average_novelty_k{k}'] = np.mean(avg_distances)
+        novelty_metrics['average_novelty'] = np.mean(platform_novelty)
         timers = timer_print(timers, f"Average Novelty Score ({platform})")
 
         # High-Novelty Market Count
         timers = timer_print(timers, f"High-Novelty Market Count ({platform})")
-        distances_20, _ = nbrs.kneighbors(embedding_vectors_norm)
-        dist_to_20th = distances_20[:, 20]  # 20th neighbor (excluding self)
-
         for percentile in [80, 90, 95, 98]:
-            threshold = np.percentile(dist_to_20th, percentile)
-            platform_high_novelty = dist_to_20th[platform_mask] > threshold
+            threshold = np.percentile(all_novelty_values, percentile)
+            platform_high_novelty = platform_novelty > threshold
             novelty_metrics[f'high_novelty_count_p{percentile}'] = np.sum(platform_high_novelty)
         timers = timer_print(timers, f"High-Novelty Market Count ({platform})")
 
-        # Local Outlier Factor
-        timers = timer_print(timers, f"Local Outlier Factor ({platform})")
-        lof = LocalOutlierFactor(n_neighbors=50, contamination=0.1)
-        lof.fit_predict(embedding_vectors_norm)
-        lof_scores = -lof.negative_outlier_factor_  # Convert to positive scores
-        platform_lof = lof_scores[platform_mask]
-        novelty_metrics['lof_outliers_1.5'] = np.sum(platform_lof > 1.5)
-        novelty_metrics['lof_outliers_2.0'] = np.sum(platform_lof > 2.0)
-        novelty_metrics['mean_lof_score'] = np.mean(platform_lof)
-        timers = timer_print(timers, f"Local Outlier Factor ({platform})")
-
         # Novelty-Weighted Unique Coverage
         timers = timer_print(timers, f"Novelty-Weighted Unique Coverage ({platform})")
-        local_density = 1.0 / (dist_to_20th + 1e-10)  # Inverse distance as density
-        density_threshold = np.percentile(local_density, 20)
+
+        # Use pre-computed novelty values to determine weights
+        # Higher novelty = lower density = higher weight
+        novelty_threshold = np.percentile(all_novelty_values, 80)
 
         weights = np.ones(len(master_df))
-        weights[local_density < density_threshold] = 2.0  # Double weight for sparse areas
+        weights[master_df['novelty'] > novelty_threshold] = 2.0  # Double weight for high-novelty areas
 
         weighted_coverage = 0
         for cluster_id in cluster_platform_dist:

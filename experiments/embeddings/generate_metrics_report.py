@@ -43,7 +43,7 @@ class MetricsReportGenerator:
                     'name': 'Convex Hull Volume (300D)',
                     'description': 'Measures the volume of the smallest convex polytope containing all platform embeddings in 300-dimensional space. The algorithm first reduces embedding dimensionality from 768D to 300D using Principal Component Analysis (PCA) to make computation tractable, then calculates the convex hull using the Quickhull algorithm. The convex hull represents the "envelope" containing all data points, and its volume quantifies the total semantic space occupied.',
                     'interpretation': 'Higher volume indicates broader topic coverage and more diverse market portfolio. This metric captures the overall "spread" of a platform\'s markets in semantic space. Unlike simple distance metrics, it accounts for the actual shape and extent of coverage. However, it can be inflated by a few outlier markets and doesn\'t distinguish between uniform coverage and clustering at extremes. It also loses information during PCA dimensionality reduction and may not capture local density variations within the hull.',
-                    'variations': ['convex_hull_volume_300d']
+                    'variations': ['convex_hull_volume_300d', 'convex_hull_volume_lowdim']
                 },
                 'trimmed_mean_distance': {
                     'name': 'Trimmed Mean Pairwise Distance',
