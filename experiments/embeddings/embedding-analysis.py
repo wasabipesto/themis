@@ -1711,6 +1711,8 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
             except:
                 platform_metrics['convex_hull_volume_full'] = 0.0
             timers = timer_print(timers, f"Convex Hull Volume (768d) ({platform})")
+        else:
+            platform_metrics['convex_hull_volume_full'] = 0.0
 
         # 2. Convex Hull Volume (reduced dimensionality - 300D via PCA)
         timers = timer_print(timers, f"Convex Hull Volume (300d) ({platform})")
@@ -1730,23 +1732,28 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
         timers = timer_print(timers, f"Convex Hull Volume (300d) ({platform})")
 
         # 3. Trimmed Mean Pairwise Distance
-        timers = timer_print(timers, f"Mean Pairwise Distance ({platform})")
-        if len(platform_embeddings) > 1:
-            pairwise_dists = pdist(platform_embeddings, metric='euclidean')
-            if len(pairwise_dists) > 0:
-                # Middle 80%
-                sorted_dists = np.sort(pairwise_dists)
-                trim_start = int(len(sorted_dists) * 0.1)
-                trim_end = int(len(sorted_dists) * 0.9)
-                platform_metrics['trimmed_mean_distance_80'] = np.mean(sorted_dists[trim_start:trim_end]) if trim_end > trim_start else np.mean(sorted_dists)
+        if False:
+            timers = timer_print(timers, f"Mean Pairwise Distance ({platform})")
+            if len(platform_embeddings) > 1:
+                pairwise_dists = pdist(platform_embeddings, metric='euclidean')
+                if len(pairwise_dists) > 0:
+                    # Middle 80%
+                    sorted_dists = np.sort(pairwise_dists)
+                    trim_start = int(len(sorted_dists) * 0.1)
+                    trim_end = int(len(sorted_dists) * 0.9)
+                    platform_metrics['trimmed_mean_distance_80'] = np.mean(sorted_dists[trim_start:trim_end]) if trim_end > trim_start else np.mean(sorted_dists)
 
-                # Bottom 90%
-                trim_end_90 = int(len(sorted_dists) * 0.9)
-                platform_metrics['trimmed_mean_distance_90'] = np.mean(sorted_dists[:trim_end_90]) if trim_end_90 > 0 else np.mean(sorted_dists)
+                    # Bottom 90%
+                    trim_end_90 = int(len(sorted_dists) * 0.9)
+                    platform_metrics['trimmed_mean_distance_90'] = np.mean(sorted_dists[:trim_end_90]) if trim_end_90 > 0 else np.mean(sorted_dists)
 
-                # All markets
-                platform_metrics['mean_pairwise_distance'] = np.mean(pairwise_dists)
-        timers = timer_print(timers, f"Mean Pairwise Distance ({platform})")
+                    # All markets
+                    platform_metrics['mean_pairwise_distance'] = np.mean(pairwise_dists)
+            timers = timer_print(timers, f"Mean Pairwise Distance ({platform})")
+        else:
+            platform_metrics['trimmed_mean_distance_80'] = 0
+            platform_metrics['trimmed_mean_distance_90'] = 0
+            platform_metrics['mean_pairwise_distance'] = 0
 
         # 4. Cluster Diversity Score (Entropy)
         timers = timer_print(timers, f"Cluster Diversity Score ({platform})")
@@ -1903,7 +1910,7 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
 
         # Average Novelty Score (k-NN distance)
         timers = timer_print(timers, f"Average Novelty Score ({platform})")
-        for k in [10, 20, 25]:
+        for k in [10, 20]:
             if k < len(embedding_vectors_norm):
                 nbrs_k = NearestNeighbors(n_neighbors=k+1, metric='euclidean')
                 nbrs_k.fit(embedding_vectors_norm)
