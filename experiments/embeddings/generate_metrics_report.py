@@ -32,7 +32,7 @@ class MetricsReportGenerator:
         self.metrics_data = metrics_data
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
-        self.platforms = list(metrics_data['platform_stats'].keys())
+        self.platforms = list(metrics_data['total_markets'].keys())
         self.metric_descriptions = self._load_metric_descriptions()
 
     def _load_metric_descriptions(self) -> Dict:
@@ -101,6 +101,12 @@ class MetricsReportGenerator:
                     'description': 'For each platform market (sampling up to 100 for efficiency), finds the 10 nearest markets from OTHER platforms only, calculates the average distance to these neighbors, then averages across all sampled markets. Uses normalized embeddings and Euclidean distance. Explicitly excludes same-platform markets to measure inter-platform positioning.',
                     'interpretation': 'Measures how distinct a platform\'s markets are from competitors\' offerings. Higher scores indicate the platform occupies unique semantic space not explored by others - true differentiation. This differs from novelty metrics by explicitly comparing against competition rather than the global distribution. It reveals competitive positioning and market gaps. However, high isolation could indicate either innovative leadership or irrelevant market selection. The metric doesn\'t distinguish between being ahead of or behind the market.',
                     'variations': ['cross_platform_isolation']
+                },
+                'effective_radius': {
+                    'name': 'Effective Radius Statistics',
+                    'description': 'Measures the spatial distribution and spread of a platform\'s markets around their semantic centroid in 768-dimensional embedding space. The centroid is calculated as the mean position of all platform embeddings, then Euclidean distances from each market to this centroid are computed. Multiple statistics capture different aspects: mean distance shows average spread, standard deviation indicates variability in spread, and percentiles (80th, 90th, 95th) identify markets at various distances from the core.',
+                    'interpretation': 'The effective radius reveals how tightly clustered or widely dispersed a platform\'s markets are in semantic space. Lower mean radius indicates markets are semantically similar and focused around core themes. Higher mean radius suggests diverse, scattered markets covering broader semantic territory. The standard deviation shows consistency - low std means uniform spread, high std means some markets are very close to center while others are far out. Percentiles identify the "semantic boundary" - 95th percentile shows the distance that contains 95% of markets, indicating the platform\'s semantic reach. This differs from convex hull volume by measuring radial distribution rather than geometric boundaries, and from pairwise distances by using a central reference point.',
+                    'variations': ['effective_radius_mean', 'effective_radius_std', 'effective_radius_80pct', 'effective_radius_90pct', 'effective_radius_95pct']
                 }
             },
             'novelty': {
@@ -206,23 +212,23 @@ class MetricsReportGenerator:
                 ax = axes.flat[row * n_cols + col]
 
             # Get data for this variation
-            if category == 'competition' and 'overlap_with_' in variation:
+            if 'overlap_with_' in variation:
                 # Handle overlap metrics specially
                 data = []
                 for platform in self.platforms:
-                    value = self.metrics_data[category].get(platform, {}).get(variation, 0)
+                    value = self.metrics_data.get(variation, {}).get(platform, 0)
                     data.append(value)
-            elif category == 'competition' and variation == 'overlap_matrix_weighted':
+            elif variation == 'overlap_matrix_weighted':
                 # Create heatmap for overlap matrix
-                overlap_data = self.metrics_data[category][variation]
+                overlap_data = self.metrics_data[variation]
                 overlap_df = pd.DataFrame(overlap_data)
                 sns.heatmap(overlap_df, annot=True, fmt='.3f', ax=ax, cmap='Blues')
                 ax.set_title(f'{variation.replace("_", " ").title()}')
                 continue
-            elif category == 'competition' and 'hhi' in variation:
+            elif 'hhi' in variation:
                 if variation == 'cluster_hhi_scores':
                     # Show distribution of HHI scores
-                    hhi_scores = [item['hhi'] for item in self.metrics_data[category][variation]]
+                    hhi_scores = [item['hhi'] for item in self.metrics_data[variation]]
                     ax.hist(hhi_scores, bins=30, alpha=0.7, color='skyblue', edgecolor='black')
                     ax.set_title('Distribution of Cluster HHI Scores')
                     ax.set_xlabel('HHI Score')
@@ -230,29 +236,41 @@ class MetricsReportGenerator:
                     continue
                 else:
                     # mean_hhi or weighted_mean_hhi
-                    data = [self.metrics_data[category][variation]] * len(self.platforms)
-                    ax.bar(['Overall'], [self.metrics_data[category][variation]], color='coral')
+                    data = [self.metrics_data[variation]] * len(self.platforms)
+                    ax.bar(['Overall'], [self.metrics_data[variation]], color='coral')
                     ax.set_title(f'{variation.replace("_", " ").title()}')
                     continue
             else:
                 data = []
+                platforms_for_plot = []
                 for platform in self.platforms:
-                    value = self.metrics_data[category].get(platform, {}).get(variation, 0)
-                    data.append(value)
+                    value = self.metrics_data.get(variation, {}).get(platform, 0)
+                    # Skip non-numeric values
+                    if isinstance(value, (int, float)):
+                        data.append(value)
+                        platforms_for_plot.append(platform)
 
-            # Create bar plot
-            bars = ax.bar(self.platforms, data, color=plt.cm.Set3(np.linspace(0, 1, len(self.platforms))))
-            ax.set_title(f'{variation.replace("_", " ").title()}')
-            ax.tick_params(axis='x', rotation=45)
+                # Only create plot if we have numeric data
+                if data and platforms_for_plot:
+                    # Create bar plot
+                    bars = ax.bar(platforms_for_plot, data, color=plt.cm.Set3(np.linspace(0, 1, len(platforms_for_plot))))
+                    ax.set_title(f'{variation.replace("_", " ").title()}')
+                    ax.tick_params(axis='x', rotation=45)
 
-            # Add value labels on bars
-            for bar, value in zip(bars, data):
-                height = bar.get_height()
-                ax.annotate(f'{value:.3f}' if isinstance(value, float) else str(value),
-                          xy=(bar.get_x() + bar.get_width() / 2, height),
-                          xytext=(0, 3),  # 3 points vertical offset
-                          textcoords="offset points",
-                          ha='center', va='bottom', fontsize=8)
+                    # Add value labels on bars
+                    for bar, value in zip(bars, data):
+                        height = bar.get_height()
+                        ax.annotate(f'{value:.3f}' if isinstance(value, float) else str(value),
+                                  xy=(bar.get_x() + bar.get_width() / 2, height),
+                                  xytext=(0, 3),  # 3 points vertical offset
+                                  textcoords="offset points",
+                                  ha='center', va='bottom', fontsize=8)
+                else:
+                    # Show message for non-plottable data
+                    ax.text(0.5, 0.5, f'No numeric data\nfor {variation}',
+                           transform=ax.transAxes, ha='center', va='center',
+                           bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgray"))
+                    ax.set_title(f'{variation.replace("_", " ").title()}')
 
         # Hide empty subplots
         for i in range(n_variations, n_rows * n_cols):
@@ -277,17 +295,23 @@ class MetricsReportGenerator:
             row = {'Platform': platform}
 
             for variation in metric_info['variations']:
-                if category == 'competition' and 'overlap_with_' in variation:
-                    value = self.metrics_data[category].get(platform, {}).get(variation, 0)
-                elif category == 'competition' and variation in ['mean_hhi', 'weighted_mean_hhi']:
-                    value = self.metrics_data[category][variation]
-                elif category == 'competition' and variation == 'cluster_hhi_scores':
+                if 'overlap_with_' in variation:
+                    value = self.metrics_data.get(variation, {}).get(platform, 0)
+                elif variation in ['mean_hhi', 'weighted_mean_hhi']:
+                    value = self.metrics_data[variation]
+                elif variation == 'cluster_hhi_scores':
                     # Skip this one for platform-specific table
                     continue
                 else:
-                    value = self.metrics_data[category].get(platform, {}).get(variation, 0)
+                    value = self.metrics_data.get(variation, {}).get(platform, 0)
 
-                row[variation.replace('_', ' ').title()] = f"{value:.4f}" if isinstance(value, float) else str(value)
+                # Skip non-numeric values like nested dictionaries
+                if isinstance(value, dict):
+                    continue
+                elif isinstance(value, (int, float)):
+                    row[variation.replace('_', ' ').title()] = f"{value:.4f}" if isinstance(value, float) else str(value)
+                else:
+                    row[variation.replace('_', ' ').title()] = str(value)
 
             table_data.append(row)
 
@@ -324,29 +348,30 @@ class MetricsReportGenerator:
 
         # Get top performers for each variation
         for variation in metric_info['variations']:
-            if category == 'competition' and variation == 'cluster_hhi_scores':
+            if variation == 'cluster_hhi_scores':
                 continue
-            elif category == 'competition' and variation in ['mean_hhi', 'weighted_mean_hhi']:
-                value = self.metrics_data[category][variation]
+            elif variation in ['mean_hhi', 'weighted_mean_hhi']:
+                value = self.metrics_data[variation]
                 interpretations.append(f"**{variation.replace('_', ' ').title()}**: {value:.4f}")
                 continue
 
             platform_values = []
             for platform in self.platforms:
-                if category == 'competition' and 'overlap_with_' in variation:
-                    value = self.metrics_data[category].get(platform, {}).get(variation, 0)
-                else:
-                    value = self.metrics_data[category].get(platform, {}).get(variation, 0)
+                value = self.metrics_data.get(variation, {}).get(platform, 0)
+                # Skip if value is a dict (like overlap matrix) or other non-numeric type
+                if isinstance(value, dict) or not isinstance(value, (int, float)):
+                    continue
                 platform_values.append((platform, value))
 
-            # Sort by value (descending for most metrics, ascending for some)
-            reverse_sort = True
-            if 'gini' in variation.lower() or 'hhi' in variation.lower():
-                reverse_sort = False  # Lower is more diverse
-
-            platform_values.sort(key=lambda x: x[1], reverse=reverse_sort)
-
+            # Only process if we have valid numeric values
             if platform_values:
+                # Sort by value (descending for most metrics, ascending for some)
+                reverse_sort = True
+                if 'gini' in variation.lower() or 'hhi' in variation.lower():
+                    reverse_sort = False  # Lower is more diverse
+
+                platform_values.sort(key=lambda x: x[1], reverse=reverse_sort)
+
                 top_platform, top_value = platform_values[0]
                 interpretations.append(
                     f"**{variation.replace('_', ' ').title()}**: {top_platform} leads with {top_value:.4f}"
@@ -356,7 +381,6 @@ class MetricsReportGenerator:
 
     def generate_category_summary(self, category: str) -> Dict:
         """Generate summary for an entire category."""
-        category_data = self.metrics_data[category]
         summary = {
             'category': category.title(),
             'description': self._get_category_description(category),
@@ -376,16 +400,13 @@ class MetricsReportGenerator:
 
     def _calculate_category_rankings(self, category: str) -> List[Tuple[str, float]]:
         """Calculate overall ranking for platforms in a category."""
-        if category not in self.metrics_data:
-            return []
-
         # Simple approach: average normalized scores across key metrics
         platform_scores = {platform: [] for platform in self.platforms}
 
         # Get key metrics for each category
         key_metrics = {
             'diversity': ['cluster_entropy', 'effective_reach_20pct', 'topic_gini_coefficient'],
-            'novelty': ['average_novelty_k20', 'high_novelty_count_p95'],
+            'novelty': ['average_novelty', 'high_novelty_count_p95'],
             'innovation': ['clusters_founded', 'innovation_index'],
             'competition': ['topic_flow_ratio']
         }
@@ -393,9 +414,13 @@ class MetricsReportGenerator:
         metrics_to_use = key_metrics.get(category, [])
 
         for metric in metrics_to_use:
+            # Check if metric exists in the flattened structure
+            if metric not in self.metrics_data:
+                continue
+
             values = []
             for platform in self.platforms:
-                value = self.metrics_data[category].get(platform, {}).get(metric, 0)
+                value = self.metrics_data[metric].get(platform, 0)
                 values.append(value)
 
             # Normalize values (0-1 scale)
@@ -450,13 +475,15 @@ class MetricsReportGenerator:
         """Generate summary of platform statistics."""
         stats = {}
         for platform in self.platforms:
-            platform_data = self.metrics_data['platform_stats'][platform]
             stats[platform] = {
-                'total_markets': platform_data.get('total_markets', 0),
-                'clustered_markets': platform_data.get('clustered_markets', 0),
-                'unique_clusters': platform_data.get('unique_clusters', 0),
-                'mean_novelty': platform_data.get('mean_novelty', 0),
-                'median_novelty': platform_data.get('median_novelty', 0)
+                'total_markets': self.metrics_data.get('total_markets', {}).get(platform, 0),
+                'clustered_markets': self.metrics_data.get('clustered_markets', {}).get(platform, 0),
+                'unique_clusters': self.metrics_data.get('unique_clusters', {}).get(platform, 0),
+                'mean_novelty': self.metrics_data.get('mean_novelty', {}).get(platform, 0),
+                'median_novelty': self.metrics_data.get('median_novelty', {}).get(platform, 0),
+                'effective_radius_mean': self.metrics_data.get('effective_radius_mean', {}).get(platform, 0),
+                'effective_radius_std': self.metrics_data.get('effective_radius_std', {}).get(platform, 0),
+                'effective_radius_95pct': self.metrics_data.get('effective_radius_95pct', {}).get(platform, 0)
             }
         return stats
 
@@ -649,6 +676,9 @@ class MetricsReportGenerator:
                         <th>Unique Clusters</th>
                         <th>Mean Novelty</th>
                         <th>Median Novelty</th>
+                        <th>Effective Radius (Mean)</th>
+                        <th>Effective Radius (Std)</th>
+                        <th>Effective Radius (95th %ile)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -660,10 +690,24 @@ class MetricsReportGenerator:
                         <td>{{ stats.unique_clusters }}</td>
                         <td>{{ "%.4f"|format(stats.mean_novelty) }}</td>
                         <td>{{ "%.4f"|format(stats.median_novelty) }}</td>
+                        <td>{{ "%.4f"|format(stats.effective_radius_mean) }}</td>
+                        <td>{{ "%.4f"|format(stats.effective_radius_std) }}</td>
+                        <td>{{ "%.4f"|format(stats.effective_radius_95pct) }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+
+            <div class="metric-description">
+                <h4>About Effective Radius</h4>
+                <p><strong>Effective Radius</strong> measures how semantically spread out a platform's markets are from their central theme. It calculates the distance of each market from the platform's semantic centroid (average position in 768D embedding space):</p>
+                <ul>
+                    <li><strong>Mean:</strong> Average distance from centroid - indicates overall semantic spread</li>
+                    <li><strong>Std:</strong> Variability in distances - shows consistency of clustering vs. scattered distribution</li>
+                    <li><strong>95th Percentile:</strong> Distance that encompasses 95% of markets - defines semantic boundary</li>
+                </ul>
+                <p>Lower values indicate focused, semantically coherent platforms. Higher values suggest diverse platforms covering broader semantic territory.</p>
+            </div>
         </div>
 
         {% for category_name, category_data in report_sections.items() %}

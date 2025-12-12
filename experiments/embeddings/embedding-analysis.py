@@ -1656,14 +1656,9 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
     # Create a copy to avoid SettingWithCopyWarning and reset index
     master_df = master_df.copy().reset_index(drop=True)
 
-    # Initialize results dictionary
-    metrics = {
-        'diversity': {},
-        'novelty': {},
-        'innovation': {},
-        'competition': {},
-        'platform_stats': {}
-    }
+    # Initialize results dictionary - new format with metric names as top level keys
+    metrics = {}
+    special_metrics = {}  # For metrics that don't fit the platform structure
 
     # Initialize timers
     timers = {}
@@ -1769,7 +1764,9 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
         distances_from_centroid = np.linalg.norm(platform_embeddings - centroid, axis=1)
         platform_metrics['effective_radius_mean'] = np.mean(distances_from_centroid)
         platform_metrics['effective_radius_std'] = np.std(distances_from_centroid)
+        platform_metrics['effective_radius_80pct'] = np.percentile(distances_from_centroid, 80)
         platform_metrics['effective_radius_90pct'] = np.percentile(distances_from_centroid, 90)
+        platform_metrics['effective_radius_95pct'] = np.percentile(distances_from_centroid, 95)
 
         # Calculate covariance-based volume (determinant of covariance matrix)
         if len(platform_embeddings) > platform_embeddings.shape[1]:
@@ -1877,7 +1874,11 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
             platform_metrics['cross_platform_isolation'] = np.mean(isolation_scores) if isolation_scores else 0
         timers = timer_print(timers, f"Cross-Platform Isolation Score ({platform})")
 
-        metrics['diversity'][platform] = platform_metrics
+        # Add platform metrics to the new structure
+        for metric_name, metric_value in platform_metrics.items():
+            if metric_name not in metrics:
+                metrics[metric_name] = {}
+            metrics[metric_name][platform] = metric_value
 
     # ================== CLUSTER DOMINANCE METRICS ==================
     print("Computing cluster dominance metrics...")
@@ -1913,11 +1914,13 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
             platform_df = master_df[master_df['platform_slug'] == platform]
             platform_in_majority = platform_df[platform_df['cluster'].isin(majority_clusters)]
 
-            if platform not in metrics['diversity']:
-                metrics['diversity'][platform] = {}
+            if threshold_key not in metrics:
+                metrics[threshold_key] = {}
+            if unique_key not in metrics:
+                metrics[unique_key] = {}
 
-            metrics['diversity'][platform][threshold_key] = len(majority_clusters)
-            metrics['diversity'][platform][unique_key] = len(platform_in_majority) / len(platform_df) if len(platform_df) > 0 else 0
+            metrics[threshold_key][platform] = len(majority_clusters)
+            metrics[unique_key][platform] = len(platform_in_majority) / len(platform_df) if len(platform_df) > 0 else 0
     timers = timer_print(timers, "Majority Cluster Counts")
 
     # Cluster Exclusivity Index
@@ -1927,13 +1930,20 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
         for cluster_id, dist in cluster_platform_dist.items():
             prop = dist['proportions'].get(platform, 0)
             exclusivity_scores.append(max(0, prop - 0.5))
-        metrics['diversity'][platform]['cluster_exclusivity_index_50'] = sum(exclusivity_scores)
+        if 'cluster_exclusivity_index_50' not in metrics:
+            metrics['cluster_exclusivity_index_50'] = {}
+        if 'cluster_exclusivity_index_70' not in metrics:
+            metrics['cluster_exclusivity_index_70'] = {}
+        if 'cluster_exclusivity_index_80' not in metrics:
+            metrics['cluster_exclusivity_index_80'] = {}
+
+        metrics['cluster_exclusivity_index_50'][platform] = sum(exclusivity_scores)
 
         # Variations with different thresholds
         exclusivity_70 = sum(max(0, dist['proportions'].get(platform, 0) - 0.7) for _, dist in cluster_platform_dist.items())
         exclusivity_80 = sum(max(0, dist['proportions'].get(platform, 0) - 0.8) for _, dist in cluster_platform_dist.items())
-        metrics['diversity'][platform]['cluster_exclusivity_index_70'] = exclusivity_70
-        metrics['diversity'][platform]['cluster_exclusivity_index_80'] = exclusivity_80
+        metrics['cluster_exclusivity_index_70'][platform] = exclusivity_70
+        metrics['cluster_exclusivity_index_80'][platform] = exclusivity_80
     timers = timer_print(timers, "Cluster Exclusivity Index")
 
     # ================== NOVELTY METRICS ==================
@@ -1986,7 +1996,11 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
         novelty_metrics['novelty_weighted_coverage'] = weighted_coverage
         timers = timer_print(timers, f"Novelty-Weighted Unique Coverage ({platform})")
 
-        metrics['novelty'][platform] = novelty_metrics
+        # Add novelty metrics to the new structure
+        for metric_name, metric_value in novelty_metrics.items():
+            if metric_name not in metrics:
+                metrics[metric_name] = {}
+            metrics[metric_name][platform] = metric_value
 
     # ================== INNOVATION METRICS ==================
     timers = timer_print(timers, "Innovation Initialization")
@@ -2116,7 +2130,11 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
                 innovation_metrics['temporal_precedence_fifth'] = precedence_counts['fifth'] / participated_clusters
             timers = timer_print(timers, f"Temporal Cluster Precedence ({platform})")
 
-            metrics['innovation'][platform] = innovation_metrics
+            # Add innovation metrics to the new structure
+            for metric_name, metric_value in innovation_metrics.items():
+                if metric_name not in metrics:
+                    metrics[metric_name] = {}
+                metrics[metric_name][platform] = metric_value
 
     # ================== COMPETITION METRICS ==================
     print("Computing competition metrics...")
@@ -2142,12 +2160,16 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
             in_degree = sum(topic_flow[other][platform] for other in platforms if other != platform)
             out_degree = sum(topic_flow[platform][other] for other in platforms if other != platform)
 
-            if platform not in metrics['competition']:
-                metrics['competition'][platform] = {}
+            if 'topic_flow_in_degree' not in metrics:
+                metrics['topic_flow_in_degree'] = {}
+            if 'topic_flow_out_degree' not in metrics:
+                metrics['topic_flow_out_degree'] = {}
+            if 'topic_flow_ratio' not in metrics:
+                metrics['topic_flow_ratio'] = {}
 
-            metrics['competition'][platform]['topic_flow_in_degree'] = in_degree
-            metrics['competition'][platform]['topic_flow_out_degree'] = out_degree
-            metrics['competition'][platform]['topic_flow_ratio'] = out_degree / (in_degree + 1)  # Avoid division by zero
+            metrics['topic_flow_in_degree'][platform] = in_degree
+            metrics['topic_flow_out_degree'][platform] = out_degree
+            metrics['topic_flow_ratio'][platform] = out_degree / (in_degree + 1)  # Avoid division by zero
     timers = timer_print(timers, "Cross-Platform Topic Flow")
 
     # Platform Overlap Matrix
@@ -2183,12 +2205,14 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
                     platform_overlap_matrix[p1][p2] = weighted_intersection / weighted_union if weighted_union > 0 else 0
 
                     # Unweighted version
-                    metrics['competition'].setdefault(p1, {})
-                    metrics['competition'][p1][f'overlap_with_{p2}_unweighted'] = len(intersection) / len(union)
+                    overlap_metric_name = f'overlap_with_{p2}_unweighted'
+                    if overlap_metric_name not in metrics:
+                        metrics[overlap_metric_name] = {}
+                    metrics[overlap_metric_name][p1] = len(intersection) / len(union)
                 else:
                     platform_overlap_matrix[p1][p2] = 0
 
-    metrics['competition']['overlap_matrix_weighted'] = platform_overlap_matrix
+    special_metrics['overlap_matrix_weighted'] = platform_overlap_matrix
     timers = timer_print(timers, "Platform Overlap Matrix")
 
     # Topic Competition Intensity (HHI per cluster)
@@ -2199,18 +2223,23 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
         hhi = sum(p**2 for p in proportions)
         hhi_scores.append({'cluster_id': cluster_id, 'hhi': hhi, 'size': dist['total']})
 
-    metrics['competition']['cluster_hhi_scores'] = sorted(hhi_scores, key=lambda x: x['hhi'])
-    metrics['competition']['mean_hhi'] = np.mean([h['hhi'] for h in hhi_scores])
-    metrics['competition']['weighted_mean_hhi'] = np.average(
+    special_metrics['cluster_hhi_scores'] = sorted(hhi_scores, key=lambda x: x['hhi'])
+    special_metrics['mean_hhi'] = np.mean([h['hhi'] for h in hhi_scores])
+    special_metrics['weighted_mean_hhi'] = np.average(
         [h['hhi'] for h in hhi_scores],
         weights=[h['size'] for h in hhi_scores]
     )
     timers = timer_print(timers, "Topic Competition Intensity")
 
     # ================== PLATFORM STATISTICS ==================
+    # Platform statistics - add to main metrics structure
+    platform_stat_metrics = ['total_markets', 'clustered_markets', 'unique_clusters', 'mean_novelty', 'median_novelty']
+    for metric_name in platform_stat_metrics:
+        metrics[metric_name] = {}
+
     for platform in platforms:
         platform_df = master_df[master_df['platform_slug'] == platform]
-        metrics['platform_stats'][platform] = {
+        platform_stats = {
             'total_markets': len(platform_df),
             'clustered_markets': len(platform_df[platform_df['cluster'] != -1]),
             'unique_clusters': len(platform_df[platform_df['cluster'] != -1]['cluster'].unique()),
@@ -2218,7 +2247,16 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
             'median_novelty': platform_df['novelty'].median() if 'novelty' in platform_df.columns else 0,
         }
 
-    return metrics
+        for metric_name, metric_value in platform_stats.items():
+            metrics[metric_name][platform] = metric_value
+
+    # Other statistics
+    special_metrics["total_markets_all"] = len(master_df)
+    special_metrics["total_clusters"] = len(master_df[master_df['cluster'] != -1]['cluster'].unique())
+
+    # Combine main metrics with special metrics at the end
+    final_metrics = {**metrics, **special_metrics}
+    return final_metrics
 
 
 def main():
@@ -2310,8 +2348,8 @@ def main():
         "--cluster-selection-epsilon",
         "-ce",
         type=float,
-        default=0,
-        help="cluster_selection_epsilon size for HDBSCAN (default: 0)",
+        default=0.5,
+        help="cluster_selection_epsilon size for HDBSCAN (default: 0.5)",
     )
     parser.add_argument(
         "--plot-method",
@@ -2678,15 +2716,15 @@ def main():
 
         # Create summary table
         summary_data = []
-        for platform in platform_metrics['platform_stats'].keys():
+        for platform in platform_metrics['total_markets'].keys():
             row = [
                 platform,
-                platform_metrics['platform_stats'][platform]['total_markets'],
-                platform_metrics['platform_stats'][platform]['unique_clusters'],
-                f"{platform_metrics['diversity'].get(platform, {}).get('cluster_entropy', 0):.2f}",
-                f"{platform_metrics['diversity'].get(platform, {}).get('effective_reach_10pct', 0)}",
-                f"{platform_metrics['innovation'].get(platform, {}).get('clusters_founded', 0)}",
-                f"{platform_metrics['novelty'].get(platform, {}).get('average_novelty_k20', 0):.3f}",
+                platform_metrics['total_markets'][platform],
+                platform_metrics['unique_clusters'][platform],
+                f"{platform_metrics.get('cluster_entropy', {}).get(platform, 0):.2f}",
+                f"{platform_metrics.get('effective_reach_10pct', {}).get(platform, 0)}",
+                f"{platform_metrics.get('clusters_founded', {}).get(platform, 0)}",
+                f"{platform_metrics.get('average_novelty', {}).get(platform, 0):.3f}",
             ]
             summary_data.append(row)
 
