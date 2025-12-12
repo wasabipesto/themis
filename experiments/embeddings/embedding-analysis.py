@@ -2136,6 +2136,136 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
                     metrics[metric_name] = {}
                 metrics[metric_name][platform] = metric_value
 
+        # ================== GROWTH SCORE METRICS ==================
+        print("Computing growth score metrics...")
+        timers = timer_print(timers, "Growth Score")
+
+        def growth_dropoff_function(hours):
+            """
+            Dropoff function for growth score calculation.
+            First market gets 100 weight, subsequent markets get decreasing weight.
+            """
+            score = 105 / (1 + 0.05 * hours) - 5
+            if score < 1:
+                return 0
+            else:
+                return round(score)
+
+        # Calculate growth scores for each cluster
+        cluster_growth_scores = {}
+
+        for cluster_id, info in cluster_temporal.items():
+            first_timestamp = info['first_timestamp']
+            two_weeks_later = first_timestamp + timedelta(days=14)
+
+            # Get all markets in this cluster within first 2 weeks
+            cluster_early_markets = master_df[
+                (master_df['cluster'] == cluster_id) &
+                (master_df['created_datetime'] <= two_weeks_later)
+            ].copy()
+
+            if len(cluster_early_markets) == 0:
+                continue
+
+            # Sort by creation time
+            cluster_early_markets = cluster_early_markets.sort_values('created_datetime')
+
+            # Calculate hours from first market
+            cluster_early_markets['hours_from_first'] = (
+                cluster_early_markets['created_datetime'] - first_timestamp
+            ).dt.total_seconds() / 3600
+
+            # Apply dropoff function
+            cluster_early_markets['growth_weight'] = cluster_early_markets['hours_from_first'].apply(growth_dropoff_function)
+
+            # Group by platform and sum weights
+            platform_weights = cluster_early_markets.groupby('platform_slug')['growth_weight'].sum()
+            total_weight = platform_weights.sum()
+
+            # Calculate proportional growth scores (0-1)
+            if total_weight > 0:
+                platform_growth_scores = platform_weights / total_weight
+            else:
+                platform_growth_scores = {}
+
+            # Also calculate market score-weighted version
+            if 'score' in cluster_early_markets.columns:
+                cluster_early_markets['score_weighted_growth_weight'] = (
+                    cluster_early_markets['growth_weight'] * cluster_early_markets['score']
+                )
+                platform_score_weights = cluster_early_markets.groupby('platform_slug')['score_weighted_growth_weight'].sum()
+                total_score_weight = platform_score_weights.sum()
+
+                if total_score_weight > 0:
+                    platform_score_growth_scores = platform_score_weights / total_score_weight
+                else:
+                    platform_score_growth_scores = {}
+            else:
+                platform_score_weights = {}
+                platform_score_growth_scores = {}
+                total_score_weight = 0
+
+            cluster_growth_scores[cluster_id] = {
+                'platform_weights': platform_weights.to_dict(),
+                'platform_growth_scores': platform_growth_scores.to_dict(),
+                'platform_score_weights': platform_score_weights.to_dict() if isinstance(platform_score_weights, pd.Series) else platform_score_weights,
+                'platform_score_growth_scores': platform_score_growth_scores.to_dict() if isinstance(platform_score_growth_scores, pd.Series) else platform_score_growth_scores,
+                'total_weight': total_weight,
+                'total_score_weight': total_score_weight,
+                'market_count': len(cluster_early_markets)
+            }
+
+        # Aggregate growth scores across all clusters for each platform
+        for platform in platforms:
+            growth_metrics = {}
+
+            # Simple growth score (sum of proportional scores across all clusters)
+            total_growth_score = 0
+            weighted_growth_score = 0  # Weighted by cluster size
+            cluster_participations = 0
+
+            # Market score-weighted versions
+            total_score_growth_score = 0
+            weighted_score_growth_score = 0
+            score_cluster_participations = 0
+
+            for cluster_id, scores in cluster_growth_scores.items():
+                platform_score = scores['platform_growth_scores'].get(platform, 0)
+                if platform_score > 0:
+                    cluster_participations += 1
+                    total_growth_score += platform_score
+
+                    # Weight by cluster size (number of markets in 2-week window)
+                    weighted_growth_score += platform_score * scores['market_count']
+
+                # Market score-weighted version
+                platform_score_weighted = scores['platform_score_growth_scores'].get(platform, 0)
+                if platform_score_weighted > 0:
+                    score_cluster_participations += 1
+                    total_score_growth_score += platform_score_weighted
+
+                    # Weight by cluster size (number of markets in 2-week window)
+                    weighted_score_growth_score += platform_score_weighted * scores['market_count']
+
+            growth_metrics['growth_score_total'] = total_growth_score
+            growth_metrics['growth_score_weighted'] = weighted_growth_score
+            growth_metrics['growth_score_clusters_participated'] = cluster_participations
+            growth_metrics['growth_score_mean'] = total_growth_score / cluster_participations if cluster_participations > 0 else 0
+
+            # Market score-weighted versions
+            growth_metrics['growth_score_market_weighted_total'] = total_score_growth_score
+            growth_metrics['growth_score_market_weighted_weighted'] = weighted_score_growth_score
+            growth_metrics['growth_score_market_weighted_clusters_participated'] = score_cluster_participations
+            growth_metrics['growth_score_market_weighted_mean'] = total_score_growth_score / score_cluster_participations if score_cluster_participations > 0 else 0
+
+            # Add growth metrics to the new structure
+            for metric_name, metric_value in growth_metrics.items():
+                if metric_name not in metrics:
+                    metrics[metric_name] = {}
+                metrics[metric_name][platform] = metric_value
+
+        timers = timer_print(timers, "Growth Score")
+
     # ================== COMPETITION METRICS ==================
     print("Computing competition metrics...")
 
@@ -2253,6 +2383,8 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
     # Other statistics
     special_metrics["total_markets_all"] = len(master_df)
     special_metrics["total_clusters"] = len(master_df[master_df['cluster'] != -1]['cluster'].unique())
+    special_metrics["total_clustered_markets"] = len(master_df[master_df['cluster'] != -1])
+    special_metrics["total_unclustered_markets"] = len(master_df[master_df['cluster'] == -1])
 
     # Combine main metrics with special metrics at the end
     final_metrics = {**metrics, **special_metrics}
