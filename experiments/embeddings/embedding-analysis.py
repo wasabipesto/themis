@@ -1763,6 +1763,20 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
             platform_metrics['convex_hull_volume_lowdim'] = 0.0
         timers = timer_print(timers, f"Convex Hull Volume ({num_dimensions}d) ({platform})")
 
+        # 2.6 Effective Radius
+        timers = timer_print(timers, f"Effective Radius ({platform})")
+        centroid = np.mean(platform_embeddings, axis=0)
+        distances_from_centroid = np.linalg.norm(platform_embeddings - centroid, axis=1)
+        platform_metrics['effective_radius_mean'] = np.mean(distances_from_centroid)
+        platform_metrics['effective_radius_std'] = np.std(distances_from_centroid)
+        platform_metrics['effective_radius_90pct'] = np.percentile(distances_from_centroid, 90)
+
+        # Calculate covariance-based volume (determinant of covariance matrix)
+        if len(platform_embeddings) > platform_embeddings.shape[1]:
+            cov_matrix = np.cov(platform_embeddings.T)
+            platform_metrics['log_determinant_volume'] = np.linalg.slogdet(cov_matrix)[1]  # Log for numerical stability
+        timers = timer_print(timers, f"Effective Radius ({platform})")
+
         # 3. Trimmed Mean Pairwise Distance
         # Skip for now, takes too much memory
         if False:
@@ -2339,6 +2353,10 @@ def main():
             f"{postgrest_base}/markets", params={"order": "id"}
         )
         save_dataframe_to_cache(markets_cache, markets_df)
+
+    # Blacklist by ID contents matching
+    id_blacklist_patterns = ["kalshi:KXMVENFL"]
+    markets_df = markets_df[~markets_df["id"].str.contains("|".join(id_blacklist_patterns))]
 
     # Apply platform filtering
     if args.sample_platform:
