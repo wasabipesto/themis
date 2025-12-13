@@ -1285,7 +1285,8 @@ def create_interactive_visualization(
     clusters_df,
     markets_df,
     cluster_info_dict,
-    output_file,
+    html_output_file,
+    json_output_file,
     display_prob,
 ):
     """
@@ -1498,8 +1499,28 @@ def create_interactive_visualization(
         fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="lightgray")
 
         # Save as HTML
-        fig.write_html(output_file, include_plotlyjs=True)
-        print(f"Static plot saved to {output_file}")
+        fig.write_html(html_output_file, include_plotlyjs=True)
+        print(f"Interactive plot saved to {html_output_file}")
+
+        # Save viz_data to JSON file
+        try:
+            # Convert viz_data to JSON-serializable format
+            viz_data_json = viz_data.copy()
+            # Convert embedding_2d column from numpy arrays to lists
+            viz_data_json['embedding_2d'] = viz_data_json['embedding_2d'].apply(lambda x: x.tolist() if hasattr(x, 'tolist') else x)
+            # Convert any other numpy types
+            for col in viz_data_json.columns:
+                if viz_data_json[col].dtype == 'object':
+                    continue
+                if 'int' in str(viz_data_json[col].dtype):
+                    viz_data_json[col] = viz_data_json[col].astype(int)
+                elif 'float' in str(viz_data_json[col].dtype):
+                    viz_data_json[col] = viz_data_json[col].astype(float)
+
+            viz_data_json.to_json(json_output_file, orient='records', indent=2)
+            print(f"Visualization data saved to {json_output_file}")
+        except Exception as json_e:
+            print(f"Warning: Could not save viz_data to JSON: {json_e}")
 
     except Exception as e:
         print(f"Error creating interactive visualization: {e}")
@@ -1649,7 +1670,7 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
         cluster_info_dict: Dictionary of cluster information (optional)
 
     Returns:
-        dict: Platform metrics organized by category
+        dict: Platform metrics organized by category with boxplot data for key metrics
     """
     print("Calculating comprehensive platform metrics...")
 
@@ -1679,6 +1700,39 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
         print("Market open_datetime missing, innovation metrics will be missing.")
 
     timers = timer_print(timers, "Metric Initialization")
+
+    # ================== BOXPLOT DATA FOR KEY METRICS ==================
+    print("Computing boxplot data for key metrics...")
+
+    boxplot_metrics = ['novelty', 'volume_usd', 'traders_count', 'duration_days', 'resolution']
+    boxplot_data = {}
+
+    for metric in boxplot_metrics:
+        if metric in master_df.columns:
+            boxplot_data[metric] = {}
+            for platform in platforms:
+                platform_data = master_df[master_df['platform_slug'] == platform][metric].dropna()
+                if len(platform_data) > 0:
+                    q1 = platform_data.quantile(0.25)
+                    q3 = platform_data.quantile(0.75)
+                    iqr = q3 - q1
+                    lower_whisker = max(platform_data.min(), q1 - 1.5 * iqr)
+                    upper_whisker = min(platform_data.max(), q3 + 1.5 * iqr)
+
+                    boxplot_data[metric][platform] = {
+                        'min': float(platform_data.min()),
+                        'q1': float(q1),
+                        'median': float(platform_data.median()),
+                        'q3': float(q3),
+                        'max': float(platform_data.max()),
+                        'lower_whisker': float(lower_whisker),
+                        'upper_whisker': float(upper_whisker),
+                        'mean': float(platform_data.mean()),
+                        'std': float(platform_data.std()),
+                        'count': int(len(platform_data))
+                    }
+
+    special_metrics['boxplot_data'] = boxplot_data
 
     # ================== DIVERSITY METRICS ==================
     print("Computing diversity metrics...")
@@ -2303,47 +2357,48 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
     timers = timer_print(timers, "Cross-Platform Topic Flow")
 
     # Platform Overlap Matrix
-    timers = timer_print(timers, "Platform Overlap Matrix")
-    platform_overlap_matrix = {}
-    for p1 in platforms:
-        platform_overlap_matrix[p1] = {}
-        p1_clusters = set(master_df[(master_df['platform_slug'] == p1) & (master_df['cluster'] != -1)]['cluster'].unique())
+    if False:
+        timers = timer_print(timers, "Platform Overlap Matrix")
+        platform_overlap_matrix = {}
+        for p1 in platforms:
+            platform_overlap_matrix[p1] = {}
+            p1_clusters = set(master_df[(master_df['platform_slug'] == p1) & (master_df['cluster'] != -1)]['cluster'].unique())
 
-        for p2 in platforms:
-            if p1 == p2:
-                platform_overlap_matrix[p1][p2] = 1.0
-            else:
-                p2_clusters = set(master_df[(master_df['platform_slug'] == p2) & (master_df['cluster'] != -1)]['cluster'].unique())
-
-                # Jaccard similarity
-                intersection = p1_clusters & p2_clusters
-                union = p1_clusters | p2_clusters
-
-                if len(union) > 0:
-                    # Weighted version
-                    weighted_intersection = 0
-                    weighted_union = 0
-
-                    for cluster_id in union:
-                        p1_count = len(master_df[(master_df['platform_slug'] == p1) & (master_df['cluster'] == cluster_id)])
-                        p2_count = len(master_df[(master_df['platform_slug'] == p2) & (master_df['cluster'] == cluster_id)])
-
-                        if cluster_id in intersection:
-                            weighted_intersection += min(p1_count, p2_count)
-                        weighted_union += max(p1_count, p2_count)
-
-                    platform_overlap_matrix[p1][p2] = weighted_intersection / weighted_union if weighted_union > 0 else 0
-
-                    # Unweighted version
-                    overlap_metric_name = f'overlap_with_{p2}_unweighted'
-                    if overlap_metric_name not in metrics:
-                        metrics[overlap_metric_name] = {}
-                    metrics[overlap_metric_name][p1] = len(intersection) / len(union)
+            for p2 in platforms:
+                if p1 == p2:
+                    platform_overlap_matrix[p1][p2] = 1.0
                 else:
-                    platform_overlap_matrix[p1][p2] = 0
+                    p2_clusters = set(master_df[(master_df['platform_slug'] == p2) & (master_df['cluster'] != -1)]['cluster'].unique())
 
-    special_metrics['overlap_matrix_weighted'] = platform_overlap_matrix
-    timers = timer_print(timers, "Platform Overlap Matrix")
+                    # Jaccard similarity
+                    intersection = p1_clusters & p2_clusters
+                    union = p1_clusters | p2_clusters
+
+                    if len(union) > 0:
+                        # Weighted version
+                        weighted_intersection = 0
+                        weighted_union = 0
+
+                        for cluster_id in union:
+                            p1_count = len(master_df[(master_df['platform_slug'] == p1) & (master_df['cluster'] == cluster_id)])
+                            p2_count = len(master_df[(master_df['platform_slug'] == p2) & (master_df['cluster'] == cluster_id)])
+
+                            if cluster_id in intersection:
+                                weighted_intersection += min(p1_count, p2_count)
+                            weighted_union += max(p1_count, p2_count)
+
+                        platform_overlap_matrix[p1][p2] = weighted_intersection / weighted_union if weighted_union > 0 else 0
+
+                        # Unweighted version
+                        overlap_metric_name = f'overlap_with_{p2}_unweighted'
+                        if overlap_metric_name not in metrics:
+                            metrics[overlap_metric_name] = {}
+                        metrics[overlap_metric_name][p1] = len(intersection) / len(union)
+                    else:
+                        platform_overlap_matrix[p1][p2] = 0
+
+        special_metrics['overlap_matrix_weighted'] = platform_overlap_matrix
+        timers = timer_print(timers, "Platform Overlap Matrix")
 
     # Topic Competition Intensity (HHI per cluster)
     timers = timer_print(timers, "Topic Competition Intensity")
@@ -2686,6 +2741,8 @@ def main():
     )
     if cached_cluster_info is None:
         cluster_info_dict = collate_cluster_information(clustered_df)
+        # Generate cluster keywords
+        cluster_info_dict = generate_cluster_keywords_tfidf(cluster_info_dict)
         # Cache cluster statistics (without full market data)
         cluster_stats = []
         for cluster_id, info in cluster_info_dict.items():
@@ -2696,8 +2753,6 @@ def main():
             }
             stats["cluster_id"] = cluster_id
             cluster_stats.append(stats)
-        # Generate cluster keywords
-        cluster_info_dict = generate_cluster_keywords_tfidf(cluster_info_dict)
         # Save it
         save_dataframe_to_cache(cluster_info_cache, pd.DataFrame(cluster_stats))
     else:
@@ -2752,6 +2807,7 @@ def main():
     plot_clusters(args.plot_method.upper(), embeddings_2d_df, clusters_df, output_file)
 
     html_output_file = f"{args.output_dir}/clusters_{args.plot_method}_interactive.html"
+    json_output_file = f"{args.output_dir}/clusters_{args.plot_method}_interactive_points.html"
     display_prob = min(1.0, DISPLAY_SAMPLE_SIZE / len(embeddings_2d_df))
     create_interactive_visualization(
         args.plot_method.upper(),
@@ -2760,6 +2816,7 @@ def main():
         master_df,
         cluster_info_dict,
         html_output_file,
+        json_output_file,
         display_prob,
     )
     print(f"Interactive plot saved to {html_output_file}")
