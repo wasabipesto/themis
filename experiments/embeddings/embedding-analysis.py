@@ -5,7 +5,7 @@ import pickle
 import re
 import time
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import hdbscan
 import matplotlib.pyplot as plt
@@ -17,7 +17,7 @@ import plotly.graph_objects as go
 import umap
 from dotenv import load_dotenv
 from scipy.spatial import ConvexHull
-from scipy.spatial.distance import pdist, squareform
+from scipy.spatial.distance import pdist
 from scipy.stats import entropy
 from sklearn.decomposition import PCA
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -1505,6 +1505,28 @@ def create_interactive_visualization(
         try:
             # Convert viz_data to JSON-serializable format
             viz_data_json = viz_data.copy()
+
+            # Omit specific fields as requested
+            fields_to_omit = [
+                "description",
+                "embedding",
+                "market_id_novelty",
+                "market_id_cluster",
+            ]
+            for field in fields_to_omit:
+                if field in viz_data_json.columns:
+                    viz_data_json = viz_data_json.drop(field, axis=1)
+
+            # Add keywords from cluster_info_dict based on cluster id
+            def get_cluster_keywords(cluster_id):
+                if cluster_id in cluster_info_dict:
+                    return cluster_info_dict[cluster_id].get("keywords", "")
+                return ""
+
+            viz_data_json["keywords"] = viz_data_json["cluster"].apply(
+                get_cluster_keywords
+            )
+
             # Convert embedding_2d column from numpy arrays to lists
             viz_data_json["embedding_2d"] = viz_data_json["embedding_2d"].apply(
                 lambda x: x.tolist() if hasattr(x, "tolist") else x
@@ -1655,7 +1677,7 @@ def generate_cluster_keywords_tfidf(cluster_info_dict, n=NUM_KEYWORDS, use_tfidf
 
 def timer_print(timers, key):
     """Utility function to track and print elapsed time for tasks."""
-    if not key in timers:
+    if key not in timers:
         timers[key] = time.time()
         print(f"Started:  {key}")
     else:
@@ -1701,13 +1723,13 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
     # Convert created_time to datetime if it's not already
     if (
         "open_datetime" in master_df.columns
-        and not "created_datetime" in master_df.columns
+        and "created_datetime" not in master_df.columns
     ):
         print("Converting open_datetime to created_datetime")
         master_df["created_datetime"] = pd.to_datetime(
             master_df["open_datetime"], format="ISO8601"
         )
-    elif not "open_datetime" in master_df.columns:
+    elif "open_datetime" not in master_df.columns:
         print("Market open_datetime missing, innovation metrics will be missing.")
 
     timers = timer_print(timers, "Metric Initialization")
@@ -1870,6 +1892,30 @@ def calculate_platform_metrics(master_df, clusterer=None, cluster_info_dict=None
                 1
             ]  # Log for numerical stability
         timers = timer_print(timers, f"Effective Radius ({platform})")
+
+        # 2.7 Effective Radius (Low-Dim)
+        timers = timer_print(timers, f"Effective Radius Low-Dim ({platform})")
+        # Calculate centroid and distances for lowdim embeddings
+        centroid_lowdim = np.mean(reduced_embeddings_lowdim, axis=0)
+        distances_from_centroid_lowdim = np.linalg.norm(
+            reduced_embeddings_lowdim - centroid_lowdim, axis=1
+        )
+        platform_metrics["effective_radius_lowdim_mean"] = np.mean(
+            distances_from_centroid_lowdim
+        )
+        platform_metrics["effective_radius_lowdim_std"] = np.std(
+            distances_from_centroid_lowdim
+        )
+        platform_metrics["effective_radius_lowdim_80pct"] = np.percentile(
+            distances_from_centroid_lowdim, 80
+        )
+        platform_metrics["effective_radius_lowdim_90pct"] = np.percentile(
+            distances_from_centroid_lowdim, 90
+        )
+        platform_metrics["effective_radius_lowdim_95pct"] = np.percentile(
+            distances_from_centroid_lowdim, 95
+        )
+        timers = timer_print(timers, f"Effective Radius Low-Dim ({platform})")
 
         # 3. Trimmed Mean Pairwise Distance
         # Skip for now, takes too much memory
@@ -3046,7 +3092,7 @@ def main():
 
     html_output_file = f"{args.output_dir}/clusters_{args.plot_method}_interactive.html"
     json_output_file = (
-        f"{args.output_dir}/clusters_{args.plot_method}_interactive_points.html"
+        f"{args.output_dir}/clusters_{args.plot_method}_interactive_points.json"
     )
     display_prob = min(1.0, DISPLAY_SAMPLE_SIZE / len(embeddings_2d_df))
     create_interactive_visualization(
