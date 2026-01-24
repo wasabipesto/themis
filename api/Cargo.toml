@@ -1,0 +1,4 @@
+[package]
+name = "themis_api"
+version.workspace = true
+edition.workspace = true

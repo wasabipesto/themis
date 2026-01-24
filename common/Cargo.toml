@@ -1,0 +1,4 @@
+[package]
+name = "themis_common"
+version.workspace = true
+edition.workspace = true
