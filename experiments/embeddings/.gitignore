@@ -1,0 +1,10 @@
+cache
+output
+saved
+*.png
+*.html
+*.csv
+*.gexf
+*.pkl
+*.egg-info
+__pycache__
