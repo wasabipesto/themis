@@ -2,16 +2,16 @@
 //! Manifold API docs: https://docs.manifold.markets/api
 //! Source code: https://github.com/manifoldmarkets/manifold/tree/main/backend/api/src
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chrono::serde::{ts_milliseconds, ts_milliseconds_option};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
 
-use crate::criteria::{calculate_all_criteria, CriterionProbability};
+use crate::criteria::{CriterionProbability, calculate_all_criteria};
 use crate::platforms::{MarketAndProbs, MarketResult};
-use crate::{helpers, MarketError, ProbSegment, StandardMarket};
+use crate::{MarketError, ProbSegment, StandardMarket, helpers};
 
 const MANIFOLD_EXCHANGE_RATE: f32 = 100.0;
 
@@ -382,7 +382,7 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                         return Err(MarketError::DataInvalid(
                             market_id.to_owned(),
                             "Market lacks resolution value.".to_string(),
-                        ))
+                        ));
                     }
                 };
 

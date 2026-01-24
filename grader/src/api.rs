@@ -1,8 +1,8 @@
 //! Module containing common API functions.
 
 use crate::{
-    scores::{MarketScore, OtherScore, PlatformCategoryScore},
     Category, CriterionProbabilityPoint, DailyProbabilityPoint, Platform, Question,
+    scores::{MarketScore, OtherScore, PlatformCategoryScore},
 };
 
 use super::PostgrestParams;

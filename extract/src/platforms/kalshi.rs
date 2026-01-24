@@ -5,9 +5,9 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::collections::HashMap;
 
-use crate::criteria::{calculate_all_criteria, CriterionProbability};
+use crate::criteria::{CriterionProbability, calculate_all_criteria};
 use crate::platforms::{MarketAndProbs, MarketResult};
-use crate::{helpers, MarketError, ProbSegment, StandardMarket};
+use crate::{MarketError, ProbSegment, StandardMarket, helpers};
 
 /// This is the container format we used to save items to disk earlier.
 #[derive(Debug, Clone, Deserialize)]

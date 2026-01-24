@@ -1,13 +1,13 @@
 //! Module containing score types and their implementations.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use log::{error, warn};
 use serde::{Serialize, Serializer};
 use std::collections::HashMap;
 use std::fmt::{self, Display};
 
 use crate::{
-    helpers, Category, CriterionProbabilityPoint, DailyProbabilityPoint, Market, Platform, Question,
+    Category, CriterionProbabilityPoint, DailyProbabilityPoint, Market, Platform, Question, helpers,
 };
 
 pub mod brier;

@@ -6,9 +6,9 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 
-use crate::criteria::{calculate_all_criteria, CriterionProbability};
+use crate::criteria::{CriterionProbability, calculate_all_criteria};
 use crate::platforms::{MarketAndProbs, MarketResult};
-use crate::{helpers, MarketError, ProbSegment, StandardMarket};
+use crate::{MarketError, ProbSegment, StandardMarket, helpers};
 
 /// This is the container format we used to save items to disk earlier.
 #[derive(Debug, Clone, Deserialize)]
@@ -221,11 +221,7 @@ pub fn standardize(input: &PolymarketData) -> MarketResult<Vec<MarketAndProbs>> 
         }
         1 => {
             // Normal case, check if our token won
-            if tracked_token.winner {
-                1.0
-            } else {
-                0.0
-            }
+            if tracked_token.winner { 1.0 } else { 0.0 }
         }
         2 => {
             // Two winners, prizes were split 50/50

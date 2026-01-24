@@ -1,7 +1,7 @@
 //! Themis extract binary source.
 //! Pulls all markets from cache files and standardizes them
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use dotenvy::dotenv;
 use log::{debug, info};
@@ -58,11 +58,13 @@ fn main() -> Result<()> {
 
     // Read log level from arg and update environment variable
     let log_level = args.log_level.to_lowercase();
-    match log_level.as_str() {
-        "error" | "warn" | "info" | "debug" | "trace" => env::set_var("RUST_LOG", log_level),
-        _ => {
-            println!("Invalid log level, resetting to INFO.");
-            env::set_var("RUST_LOG", "info")
+    unsafe {
+        match log_level.as_str() {
+            "error" | "warn" | "info" | "debug" | "trace" => env::set_var("RUST_LOG", log_level),
+            _ => {
+                println!("Invalid log level, resetting to INFO.");
+                env::set_var("RUST_LOG", "info")
+            }
         }
     }
     env_logger::init();

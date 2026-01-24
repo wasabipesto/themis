@@ -299,7 +299,7 @@ pub fn display_progress(
         Platform::Metaculus => 15,
         Platform::Polymarket => 250,
     };
-    if completed % n == 0 {
+    if completed.is_multiple_of(n) {
         let elapsed = start_time.elapsed();
 
         // Estimate total time and remaining time

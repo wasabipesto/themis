@@ -1,7 +1,7 @@
 //! Helper functions for dealing with probabilities over time
 
 use crate::{DailyProbability, ProbSegment};
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use chrono::{DateTime, Duration, TimeDelta, TimeZone, Utc};
 use log::{debug, error, warn};
 
@@ -198,19 +198,19 @@ pub fn validate_prob_segments(probs: &[ProbSegment]) -> Result<()> {
             // Check that the previous segment does not intrude
             if segment.start < prev.end {
                 return Err(anyhow!(
-                "Overlapping segments detected: previous segment ends at {}, this segment starts at {}",
-                prev.end,
-                segment.start
-            ));
+                    "Overlapping segments detected: previous segment ends at {}, this segment starts at {}",
+                    prev.end,
+                    segment.start
+                ));
             }
 
             // Check that the previous segment meets this one
             if segment.start > prev.end {
                 return Err(anyhow!(
-                "Gap between segments detected: previous segment ends at {}, this segment starts at {}",
-                prev.end,
-                segment.start
-            ));
+                    "Gap between segments detected: previous segment ends at {}, this segment starts at {}",
+                    prev.end,
+                    segment.start
+                ));
             }
         }
 
@@ -473,9 +473,11 @@ mod tests {
 
         // Empty input
         let empty_probs: Vec<ProbSegment> = vec![];
-        assert!(get_daily_probabilities(&empty_probs, "")
-            .unwrap()
-            .is_empty());
+        assert!(
+            get_daily_probabilities(&empty_probs, "")
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[test]

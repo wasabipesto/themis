@@ -1,6 +1,6 @@
 //! Module with relative score calculations.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chrono::{DateTime, Duration, Utc};
 use log::error;
 use std::collections::{HashMap, HashSet};
@@ -42,7 +42,7 @@ pub fn score_market(
                 return Err(anyhow!(
                     "Market {} has no question invert attribute provided",
                     first_market.id
-                ))
+                ));
             }
         }
     } else {
@@ -56,7 +56,7 @@ pub fn score_market(
                 return Err(anyhow!(
                     "Market {} has no question invert attribute provided",
                     market.id
-                ))
+                ));
             }
         };
         if market_resolution != resolution {
@@ -174,7 +174,7 @@ pub fn score_market(
                     return Err(anyhow!(
                         "Market {} has no question invert attribute provided",
                         market.id
-                    ))
+                    ));
                 }
             };
 
@@ -396,10 +396,12 @@ mod tests {
             &probs,
         );
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("At least two markets"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("At least two markets")
+        );
     }
 
     #[test]
@@ -423,10 +425,12 @@ mod tests {
             &probs,
         );
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("resolved differently"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("resolved differently")
+        );
     }
 
     #[test]
@@ -450,9 +454,11 @@ mod tests {
             &probs,
         );
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("no question invert attribute"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("no question invert attribute")
+        );
     }
 }

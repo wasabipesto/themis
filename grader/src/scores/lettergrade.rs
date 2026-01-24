@@ -5,7 +5,7 @@
 //! which is not intuitive for many people. Logarithmic scores can have extreme
 //! values without necessarily representing extreme underperformance.
 
-use crate::scores::{brier, logarithmic, spherical, AbsoluteScoreType, RelativeScoreType};
+use crate::scores::{AbsoluteScoreType, RelativeScoreType, brier, logarithmic, spherical};
 
 /// Brier score cutoffs and their corresponding letter grades
 pub const BRIER_ABSCORE_GRADES: [(f32, &str); 14] = [
