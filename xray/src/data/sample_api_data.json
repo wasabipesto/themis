@@ -1,0 +1,196 @@
+{
+    "page": {
+        "link_placeholder": "Or paste some other market link"
+    },
+    "market": {
+        "platform_name": "Kalshi",
+        "title": "Who will win Survivor Season 49?",
+        "url": "https://kalshi.com/markets/kxsurvivor/who-will-win-survivor/kxsurvivor-26jan31",
+        "type": "multichoice-one",
+        "outcomes": [
+            {
+                "name": "Savannah Louie",
+                "probability": 80
+            },
+            {
+                "name": "Rizo Velovic",
+                "probability": 16
+            },
+            {
+                "name": "Sophi Balerdi",
+                "probability": 4
+            }
+        ]
+    },
+    "our_assessment": {
+        "label": "High Confidence",
+        "confidence_percent": 80
+    },
+    "confidence_aspects": [
+        {
+            "title": "Narrow bid-ask spread",
+            "factor_type": "in_favor",
+            "impact": 10,
+            "description": "A small gap between \"bid\" and \"ask\" orders means that traders are confident in the current probability. Currently the bid-ask spread is just 1 cent, the lowest it can be.",
+            "icon": "mdi:arrow-collapse-horizontal"
+        },
+        {
+            "title": "Good past performance on Survivor questions",
+            "factor_type": "in_favor",
+            "impact": 10,
+            "description": "Kalshi has 14 past markets about Survivor with a cumulative trade volume of $1,148,345. One month prior to resolution, those markets were on average 11% away from the actual resolution value.",
+            "icon": "mdi:trophy-variant"
+        },
+        {
+            "title": "Other prediction markets agree",
+            "factor_type": "in_favor",
+            "impact": 10,
+            "description": "Polymarket has their own market on this question with $34,125 in volume and an estimate within 5% of this one.",
+            "link_text": "See it here.",
+            "link_url": "https://polymarket.com/event/survivor-49-winner",
+            "icon": "mdi:handshake"
+        },
+        {
+            "title": "Expected to resolve soon",
+            "factor_type": "in_favor",
+            "impact": 5,
+            "description": "This market is scheduled to close in less than a week, which means traders can invest without locking up capital for a long time.",
+            "icon": "mdi:clock-fast"
+        },
+        {
+            "title": "Price has been stable for 30 days",
+            "factor_type": "in_favor",
+            "impact": 5,
+            "description": "The price hasn't drifted more than 10% in the last month, even though the market has been liquid the entire time.",
+            "icon": "mdi:chart-line-variant"
+        },
+        {
+            "title": "Good market depth",
+            "factor_type": "in_favor",
+            "impact": 0,
+            "description": "There are $14,323 of limit orders within 5% of the current price, which is very high for Kalshi and indicates high confidence. If you had insider information, you could wager $10,000 to win up to $104,365.",
+            "icon": "mdi:waves"
+        },
+        {
+            "title": "Kalshi return on investment",
+            "factor_type": "in_favor",
+            "impact": 0,
+            "description": "Kalshi offers 3.25% interest on held positions. On longer markets this would be expected to improve accuracy but this market will resolve soon so the point is moot.",
+            "icon": "mdi:percent"
+        },
+        {
+            "title": "Unambiguous resolution criteria",
+            "factor_type": "in_favor",
+            "impact": 0,
+            "description": "The resolution criteria is very clear and covers edge cases clearly. We should expect that the market's resolution will seem fair in hindsight.",
+            "icon": "mdi:gavel"
+        },
+        {
+            "title": "Moderate liquidity rewards",
+            "factor_type": "in_favor",
+            "impact": 0,
+            "description": "Kalshi provides liquidity rewards for at least one contract within this question, with a pool of $300 for those with open orders. This is moderate for Kalshi.",
+            "icon": "mdi:gift"
+        },
+        {
+            "title": "Low recent trade volume",
+            "factor_type": "against",
+            "impact": -5,
+            "description": "Trade volume in the last week is low compared to other points in this market's history. This could indicate that new information has yet to be priced into this market.",
+            "icon": "mdi:volume-low"
+        },
+        {
+            "title": "Low number of unique traders",
+            "factor_type": "against",
+            "impact": -5,
+            "description": "The majority of trades on this market are from just 24 accounts. This is low for Kalshi and could indicate poor visibility.",
+            "icon": "mdi:account-group-outline"
+        },
+        {
+            "title": "Many new or unprofitable traders",
+            "factor_type": "against",
+            "impact": 0,
+            "description": "There are 13 instances of new users betting large amounts on this market, which could affect the price significantly. Additionally, there are 2 instances of users with very poor past performance shifting this market by more than 3%. However, all of these have been corrected by other traders.",
+            "icon": "mdi:account-alert"
+        },
+        {
+            "title": "Potential misinformation in comments",
+            "factor_type": "against",
+            "impact": 0,
+            "description": "Analysis of the comment section shows that some users may be attempting to manipulate the market through misinformation.",
+            "icon": "mdi:alert-circle"
+        },
+        {
+            "title": "Inconsistent news coverage",
+            "factor_type": "against",
+            "impact": 0,
+            "description": "Recent news articles seem to indicate that the probability may be more uncertain than this market indicates.",
+            "icon": "mdi:newspaper-variant-outline"
+        }
+    ],
+    "history_chart": {
+        "subtitle": "Who will win Survivor Season 49?",
+        "time_labels": ["4 weeks ago", "2 weeks ago", "now"],
+        "series": [
+            {
+                "name": "Kalshi Prediction (Savannah Louie)",
+                "color": "green"
+            },
+            {
+                "name": "Our Confidence in Kalshi’s Prediction",
+                "color": "blue"
+            }
+        ]
+    },
+    "similar_markets": {
+        "items": [
+            {
+                "title": "Next U.S. Presidential Election Winner?",
+                "outcomes": [
+                    {
+                        "name": "J.D. Vance",
+                        "probability": 26
+                    },
+                    {
+                        "name": "Gavin Newsom",
+                        "probability": 19
+                    },
+                    {
+                        "name": "Marco Rubio",
+                        "probability": 10
+                    }
+                ]
+            },
+            {
+                "title": "What will the announcers say during the New York at Philadelphia professional basketball game?",
+                "outcomes": [
+                    {
+                        "name": "Playoff",
+                        "probability": 36
+                    },
+                    {
+                        "name": "Tech / Technical",
+                        "probability": 25
+                    },
+                    {
+                        "name": "Buzzer",
+                        "probability": 23
+                    },
+                    {
+                        "name": "Trade / Trades / Traded",
+                        "probability": 17
+                    }
+                ]
+            },
+            {
+                "title": "Will Kanye West / Ye release BULLY before January 31st?",
+                "outcomes": [
+                    {
+                        "name": "Yes",
+                        "probability": 32
+                    }
+                ]
+            }
+        ]
+    }
+}

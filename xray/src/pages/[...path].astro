@@ -1,0 +1,303 @@
+---
+export const prerender = false;
+
+import Base from "@layouts/base.astro";
+import { Icon } from "astro-icon/components";
+
+const { path } = Astro.params;
+const query = Astro.url.search;
+
+import data from "@data/sample_api_data.json";
+
+const {
+    page,
+    market,
+    our_assessment,
+    confidence_aspects,
+    history_chart,
+    similar_markets,
+} = data;
+
+// Separate confidence aspects by type
+const inFavorAspects = confidence_aspects.filter(
+    (a) => a.factor_type === "in_favor",
+);
+const againstAspects = confidence_aspects.filter(
+    (a) => a.factor_type === "against",
+);
+---
+
+<Base title="Market X-Ray">
+    <div class="mx-auto space-y-4 p-4 text-text">
+        <!-- URL Bar -->
+        <div
+            class="bg-base-light text-base-dark rounded p-3 border border-base-dark"
+        >
+            <p>How confident should I be in...</p>
+            <p class="sm:ml-10 text-xl font-bold font-underline">
+                <a href={market.url}>{market.title}</a>
+            </p>
+        </div>
+
+        <hr class="border-t border-dotted border-text opacity-20" />
+
+        <!-- Market Probabilities -->
+        <div class="space-y-3">
+            <div class="">
+                <span class="text-lg font-bold"
+                    >{market.platform_name} says:</span
+                >
+            </div>
+            {
+                market.outcomes.map((outcome) => (
+                    <div class="flex pl-4 items-center gap-2">
+                        <div class="w-32">{outcome.name}</div>
+                        <div class="w-10 text-right">
+                            {outcome.probability}%
+                        </div>
+                        <div class="flex-1 bg-crust rounded h-5 overflow-hidden border border-base-dark">
+                            <div
+                                class={`h-full ${outcome.probability >= 50 ? "bg-green" : outcome.probability >= 10 ? "bg-yellow" : "bg-peach"}`}
+                                style={`width: ${outcome.probability}%`}
+                            />
+                        </div>
+                    </div>
+                ))
+            }
+        </div>
+
+        <!-- Our Assessment -->
+        <div class="space-y-3 mt-4">
+            <div class=""><span class="text-lg font-bold">We say:</span></div>
+            <div class="flex pl-4 items-center gap-2">
+                <div class="w-32">{our_assessment.label}</div>
+                <div class="w-10 text-right">
+                    {our_assessment.confidence_percent}%
+                </div>
+                <div
+                    class="flex-1 bg-crust rounded h-5 overflow-hidden border border-base-dark"
+                >
+                    <div
+                        class="h-full bg-green"
+                        style={`width: ${our_assessment.confidence_percent}%`}
+                    >
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <hr class="border-t border-dotted border-text opacity-20" />
+
+        <!-- Confidence Factors: Two Column Layout -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Why we're confident -->
+            <div class="border border-base-dark rounded p-4 space-y-3">
+                <h2 class="text-xl font-bold mb-3">Why we're confident</h2>
+                {
+                    inFavorAspects.map((aspect) => (
+                        <div class="space-y-1">
+                            <div class="font-bold">
+                                <Icon
+                                    name={aspect.icon}
+                                    class="inline mb-1 mr-1"
+                                />
+                                {aspect.title}
+                                {aspect.impact > 0 && (
+                                    <span class="text-green ml-2">
+                                        +{aspect.impact}%
+                                    </span>
+                                )}
+                                {aspect.impact === 0 && (
+                                    <span class="text-subtext ml-2">
+                                        {aspect.impact}%
+                                    </span>
+                                )}
+                            </div>
+                            <div class="text-subtext leading-relaxed">
+                                {aspect.description}
+                                {aspect.link_text && (
+                                    <a
+                                        href={aspect.link_url}
+                                        class="text-blue underline"
+                                    >
+                                        {" "}
+                                        {aspect.link_text}
+                                    </a>
+                                )}
+                            </div>
+                        </div>
+                    ))
+                }
+            </div>
+
+            <!-- Why we doubt -->
+            <div class="border border-base-dark rounded p-4 space-y-3">
+                <h2 class="text-xl font-bold mb-3">Why we doubt</h2>
+                {
+                    againstAspects.map((aspect) => (
+                        <div class="space-y-1">
+                            <div class="font-bold">
+                                <Icon
+                                    name={aspect.icon}
+                                    class="inline mb-1 mr-1"
+                                />
+                                {aspect.title}
+                                {aspect.impact < 0 && (
+                                    <span class="text-red ml-2">
+                                        {aspect.impact}%
+                                    </span>
+                                )}
+                                {aspect.impact === 0 && (
+                                    <span class="text-subtext ml-2">
+                                        {aspect.impact}%
+                                    </span>
+                                )}
+                            </div>
+                            <div class="text-subtext leading-relaxed">
+                                {aspect.description}
+                                {aspect.link_text && (
+                                    <a
+                                        href={aspect.link_url}
+                                        class="text-blue underline"
+                                    >
+                                        {" "}
+                                        {aspect.link_text}
+                                    </a>
+                                )}
+                            </div>
+                        </div>
+                    ))
+                }
+            </div>
+        </div>
+
+        <hr class="border-t border-dotted border-text opacity-20" />
+
+        <!-- History Chart -->
+        <div class="space-y-3">
+            <h2 class="text-lg font-bold">History</h2>
+            <div
+                class="border border-base-dark rounded p-4 bg-base-light text-base-dark"
+            >
+                <div class="mb-4 text-base">
+                    "{history_chart.subtitle}"
+                </div>
+
+                <!-- Chart Area (placeholder) -->
+                <div
+                    class="relative h-56 bg-white border border-base-dark rounded mb-3"
+                >
+                    <!-- Placeholder SVG/Canvas area for actual chart -->
+                    <svg
+                        class="w-full h-full"
+                        viewBox="0 0 500 200"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <!-- Green line (Kalshi Prediction) -->
+                        <polyline
+                            points="10,80 50,90 90,70 130,65 170,55 210,50 250,45 290,35 330,25 370,15 410,10 450,8 490,12"
+                            fill="none"
+                            stroke="rgb(166, 209, 137)"
+                            stroke-width="2"></polyline>
+                        <!-- Blue line (Our Confidence) -->
+                        <polyline
+                            points="10,150 50,145 90,140 130,135 170,125 210,110 250,100 290,95 330,92 370,90 410,88 450,87 490,85"
+                            fill="none"
+                            stroke="rgb(140, 170, 238)"
+                            stroke-width="2"></polyline>
+                    </svg>
+                    <!-- X-axis labels -->
+                    <div
+                        class="absolute bottom-1 left-0 right-0 flex justify-between px-2 text-sm"
+                    >
+                        {
+                            history_chart.time_labels.map((label) => (
+                                <span>{label}</span>
+                            ))
+                        }
+                    </div>
+                </div>
+
+                <!-- Legend -->
+                <div class="space-y-1 text-sm">
+                    <div class="flex items-center gap-2">
+                        <div
+                            class="w-12 h-0.5"
+                            style="background-color: rgb(166, 209, 137);"
+                        >
+                        </div>
+                        <span style="color: rgb(166, 209, 137);"
+                            >{history_chart.series[0].name}</span
+                        >
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div
+                            class="w-12 h-0.5"
+                            style="background-color: rgb(140, 170, 238);"
+                        >
+                        </div>
+                        <span style="color: rgb(140, 170, 238);"
+                            >{history_chart.series[1].name}</span
+                        >
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <hr class="border-t border-dotted border-text opacity-20" />
+
+        <!-- Similar Markets -->
+        <div class="space-y-3">
+            <h2 class="text-lg font-bold">Similar markets</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {
+                    similar_markets.items.map((item) => (
+                        <div class="border border-lavender rounded">
+                            <div class="p-3">
+                                <h3 class="font-bold mb-2">{item.title}</h3>
+                                {item.outcomes.slice(0, 3).map((outcome) => (
+                                    <div class="flex text-sm pl-4 items-center gap-2">
+                                        <div class="w-32">{outcome.name}</div>
+                                        <div class="w-10 text-right">
+                                            {outcome.probability}%
+                                        </div>
+                                        <div class="flex-1 bg-crust rounded h-5 overflow-hidden border border-base-dark">
+                                            <div
+                                                class={`h-full ${outcome.probability >= 50 ? "bg-green" : outcome.probability >= 10 ? "bg-yellow" : "bg-peach"}`}
+                                                style={`width: ${outcome.probability}%`}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))
+                }
+            </div>
+
+            <div class="text-center pt-2">
+                <input
+                    type="text"
+                    placeholder="Or paste some other market link"
+                    class="w-full max-w-sm bg-base-light border border-base-dark rounded px-3 py-2 text-center text-base-dark"
+                />
+            </div>
+        </div>
+
+        <hr class="border-t border-dotted border-text opacity-20" />
+
+        <!-- Footer Links -->
+        <div class="text-center text-s space-x-2 py-2">
+            <a href="/" class="hover:underline">Home</a>
+            <span>|</span>
+            <a href="/methodology" class="hover:underline">Methodology</a>
+            <span>|</span>
+            <a href="/api" class="hover:underline">API</a>
+            <span>|</span>
+            <a
+                href="https://github.com/wasabipesto/themis"
+                class="hover:underline">Source Code</a
+            >
+        </div>
+    </div>
+</Base>
