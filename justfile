@@ -1,38 +1,24 @@
-set dotenv-load
+set dotenv-load := true
 
 # List commands, default
 default:
-  just --list
+    just --list
+
+# Run rust workspace tests
+rust-test *args:
+    cargo test -qr {{ args }}
 
 # Download new markets to cache
-[working-directory: 'download']
 download *args:
-    cargo run -qr -- {{args}}
-
-# Run download tests
-[working-directory: 'download']
-download-test:
-      cargo test -q
+    cargo run -qr -p themis_download -- {{ args }}
 
 # Extract markets from cache
-[working-directory: 'extract']
 extract *args:
-    cargo run -qr -- {{args}}
-
-# Run extract tests
-[working-directory: 'extract']
-extract-test:
-    cargo test -q
+    cargo run -qr -p themis_extract -- {{ args }}
 
 # Grade markets
-[working-directory: 'grader']
 grade *args:
-  cargo run -qr -- {{args}}
-
-# Run grader tests
-[working-directory: 'grader']
-grade-test:
-  cargo test -q
+    cargo run -qr -p themis_grader -- {{ args }}
 
 # Start the database containers
 db-up:
@@ -57,7 +43,7 @@ db-run-sql file:
     docker exec -i $POSTGRES_CONTAINER_NAME psql \
     --username=$POSTGRES_USER \
     --dbname=$POSTGRES_DB \
-    < {{file}}
+    < {{ file }}
 
 # Get the database schema
 db-get-schema:
@@ -84,7 +70,7 @@ db-backup:
 # Get DB items from an endpoint
 db-curl *endpoint:
     curl -sf \
-    -X GET "${PGRST_URL}/{{endpoint}}" \
+    -X GET "${PGRST_URL}/{{ endpoint }}" \
     -H "Authorization: Bearer ${PGRST_APIKEY}" | jq
 
 # Refresh all database views
@@ -100,13 +86,13 @@ db-refresh-quick:
     -H "Authorization: Bearer ${PGRST_APIKEY}" | jq
 
 # Start the main site dev server
-[working-directory: 'site']
+[working-directory('site')]
 site-dev:
     NODE_OPTIONS="--max-old-space-size=64000" \
     npx astro dev
 
 # Check the main site for errors
-[working-directory: 'site']
+[working-directory('site')]
 site-test:
     npx astro check --silent
 
@@ -116,10 +102,10 @@ site-cache-reset:
     mv site/cache/*.json site/cache/archive
 
 # Build the main site
-[working-directory: 'site']
+[working-directory('site')]
 site-build *args:
     NODE_OPTIONS="--max-old-space-size=64000" \
-    npx astro build {{args}}
+    npx astro build {{ args }}
 
 # Push the site to dev with rclone
 site-push-dev:
@@ -134,7 +120,7 @@ site-push-prod:
 deploy: site-test site-build site-push-dev site-push-prod
 
 # Start the grouper dev server
-[working-directory: 'grouper']
+[working-directory('grouper')]
 group:
     PUBLIC_PGRST_URL=${PGRST_URL} \
     PUBLIC_PGRST_APIKEY=${PGRST_APIKEY} \
@@ -143,16 +129,16 @@ group:
     npx astro dev
 
 # Check the grouper site for errors
-[working-directory: 'grouper']
+[working-directory('grouper')]
 group-test:
     npx astro check --silent
 
 # Generate embeddings
 embeddings *args:
-    uv run scripts/update-embeddings.py {{args}}
+    uv run scripts/update-embeddings.py {{ args }}
 
 # Run nightly process
-nightly: download-test extract-test grade-test group-test site-test
+nightly: rust-test group-test site-test
     #just download --log-level warn --resolved-since-days-ago 10 --reset-cache
     #just download --log-level warn --resolved-since-days-ago 10
     #just extract --log-level warn
