@@ -370,7 +370,11 @@ pub fn build_prob_segments(
             continue;
         }
 
-        segments.push(ProbSegment { start, end, prob });
+        segments.push(ProbSegment {
+            start,
+            end,
+            prob,
+        });
     }
     segments
 }

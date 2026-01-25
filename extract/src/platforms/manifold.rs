@@ -607,17 +607,19 @@ pub fn build_prob_segments(raw_history: &[ManifoldBet]) -> Vec<ProbSegment> {
         // Get the probability after the bet was made.
         let prob = bet.prob_after;
 
-        segments.push(ProbSegment { start, end, prob });
+        segments.push(ProbSegment {
+            start,
+            end,
+            prob,
+        });
     }
     segments
 }
 
 /// Get the number of unique traders from the bet log.
 fn get_traders_count(bets: &[ManifoldBet]) -> u32 {
-    bets.iter()
-        .map(|bet| bet.user_id.clone())
-        .collect::<std::collections::HashSet<_>>()
-        .len() as u32
+    bets.iter().map(|bet| bet.user_id.clone()).collect::<std::collections::HashSet<_>>().len()
+        as u32
 }
 
 /// Get the total trade volume from the bet log.
@@ -725,6 +727,5 @@ fn get_category(tags: &[String]) -> Option<String> {
 
     let category_map: HashMap<&str, &str> = CATEGORIES.iter().cloned().collect();
 
-    tags.iter()
-        .find_map(|tag| category_map.get(tag.as_str()).map(|&cat| cat.to_string()))
+    tags.iter().find_map(|tag| category_map.get(tag.as_str()).map(|&cat| cat.to_string()))
 }

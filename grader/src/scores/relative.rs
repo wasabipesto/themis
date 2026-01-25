@@ -60,17 +60,13 @@ pub fn score_market(
             }
         };
         if market_resolution != resolution {
-            return Err(anyhow!(
-                "Market {} resolved differently than consensus",
-                market.id
-            ));
+            return Err(anyhow!("Market {} resolved differently than consensus", market.id));
         }
     }
 
     // Get override bounds as DateTime<Utc>
-    let start_date_override = question
-        .start_date_override
-        .map(|date| date.and_hms_opt(0, 0, 0).unwrap().and_utc());
+    let start_date_override =
+        question.start_date_override.map(|date| date.and_hms_opt(0, 0, 0).unwrap().and_utc());
     let end_date_override = question
         .end_date_override
         .map(|date| date.and_hms_opt(0, 0, 0).unwrap().and_utc() + Duration::days(1));
@@ -80,11 +76,8 @@ pub fn score_market(
         .iter()
         .map(|market| {
             // Filter out probabilities for this market
-            let mut daily_probs: Vec<DailyProbabilityPoint> = probs
-                .iter()
-                .filter(|p| p.market_id == market.id)
-                .cloned()
-                .collect();
+            let mut daily_probs: Vec<DailyProbabilityPoint> =
+                probs.iter().filter(|p| p.market_id == market.id).cloned().collect();
             let prob_count_unfiltered = daily_probs.len();
 
             // Filter out probability points outside of override bounds
@@ -119,14 +112,10 @@ pub fn score_market(
         .collect::<Result<Vec<_>>>()?;
 
     // Collect start & end dates from each market
-    let mut start_dates: Vec<DateTime<Utc>> = markets_with_probs
-        .iter()
-        .map(|m| m.daily_probs.first().unwrap().date)
-        .collect();
-    let mut end_dates: Vec<DateTime<Utc>> = markets_with_probs
-        .iter()
-        .map(|m| m.daily_probs.last().unwrap().date)
-        .collect();
+    let mut start_dates: Vec<DateTime<Utc>> =
+        markets_with_probs.iter().map(|m| m.daily_probs.first().unwrap().date).collect();
+    let mut end_dates: Vec<DateTime<Utc>> =
+        markets_with_probs.iter().map(|m| m.daily_probs.last().unwrap().date).collect();
 
     // Start scoring after the second market starts
     start_dates.sort_by_key(|date| *date);
@@ -156,9 +145,8 @@ pub fn score_market(
         let mut daily_market_absolute_scores = HashMap::with_capacity(markets.len());
         for market in markets {
             // Get the market's probability point for the current day
-            let market_prob_point = if let Some(market_prob_point) = probs
-                .iter()
-                .find(|p| p.date == day && p.market_id == market.id)
+            let market_prob_point = if let Some(market_prob_point) =
+                probs.iter().find(|p| p.date == day && p.market_id == market.id)
             {
                 market_prob_point
             } else {
@@ -184,10 +172,7 @@ pub fn score_market(
         }
 
         // Get baseline score for the current day
-        let scores = daily_market_absolute_scores
-            .values()
-            .cloned()
-            .collect::<Vec<f32>>();
+        let scores = daily_market_absolute_scores.values().cloned().collect::<Vec<f32>>();
         let baseline = helpers::median(&scores);
 
         // Subtract the baseline from each score to get the relative scores for each market
@@ -305,13 +290,8 @@ mod tests {
 
         let question = create_test_question(None, None);
 
-        let result = score_market(
-            &RelativeScoreType::BrierRelative,
-            &question,
-            &markets,
-            &probs,
-        )
-        .unwrap();
+        let result =
+            score_market(&RelativeScoreType::BrierRelative, &question, &markets, &probs).unwrap();
 
         assert_eq!(result.len(), 3);
 
@@ -338,13 +318,8 @@ mod tests {
 
         let question = create_test_question(None, None);
 
-        let result = score_market(
-            &RelativeScoreType::BrierRelative,
-            &question,
-            &markets,
-            &probs,
-        )
-        .unwrap();
+        let result =
+            score_market(&RelativeScoreType::BrierRelative, &question, &markets, &probs).unwrap();
 
         assert_eq!(result.len(), 2);
         // Both markets should have similar scores since their effective predictions were the same
@@ -371,13 +346,8 @@ mod tests {
             None,
         );
 
-        let result = score_market(
-            &RelativeScoreType::BrierRelative,
-            &question,
-            &markets,
-            &probs,
-        )
-        .unwrap();
+        let result =
+            score_market(&RelativeScoreType::BrierRelative, &question, &markets, &probs).unwrap();
         assert_eq!(result.len(), 2);
     }
 
@@ -389,19 +359,9 @@ mod tests {
 
         let question = create_test_question(None, None);
 
-        let result = score_market(
-            &RelativeScoreType::BrierRelative,
-            &question,
-            &markets,
-            &probs,
-        );
+        let result = score_market(&RelativeScoreType::BrierRelative, &question, &markets, &probs);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .to_string()
-                .contains("At least two markets")
-        );
+        assert!(result.unwrap_err().to_string().contains("At least two markets"));
     }
 
     #[test]
@@ -418,19 +378,9 @@ mod tests {
 
         let question = create_test_question(None, None);
 
-        let result = score_market(
-            &RelativeScoreType::BrierRelative,
-            &question,
-            &markets,
-            &probs,
-        );
+        let result = score_market(&RelativeScoreType::BrierRelative, &question, &markets, &probs);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .to_string()
-                .contains("resolved differently")
-        );
+        assert!(result.unwrap_err().to_string().contains("resolved differently"));
     }
 
     #[test]
@@ -447,18 +397,8 @@ mod tests {
 
         let question = create_test_question(None, None);
 
-        let result = score_market(
-            &RelativeScoreType::BrierRelative,
-            &question,
-            &markets,
-            &probs,
-        );
+        let result = score_market(&RelativeScoreType::BrierRelative, &question, &markets, &probs);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .to_string()
-                .contains("no question invert attribute")
-        );
+        assert!(result.unwrap_err().to_string().contains("no question invert attribute"));
     }
 }

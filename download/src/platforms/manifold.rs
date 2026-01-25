@@ -1,11 +1,11 @@
 //! Tools to download and process markets from the Manifold API.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
 use log::{debug, error, trace, warn};
 use reqwest_middleware::ClientWithMiddleware;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use serde_jsonlines::append_json_lines;
 use std::collections::HashMap;
 use std::path::Path;
@@ -81,10 +81,7 @@ async fn get_bet_data(client: &ClientWithMiddleware, market_id: &str) -> Result<
         let bet_arr = response
             .as_array()
             .ok_or_else(|| {
-                anyhow!(
-                    "Could not format API response as array. Response: {:?}",
-                    response
-                )
+                anyhow!("Could not format API response as array. Response: {:?}", response)
             })?
             .to_owned();
 
@@ -92,9 +89,7 @@ async fn get_bet_data(client: &ClientWithMiddleware, market_id: &str) -> Result<
         // if the length is less than the limit, we've reached the end of the bets
         if bet_arr.len() == limit {
             // update the cursor
-            let last_bet = bet_arr
-                .last()
-                .ok_or_else(|| anyhow!("Bet batch missing items!"))?;
+            let last_bet = bet_arr.last().ok_or_else(|| anyhow!("Bet batch missing items!"))?;
             let last_id = get_id(last_bet)?;
             before = Some(last_id);
             // save the bets
@@ -106,11 +101,7 @@ async fn get_bet_data(client: &ClientWithMiddleware, market_id: &str) -> Result<
             break;
         }
     }
-    trace!(
-        "Downloaded {} bet items for market {}",
-        bets.len(),
-        market_id
-    );
+    trace!("Downloaded {} bet items for market {}", bets.len(), market_id);
     Ok(bets)
 }
 
@@ -149,10 +140,7 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
     let mut before: Option<String> = None;
     loop {
         let response = send_request(
-            client
-                .get(&api_url)
-                .query(&[("limit", limit)])
-                .query(&[("before", before)]), // if value is None, param is not sent
+            client.get(&api_url).query(&[("limit", limit)]).query(&[("before", before)]), // if value is None, param is not sent
         )
         .await?;
 
@@ -180,10 +168,7 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
                 .transpose()
                 .map_err(|e| anyhow!("Failed to get ID for the last batch item: {e}"))?
                 .ok_or_else(|| anyhow!("Batch is empty!"))?;
-            debug!(
-                "Got {} items and new {platform} cursor: {cursor_some}",
-                batch.len()
-            );
+            debug!("Got {} items and new {platform} cursor: {cursor_some}", batch.len());
             before = Some(cursor_some);
         } else {
             debug!(
@@ -215,9 +200,7 @@ pub async fn download_data(
 
     // Process in batches of 10
     for batch in ids_to_download.chunks(10) {
-        let futures = batch
-            .iter()
-            .map(|id| get_data_and_build_item(&client, &index, id));
+        let futures = batch.iter().map(|id| get_data_and_build_item(&client, &index, id));
 
         // Wait for all tasks in the batch to finish
         let results = futures::future::join_all(futures).await;

@@ -104,10 +104,7 @@ fn main() -> Result<()> {
         let lines = platform.load_data(&args.directory, &args.halt_catch_fire)?;
         let num_input = lines.len();
         if args.schema_only {
-            info!(
-                "{platform}: Data loaded. All {} items deserialized correctly.",
-                num_input
-            );
+            info!("{platform}: Data loaded. All {} items deserialized correctly.", num_input);
             continue;
         }
 
@@ -250,10 +247,7 @@ fn upload_batch(
     }
 
     // Upload daily probabilities batch
-    let daily_probs: Vec<_> = market_batch
-        .iter()
-        .flat_map(|m| &m.daily_probabilities)
-        .collect();
+    let daily_probs: Vec<_> = market_batch.iter().flat_map(|m| &m.daily_probabilities).collect();
 
     debug!("Uploading batch of {} probabilities", daily_probs.len());
     let probs_response = client
@@ -276,10 +270,8 @@ fn upload_batch(
     }
 
     // Upload criterion probabilities batch
-    let criteria_probs: Vec<_> = market_batch
-        .iter()
-        .flat_map(|m| &m.criterion_probabilities)
-        .collect();
+    let criteria_probs: Vec<_> =
+        market_batch.iter().flat_map(|m| &m.criterion_probabilities).collect();
 
     debug!("Uploading batch of {} probabilities", criteria_probs.len());
     let probs_response = client
@@ -318,10 +310,7 @@ fn refresh_materialized_views(params: &PostgrestParams) -> Result<()> {
         .context("Failed to create HTTP client with extended timeout")?;
 
     let response = long_timeout_client
-        .post(format!(
-            "{}/rpc/refresh_all_materialized_views",
-            params.postgrest_url
-        ))
+        .post(format!("{}/rpc/refresh_all_materialized_views", params.postgrest_url))
         .bearer_auth(&params.postgrest_api_key)
         .send()
         .context("Failed to send refresh materialized views request")?;

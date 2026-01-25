@@ -46,12 +46,7 @@ impl fmt::Display for Platform {
 impl Platform {
     /// Returns a list of all supported platform types.
     pub fn all() -> Vec<Platform> {
-        vec![
-            Platform::Kalshi,
-            Platform::Manifold,
-            Platform::Metaculus,
-            Platform::Polymarket,
-        ]
+        vec![Platform::Kalshi, Platform::Manifold, Platform::Metaculus, Platform::Polymarket]
     }
     fn get_close_datetime(&self, item: &IndexItem) -> Option<DateTime<Utc>> {
         match self {
@@ -125,11 +120,7 @@ impl Platform {
             ids_to_download.push(id.clone())
         }
 
-        debug!(
-            "{self}: Selected {}/{} items to download",
-            ids_to_download.len(),
-            index_map.len(),
-        );
+        debug!("{self}: Selected {}/{} items to download", ids_to_download.len(), index_map.len(),);
         ids_to_download
     }
 }
@@ -172,10 +163,7 @@ impl PlatformHandler for Platform {
 
         // attempt to load the index file
         let index = match load_index_from_file(&index_file_path).unwrap_or_else(|e| {
-            error!(
-                "{self}: Failed to access index file {}: {e}",
-                index_file_path.display()
-            );
+            error!("{self}: Failed to access index file {}: {e}", index_file_path.display());
             panic!();
         }) {
             // index file exists and is valid, keep it
@@ -202,10 +190,7 @@ impl PlatformHandler for Platform {
                     error!("{self}: Failed to write index file to disk: {e}");
                     panic!();
                 }
-                info!(
-                    "{self}: Index downloaded and saved to disk with {} items.",
-                    index.len()
-                );
+                info!("{self}: Index downloaded and saved to disk with {} items.", index.len());
                 index
             }
         };
@@ -213,20 +198,15 @@ impl PlatformHandler for Platform {
         // convert index into a hashmap for lookups
         // was considering serializing this as a hashmap but it doesn't take very long to convert
         debug!("{self}: Converting index into HashMap.");
-        let index_map: HashMap<String, IndexItem> = index
-            .into_iter()
-            .map(|item| (item.id.clone(), item))
-            .collect();
+        let index_map: HashMap<String, IndexItem> =
+            index.into_iter().map(|item| (item.id.clone(), item)).collect();
 
         // load the data file from the disk
         // if it does not exist, create an empty file
         // note that this can be very large
         info!("{self}: Loading cached data progress from disk.");
         let data_ids = load_data_ids(&data_file_path).unwrap();
-        info!(
-            "{self}: Data cache loaded from disk with {} items.",
-            data_ids.len()
-        );
+        info!("{self}: Data cache loaded from disk with {} items.", data_ids.len());
 
         // get the IDs in index file that aren't in data file
         debug!("{self}: Getting IDs to download.");
@@ -264,10 +244,8 @@ impl PlatformHandler for Platform {
             // confirm how many we actually got
             debug!("{self}: Checking data on disk.");
             let downloaded_ids = load_data_ids(&data_file_path).unwrap();
-            let num_downloaded = ids_to_download
-                .iter()
-                .filter(|id| downloaded_ids.contains(*id))
-                .count();
+            let num_downloaded =
+                ids_to_download.iter().filter(|id| downloaded_ids.contains(*id)).count();
             if num_downloaded == num_to_download {
                 info!("{self}: All {} items downloaded", num_to_download);
             } else {

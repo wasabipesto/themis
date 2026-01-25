@@ -42,12 +42,7 @@ mod tests {
     /// Helper function to compare floating point values with tolerance
     fn assert_approx_eq(actual: f32, expected: f32, epsilon: f32) {
         let diff = (actual - expected).abs();
-        assert!(
-            diff < epsilon,
-            "Expected approximately {}, got {}",
-            expected,
-            actual
-        );
+        assert!(diff < epsilon, "Expected approximately {}, got {}", expected, actual);
     }
 
     #[test]
@@ -56,26 +51,10 @@ mod tests {
         let epsilon = 1e-6;
         assert_approx_eq(spherical_score(0.5, 0.0), 1.0 / 2.0_f32.sqrt(), epsilon);
         assert_approx_eq(spherical_score(0.5, 1.0), 1.0 / 2.0_f32.sqrt(), epsilon);
-        assert_approx_eq(
-            spherical_score(1.0 / 3.0, 0.0),
-            2.0 / 5.0_f32.sqrt(),
-            epsilon,
-        );
-        assert_approx_eq(
-            spherical_score(2.0 / 3.0, 1.0),
-            2.0 / 5.0_f32.sqrt(),
-            epsilon,
-        );
-        assert_approx_eq(
-            spherical_score(2.0 / 3.0, 0.0),
-            1.0 / 5.0_f32.sqrt(),
-            epsilon,
-        );
-        assert_approx_eq(
-            spherical_score(1.0 / 3.0, 1.0),
-            1.0 / 5.0_f32.sqrt(),
-            epsilon,
-        );
+        assert_approx_eq(spherical_score(1.0 / 3.0, 0.0), 2.0 / 5.0_f32.sqrt(), epsilon);
+        assert_approx_eq(spherical_score(2.0 / 3.0, 1.0), 2.0 / 5.0_f32.sqrt(), epsilon);
+        assert_approx_eq(spherical_score(2.0 / 3.0, 0.0), 1.0 / 5.0_f32.sqrt(), epsilon);
+        assert_approx_eq(spherical_score(1.0 / 3.0, 1.0), 1.0 / 5.0_f32.sqrt(), epsilon);
     }
 
     #[test]
@@ -87,36 +66,12 @@ mod tests {
         assert_approx_eq(spherical_score(0.1, 0.0), 9.0 / 82.0_f32.sqrt(), epsilon);
         assert_approx_eq(spherical_score(0.9, 1.0), 9.0 / 82.0_f32.sqrt(), epsilon);
         // Values past this point essentially round directly to one.
-        assert_approx_eq(
-            spherical_score(0.01, 0.0),
-            99.0 / (13.0 * 58.0_f32.sqrt()),
-            epsilon,
-        );
-        assert_approx_eq(
-            spherical_score(0.99, 1.0),
-            99.0 / (13.0 * 58.0_f32.sqrt()),
-            epsilon,
-        );
-        assert_approx_eq(
-            spherical_score(0.001, 0.0),
-            999.0 / 998_002.0_f32.sqrt(),
-            epsilon,
-        );
-        assert_approx_eq(
-            spherical_score(0.999, 1.0),
-            999.0 / 998_002.0_f32.sqrt(),
-            epsilon,
-        );
-        assert_approx_eq(
-            spherical_score(0.0001, 0.0),
-            9999.0 / 99_980_002.0_f32.sqrt(),
-            epsilon,
-        );
-        assert_approx_eq(
-            spherical_score(0.9999, 1.0),
-            9999.0 / 99_980_002.0_f32.sqrt(),
-            epsilon,
-        );
+        assert_approx_eq(spherical_score(0.01, 0.0), 99.0 / (13.0 * 58.0_f32.sqrt()), epsilon);
+        assert_approx_eq(spherical_score(0.99, 1.0), 99.0 / (13.0 * 58.0_f32.sqrt()), epsilon);
+        assert_approx_eq(spherical_score(0.001, 0.0), 999.0 / 998_002.0_f32.sqrt(), epsilon);
+        assert_approx_eq(spherical_score(0.999, 1.0), 999.0 / 998_002.0_f32.sqrt(), epsilon);
+        assert_approx_eq(spherical_score(0.0001, 0.0), 9999.0 / 99_980_002.0_f32.sqrt(), epsilon);
+        assert_approx_eq(spherical_score(0.9999, 1.0), 9999.0 / 99_980_002.0_f32.sqrt(), epsilon);
         assert_approx_eq(spherical_score(0.00001, 0.0), 1.0, epsilon);
         assert_approx_eq(spherical_score(0.99999, 1.0), 1.0, epsilon);
     }
@@ -135,11 +90,7 @@ mod tests {
     /// Test with partial outcomes (neither 0 nor 1)
     fn test_partial_outcomes() {
         let epsilon = 1e-6;
-        assert_approx_eq(
-            spherical_score(1.0 / 3.0, 1.0 / 3.0),
-            5.0_f32.sqrt() / 3.0,
-            epsilon,
-        );
+        assert_approx_eq(spherical_score(1.0 / 3.0, 1.0 / 3.0), 5.0_f32.sqrt() / 3.0, epsilon);
         assert_approx_eq(
             spherical_score(1.0 / 3.0, 2.0 / 3.0),
             4.0 / (3.0 * 5.0_f32.sqrt()),

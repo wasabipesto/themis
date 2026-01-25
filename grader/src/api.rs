@@ -34,13 +34,7 @@ fn make_get_request<T>(client: &Client, params: &PostgrestParams, endpoint: &str
 where
     T: serde::de::DeserializeOwned,
 {
-    let response = make_request(
-        client,
-        params,
-        endpoint,
-        HttpMethod::GET,
-        Option::<&()>::None,
-    )?;
+    let response = make_request(client, params, endpoint, HttpMethod::GET, Option::<&()>::None)?;
     process_response(response, endpoint)
 }
 
@@ -57,13 +51,7 @@ fn make_post_request(
 
 /// Make a simple delete request
 fn make_delete_request(client: &Client, params: &PostgrestParams, endpoint: &str) -> Result<()> {
-    let response = make_request(
-        client,
-        params,
-        endpoint,
-        HttpMethod::DELETE,
-        Option::<&()>::None,
-    )?;
+    let response = make_request(client, params, endpoint, HttpMethod::DELETE, Option::<&()>::None)?;
     process_empty_response(response, endpoint)
 }
 
@@ -95,9 +83,7 @@ fn make_request(
     }
 
     // Ship it
-    request_builder
-        .send()
-        .with_context(|| format!("Failed to send {method} request to {endpoint}"))
+    request_builder.send().with_context(|| format!("Failed to send {method} request to {endpoint}"))
 }
 
 /// Process API response, returning deserialized data or an error
@@ -107,14 +93,10 @@ where
 {
     let status = response.status();
     if status.is_success() {
-        response
-            .json::<T>()
-            .context("Failed to parse response JSON")
+        response.json::<T>().context("Failed to parse response JSON")
     } else {
         let body = response.text()?;
-        Err(anyhow::anyhow!(
-            "Request to {endpoint} failed with status {status} and body: {body}",
-        ))
+        Err(anyhow::anyhow!("Request to {endpoint} failed with status {status} and body: {body}",))
     }
 }
 
@@ -125,9 +107,7 @@ fn process_empty_response(response: Response, endpoint: &str) -> Result<()> {
         Ok(())
     } else {
         let body = response.text()?;
-        Err(anyhow::anyhow!(
-            "Request to {endpoint} failed with status {status} and body: {body}",
-        ))
+        Err(anyhow::anyhow!("Request to {endpoint} failed with status {status} and body: {body}",))
     }
 }
 
@@ -139,10 +119,7 @@ pub fn get_all_markets(client: &Client, params: &PostgrestParams) -> Result<Vec<
     let mut markets = Vec::new();
 
     loop {
-        let endpoint = format!(
-            "/market_details?order=id.asc&limit={}&offset={}",
-            limit, offset
-        );
+        let endpoint = format!("/market_details?order=id.asc&limit={}&offset={}", limit, offset);
         let body: Vec<Market> = make_get_request(client, params, &endpoint)?;
         if body.is_empty() {
             break;
@@ -209,10 +186,7 @@ pub fn get_market_probs(
     let mut probs = Vec::new();
 
     for market_id in market_ids {
-        let endpoint = format!(
-            "/daily_probabilities?order=date.asc&market_id=eq.{}",
-            market_id
-        );
+        let endpoint = format!("/daily_probabilities?order=date.asc&market_id=eq.{}", market_id);
         let response: Vec<DailyProbabilityPoint> = make_get_request(client, params, &endpoint)?;
         probs.extend(response);
     }
@@ -269,12 +243,7 @@ pub fn upload_other_scores(
 
 /// Refreshes the market and question materialized views in the database.
 pub fn refresh_quick_materialized_views(client: &Client, params: &PostgrestParams) -> Result<()> {
-    make_post_request(
-        client,
-        params,
-        "/rpc/refresh_quick_materialized_views",
-        Option::<&()>::None,
-    )
+    make_post_request(client, params, "/rpc/refresh_quick_materialized_views", Option::<&()>::None)
 }
 
 /// Refreshes all materialized views in the database.
@@ -287,10 +256,5 @@ pub fn refresh_all_materialized_views(params: &PostgrestParams) -> Result<()> {
         .build()
         .context("Failed to create HTTP client with extended timeout")?;
 
-    make_post_request(
-        &client,
-        params,
-        "/rpc/refresh_all_materialized_views",
-        Option::<&()>::None,
-    )
+    make_post_request(&client, params, "/rpc/refresh_all_materialized_views", Option::<&()>::None)
 }

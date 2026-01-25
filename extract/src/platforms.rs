@@ -46,12 +46,7 @@ impl fmt::Display for Platform {
 
 impl Platform {
     pub fn all() -> Vec<Platform> {
-        vec![
-            Platform::Kalshi,
-            Platform::Manifold,
-            Platform::Metaculus,
-            Platform::Polymarket,
-        ]
+        vec![Platform::Kalshi, Platform::Manifold, Platform::Metaculus, Platform::Polymarket]
     }
 
     /// Based on platform, deserialize a line into that platform's datatype.

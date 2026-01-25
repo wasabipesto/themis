@@ -221,7 +221,11 @@ pub fn standardize(input: &PolymarketData) -> MarketResult<Vec<MarketAndProbs>> 
         }
         1 => {
             // Normal case, check if our token won
-            if tracked_token.winner { 1.0 } else { 0.0 }
+            if tracked_token.winner {
+                1.0
+            } else {
+                0.0
+            }
         }
         2 => {
             // Two winners, prizes were split 50/50
@@ -314,18 +318,18 @@ pub fn build_prob_segments(raw_history: &[PolymarketPricePoint]) -> Vec<ProbSegm
         // Get the probability after the bet was made.
         let prob = point.p;
 
-        segments.push(ProbSegment { start, end, prob });
+        segments.push(ProbSegment {
+            start,
+            end,
+            prob,
+        });
     }
     segments
 }
 
 /// Get the number of unique traders by counting up the total number of proxy wallets.
 fn get_traders_count(trades: &[PolymarketTrade]) -> u32 {
-    trades
-        .iter()
-        .map(|trade| trade.proxy_wallet.clone())
-        .collect::<HashSet<_>>()
-        .len() as u32
+    trades.iter().map(|trade| trade.proxy_wallet.clone()).collect::<HashSet<_>>().len() as u32
 }
 
 /// Manual mapping of tags to our standard categories.
@@ -354,7 +358,5 @@ fn get_category(tags: &Option<Vec<String>>) -> Option<String> {
 
     let category_map: HashMap<&str, &str> = CATEGORIES.iter().cloned().collect();
 
-    tags.as_ref()?
-        .iter()
-        .find_map(|tag| category_map.get(tag.as_str()).map(|&cat| cat.to_string()))
+    tags.as_ref()?.iter().find_map(|tag| category_map.get(tag.as_str()).map(|&cat| cat.to_string()))
 }

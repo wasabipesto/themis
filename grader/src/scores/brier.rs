@@ -27,12 +27,7 @@ mod tests {
     fn assert_approx_eq(actual: f32, expected: f32) {
         let epsilon = 1e-6;
         let diff = (actual - expected).abs();
-        assert!(
-            diff < epsilon,
-            "Expected approximately {}, got {}",
-            expected,
-            actual
-        );
+        assert!(diff < epsilon, "Expected approximately {}, got {}", expected, actual);
     }
 
     #[test]

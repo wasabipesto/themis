@@ -52,12 +52,14 @@ async fn main() {
 
     // read log level from arg and update environment variable
     let log_level = args.log_level.to_lowercase();
-    match log_level.as_str() {
-        "error" | "warn" | "info" | "debug" | "trace" => env::set_var("RUST_LOG", log_level),
-        _ => {
-            // invalid, reset to 'info' as a default
-            println!("Invalid log level, resetting to INFO.");
-            env::set_var("RUST_LOG", "info")
+    unsafe {
+        match log_level.as_str() {
+            "error" | "warn" | "info" | "debug" | "trace" => env::set_var("RUST_LOG", log_level),
+            _ => {
+                // invalid, reset to 'info' as a default
+                println!("Invalid log level, resetting to INFO.");
+                env::set_var("RUST_LOG", "info")
+            }
         }
     }
     env_logger::init();
@@ -102,8 +104,6 @@ async fn main() {
             })
         })
         .collect();
-    futures::future::try_join_all(tasks)
-        .await
-        .expect("Failed to join tasks");
+    futures::future::try_join_all(tasks).await.expect("Failed to join tasks");
     info!("All platform downloads complete.");
 }

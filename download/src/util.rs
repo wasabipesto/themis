@@ -1,10 +1,10 @@
 //! A couple utilities.
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use log::{debug, error, info, trace, warn};
 use reqwest_leaky_bucket::leaky_bucket::RateLimiter;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
+use reqwest_retry::{RetryTransientMiddleware, policies::ExponentialBackoff};
 use serde_json::Value;
 use serde_jsonlines::json_lines;
 use std::collections::HashSet;
@@ -61,26 +61,16 @@ pub async fn send_request(req: reqwest_middleware::RequestBuilder) -> Result<Val
 
     // send the request
     // automatic rate-limiting and exponential backoffs are applied here
-    let response = req
-        .send()
-        .await
-        .map_err(|e| anyhow::anyhow!("Failed to send request: {}", e))?;
+    let response =
+        req.send().await.map_err(|e| anyhow::anyhow!("Failed to send request: {}", e))?;
 
     // parse the response as text
     let status = response.status();
-    let response_text = response
-        .text()
-        .await
-        .context("Failed to get response body text.")?;
+    let response_text = response.text().await.context("Failed to get response body text.")?;
 
     // check if the server returned an error
     if !status.is_success() {
-        return Err(anyhow!(
-            "Query to {} returned {}: {}.",
-            final_url,
-            status,
-            response_text
-        ));
+        return Err(anyhow!("Query to {} returned {}: {}.", final_url, status, response_text));
     }
 
     // parse the text as json
@@ -102,16 +92,9 @@ pub fn backup_file(file_path: &Path) -> Result<()> {
                 backup_path.display()
             )
         })?;
-        debug!(
-            "Backed up existing file {} to {}",
-            file_path.display(),
-            backup_path.display()
-        );
+        debug!("Backed up existing file {} to {}", file_path.display(), backup_path.display());
     } else {
-        debug!(
-            "Requested backup of file {} but it does not exist.",
-            file_path.display(),
-        );
+        debug!("Requested backup of file {} but it does not exist.", file_path.display(),);
     }
     Ok(())
 }
@@ -137,11 +120,7 @@ pub fn load_index_from_file(index_file_path: &PathBuf) -> Result<Option<Vec<Inde
                 }
             },
             Err(e) => {
-                warn!(
-                    "Failed to read JSON lines from {}: {}.",
-                    index_file_path.display(),
-                    e
-                );
+                warn!("Failed to read JSON lines from {}: {}.", index_file_path.display(), e);
                 return Ok(None);
             }
         };
@@ -149,10 +128,7 @@ pub fn load_index_from_file(index_file_path: &PathBuf) -> Result<Option<Vec<Inde
         // check the contents, re-download if empty
         if index.is_empty() {
             // if the index exists but it's empty something must have gone wrong
-            warn!(
-                "Index file {} exists but is empty. Overriding",
-                index_file_path.display(),
-            );
+            warn!("Index file {} exists but is empty. Overriding", index_file_path.display(),);
             Ok(None)
         } else {
             // the index loaded with some valid JSON, assume it's complete
@@ -161,11 +137,7 @@ pub fn load_index_from_file(index_file_path: &PathBuf) -> Result<Option<Vec<Inde
     } else {
         // touch a new index file and make sure it was created properly
         File::create(index_file_path).map_err(|e| {
-            anyhow!(
-                "Could not create new data file {}: {}",
-                index_file_path.display(),
-                e
-            )
+            anyhow!("Could not create new data file {}: {}", index_file_path.display(), e)
         })?;
         // index is not valid because it was just created
         trace!("Created new index file {}", index_file_path.display());
@@ -182,22 +154,13 @@ pub fn load_data_ids(data_file_path: &PathBuf) -> Result<HashSet<String>> {
 
     if data_file_path.exists() {
         // open the data file
-        let file = File::open(data_file_path).map_err(|e| {
-            anyhow!(
-                "Failed to open data file {}: {}",
-                data_file_path.display(),
-                e
-            )
-        })?;
+        let file = File::open(data_file_path)
+            .map_err(|e| anyhow!("Failed to open data file {}: {}", data_file_path.display(), e))?;
         // start reading line by line
         let reader = BufReader::new(file);
         for line in reader.lines() {
             let line = line.map_err(|e| {
-                anyhow!(
-                    "Failed to read line from {}: {}",
-                    data_file_path.display(),
-                    e
-                )
+                anyhow!("Failed to read line from {}: {}", data_file_path.display(), e)
             })?;
             // deserialize into JSON
             match serde_json::from_str::<Value>(&line) {
@@ -219,10 +182,7 @@ pub fn load_data_ids(data_file_path: &PathBuf) -> Result<HashSet<String>> {
                 }
                 Err(e) => {
                     // invalid JSON on this line
-                    error!(
-                        "Failed to deserialize JSON from {}: {e}",
-                        data_file_path.display(),
-                    );
+                    error!("Failed to deserialize JSON from {}: {e}", data_file_path.display(),);
                     return Err(anyhow!(
                         "Failed to deserialize JSON from {}: {e}",
                         data_file_path.display(),
@@ -233,11 +193,7 @@ pub fn load_data_ids(data_file_path: &PathBuf) -> Result<HashSet<String>> {
     } else {
         // touch a new index file and make sure it was created properly
         File::create(data_file_path).map_err(|e| {
-            anyhow!(
-                "Could not create new data file {}: {}",
-                data_file_path.display(),
-                e
-            )
+            anyhow!("Could not create new data file {}: {}", data_file_path.display(), e)
         })?;
         trace!("Created new data file {}", data_file_path.display());
     }

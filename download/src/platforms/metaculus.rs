@@ -1,11 +1,11 @@
 //! Tools to download and process markets from the Metaculus API.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
 use log::{debug, trace, warn};
 use reqwest_middleware::ClientWithMiddleware;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use serde_jsonlines::append_json_lines;
 use std::collections::HashMap;
 use std::path::Path;
@@ -82,11 +82,13 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
         // check the results
         let batch = match response.get("results") {
             Some(results) => {
-                results.as_array()
-                    .map(|results_array| results_array.to_owned())
-                    .ok_or_else(|| anyhow!("Metaculus API Error: 'results' is not an array at offset {offset}"))
-            },
-            None => Err(anyhow!("Metaculus API Error: No 'results' key in response from url {api_url} at offset {offset}")),
+                results.as_array().map(|results_array| results_array.to_owned()).ok_or_else(|| {
+                    anyhow!("Metaculus API Error: 'results' is not an array at offset {offset}")
+                })
+            }
+            None => Err(anyhow!(
+                "Metaculus API Error: No 'results' key in response from url {api_url} at offset {offset}"
+            )),
         }?;
 
         // break if the batch returns no items
@@ -109,10 +111,7 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
         // update the cursor
         if batch.len() == limit {
             offset += batch.len();
-            debug!(
-                "Got {} items and new {platform} cursor: {offset}",
-                batch.len()
-            );
+            debug!("Got {} items and new {platform} cursor: {offset}", batch.len());
         } else {
             debug!(
                 "Batch size {} was smaller than limit {}, we must be done here.",
@@ -150,11 +149,7 @@ pub async fn download_data(
         let line = json!(MetaculusItem {
             id: id.clone(),
             last_updated: Utc::now(),
-            post: index
-                .get(id)
-                .ok_or_else(|| anyhow!("Cache missing key!"))?
-                .data
-                .clone(),
+            post: index.get(id).ok_or_else(|| anyhow!("Cache missing key!"))?.data.clone(),
             details,
         });
         append_json_lines(data_file_path, [line])?;
