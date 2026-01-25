@@ -7,6 +7,7 @@ use anyhow::{Context, Result, anyhow};
 use build_time::build_time_utc;
 use error::ApiError;
 use log::info;
+use rand::Rng;
 use rocket::State;
 use rocket::serde::json::Json;
 use std::env;
@@ -65,7 +66,6 @@ fn xray_db_test(pool: &State<DbPool>) -> Result<Json<Vec<TableDebugInfo>>, ApiEr
 #[get("/xray/error_test")]
 fn xray_error_test() -> Result<Json<XRayAnalysis>, ApiError> {
     // Get a random thread
-    use rand::Rng;
     let mut rng = rand::rng();
 
     // Pick a random response

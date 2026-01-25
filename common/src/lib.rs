@@ -100,14 +100,14 @@ pub enum MarketType {
 
 /// Represents different types of market outcomes
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub enum OutcomeType {
+pub enum Outcomes {
     #[default]
     None,
     Binary(OutcomeBinary),
-    Discrete(OutcomeDiscrete),
+    Discrete(Vec<OutcomeDiscrete>),
     Continuous(OutcomeContinuous),
-    Numeric(OutcomeNumeric),
-    Date(OutcomeDate),
+    Numeric(Vec<OutcomeNumeric>),
+    Date(Vec<OutcomeDate>),
 }
 
 /// Binary outcome with a single probability
@@ -138,8 +138,8 @@ pub struct OutcomeContinuous {
 pub struct OutcomeNumeric {
     pub label: Label,
     pub numerical_strike_low: f32,
-    pub numerical_strike_high: f32,
     pub numerical_strike_midpoint: f32,
+    pub numerical_strike_high: f32,
     pub probability: Probability,
 }
 
@@ -148,8 +148,8 @@ pub struct OutcomeNumeric {
 pub struct OutcomeDate {
     pub label: Label,
     pub date_strike_low: DateTime<Utc>,
-    pub date_strike_high: DateTime<Utc>,
     pub date_strike_midpoint: DateTime<Utc>,
+    pub date_strike_high: DateTime<Utc>,
     pub probability: Probability,
 }
 
@@ -168,7 +168,7 @@ pub struct MarketData {
     pub expected_close_datetime: DateTime<Utc>,
     pub last_updated_datetime: DateTime<Utc>,
     pub tags: Vec<String>,
-    pub outcomes: Vec<OutcomeType>,
+    pub outcomes: Outcomes,
 }
 
 /// Current status of a prediction market
