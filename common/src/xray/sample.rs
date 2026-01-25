@@ -1,7 +1,7 @@
 //! Generate sample data for testing and benchmarking.
 
 use anyhow::{Result, anyhow};
-use chrono::{DateTime, Duration, Utc};
+use chrono::{Duration, Utc};
 use lipsum::{lipsum_title_with_rng, lipsum_with_rng, lipsum_words_with_rng};
 use rand::Rng;
 use sluggify::sluggify::sluggify;
@@ -18,96 +18,134 @@ fn sample_market_outcomes(market_type: &MarketType) -> Result<Outcomes> {
         MarketType::Binary => Outcomes::Binary(OutcomeBinary {
             probability: Probability::new(rng.random_range(0.0..=1.0))?,
         }),
-        MarketType::DiscreteOne => Outcomes::Discrete(vec![
-            OutcomeDiscrete {
+        MarketType::DiscreteOne => {
+            let num_outcomes = rng.random_range(3..=10);
+            let mut outcomes = Vec::with_capacity(num_outcomes);
+            let mut raw_probs = Vec::with_capacity(num_outcomes);
+
+            // Generate random probabilities
+            for _ in 0..num_outcomes {
+                raw_probs.push(rng.random_range(0.1..=10.0));
+            }
+
+            // Normalize to sum to 1.0
+            let sum: f64 = raw_probs.iter().sum();
+            for raw_prob in raw_probs {
+                outcomes.push(OutcomeDiscrete {
+                    label: Label(lipsum_title_with_rng(&mut rng)),
+                    probability: Probability::new((raw_prob / sum) as f32)?,
+                });
+            }
+
+            Outcomes::Discrete(outcomes)
+        }
+        MarketType::DiscreteMulti => {
+            let num_outcomes = rng.random_range(3..=10);
+            let mut outcomes = Vec::with_capacity(num_outcomes);
+
+            for _ in 0..num_outcomes {
+                outcomes.push(OutcomeDiscrete {
+                    label: Label(lipsum_title_with_rng(&mut rng)),
+                    probability: Probability::new(rng.random_range(0.0..=1.0))?,
+                });
+            }
+
+            Outcomes::Discrete(outcomes)
+        }
+        MarketType::Numeric => {
+            let num_outcomes = rng.random_range(3..=10);
+            let mut outcomes = Vec::with_capacity(num_outcomes);
+
+            // Choose natural schelling points for the range
+            let schelling_points = [
+                (0.0, 100.0),
+                (0.0, 1000.0),
+                (0.0, 10000.0),
+                (1.0, 10.0),
+                (10.0, 100.0),
+                (100.0, 1000.0),
+                (1000.0, 10000.0),
+                (0.0, 50.0),
+                (50.0, 150.0),
+            ];
+            let (min_val, max_val) = schelling_points[rng.random_range(0..schelling_points.len())];
+            let range = max_val - min_val;
+            let step = range / num_outcomes as f64;
+
+            for i in 0..num_outcomes {
+                let low = min_val + (i as f64 * step);
+                let high = min_val + ((i + 1) as f64 * step);
+                let mid = (low + high) / 2.0;
+
+                outcomes.push(OutcomeNumeric {
+                    label: Label(lipsum_title_with_rng(&mut rng)),
+                    numerical_strike_low: low as f32,
+                    numerical_strike_midpoint: mid as f32,
+                    numerical_strike_high: high as f32,
+                    probability: Probability::new(rng.random_range(0.0..=1.0))?,
+                });
+            }
+
+            Outcomes::Numeric(outcomes)
+        }
+        MarketType::Date => {
+            let num_outcomes = rng.random_range(3..=10);
+            let mut outcomes = Vec::with_capacity(num_outcomes);
+
+            // Choose natural schelling points for date ranges
+            let base_date = Utc::now();
+            let date_ranges = [
+                Duration::days(30),   // 1 month
+                Duration::days(90),   // 3 months
+                Duration::days(180),  // 6 months
+                Duration::days(365),  // 1 year
+                Duration::days(730),  // 2 years
+                Duration::days(1825), // 5 years
+            ];
+            let total_range = date_ranges[rng.random_range(0..date_ranges.len())];
+            let step = total_range / num_outcomes as i32;
+
+            for i in 0..num_outcomes {
+                let low = base_date + (step * i as i32);
+                let high = base_date + (step * (i + 1) as i32);
+                let mid = low + (high - low) / 2;
+
+                outcomes.push(OutcomeDate {
+                    label: Label(lipsum_title_with_rng(&mut rng)),
+                    date_strike_low: low,
+                    date_strike_midpoint: mid,
+                    date_strike_high: high,
+                    probability: Probability::new(rng.random_range(0.0..=1.0))?,
+                });
+            }
+
+            Outcomes::Date(outcomes)
+        }
+        MarketType::Continuous => {
+            // Choose natural schelling points for min and max
+            let schelling_ranges = [
+                (0.0, 100.0),
+                (0.0, 1000.0),
+                (1.0, 10.0),
+                (10.0, 100.0),
+                (100.0, 1000.0),
+                (0.0, 50.0),
+                (50.0, 150.0),
+                (0.0, 500.0),
+            ];
+            let (min_val, max_val) = schelling_ranges[rng.random_range(0..schelling_ranges.len())];
+
+            // Random peak between min and max
+            let peak = rng.random_range(min_val..=max_val);
+
+            Outcomes::Continuous(OutcomeContinuous {
                 label: Label(lipsum_title_with_rng(&mut rng)),
-                probability: Probability::new(0.5)?,
-            },
-            OutcomeDiscrete {
-                label: Label(lipsum_title_with_rng(&mut rng)),
-                probability: Probability::new(0.5)?,
-            },
-            OutcomeDiscrete {
-                label: Label(lipsum_title_with_rng(&mut rng)),
-                probability: Probability::new(0.5)?,
-            },
-        ]),
-        MarketType::DiscreteMulti => Outcomes::Discrete(vec![
-            OutcomeDiscrete {
-                label: Label(lipsum_title_with_rng(&mut rng)),
-                probability: Probability::new(0.5)?,
-            },
-            OutcomeDiscrete {
-                label: Label(lipsum_title_with_rng(&mut rng)),
-                probability: Probability::new(0.5)?,
-            },
-            OutcomeDiscrete {
-                label: Label(lipsum_title_with_rng(&mut rng)),
-                probability: Probability::new(0.5)?,
-            },
-        ]),
-        MarketType::Numeric => Outcomes::Numeric(vec![
-            OutcomeNumeric {
-                label: Label(lipsum_title_with_rng(&mut rng)),
-                numerical_strike_low: 10.0,
-                numerical_strike_midpoint: 50.0,
-                numerical_strike_high: 100.0,
-                probability: Probability::new(0.5)?,
-            },
-            OutcomeNumeric {
-                label: Label(lipsum_title_with_rng(&mut rng)),
-                numerical_strike_low: 10.0,
-                numerical_strike_midpoint: 50.0,
-                numerical_strike_high: 100.0,
-                probability: Probability::new(0.5)?,
-            },
-            OutcomeNumeric {
-                label: Label(lipsum_title_with_rng(&mut rng)),
-                numerical_strike_low: 10.0,
-                numerical_strike_midpoint: 50.0,
-                numerical_strike_high: 100.0,
-                probability: Probability::new(0.5)?,
-            },
-        ]),
-        MarketType::Date => Outcomes::Date(vec![
-            OutcomeDate {
-                label: Label(lipsum_title_with_rng(&mut rng)),
-                date_strike_low: DateTime::parse_from_rfc3339("2022-01-01T00:00:00Z")?
-                    .with_timezone(&Utc),
-                date_strike_midpoint: DateTime::parse_from_rfc3339("2022-06-01T00:00:00Z")?
-                    .with_timezone(&Utc),
-                date_strike_high: DateTime::parse_from_rfc3339("2022-12-31T00:00:00Z")?
-                    .with_timezone(&Utc),
-                probability: Probability::new(0.5)?,
-            },
-            OutcomeDate {
-                label: Label(lipsum_title_with_rng(&mut rng)),
-                date_strike_low: DateTime::parse_from_rfc3339("2022-01-01T00:00:00Z")?
-                    .with_timezone(&Utc),
-                date_strike_midpoint: DateTime::parse_from_rfc3339("2022-06-01T00:00:00Z")?
-                    .with_timezone(&Utc),
-                date_strike_high: DateTime::parse_from_rfc3339("2022-12-31T00:00:00Z")?
-                    .with_timezone(&Utc),
-                probability: Probability::new(0.5)?,
-            },
-            OutcomeDate {
-                label: Label(lipsum_title_with_rng(&mut rng)),
-                date_strike_low: DateTime::parse_from_rfc3339("2022-01-01T00:00:00Z")?
-                    .with_timezone(&Utc),
-                date_strike_midpoint: DateTime::parse_from_rfc3339("2022-06-01T00:00:00Z")?
-                    .with_timezone(&Utc),
-                date_strike_high: DateTime::parse_from_rfc3339("2022-12-31T00:00:00Z")?
-                    .with_timezone(&Utc),
-                probability: Probability::new(0.5)?,
-            },
-        ]),
-        MarketType::Continuous => Outcomes::Continuous(OutcomeContinuous {
-            label: Label(lipsum_title_with_rng(&mut rng)),
-            continuous_min: 10.0,
-            continuous_peak: 80.0,
-            continuous_max: 100.0,
-            probability: Probability::new(0.5)?,
-        }),
+                continuous_min: min_val as f32,
+                continuous_peak: peak as f32,
+                continuous_max: max_val as f32,
+                probability: Probability::new(rng.random_range(0.5..=1.0))?,
+            })
+        }
     };
     Ok(outcomes)
 }
