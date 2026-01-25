@@ -17,6 +17,7 @@ use error::ResultExt;
 use themis_common::XRayAnalysis;
 use themis_common::db_util::debug::{TableDebugInfo, get_table_debug_info};
 use themis_common::db_util::pool::{DbPool, init_db_pool};
+use themis_common::xray::sample::sample_xray_analysis;
 
 // ============================================================================
 // Routes
@@ -41,11 +42,11 @@ fn index() -> Json<serde_json::Value> {
 
 /// Returns sample X-Ray analysis data for testing
 #[get("/xray/sample")]
-fn xray_sample(pool: &State<DbPool>) -> Result<Json<XRayAnalysis>, ApiError> {
-    // Get a database connection
-    let mut _conn = pool.get().context("Failed to get database connection")?;
+fn xray_sample() -> Result<Json<XRayAnalysis>, ApiError> {
+    // Get sample data
+    let data = sample_xray_analysis()?;
 
-    Ok(Json(XRayAnalysis::default()))
+    Ok(Json(data))
 }
 
 /// Tests database connectivity and returns table row counts
@@ -54,7 +55,7 @@ fn xray_db_test(pool: &State<DbPool>) -> Result<Json<Vec<TableDebugInfo>>, ApiEr
     // Get a database connection
     let mut conn = pool.get().context("Failed to get database connection")?;
 
-    // Convert results to JSON object
+    // Get debug data
     let table_counts = get_table_debug_info(&mut conn)?;
 
     Ok(Json(table_counts))
@@ -63,8 +64,11 @@ fn xray_db_test(pool: &State<DbPool>) -> Result<Json<Vec<TableDebugInfo>>, ApiEr
 /// Demonstrates errors so I remember how to use them later.
 #[get("/xray/error_test")]
 fn xray_error_test() -> Result<Json<XRayAnalysis>, ApiError> {
+    // Get a random thread
     use rand::Rng;
     let mut rng = rand::rng();
+
+    // Pick a random response
     match rng.random_range(1..=100) {
         1..=30 => Err(anyhow!("Some funny internal error happened."))?,
         31..=60 => Err(anyhow!("I think you did something wrong.")).bad_request()?,

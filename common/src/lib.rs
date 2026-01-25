@@ -3,8 +3,10 @@
 use anyhow::{Result, bail};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter};
 
 pub mod db_util;
+pub mod xray;
 
 // ============================================================================
 // Data Structures
@@ -18,7 +20,11 @@ pub struct Url(String);
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, PartialOrd, Default)]
 pub struct PlatformName(String);
 
-/// Disambiguatred market identifier
+/// Slugified platform name
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, PartialOrd, Default)]
+pub struct PlatformSlug(String);
+
+/// Disambiguated market identifier
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, PartialOrd, Default)]
 pub struct MarketId(String);
 
@@ -45,6 +51,38 @@ impl Probability {
                 value
             )
         }
+    }
+}
+
+/// A specific market platform
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum Platform {
+    Kalshi,
+    Manifold,
+    Metaculus,
+    Polymarket,
+}
+
+impl Display for Platform {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Platform::Kalshi => write!(f, "Kalshi"),
+            Platform::Manifold => write!(f, "Manifold"),
+            Platform::Metaculus => write!(f, "Metaculus"),
+            Platform::Polymarket => write!(f, "Polymarket"),
+        }
+    }
+}
+
+impl From<Platform> for PlatformName {
+    fn from(platform: Platform) -> Self {
+        PlatformName(platform.to_string())
+    }
+}
+
+impl From<Platform> for PlatformSlug {
+    fn from(platform: Platform) -> Self {
+        PlatformSlug(platform.to_string().to_lowercase())
     }
 }
 
@@ -154,7 +192,7 @@ pub struct XRayAssessment {
 
 /// Type of confidence factor impact
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub enum FactorType {
+pub enum ImpactType {
     Positive,
     Negative,
     #[default]
@@ -166,8 +204,9 @@ pub enum FactorType {
 pub struct XRayConfidenceAspect {
     pub icon: String,
     pub title: String,
-    pub factor_type: FactorType,
-    pub impact: f32,
+    pub aspect_name: String,
+    pub impact_type: ImpactType,
+    pub impact_amount: f32,
     pub description: String,
     pub links: Vec<Link>,
 }

@@ -20,10 +20,13 @@ const {
 
 // Separate confidence aspects by type
 const inFavorAspects = confidence_aspects.filter(
-    (a) => a.factor_type === "in_favor",
+    (a) => a.impact_type === "positive",
 );
 const againstAspects = confidence_aspects.filter(
-    (a) => a.factor_type === "against",
+    (a) => a.impact_type === "negative",
+);
+const neutralAspects = confidence_aspects.filter(
+    (a) => a.impact_type === "neutral",
 );
 ---
 
@@ -102,14 +105,14 @@ const againstAspects = confidence_aspects.filter(
                                     class="inline mb-1 mr-1"
                                 />
                                 {aspect.title}
-                                {aspect.impact > 0 && (
+                                {aspect.impact_amount > 0 && (
                                     <span class="text-green ml-2">
-                                        +{aspect.impact}%
+                                        +{aspect.impact_amount}%
                                     </span>
                                 )}
-                                {aspect.impact === 0 && (
+                                {aspect.impact_amount === 0 && (
                                     <span class="text-subtext ml-2">
-                                        {aspect.impact}%
+                                        {aspect.impact_amount}%
                                     </span>
                                 )}
                             </div>
@@ -142,14 +145,14 @@ const againstAspects = confidence_aspects.filter(
                                     class="inline mb-1 mr-1"
                                 />
                                 {aspect.title}
-                                {aspect.impact < 0 && (
+                                {aspect.impact_amount < 0 && (
                                     <span class="text-red ml-2">
-                                        {aspect.impact}%
+                                        {aspect.impact_amount}%
                                     </span>
                                 )}
-                                {aspect.impact === 0 && (
+                                {aspect.impact_amount === 0 && (
                                     <span class="text-subtext ml-2">
-                                        {aspect.impact}%
+                                        {aspect.impact_amount}%
                                     </span>
                                 )}
                             </div>
@@ -251,7 +254,7 @@ const againstAspects = confidence_aspects.filter(
             <h2 class="text-lg font-bold">Similar markets</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {
-                    similar_markets.items.map((item) => (
+                    similar_markets.map((item) => (
                         <div class="border border-lavender rounded">
                             <div class="p-3">
                                 <h3 class="font-bold mb-2">{item.title}</h3>
