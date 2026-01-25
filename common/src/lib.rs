@@ -4,6 +4,8 @@ use anyhow::{Result, bail};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+pub mod db_util;
+
 // ============================================================================
 // Data Structures
 // ============================================================================
