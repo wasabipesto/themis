@@ -9,3 +9,6 @@ authors = ["wasabipesto <contact@wasabipesto.com>"]
 repository = "https://github.com/wasabipesto/themis"
 readme = "README.md"
 license-file = "LICENSE"
+
+[workspace.dependencies]
+themis_common = { path = "common" }
