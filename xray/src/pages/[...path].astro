@@ -19,10 +19,10 @@ const {
 } = data;
 
 // Separate confidence aspects by type
-const inFavorAspects = confidence_aspects.filter(
+const positiveAspects = confidence_aspects.filter(
     (a) => a.impact_type === "positive",
 );
-const againstAspects = confidence_aspects.filter(
+const negativeAspects = confidence_aspects.filter(
     (a) => a.impact_type === "negative",
 );
 const neutralAspects = confidence_aspects.filter(
@@ -97,7 +97,7 @@ const neutralAspects = confidence_aspects.filter(
             <div class="border border-base-dark rounded p-4 space-y-3">
                 <h2 class="text-xl font-bold mb-3">Why we're confident</h2>
                 {
-                    inFavorAspects.map((aspect) => (
+                    positiveAspects.map((aspect) => (
                         <div class="space-y-1">
                             <div class="font-bold">
                                 <Icon
@@ -131,13 +131,54 @@ const neutralAspects = confidence_aspects.filter(
                         </div>
                     ))
                 }
+
+                <!-- Neutral aspects under confident column if it's shorter on desktop -->
+                {
+                    neutralAspects.length > 0 &&
+                        positiveAspects.length < negativeAspects.length && (
+                            <div>
+                                <hr class="border-t border-dotted border-text opacity-20 my-4 hidden md:block" />
+                                <h3 class="text-lg font-bold mb-3 hidden md:block">
+                                    Other factors
+                                </h3>
+                                {neutralAspects.map((aspect) => (
+                                    <div class="space-y-1 hidden md:block">
+                                        <div class="font-bold">
+                                            <Icon
+                                                name={aspect.icon}
+                                                class="inline mb-1 mr-1"
+                                            />
+                                            {aspect.title}
+                                            {aspect.impact_amount === 0 && (
+                                                <span class="text-subtext ml-2">
+                                                    {aspect.impact_amount}%
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div class="text-subtext leading-relaxed">
+                                            {aspect.description}
+                                            {aspect.link_text && (
+                                                <a
+                                                    href={aspect.link_url}
+                                                    class="text-blue underline"
+                                                >
+                                                    {" "}
+                                                    {aspect.link_text}
+                                                </a>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )
+                }
             </div>
 
             <!-- Why we doubt -->
             <div class="border border-base-dark rounded p-4 space-y-3">
                 <h2 class="text-xl font-bold mb-3">Why we doubt</h2>
                 {
-                    againstAspects.map((aspect) => (
+                    negativeAspects.map((aspect) => (
                         <div class="space-y-1">
                             <div class="font-bold">
                                 <Icon
@@ -171,8 +212,86 @@ const neutralAspects = confidence_aspects.filter(
                         </div>
                     ))
                 }
+
+                <!-- Neutral aspects under doubt column if it's shorter on desktop -->
+                {
+                    neutralAspects.length > 0 &&
+                        negativeAspects.length < positiveAspects.length && (
+                            <div>
+                                <hr class="border-t border-dotted border-text opacity-20 my-4 hidden md:block" />
+                                <h3 class="text-lg font-bold mb-3 hidden md:block">
+                                    Other factors
+                                </h3>
+                                {neutralAspects.map((aspect) => (
+                                    <div class="space-y-1 hidden md:block">
+                                        <div class="font-bold">
+                                            <Icon
+                                                name={aspect.icon}
+                                                class="inline mb-1 mr-1"
+                                            />
+                                            {aspect.title}
+                                            {aspect.impact_amount === 0 && (
+                                                <span class="text-subtext ml-2">
+                                                    {aspect.impact_amount}%
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div class="text-subtext leading-relaxed">
+                                            {aspect.description}
+                                            {aspect.link_text && (
+                                                <a
+                                                    href={aspect.link_url}
+                                                    class="text-blue underline"
+                                                >
+                                                    {" "}
+                                                    {aspect.link_text}
+                                                </a>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )
+                }
             </div>
         </div>
+
+        <!-- Neutral aspects at the end on mobile -->
+        {
+            neutralAspects.length > 0 && (
+                <div class="border border-base-dark rounded p-4 space-y-3 md:hidden">
+                    <h2 class="text-xl font-bold mb-3">Other factors</h2>
+                    {neutralAspects.map((aspect) => (
+                        <div class="space-y-1">
+                            <div class="font-bold">
+                                <Icon
+                                    name={aspect.icon}
+                                    class="inline mb-1 mr-1"
+                                />
+                                {aspect.title}
+                                {aspect.impact_amount === 0 && (
+                                    <span class="text-subtext ml-2">
+                                        {aspect.impact_amount}%
+                                    </span>
+                                )}
+                            </div>
+                            <div class="text-subtext leading-relaxed">
+                                {aspect.description}
+                                {aspect.link_text && (
+                                    <a
+                                        href={aspect.link_url}
+                                        class="text-blue underline"
+                                    >
+                                        {" "}
+                                        {aspect.link_text}
+                                    </a>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )
+        }
 
         <hr class="border-t border-dotted border-text opacity-20" />
 
