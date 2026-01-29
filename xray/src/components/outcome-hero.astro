@@ -1,0 +1,186 @@
+---
+import type {
+    MarketData,
+    Outcomes,
+    OutcomeDiscrete,
+    OutcomeNumeric,
+    OutcomeDate,
+} from "@types";
+
+import ProbBar from "@atoms/prob-bar.astro";
+
+interface Props {
+    market: MarketData;
+}
+let { market } = Astro.props;
+let { title, outcomes } = market;
+
+let numOutcomesToShow = 5;
+
+// Helper to format dates nicely
+function formatDate(dateStr: string): string {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+    });
+}
+
+// Helper to format probability as percentage
+function formatProb(prob: number): string {
+    return (prob * 100).toFixed(1);
+}
+
+// Sort and limit discrete outcomes
+function getTopOutcomes<T extends { probability: number }>(
+    outcomes: T[],
+    limit: number,
+): T[] {
+    return [...outcomes]
+        .sort((a, b) => b.probability - a.probability)
+        .slice(0, limit);
+}
+
+// Set continuous outcome position based on bounds and peak
+function continuousPosition(min: number, max: number, peak: number): number {
+    return ((peak - min) / (max - min)) * 100;
+}
+
+// Clamp continuous outcome position between 10-90%
+function continuousPositionClamped(
+    min: number,
+    max: number,
+    peak: number,
+): number {
+    let position = continuousPosition(min, max, peak);
+    return Math.max(10, Math.min(90, position));
+}
+---
+
+<div class="">
+    {/* None outcome - show nothing */}
+    {"None" in outcomes && null}
+
+    {/* Binary outcome - show probability and bar */}
+    {
+        "Binary" in outcomes && (
+            <div class="flex items-center gap-2">
+                <div class="w-20 text-right">
+                    {formatProb(outcomes.Binary.probability)}%
+                </div>
+                <ProbBar p={outcomes.Binary.probability * 100} />
+            </div>
+        )
+    }
+
+    {/* Discrete outcomes - show top N sorted by probability */}
+    {
+        "Discrete" in outcomes && (
+            <div class="space-y-1">
+                {getTopOutcomes(outcomes.Discrete, numOutcomesToShow).map(
+                    (outcome) => (
+                        <div class="flex pl-4 items-center gap-2">
+                            <!-- TODO: On smaller screens the label should be on another line and not truncated. -->
+                            <div class="w-60 truncate">{outcome.label}</div>
+                            <div class="w-10 text-right">
+                                {formatProb(outcome.probability)}%
+                            </div>
+                            <ProbBar p={outcome.probability * 100} />
+                        </div>
+                    ),
+                )}
+            </div>
+        )
+    }
+
+    {/* Continuous outcome - show distribution line with marker */}
+    {
+        "Continuous" in outcomes && (
+            <div class="mt-2">
+                <div class="mb-1">
+                    {outcomes.Continuous.label}:{" "}
+                    {formatProb(outcomes.Continuous.probability)}%
+                </div>
+                <div class="relative h-8 flex items-center">
+                    {/* Distribution line */}
+                    <div class="absolute w-full h-1 bg-linear-to-r from-flamingo via-mauve to-flamingo rounded" />
+
+                    {/* Expected value marker */}
+                    <div
+                        class="absolute w-0.5 h-8 bg-text z-10"
+                        style={`left: ${continuousPosition(outcomes.Continuous.continuous_min, outcomes.Continuous.continuous_max, outcomes.Continuous.continuous_peak)}%`}
+                    >
+                        <div class="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-text rounded-full" />
+                    </div>
+                </div>
+
+                {/* Bounds labels */}
+                <div class="relative text-sm text-subtext0 mt-1">
+                    <div class="flex justify-between">
+                        <span>Minimum: {outcomes.Continuous.continuous_min}</span>
+                        <span>Maximum: {outcomes.Continuous.continuous_max}</span>
+                    </div>
+                    <span
+                        class="absolute font-semibold -top-1"
+                        style={`left: ${continuousPositionClamped(outcomes.Continuous.continuous_min, outcomes.Continuous.continuous_max, outcomes.Continuous.continuous_peak)}%; transform: translateX(-50%);`}
+                    >
+                        {outcomes.Continuous.continuous_peak.toFixed(1)}
+                    </span>
+                </div>
+            </div>
+        )
+    }
+
+    {/* Numeric outcomes - show top N sorted by probability */}
+    {
+        "Numeric" in outcomes && (
+            <div class="space-y-1">
+                {getTopOutcomes(outcomes.Numeric, numOutcomesToShow).map(
+                    (outcome) => (
+                        <div class="flex pl-4 items-center gap-2">
+                            <!-- TODO: On smaller screens the label should be on another line and not truncated. -->
+                            <div class="w-50 truncate" title={outcome.label}>
+                                {outcome.label}
+                            </div>
+                            <div class="w-16 text-right text-sm text-subtext0">
+                                {outcome.numerical_strike_midpoint.toFixed(1)}
+                            </div>
+                            <div class="w-10 text-right">
+                                {formatProb(outcome.probability)}%
+                            </div>
+                            <ProbBar p={outcome.probability * 100} />
+                        </div>
+                    ),
+                )}
+            </div>
+        )
+    }
+
+    {
+        /* Date outcomes - show top N sorted by probability with formatted dates */
+    }
+    {
+        "Date" in outcomes && (
+            <div class="space-y-1">
+                {getTopOutcomes(outcomes.Date, numOutcomesToShow).map(
+                    (outcome) => (
+                        <div class="flex pl-4 items-center gap-2">
+                            <!-- TODO: On smaller screens the label should be on another line and not truncated. -->
+                            <div class="w-50 truncate" title={outcome.label}>
+                                {outcome.label}
+                            </div>
+                            <div class="w-24 text-right text-sm text-subtext0">
+                                {formatDate(outcome.date_strike_midpoint)}
+                            </div>
+                            <div class="w-10 text-right">
+                                {formatProb(outcome.probability)}%
+                            </div>
+                            <ProbBar p={outcome.probability * 100} />
+                        </div>
+                    ),
+                )}
+            </div>
+        )
+    }
+</div>

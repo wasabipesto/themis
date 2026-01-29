@@ -1,0 +1,178 @@
+---
+import type {
+    MarketData,
+    Outcomes,
+    OutcomeDiscrete,
+    OutcomeNumeric,
+    OutcomeDate,
+} from "@types";
+
+import ProbBar from "@atoms/prob-bar.astro";
+
+interface Props {
+    market: MarketData;
+    numOutcomesToShow?: number;
+}
+let { market, numOutcomesToShow = 3 } = Astro.props;
+let {
+    title,
+    platform_name,
+    outcomes,
+    url,
+    description,
+    market_status,
+    market_type,
+    unique_traders,
+    volume_usd,
+    open_datetime,
+    expected_close_datetime,
+    tags,
+} = market;
+
+// Helper to format dates nicely
+function formatDate(dateStr: string): string {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+    });
+}
+
+// Helper to format probability as percentage
+function formatProb(prob: number): string {
+    return (prob * 100).toFixed(1);
+}
+
+// Sort and limit discrete outcomes
+function getTopOutcomes<T extends { probability: number }>(
+    outcomes: T[],
+    limit: number,
+): T[] {
+    return [...outcomes]
+        .sort((a, b) => b.probability - a.probability)
+        .slice(0, limit);
+}
+---
+
+<div class="border border-lavender rounded">
+    <div class="p-3">
+        <h3 class="font-bold mb-2">{title}</h3>
+
+        {/* None outcome - show nothing */}
+        {"None" in outcomes && null}
+
+        {/* Binary outcome - show probability and bar */}
+        {
+            "Binary" in outcomes && (
+                <div class="w-60 truncate">Expected Probability</div>
+                <div class="flex text-sm items-center gap-2">
+                    <div class="w-20 text-right">
+                        {formatProb(outcomes.Binary.probability)}%
+                    </div>
+                    <ProbBar p={outcomes.Binary.probability * 100} />
+                </div>
+            )
+        }
+
+        {/* Discrete outcomes - show top N sorted by probability */}
+        {
+            "Discrete" in outcomes && (
+                <div class="space-y-1">
+                    {getTopOutcomes(outcomes.Discrete, numOutcomesToShow).map(
+                        (outcome) => (
+                            <div class="w-60 truncate" title={outcome.label}>{outcome.label}</div>
+                            <div class="flex text-sm pl-4 items-center gap-2">
+                                <div class="w-10 text-right">
+                                    {formatProb(outcome.probability)}%
+                                </div>
+                                <ProbBar p={outcome.probability * 100} />
+                            </div>
+                        ),
+                    )}
+                </div>
+            )
+        }
+
+        {/* Continuous outcome - show distribution line with marker */}
+        {
+            "Continuous" in outcomes && (
+                <div class="mt-2">
+                    <div class="text-sm mb-1">
+                        {outcomes.Continuous.label}:
+                        {formatProb(outcomes.Continuous.probability)}%
+                    </div>
+                    <div class="relative h-8 flex items-center">
+                        {/* Distribution line */}
+                        <div class="absolute w-full h-1 bg-linear-to-r from-flamingo via-mauve to-flamingo rounded" />
+
+                        {/* Expected value marker */}
+                        <div
+                            class="absolute w-0.5 h-8 bg-text z-10"
+                            style={`left: ${((outcomes.Continuous.continuous_peak - outcomes.Continuous.continuous_min) / (outcomes.Continuous.continuous_max - outcomes.Continuous.continuous_min)) * 100}%`}
+                        >
+                            <div class="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-text rounded-full" />
+                        </div>
+                    </div>
+
+                    {/* Bounds labels */}
+                    <div class="flex justify-between text-xs text-subtext0 mt-1">
+                        <span>{outcomes.Continuous.continuous_min}</span>
+                        <span class="font-semibold">
+                            {outcomes.Continuous.continuous_peak.toFixed(1)}
+                        </span>
+                        <span>{outcomes.Continuous.continuous_max}</span>
+                    </div>
+                </div>
+            )
+        }
+
+        {/* Numeric outcomes - show top N sorted by probability */}
+        {
+            "Numeric" in outcomes && (
+                <div class="space-y-1">
+                    {getTopOutcomes(outcomes.Numeric, numOutcomesToShow).map(
+                        (outcome) => (
+                            <div class="w-60 truncate" title={outcome.label}>{outcome.label}</div>
+                            <div class="flex text-sm pl-4 items-center gap-2">
+                                <div class="w-16 text-right text-xs text-subtext0">
+                                    {outcome.numerical_strike_midpoint.toFixed(
+                                        1,
+                                    )}
+                                </div>
+                                <div class="w-10 text-right">
+                                    {formatProb(outcome.probability)}%
+                                </div>
+                                <ProbBar p={outcome.probability * 100} />
+                            </div>
+                        ),
+                    )}
+                </div>
+            )
+        }
+
+        {
+            /* Date outcomes - show top N sorted by probability with formatted dates */
+        }
+        {
+            "Date" in outcomes && (
+                <div class="space-y-1">
+                    {getTopOutcomes(outcomes.Date, numOutcomesToShow).map(
+                        (outcome) => (
+                            <div class="w-60 truncate" title={outcome.label}>{outcome.label}</div>
+                            <div class="flex text-sm pl-4 items-center gap-2">
+                                <div class="w-24 text-right text-xs text-subtext0">
+                                    {formatDate(outcome.date_strike_midpoint)}
+                                </div>
+                                <div class="w-10 text-right">
+                                    {formatProb(outcome.probability)}%
+                                </div>
+                                <ProbBar p={outcome.probability * 100} />
+                            </div>
+                        ),
+                    )}
+                </div>
+            )
+        }
+    </div>
+</div>

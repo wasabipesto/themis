@@ -1,18 +1,23 @@
 ---
+// Render this page dynamically on the server
 export const prerender = false;
 
 import Base from "@layouts/base.astro";
+import { getXRayData } from "@lib/api.ts";
+import { ImpactType, type XRayAnalysis } from "@types";
+import MarketCard from "@components/market-card.astro";
+import OutcomeHero from "@components/outcome-hero.astro";
 import { Icon } from "astro-icon/components";
 
 const { path } = Astro.params;
 const query = Astro.url.search;
 
-import data from "@data/sample_api_data.json";
+// Call the API at build time to get the full analysis
+let data: XRayAnalysis = await getXRayData(path, query);
 
 const {
-    page,
     market,
-    our_assessment,
+    assessment,
     confidence_aspects,
     history_chart,
     similar_markets,
@@ -20,13 +25,13 @@ const {
 
 // Separate confidence aspects by type
 const positiveAspects = confidence_aspects.filter(
-    (a) => a.impact_type === "positive",
+    (a) => a.impact_type === ImpactType.Positive,
 );
 const negativeAspects = confidence_aspects.filter(
-    (a) => a.impact_type === "negative",
+    (a) => a.impact_type === ImpactType.Negative,
 );
 const neutralAspects = confidence_aspects.filter(
-    (a) => a.impact_type === "neutral",
+    (a) => a.impact_type === ImpactType.Neutral,
 );
 ---
 
@@ -51,38 +56,23 @@ const neutralAspects = confidence_aspects.filter(
                     >{market.platform_name} says:</span
                 >
             </div>
-            {
-                market.outcomes.map((outcome) => (
-                    <div class="flex pl-4 items-center gap-2">
-                        <div class="w-32">{outcome.name}</div>
-                        <div class="w-10 text-right">
-                            {outcome.probability}%
-                        </div>
-                        <div class="flex-1 bg-crust rounded h-5 overflow-hidden border border-base-dark">
-                            <div
-                                class={`h-full ${outcome.probability >= 50 ? "bg-green" : outcome.probability >= 10 ? "bg-yellow" : "bg-peach"}`}
-                                style={`width: ${outcome.probability}%`}
-                            />
-                        </div>
-                    </div>
-                ))
-            }
+            <OutcomeHero market={market} />
         </div>
 
         <!-- Our Assessment -->
         <div class="space-y-3 mt-4">
             <div class=""><span class="text-lg font-bold">We say:</span></div>
             <div class="flex pl-4 items-center gap-2">
-                <div class="w-32">{our_assessment.label}</div>
+                <div class="w-32">{assessment.title}</div>
                 <div class="w-10 text-right">
-                    {our_assessment.confidence_percent}%
+                    {assessment.confidence_percent}%
                 </div>
                 <div
                     class="flex-1 bg-crust rounded h-5 overflow-hidden border border-base-dark"
                 >
                     <div
                         class="h-full bg-green"
-                        style={`width: ${our_assessment.confidence_percent}%`}
+                        style={`width: ${assessment.confidence_percent}%`}
                     >
                     </div>
                 </div>
@@ -118,13 +108,14 @@ const neutralAspects = confidence_aspects.filter(
                             </div>
                             <div class="text-subtext leading-relaxed">
                                 {aspect.description}
-                                {aspect.link_text && (
+                                <!-- TODO: Implement multiple links -->
+                                {aspect.links.length && (
                                     <a
-                                        href={aspect.link_url}
+                                        href={aspect.links[0].url}
                                         class="text-blue underline"
                                     >
                                         {" "}
-                                        {aspect.link_text}
+                                        {aspect.links[0].text}
                                     </a>
                                 )}
                             </div>
@@ -157,15 +148,16 @@ const neutralAspects = confidence_aspects.filter(
                                         </div>
                                         <div class="text-subtext leading-relaxed">
                                             {aspect.description}
-                                            {aspect.link_text && (
-                                                <a
-                                                    href={aspect.link_url}
-                                                    class="text-blue underline"
-                                                >
-                                                    {" "}
-                                                    {aspect.link_text}
-                                                </a>
-                                            )}
+                                <!-- TODO: Implement multiple links -->
+                                {aspect.links.length && (
+                                    <a
+                                        href={aspect.links[0].url}
+                                        class="text-blue underline"
+                                    >
+                                        {" "}
+                                        {aspect.links[0].text}
+                                    </a>
+                                )}
                                         </div>
                                     </div>
                                 ))}
@@ -199,13 +191,14 @@ const neutralAspects = confidence_aspects.filter(
                             </div>
                             <div class="text-subtext leading-relaxed">
                                 {aspect.description}
-                                {aspect.link_text && (
+                                <!-- TODO: Implement multiple links -->
+                                {aspect.links.length && (
                                     <a
-                                        href={aspect.link_url}
+                                        href={aspect.links[0].url}
                                         class="text-blue underline"
                                     >
                                         {" "}
-                                        {aspect.link_text}
+                                        {aspect.links[0].text}
                                     </a>
                                 )}
                             </div>
@@ -238,15 +231,16 @@ const neutralAspects = confidence_aspects.filter(
                                         </div>
                                         <div class="text-subtext leading-relaxed">
                                             {aspect.description}
-                                            {aspect.link_text && (
-                                                <a
-                                                    href={aspect.link_url}
-                                                    class="text-blue underline"
-                                                >
-                                                    {" "}
-                                                    {aspect.link_text}
-                                                </a>
-                                            )}
+                                <!-- TODO: Implement multiple links -->
+                                {aspect.links.length && (
+                                    <a
+                                        href={aspect.links[0].url}
+                                        class="text-blue underline"
+                                    >
+                                        {" "}
+                                        {aspect.links[0].text}
+                                    </a>
+                                )}
                                         </div>
                                     </div>
                                 ))}
@@ -277,13 +271,14 @@ const neutralAspects = confidence_aspects.filter(
                             </div>
                             <div class="text-subtext leading-relaxed">
                                 {aspect.description}
-                                {aspect.link_text && (
+                                <!-- TODO: Implement multiple links -->
+                                {aspect.links.length && (
                                     <a
-                                        href={aspect.link_url}
+                                        href={aspect.links[0].url}
                                         class="text-blue underline"
                                     >
                                         {" "}
-                                        {aspect.link_text}
+                                        {aspect.links[0].text}
                                     </a>
                                 )}
                             </div>
@@ -302,7 +297,7 @@ const neutralAspects = confidence_aspects.filter(
                 class="border border-base-dark rounded p-4 bg-base-light text-base-dark"
             >
                 <div class="mb-4 text-base">
-                    "{history_chart.subtitle}"
+                    "{history_chart.title}"
                 </div>
 
                 <!-- Chart Area (placeholder) -->
@@ -328,40 +323,6 @@ const neutralAspects = confidence_aspects.filter(
                             stroke="rgb(140, 170, 238)"
                             stroke-width="2"></polyline>
                     </svg>
-                    <!-- X-axis labels -->
-                    <div
-                        class="absolute bottom-1 left-0 right-0 flex justify-between px-2 text-sm"
-                    >
-                        {
-                            history_chart.time_labels.map((label) => (
-                                <span>{label}</span>
-                            ))
-                        }
-                    </div>
-                </div>
-
-                <!-- Legend -->
-                <div class="space-y-1 text-sm">
-                    <div class="flex items-center gap-2">
-                        <div
-                            class="w-12 h-0.5"
-                            style="background-color: rgb(166, 209, 137);"
-                        >
-                        </div>
-                        <span style="color: rgb(166, 209, 137);"
-                            >{history_chart.series[0].name}</span
-                        >
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div
-                            class="w-12 h-0.5"
-                            style="background-color: rgb(140, 170, 238);"
-                        >
-                        </div>
-                        <span style="color: rgb(140, 170, 238);"
-                            >{history_chart.series[1].name}</span
-                        >
-                    </div>
                 </div>
             </div>
         </div>
@@ -373,26 +334,8 @@ const neutralAspects = confidence_aspects.filter(
             <h2 class="text-lg font-bold">Similar markets</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {
-                    similar_markets.map((item) => (
-                        <div class="border border-lavender rounded">
-                            <div class="p-3">
-                                <h3 class="font-bold mb-2">{item.title}</h3>
-                                {item.outcomes.slice(0, 3).map((outcome) => (
-                                    <div class="flex text-sm pl-4 items-center gap-2">
-                                        <div class="w-32">{outcome.name}</div>
-                                        <div class="w-10 text-right">
-                                            {outcome.probability}%
-                                        </div>
-                                        <div class="flex-1 bg-crust rounded h-5 overflow-hidden border border-base-dark">
-                                            <div
-                                                class={`h-full ${outcome.probability >= 50 ? "bg-green" : outcome.probability >= 10 ? "bg-yellow" : "bg-peach"}`}
-                                                style={`width: ${outcome.probability}%`}
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                    similar_markets.slice(0,3).map((item) => (
+                        <MarketCard market={item} />
                     ))
                 }
             </div>

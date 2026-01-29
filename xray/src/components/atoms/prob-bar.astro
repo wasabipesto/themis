@@ -1,0 +1,18 @@
+---
+import type { Probability } from "@types";
+
+interface Props {
+    p: Probability;
+}
+let { p } = Astro.props;
+---
+
+<div
+    class="flex-1 bg-crust rounded h-5 overflow-hidden border border-base-dark"
+>
+    <div
+        class={`h-full ${p >= 50 ? "bg-green" : p >= 10 ? "bg-yellow" : "bg-peach"}`}
+        style={`width: ${p}%`}
+    >
+    </div>
+</div>
