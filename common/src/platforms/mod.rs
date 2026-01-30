@@ -1,21 +1,60 @@
-//! A couple items related to platforms.
+//! Configuration and definitions for market platforms
 
 use chrono::{DateTime, Utc};
 use clap::ValueEnum;
 use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::path::Path;
 
-use crate::util::{backup_file, load_data_ids, load_index_from_file};
+use crate::download_util::{backup_file, load_data_ids, load_index_from_file};
 
 pub mod kalshi;
 pub mod manifold;
 pub mod metaculus;
 pub mod polymarket;
+
+/// Formatted platform name
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, PartialOrd, Default)]
+pub struct PlatformName(String);
+
+/// Slugified platform name
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, PartialOrd, Default)]
+pub struct PlatformSlug(String);
+
+/// A specific market platform
+#[derive(Debug, Copy, Clone, PartialEq, Eq, ValueEnum, PartialOrd, Serialize, Deserialize)]
+pub enum Platform {
+    Kalshi,
+    Manifold,
+    Metaculus,
+    Polymarket,
+}
+
+impl fmt::Display for Platform {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Platform::Kalshi => write!(f, "Kalshi"),
+            Platform::Manifold => write!(f, "Manifold"),
+            Platform::Metaculus => write!(f, "Metaculus"),
+            Platform::Polymarket => write!(f, "Polymarket"),
+        }
+    }
+}
+
+impl From<Platform> for PlatformName {
+    fn from(platform: Platform) -> Self {
+        PlatformName(platform.to_string())
+    }
+}
+
+impl From<Platform> for PlatformSlug {
+    fn from(platform: Platform) -> Self {
+        PlatformSlug(platform.to_string().to_lowercase())
+    }
+}
 
 /// Format of data saved to JSON for basic index data.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -32,24 +71,6 @@ pub struct LightweightIndexItem {
     pub close_datetime: Option<DateTime<Utc>>,
 }
 
-/// All possible platforms that are supported by this application.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, ValueEnum, Serialize)]
-pub enum Platform {
-    Kalshi,
-    Manifold,
-    Metaculus,
-    Polymarket,
-}
-impl fmt::Display for Platform {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Platform::Kalshi => write!(f, "Kalshi"),
-            Platform::Manifold => write!(f, "Manifold"),
-            Platform::Metaculus => write!(f, "Metaculus"),
-            Platform::Polymarket => write!(f, "Polymarket"),
-        }
-    }
-}
 impl Platform {
     /// Returns a list of all supported platform types.
     pub fn all() -> Vec<Platform> {

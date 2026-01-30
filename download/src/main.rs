@@ -10,7 +10,7 @@ use std::fs;
 use std::path::PathBuf;
 use tokio::task::JoinHandle;
 
-use themis_download::platforms::{Platform, PlatformHandler};
+use themis_common::platforms::{Platform, PlatformHandler};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about)]

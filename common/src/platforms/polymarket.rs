@@ -12,7 +12,7 @@ use std::path::Path;
 use std::time::Instant;
 
 use super::{IndexItem, Platform};
-use crate::util::{
+use crate::download_util::{
     display_progress, finalize_temp_file, get_reqwest_client_ratelimited, get_temp_file_path,
     read_index_item_from_file, send_request,
 };

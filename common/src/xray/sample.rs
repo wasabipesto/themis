@@ -6,10 +6,11 @@ use lipsum::{lipsum_title_with_rng, lipsum_with_rng, lipsum_words_with_rng};
 use rand::Rng;
 use sluggify::sluggify::sluggify;
 
+use crate::platforms::Platform;
 use crate::{
     HistoryChart, ImpactType, Label, Link, MarketData, MarketStatus, MarketTitle, MarketType,
     OutcomeBinary, OutcomeContinuous, OutcomeDate, OutcomeDiscrete, OutcomeNumeric, Outcomes,
-    Platform, Probability, Url, XRayAnalysis, XRayAssessment, XRayConfidenceAspect,
+    Probability, Url, XRayAnalysis, XRayAssessment, XRayConfidenceAspect,
 };
 
 fn sample_market_outcomes(market_type: &MarketType) -> Result<Outcomes> {

@@ -1,4 +1,4 @@
-//! A couple utilities.
+//! A couple of utilities for downloading from platform APIs
 
 use anyhow::{Context, Result, anyhow};
 use log::{debug, error, info, trace, warn};
@@ -17,7 +17,8 @@ use std::time::{Duration, Instant};
 
 use crate::platforms::{IndexItem, Platform};
 
-/// A default API client with middleware to ratelimit and retry on failure.
+/// A default API client with middleware to rate limit and retry on failure.
+/// Standard version wit no authentication header.
 pub fn get_reqwest_client_ratelimited(
     request_count: usize,
     interval_ms: u64,
@@ -25,7 +26,7 @@ pub fn get_reqwest_client_ratelimited(
     get_reqwest_client_ratelimited_with_auth(request_count, interval_ms, None)
 }
 
-/// A default API client with middleware to ratelimit and retry on failure.
+/// A default API client with middleware to rate limit and retry on failure.
 /// Optionally includes an Authorization header.
 pub fn get_reqwest_client_ratelimited_with_auth(
     request_count: usize,
@@ -371,7 +372,7 @@ pub fn get_id(item: &Value) -> Result<String> {
     }
 }
 
-// Formats a `Duration` into a human-readable string
+/// Formats a `Duration` into a human-readable string
 fn format_duration(duration: Duration) -> String {
     let secs = duration.as_secs();
     if secs < 60 {
