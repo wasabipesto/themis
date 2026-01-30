@@ -6,7 +6,6 @@ use chrono::Duration;
 use chrono::Utc;
 use clap::Parser;
 use log::{debug, info};
-use std::env;
 use std::fs;
 use std::path::PathBuf;
 use tokio::task::JoinHandle;
@@ -21,7 +20,7 @@ struct Args {
     platform: Option<Platform>,
 
     /// Output directory for JSON files
-    #[arg(short, long, default_value = "../cache")]
+    #[arg(short, long, default_value = "../cache/download")]
     output_dir: PathBuf,
 
     /// Only download markets that resolved since this date/time (ISO 8601)
@@ -47,25 +46,14 @@ struct Args {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    // get command line args
+    // Get command line args
     let args = Args::parse();
 
-    // read log level from arg and update environment variable
-    let log_level = args.log_level.to_lowercase();
-    unsafe {
-        match log_level.as_str() {
-            "error" | "warn" | "info" | "debug" | "trace" => env::set_var("RUST_LOG", log_level),
-            _ => {
-                // invalid, reset to 'info' as a default
-                println!("Invalid log level, resetting to INFO.");
-                env::set_var("RUST_LOG", "info")
-            }
-        }
-    }
-    env_logger::init();
+    // Set log level from environment or CLI argument
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or(&args.log_level));
     debug!("Command line args: {:?}", args);
 
-    // if the user requested a specific platform, format it into a list
+    // If the user requested a specific platform, format it into a list
     // otherwise, return the default platform list
     let platforms: Vec<Platform> = match args.platform {
         Some(platform) => Vec::from([platform]),
@@ -73,15 +61,15 @@ async fn main() {
     };
     debug!("Platforms to process: {:?}", platforms);
 
-    // ensure output directory exists
-    // if it doesn't exist, create it
+    // Ensure output directory exists
+    // If it doesn't exist, create it
     let output_dir = args.output_dir;
     if !output_dir.exists() {
         info!("Creating output directory \"{}\"", output_dir.display());
         fs::create_dir_all(&output_dir).expect("Could not create output directory!");
     }
 
-    // start the download for all platforms in parallel
+    // Start the download for all platforms in parallel
     let resolved_since = match args.resolved_since_days_ago {
         Some(days_ago) => Some(Utc::now() - Duration::days(days_ago)),
         None => args.resolved_since,
@@ -104,6 +92,8 @@ async fn main() {
             })
         })
         .collect();
-    futures::future::try_join_all(tasks).await.expect("Failed to join tasks");
+    futures::future::try_join_all(tasks)
+        .await
+        .expect("Failed to join tasks");
     info!("All platform downloads complete.");
 }

@@ -7,12 +7,15 @@ use reqwest_middleware::ClientWithMiddleware;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use serde_jsonlines::append_json_lines;
-use std::collections::HashMap;
+
 use std::path::Path;
 use std::time::Instant;
 
 use super::{IndexItem, Platform};
-use crate::util::{display_progress, get_id, get_reqwest_client_ratelimited, send_request};
+use crate::util::{
+    display_progress, get_id, get_reqwest_client_ratelimited, read_index_item_from_file,
+    send_request,
+};
 
 const METACULUS_API_BASE: &str = "https://www.metaculus.com/api";
 const METACULUS_RATELIMIT: usize = 8;
@@ -81,11 +84,12 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
 
         // check the results
         let batch = match response.get("results") {
-            Some(results) => {
-                results.as_array().map(|results_array| results_array.to_owned()).ok_or_else(|| {
+            Some(results) => results
+                .as_array()
+                .map(|results_array| results_array.to_owned())
+                .ok_or_else(|| {
                     anyhow!("Metaculus API Error: 'results' is not an array at offset {offset}")
-                })
-            }
+                }),
             None => Err(anyhow!(
                 "Metaculus API Error: No 'results' key in response from url {api_url} at offset {offset}"
             )),
@@ -111,7 +115,10 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
         // update the cursor
         if batch.len() == limit {
             offset += batch.len();
-            debug!("Got {} items and new {platform} cursor: {offset}", batch.len());
+            debug!(
+                "Got {} items and new {platform} cursor: {offset}",
+                batch.len()
+            );
         } else {
             debug!(
                 "Batch size {} was smaller than limit {}, we must be done here.",
@@ -127,7 +134,7 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
 /// Downloads extended data for all markets that haven't been downloaded.
 /// Appends directly into data file.
 pub async fn download_data(
-    index: HashMap<String, IndexItem>,
+    index_file_path: &Path,
     ids_to_download: &[String],
     data_file_path: &Path,
 ) -> Result<()> {
@@ -145,11 +152,14 @@ pub async fn download_data(
         // download extended data
         let details = get_extended_data(&client, id).await?;
 
+        // get post from index file
+        let index_item = read_index_item_from_file(index_file_path, id)?;
+
         // append row to data json file
         let line = json!(MetaculusItem {
             id: id.clone(),
             last_updated: Utc::now(),
-            post: index.get(id).ok_or_else(|| anyhow!("Cache missing key!"))?.data.clone(),
+            post: index_item.data.clone(),
             details,
         });
         append_json_lines(data_file_path, [line])?;

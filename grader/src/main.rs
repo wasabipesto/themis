@@ -23,18 +23,8 @@ fn main() -> Result<()> {
     // Get command line args
     let args = Args::parse();
 
-    // Read log level from arg and update environment variable
-    let log_level = args.log_level.to_lowercase();
-    unsafe {
-        match log_level.as_str() {
-            "error" | "warn" | "info" | "debug" | "trace" => env::set_var("RUST_LOG", log_level),
-            _ => {
-                println!("Invalid log level, resetting to INFO.");
-                env::set_var("RUST_LOG", "info")
-            }
-        }
-    }
-    env_logger::init();
+    // Set log level from environment or CLI argument
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or(&args.log_level));
     debug!("Command line args: {:?}", args);
 
     // Get environment variables
@@ -65,15 +55,24 @@ fn main() -> Result<()> {
     info!("Downloading markets and questions...");
     let markets = api::get_all_markets(&client, &postgrest_params)?;
     let questions = api::get_questions(&client, &postgrest_params)?;
-    info!("{} markets and {} questions downloaded.", markets.len(), questions.len(),);
+    info!(
+        "{} markets and {} questions downloaded.",
+        markets.len(),
+        questions.len(),
+    );
 
     // Get probabilities for linked markets.
     info!("Downloading probabilities...");
     let criterion_probs = api::get_all_criterion_probs(&client, &postgrest_params)?;
-    let linked_markets: Vec<Market> =
-        markets.iter().filter(|market| market.question_id.is_some()).cloned().collect();
-    let linked_market_ids: Vec<String> =
-        linked_markets.iter().map(|market| market.id.clone()).collect();
+    let linked_markets: Vec<Market> = markets
+        .iter()
+        .filter(|market| market.question_id.is_some())
+        .cloned()
+        .collect();
+    let linked_market_ids: Vec<String> = linked_markets
+        .iter()
+        .map(|market| market.id.clone())
+        .collect();
     let linked_market_probs =
         api::get_market_probs(&client, &postgrest_params, &linked_market_ids)?;
     info!(
@@ -107,7 +106,10 @@ fn main() -> Result<()> {
     api::upload_platform_category_scores(&client, &postgrest_params, &platform_category_scores)?;
     api::wipe_other_scores(&client, &postgrest_params)?;
     api::upload_other_scores(&client, &postgrest_params, &other_scores)?;
-    info!("{} aggregate scores uploaded.", platform_category_scores.len() + other_scores.len());
+    info!(
+        "{} aggregate scores uploaded.",
+        platform_category_scores.len() + other_scores.len()
+    );
 
     // Refresh all materialized views
     info!("Refreshing all materialized views...");

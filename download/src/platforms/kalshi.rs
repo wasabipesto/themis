@@ -1,6 +1,6 @@
 //! Tools to download and process markets from the Kalshi API.
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use lazy_static::lazy_static;
 use log::{debug, error, trace, warn};
@@ -14,7 +14,9 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use super::{IndexItem, Platform};
-use crate::util::{display_progress, get_reqwest_client_ratelimited, send_request};
+use crate::util::{
+    display_progress, get_reqwest_client_ratelimited, read_index_item_from_file, send_request,
+};
 
 const KALSHI_API_BASE: &str = "https://api.elections.kalshi.com/trade-api/v2";
 const KALSHI_RATELIMIT: usize = 10;
@@ -57,11 +59,16 @@ async fn get_event(client: &ClientWithMiddleware, market: &Value) -> Result<Valu
     // If not in cache, download the event
     let api_url = format!("{KALSHI_API_BASE}/events/{event_ticker}");
     let response = send_request(client.get(&api_url)).await?;
-    let event =
-        response.get("event").context("Expected 'event' field in /events response.")?.clone();
+    let event = response
+        .get("event")
+        .context("Expected 'event' field in /events response.")?
+        .clone();
 
     // Add to cache
-    EVENT_CACHE.lock().unwrap().insert(event_ticker.to_owned(), event.clone());
+    EVENT_CACHE
+        .lock()
+        .unwrap()
+        .insert(event_ticker.to_owned(), event.clone());
     Ok(event)
 }
 
@@ -85,11 +92,16 @@ async fn get_series(client: &ClientWithMiddleware, event: &Value) -> Result<Valu
     // If not in cache, download the series
     let api_url = format!("{KALSHI_API_BASE}/series/{series_ticker}");
     let response = send_request(client.get(&api_url)).await?;
-    let series =
-        response.get("series").context("Expected 'series' field in /series response.").cloned()?;
+    let series = response
+        .get("series")
+        .context("Expected 'series' field in /series response.")
+        .cloned()?;
 
     // Add to cache
-    SERIES_CACHE.lock().unwrap().insert(series_ticker.to_owned(), series.clone());
+    SERIES_CACHE
+        .lock()
+        .unwrap()
+        .insert(series_ticker.to_owned(), series.clone());
     Ok(series)
 }
 
@@ -160,7 +172,10 @@ async fn get_trades(
                 .as_str()
                 .context("Failed to interpret 'cursor' as string.")?
                 .to_owned();
-            trace!("Got {} items and new Kalshi history cursor: {cursor_some}", trades.len());
+            trace!(
+                "Got {} items and new Kalshi history cursor: {cursor_some}",
+                trades.len()
+            );
             if cursor_some.is_empty() {
                 debug!("Market returned {limit} trades but cursor was empty. Exiting.");
                 break;
@@ -182,15 +197,12 @@ async fn get_trades(
 /// Downloads everything to build a market item.
 async fn get_data_and_build_item(
     client: &ClientWithMiddleware,
-    index: &HashMap<String, IndexItem>,
+    index_file_path: &Path,
     ticker: &str,
 ) -> Result<KalshiItem> {
-    // get market from index
-    let market = index
-        .get(ticker)
-        .ok_or_else(|| anyhow!("Index missing market key {ticker}!"))?
-        .data
-        .clone();
+    // get market from index file
+    let index_item = read_index_item_from_file(index_file_path, ticker)?;
+    let market = index_item.data.clone();
     // get event data...
     let event = get_event(client, &market).await?;
     // and series data...
@@ -221,7 +233,10 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
     let mut cursor: Option<String> = None;
     loop {
         let response = send_request(
-            client.get(&api_url).query(&[("limit", limit)]).query(&[("cursor", cursor.clone())]),
+            client
+                .get(&api_url)
+                .query(&[("limit", limit)])
+                .query(&[("cursor", cursor.clone())]),
         )
         .await?;
         let batch = response
@@ -255,7 +270,10 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
                 .as_str()
                 .context("Failed to interpret 'cursor' as string.")?
                 .to_owned();
-            debug!("Got {} items and new {platform} cursor: {cursor_some}", batch.len());
+            debug!(
+                "Got {} items and new {platform} cursor: {cursor_some}",
+                batch.len()
+            );
             cursor = Some(cursor_some);
         } else {
             debug!(
@@ -272,7 +290,7 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
 /// Downloads extended data for all markets that haven't been downloaded.
 /// Appends directly into data file.
 pub async fn download_data(
-    index: HashMap<String, IndexItem>,
+    index_file_path: &Path,
     ids_to_download: &[String],
     data_file_path: &Path,
 ) -> Result<()> {
@@ -287,7 +305,9 @@ pub async fn download_data(
 
     // Process in batches of 10
     for batch in ids_to_download.chunks(10) {
-        let futures = batch.iter().map(|ticker| get_data_and_build_item(&client, &index, ticker));
+        let futures = batch
+            .iter()
+            .map(|ticker| get_data_and_build_item(&client, index_file_path, ticker));
 
         // Wait for all tasks in the batch to finish
         let results = futures::future::join_all(futures).await;

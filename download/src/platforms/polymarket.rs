@@ -7,12 +7,14 @@ use reqwest_middleware::ClientWithMiddleware;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use serde_jsonlines::append_json_lines;
-use std::collections::HashMap;
+
 use std::path::Path;
 use std::time::Instant;
 
 use super::{IndexItem, Platform};
-use crate::util::{display_progress, get_reqwest_client_ratelimited, send_request};
+use crate::util::{
+    display_progress, get_reqwest_client_ratelimited, read_index_item_from_file, send_request,
+};
 
 const POLYMARKET_CLOB_API_BASE: &str = "https://clob.polymarket.com";
 const POLYMARKET_DATA_API_BASE: &str = "https://data-api.polymarket.com";
@@ -43,7 +45,9 @@ fn get_clob_id(item: &Value) -> Result<String> {
 
     // we take the first token, which is usually YES
     // but save it so that we know which it was
-    let first_token = tokens.first().context("No tokens found in 'tokens' array")?;
+    let first_token = tokens
+        .first()
+        .context("No tokens found in 'tokens' array")?;
 
     let token_id = first_token
         .get("token_id")
@@ -152,13 +156,21 @@ async fn get_trades(client: &ClientWithMiddleware, market: &Value) -> Result<Vec
         let trades_arr = response
             .as_array()
             .ok_or_else(|| {
-                anyhow!("Could not format API response as array. Response: {:?}", response)
+                anyhow!(
+                    "Could not format API response as array. Response: {:?}",
+                    response
+                )
             })?
             .to_owned();
 
         // check if we're running into repeating hashes
         let last_hash = if !trades_arr.is_empty() {
-            trades_arr.last().unwrap().get("transactionHash").unwrap().to_string()
+            trades_arr
+                .last()
+                .unwrap()
+                .get("transactionHash")
+                .unwrap()
+                .to_string()
         } else {
             break;
         };
@@ -172,7 +184,10 @@ async fn get_trades(client: &ClientWithMiddleware, market: &Value) -> Result<Vec
             break;
         }
         if offset > limit * 100 {
-            warn!("Downloading trades at offset {} for condition ID {}...", offset, condition_id);
+            warn!(
+                "Downloading trades at offset {} for condition ID {}...",
+                offset, condition_id
+            );
         }
 
         // check the length of the returned array
@@ -195,15 +210,20 @@ async fn get_trades(client: &ClientWithMiddleware, market: &Value) -> Result<Vec
     // sometimes returns null instead of a trade, remove those
     trades.retain(|trade| !trade.is_null());
 
-    trace!("Downloaded {} trades for condition ID {}", trades.len(), condition_id);
+    trace!(
+        "Downloaded {} trades for condition ID {}",
+        trades.len(),
+        condition_id
+    );
     Ok(trades)
 }
 
 /// Download information from the Gamma API.
 async fn get_market_gamma(client: &ClientWithMiddleware, market: &Value) -> Result<Option<Value>> {
     let api_url = POLYMARKET_GAMMA_API_BASE.to_owned() + "/markets";
-    let market_slug =
-        market.get("market_slug").context("Expected 'market_slug' field in market.")?;
+    let market_slug = market
+        .get("market_slug")
+        .context("Expected 'market_slug' field in market.")?;
     let response = send_request(client.get(&api_url).query(&[("slug", &market_slug)]))
         .await?
         .as_array()
@@ -219,14 +239,12 @@ async fn get_market_gamma(client: &ClientWithMiddleware, market: &Value) -> Resu
 /// Downloads everything to build a market item.
 async fn get_data_and_build_item(
     client: &ClientWithMiddleware,
-    cache: &HashMap<String, IndexItem>,
+    index_file_path: &Path,
     market_id: &str,
 ) -> Result<PolymarketItem> {
-    let market = cache
-        .get(market_id)
-        .ok_or_else(|| anyhow!("Cache missing market key {market_id}!"))?
-        .data
-        .clone();
+    // get market from index file
+    let index_item = read_index_item_from_file(index_file_path, market_id)?;
+    let market = index_item.data.clone();
     let (prices_history_token, prices_history) = get_prices_history(client, &market).await?;
     let trades = get_trades(client, &market).await?;
     let market_gamma = get_market_gamma(client, &market).await?;
@@ -258,19 +276,23 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
     let mut cursor: Option<String> = None;
     loop {
         let response = send_request(
-            client.get(&api_url).query(&[("limit", limit)]).query(&[("next_cursor", &cursor)]), // if value is None, param is not sent
+            client
+                .get(&api_url)
+                .query(&[("limit", limit)])
+                .query(&[("next_cursor", &cursor)]), // if value is None, param is not sent
         )
         .await?;
 
         let batch = match response.get("data") {
-            Some(results) => {
-                results.as_array().map(|results_array| results_array.to_owned()).ok_or_else(|| {
+            Some(results) => results
+                .as_array()
+                .map(|results_array| results_array.to_owned())
+                .ok_or_else(|| {
                     anyhow!(
                         "{platform} API Error: 'results' is not an array at offset {:?}",
                         cursor
                     )
-                })
-            }
+                }),
             None => Err(anyhow!(
                 "{platform} API Error: No 'results' key in response from url {api_url} at offset {:?}",
                 cursor
@@ -306,7 +328,10 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
                 .as_str()
                 .context("Failed to interpret 'next_cursor' as string.")?
                 .to_owned();
-            debug!("Got {} items and new {platform} cursor: {cursor_some}", batch.len());
+            debug!(
+                "Got {} items and new {platform} cursor: {cursor_some}",
+                batch.len()
+            );
             cursor = Some(cursor_some);
         } else {
             debug!(
@@ -323,7 +348,7 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
 /// Downloads extended data for all markets that haven't been downloaded.
 /// Appends directly into data file.
 pub async fn download_data(
-    index: HashMap<String, IndexItem>,
+    index_file_path: &Path,
     ids_to_download: &[String],
     data_file_path: &Path,
 ) -> Result<()> {
@@ -338,8 +363,9 @@ pub async fn download_data(
 
     // Process in batches of 10
     for batch in ids_to_download.chunks(10) {
-        let futures =
-            batch.iter().map(|market_id| get_data_and_build_item(&client, &index, market_id));
+        let futures = batch
+            .iter()
+            .map(|market_id| get_data_and_build_item(&client, index_file_path, market_id));
 
         // Wait for all tasks in the batch to finish
         let results = futures::future::join_all(futures).await;
