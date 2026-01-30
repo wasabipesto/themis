@@ -1,5 +1,8 @@
 //! Generate sample data for testing and benchmarking.
 
+// Disable pedantic lints for this module since it's mostly placeholder.
+#![allow(clippy::pedantic)]
+
 use anyhow::{Result, anyhow};
 use chrono::{Duration, Utc};
 use lipsum::{lipsum_title_with_rng, lipsum_with_rng, lipsum_words_with_rng};

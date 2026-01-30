@@ -1,7 +1,14 @@
 [package]
 name = "themis_common"
+description = "Common library for the Themis project"
 version.workspace = true
 edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+readme.workspace = true
+license-file.workspace = true
+categories.workspace = true
+keywords.workspace = true
 
 [dependencies]
 anyhow = { version = "1.0" }
@@ -10,13 +17,10 @@ clap = { version = "4.5", features = ["derive"] }
 dotenvy = { version = "0.15" }
 diesel = { version = "2.1", features = ["chrono", "postgres", "r2d2", "serde_json"] }
 futures = { version = "0.3.30" }
-lazy_static = { version = "1.5" }
 log = { version = "0.4" }
 lipsum = { git = "https://github.com/mgeisler/lipsum.git" }
 rand = { version = "0.9" }
-regex = { version = "1.10" }
 reqwest = { version = "0.12", features = ["blocking", "json"] }
-reqwest-chain = "1.0.0"
 reqwest-leaky-bucket = { version = "0.3.0" }
 reqwest-middleware = { version = "0.4.0" }
 reqwest-retry = { version = "0.7.0" }

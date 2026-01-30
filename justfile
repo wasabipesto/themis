@@ -9,6 +9,10 @@ rust-test *args:
     cargo test -qr {{ args }}
 
 # Run the API dev server
+build *args:
+    cargo build -r {{ args }}
+
+# Run the API dev server
 api *args:
     cargo run -qr -p themis_api -- {{ args }}
 

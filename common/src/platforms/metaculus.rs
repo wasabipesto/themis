@@ -7,15 +7,14 @@ use reqwest_middleware::ClientWithMiddleware;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use serde_jsonlines::append_json_lines;
-
 use std::env;
 use std::path::Path;
 use std::time::Instant;
 
 use super::{IndexItem, Platform};
 use crate::download_util::{
-    display_progress, finalize_temp_file, get_id, get_reqwest_client_ratelimited_with_auth,
-    get_temp_file_path, read_index_item_from_file, send_request,
+    finalize_temp_file, get_id, get_reqwest_client_ratelimited_with_auth, get_temp_file_path,
+    pretty_print_download_progress, read_index_item_from_file, send_request,
 };
 
 const METACULUS_API_BASE: &str = "https://www.metaculus.com/api";
@@ -47,35 +46,35 @@ async fn get_extended_data(client: &ClientWithMiddleware, id: &str) -> Result<Va
 
 /// Downloads index and streams it directly to disk.
 pub async fn download_index(index_file_path: &Path) -> Result<()> {
-    // set platform
+    // Set platform
     let platform = Platform::Metaculus;
 
-    // get API key from environment
-    let api_key =
-        env::var("METACULUS_API_KEY").expect("METACULUS_API_KEY environment variable is required");
-    let auth_header = format!("Token {}", api_key);
+    // Get API key from environment
+    let api_key = env::var("METACULUS_API_KEY")
+        .map_err(|_| anyhow!("METACULUS_API_KEY environment variable is required"))?;
+    let auth_header = format!("Token {api_key}");
 
-    // get client
+    // Get client
     let api_url = METACULUS_API_BASE.to_owned() + "/posts/";
     let client = get_reqwest_client_ratelimited_with_auth(
         METACULUS_RATELIMIT,
         METACULUS_RATELIMIT_MS,
         Some(auth_header),
-    );
+    )?;
 
-    // write to temporary file first for atomic operation
+    // Write to temporary file first for atomic operation
     let temp_file_path = get_temp_file_path(index_file_path);
     debug!(
         "{platform}: Writing index to temp file: {}",
         temp_file_path.display()
     );
 
-    // loop through questions endpoint until all are downloaded
+    // Loop through questions endpoint until all are downloaded
     let limit = 100;
     let mut total_items = 0;
     let mut offset: usize = 0;
     loop {
-        // submit the request
+        // Submit the request
         let response = send_request(
             client
                 // Options: https://www.metaculus.com/api/
@@ -99,26 +98,23 @@ pub async fn download_index(index_file_path: &Path) -> Result<()> {
         )
         .await?;
 
-        // check the results
+        // Check the results
         let batch = match response.get("results") {
-            Some(results) => results
-                .as_array()
-                .map(|results_array| results_array.to_owned())
-                .ok_or_else(|| {
-                    anyhow!("Metaculus API Error: 'results' is not an array at offset {offset}")
-                }),
+            Some(results) => results.as_array().map(Vec::to_owned).ok_or_else(|| {
+                anyhow!("Metaculus API Error: 'results' is not an array at offset {offset}")
+            }),
             None => Err(anyhow!(
                 "Metaculus API Error: No 'results' key in response from url {api_url} at offset {offset}"
             )),
         }?;
 
-        // break if the batch returns no items
+        // Break if the batch returns no items
         if batch.is_empty() {
             trace!("No items in batch, breaking from download loop.");
             break;
         }
 
-        // build items from batch
+        // Build items from batch
         let mut items = Vec::with_capacity(batch.len());
         for question in batch.clone() {
             let question_id = get_id(&question)?;
@@ -130,7 +126,7 @@ pub async fn download_index(index_file_path: &Path) -> Result<()> {
             items.push(item);
         }
 
-        // immediately write batch to temp file
+        // Immediately write batch to temp file
         append_json_lines(&temp_file_path, items)?;
         total_items += batch.len();
         trace!(
@@ -139,7 +135,7 @@ pub async fn download_index(index_file_path: &Path) -> Result<()> {
             total_items
         );
 
-        // update the cursor
+        // Update the cursor
         if batch.len() == limit {
             offset += batch.len();
             debug!(
@@ -156,7 +152,7 @@ pub async fn download_index(index_file_path: &Path) -> Result<()> {
         }
     }
 
-    // atomically move temp file to final location
+    // Atomically move temp file to final location
     finalize_temp_file(&temp_file_path, index_file_path)?;
     debug!("{platform}: Index download complete with {total_items} total items");
     Ok(())
@@ -169,36 +165,37 @@ pub async fn download_data(
     ids_to_download: &[String],
     data_file_path: &Path,
 ) -> Result<()> {
-    // get client
+    // Set the platform type
     let platform = Platform::Metaculus;
 
-    // get API key from environment
-    let api_key =
-        env::var("METACULUS_API_KEY").expect("METACULUS_API_KEY environment variable is required");
-    let auth_header = format!("Token {}", api_key);
+    // Get the API key from environment
+    let api_key = env::var("METACULUS_API_KEY")
+        .map_err(|_| anyhow!("METACULUS_API_KEY environment variable is required"))?;
+    let auth_header = format!("Token {api_key}");
 
+    // Get the client
     let client = get_reqwest_client_ratelimited_with_auth(
         METACULUS_RATELIMIT,
         METACULUS_RATELIMIT_MS,
         Some(auth_header),
-    );
+    )?;
 
     // Set progress counters
     let start_time = Instant::now();
     let download_count = ids_to_download.len();
     let mut completed: usize = 0;
 
-    // could paralleize this but the rate limit is so low that it doesn't have any benefit
-    for id in ids_to_download.iter() {
-        // download extended data
+    // We could parallelize this but the rate limit is so low that it doesn't have any benefit
+    for id in ids_to_download {
+        // Download extended data
         let details = get_extended_data(&client, id).await?;
 
-        // get post from index file
+        // Get post from index file
         let index_item = read_index_item_from_file(index_file_path, id)?;
 
-        // append row to data json file
+        // Append row to data JSON file
         let line = json!(MetaculusItem {
-            id: id.clone(),
+            id: id.to_owned(),
             last_updated: Utc::now(),
             post: index_item.data.clone(),
             details,
@@ -208,7 +205,7 @@ pub async fn download_data(
 
         // Calculate progress and elapsed time every n items
         completed += 1;
-        display_progress(&platform, completed, download_count, &start_time);
+        pretty_print_download_progress(&platform, completed, download_count, &start_time);
     }
     Ok(())
 }

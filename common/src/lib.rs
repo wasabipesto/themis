@@ -1,5 +1,10 @@
 //! Themis common utilities, definitions, and processes
 
+#![deny(clippy::all)]
+#![warn(clippy::pedantic)]
+#![allow(clippy::too_many_lines)]
+#![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
 use anyhow::{Result, bail};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -31,14 +36,14 @@ pub struct Probability(f32);
 
 impl Probability {
     /// Creates a new probability, validating it's between 0.0 and 1.0
+    ///
+    /// # Errors
+    /// Will return `Err` if the value is not between 0.0 and 1.0.
     pub fn new(value: f32) -> Result<Self> {
         if (0.0..=1.0).contains(&value) {
             Ok(Probability(value))
         } else {
-            bail!(
-                "Probability must be between 0.0 and 1.0. Was given: {}",
-                value
-            )
+            bail!("Probability must be between 0.0 and 1.0. Was given: {value}")
         }
     }
 }

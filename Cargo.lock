@@ -1752,18 +1752,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "reqwest-chain"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da5c014fb79a8227db44a0433d748107750d2550b7fca55c59a3d7ee7d2ee2b2"
-dependencies = [
- "anyhow",
- "async-trait",
- "http 1.4.0",
- "reqwest-middleware",
-]
-
-[[package]]
 name = "reqwest-leaky-bucket"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2292,8 +2280,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "build-time",
- "chrono",
- "diesel",
  "env_logger",
  "log",
  "rand 0.9.2",
@@ -2313,13 +2299,10 @@ dependencies = [
  "diesel",
  "dotenvy",
  "futures",
- "lazy_static",
  "lipsum",
  "log",
  "rand 0.9.2",
- "regex",
  "reqwest",
- "reqwest-chain",
  "reqwest-leaky-bucket",
  "reqwest-middleware",
  "reqwest-retry",
@@ -2338,17 +2321,7 @@ dependencies = [
  "clap",
  "env_logger",
  "futures",
- "lazy_static",
  "log",
- "regex",
- "reqwest",
- "reqwest-chain",
- "reqwest-leaky-bucket",
- "reqwest-middleware",
- "reqwest-retry",
- "serde",
- "serde-jsonlines",
- "serde_json",
  "themis_common",
  "tokio",
 ]
@@ -2365,7 +2338,6 @@ dependencies = [
  "log",
  "reqwest",
  "serde",
- "serde-jsonlines",
  "serde_json",
 ]
 

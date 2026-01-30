@@ -1,7 +1,14 @@
 [package]
 name = "themis_grader"
+description = "Grading tools for the Themis project"
 version.workspace = true
 edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+readme.workspace = true
+license-file.workspace = true
+categories.workspace = true
+keywords.workspace = true
 
 [dependencies]
 anyhow = "1.0"
