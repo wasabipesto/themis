@@ -5,7 +5,7 @@ use clap::ValueEnum;
 use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use serde_jsonlines::write_json_lines;
+
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::path::Path;
@@ -192,8 +192,8 @@ impl PlatformHandler for Platform {
             });
         }
 
-        // attempt to load the index file
-        let index = match load_index_from_file(&index_file_path).unwrap_or_else(|e| {
+        // attempt to load the index file, or download if needed
+        let needs_download = match load_index_from_file(&index_file_path).unwrap_or_else(|e| {
             error!(
                 "{self}: Failed to access index file {}: {e}",
                 index_file_path.display()
@@ -203,34 +203,35 @@ impl PlatformHandler for Platform {
             // index file exists and is valid, keep it
             Some(index) => {
                 info!("{self}: Index loaded from disk with {} items.", index.len());
-                index
+                false
             }
             // index file needs to be downloaded
-            None => {
-                info!("{self}: Downloading new index.");
-                // download the platform index
-                let index = match self {
-                    Platform::Kalshi => kalshi::download_index().await,
-                    Platform::Manifold => manifold::download_index().await,
-                    Platform::Metaculus => metaculus::download_index().await,
-                    Platform::Polymarket => polymarket::download_index().await,
-                }
-                .unwrap_or_else(|e| {
-                    error!("{self}: Failed to download index: {e}");
-                    panic!();
-                });
-                // write to disk
-                if let Err(e) = write_json_lines(&index_file_path, &index) {
-                    error!("{self}: Failed to write index file to disk: {e}");
-                    panic!();
-                }
-                info!(
-                    "{self}: Index downloaded and saved to disk with {} items.",
-                    index.len()
-                );
-                index
-            }
+            None => true,
         };
+
+        if needs_download {
+            info!("{self}: Downloading new index.");
+            // download the platform index directly to disk
+            match self {
+                Platform::Kalshi => kalshi::download_index(&index_file_path).await,
+                Platform::Manifold => manifold::download_index(&index_file_path).await,
+                Platform::Metaculus => metaculus::download_index(&index_file_path).await,
+                Platform::Polymarket => polymarket::download_index(&index_file_path).await,
+            }
+            .unwrap_or_else(|e| {
+                error!("{self}: Failed to download index: {e}");
+                panic!();
+            });
+            info!("{self}: Index downloaded and saved to disk.");
+        }
+
+        // load the index for lightweight conversion
+        let index = load_index_from_file(&index_file_path)
+            .unwrap_or_else(|e| {
+                error!("{self}: Failed to load index file after download: {e}");
+                panic!();
+            })
+            .expect("Index file should exist after download");
 
         // convert index into a lightweight hashmap for minimal memory usage
         debug!("{self}: Converting index into lightweight HashMap.");

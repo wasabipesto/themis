@@ -13,8 +13,8 @@ use std::time::Instant;
 
 use super::{IndexItem, Platform};
 use crate::util::{
-    display_progress, get_id, get_reqwest_client_ratelimited, read_index_item_from_file,
-    send_request,
+    display_progress, finalize_temp_file, get_id, get_reqwest_client_ratelimited,
+    get_temp_file_path, read_index_item_from_file, send_request,
 };
 
 const METACULUS_API_BASE: &str = "https://www.metaculus.com/api";
@@ -44,8 +44,8 @@ async fn get_extended_data(client: &ClientWithMiddleware, id: &str) -> Result<Va
     })
 }
 
-/// Downloads and returns a new index.
-pub async fn download_index() -> Result<Vec<IndexItem>> {
+/// Downloads index and streams it directly to disk.
+pub async fn download_index(index_file_path: &Path) -> Result<()> {
     // set platform
     let platform = Platform::Metaculus;
 
@@ -53,9 +53,16 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
     let api_url = METACULUS_API_BASE.to_owned() + "/posts/";
     let client = get_reqwest_client_ratelimited(METACULUS_RATELIMIT, METACULUS_RATELIMIT_MS);
 
+    // write to temporary file first for atomic operation
+    let temp_file_path = get_temp_file_path(index_file_path);
+    debug!(
+        "{platform}: Writing index to temp file: {}",
+        temp_file_path.display()
+    );
+
     // loop through questions endpoint until all are downloaded
     let limit = 100;
-    let mut index = Vec::new();
+    let mut total_items = 0;
     let mut offset: usize = 0;
     loop {
         // submit the request
@@ -101,7 +108,8 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
             break;
         }
 
-        // add batch to cache
+        // build items from batch
+        let mut items = Vec::with_capacity(batch.len());
         for question in batch.clone() {
             let question_id = get_id(&question)?;
             let item = IndexItem {
@@ -109,8 +117,17 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
                 last_updated: Utc::now(),
                 data: question,
             };
-            index.push(item);
+            items.push(item);
         }
+
+        // immediately write batch to temp file
+        append_json_lines(&temp_file_path, items)?;
+        total_items += batch.len();
+        trace!(
+            "{platform}: Wrote {} items to temp file (total: {})",
+            batch.len(),
+            total_items
+        );
 
         // update the cursor
         if batch.len() == limit {
@@ -128,7 +145,11 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
             break;
         }
     }
-    Ok(index)
+
+    // atomically move temp file to final location
+    finalize_temp_file(&temp_file_path, index_file_path)?;
+    debug!("{platform}: Index download complete with {total_items} total items");
+    Ok(())
 }
 
 /// Downloads extended data for all markets that haven't been downloaded.

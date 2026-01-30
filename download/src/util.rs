@@ -287,6 +287,37 @@ pub fn read_index_item_from_file(index_file_path: &Path, target_id: &str) -> Res
     ))
 }
 
+/// Creates a temporary file path for atomic writes.
+/// Returns a path with .tmp extension.
+pub fn get_temp_file_path(file_path: &Path) -> PathBuf {
+    let mut temp_path = file_path.to_path_buf();
+    let current_extension = file_path.extension().and_then(|e| e.to_str()).unwrap_or("");
+    let new_extension = if current_extension.is_empty() {
+        "tmp".to_string()
+    } else {
+        format!("{}.tmp", current_extension)
+    };
+    temp_path.set_extension(new_extension);
+    temp_path
+}
+
+/// Atomically moves a temporary file to its final location.
+pub fn finalize_temp_file(temp_path: &Path, final_path: &Path) -> Result<()> {
+    fs::rename(temp_path, final_path).with_context(|| {
+        format!(
+            "Failed to rename temp file {} to {}",
+            temp_path.display(),
+            final_path.display()
+        )
+    })?;
+    debug!(
+        "Successfully renamed {} to {}",
+        temp_path.display(),
+        final_path.display()
+    );
+    Ok(())
+}
+
 /// Get ID from JSON object
 pub fn get_id(item: &Value) -> Result<String> {
     // convert to an object and perform the lookup
