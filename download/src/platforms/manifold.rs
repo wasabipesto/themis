@@ -8,12 +8,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use serde_jsonlines::append_json_lines;
 
+use std::env;
 use std::path::Path;
 use std::time::Instant;
 
 use super::{IndexItem, Platform};
 use crate::util::{
-    display_progress, finalize_temp_file, get_id, get_reqwest_client_ratelimited,
+    display_progress, finalize_temp_file, get_id, get_reqwest_client_ratelimited_with_auth,
     get_temp_file_path, read_index_item_from_file, send_request,
 };
 
@@ -140,9 +141,19 @@ pub async fn download_index(index_file_path: &Path) -> Result<()> {
     // set platform
     let platform = Platform::Manifold;
 
+    // get optional API key from environment
+    let auth_header = env::var("MANIFOLD_API_KEY")
+        .ok()
+        .filter(|key| !key.is_empty())
+        .map(|key| format!("Key {}", key));
+
     // get url and client
     let api_url = MANIFOLD_API_BASE.to_owned() + "/markets";
-    let client = get_reqwest_client_ratelimited(MANIFOLD_RATELIMIT, MANIFOLD_RATELIMIT_MS);
+    let client = get_reqwest_client_ratelimited_with_auth(
+        MANIFOLD_RATELIMIT,
+        MANIFOLD_RATELIMIT_MS,
+        auth_header,
+    );
 
     // write to temporary file first for atomic operation
     let temp_file_path = get_temp_file_path(index_file_path);
@@ -228,7 +239,18 @@ pub async fn download_data(
 ) -> Result<()> {
     // Get client
     let platform = Platform::Manifold;
-    let client = get_reqwest_client_ratelimited(MANIFOLD_RATELIMIT, MANIFOLD_RATELIMIT_MS);
+
+    // get optional API key from environment
+    let auth_header = env::var("MANIFOLD_API_KEY")
+        .ok()
+        .filter(|key| !key.is_empty())
+        .map(|key| format!("Key {}", key));
+
+    let client = get_reqwest_client_ratelimited_with_auth(
+        MANIFOLD_RATELIMIT,
+        MANIFOLD_RATELIMIT_MS,
+        auth_header,
+    );
 
     // Set progress counters
     let start_time = Instant::now();

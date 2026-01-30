@@ -30,11 +30,11 @@ Install any other dependencies:
 
 In previous versions of this program, we deserialized all API responses immediately upon receiving them in order to work in a type-safe rust environment. This works great if APIs never change. Since external APIs can change unexpectedly, we have broken the download flow into two programs: a downloader and an extractor. The downloader will grab all relevant data from the platform APIs, then the extractor will deserialize that data into something we can use.
 
-Before downloading, make sure you have enough disk space, memory, and time:
+Before downloading, make sure you have the required API keys, enough disk space, and time:
 
-- By default the download program will download from all platforms in parallel to avoid getting bottle-necked by any one platform's API rate limit. In order to do this we first download the platform's bulk list as an index and load it into memory. If you are running in the default mode, expect to use around 6 GB of memory. If you run out of memory, you can run the platforms one at a time with the `--platform` option.
-- This program will download all relevant data from each platform's API to disk. We try to avoid reading or writing any more than necessary by buffering writes and appending data where possible. Still, a large amount of disk space will be required for this data. As of February 2025 it uses around 20 GB, but this will increase over time.
-- When run the first time, this utility takes a day or so to complete. It will first download each platform's index and make a download plan. Then it will queue up batches of downloads that run asynchronously. If you interrupt the program or it runs into an error, simply restart it. It will look for an existing index file and attempt to resume the downloads automatically.
+- Currently the only platform that requires an API key is Metaculus. You will need to register an account, then you can generate an API key on your [settings page](https://www.metaculus.com/accounts/settings/account/#api-access).
+- This program will download all relevant data from each platform's API to disk. A large amount of disk space will be required for this data - as of February 2026 it uses around 100 GB, but this will increase further over time.
+- When run the first time, this utility takes a few days to complete. It will first download each platform's index and make a download plan. Then it will queue up batches of downloads that run asynchronously. If you interrupt the program or it runs into an error, simply restart it. It will look for an existing index file and attempt to resume the downloads automatically.
 
 To run the downloader:
 

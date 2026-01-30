@@ -20,7 +20,7 @@ struct Args {
     platform: Option<Platform>,
 
     /// Output directory for JSON files
-    #[arg(short, long, default_value = "../cache/download")]
+    #[arg(short, long, default_value = "cache/download")]
     output_dir: PathBuf,
 
     /// Only download markets that resolved since this date/time (ISO 8601)

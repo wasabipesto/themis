@@ -8,12 +8,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use serde_jsonlines::append_json_lines;
 
+use std::env;
 use std::path::Path;
 use std::time::Instant;
 
 use super::{IndexItem, Platform};
 use crate::util::{
-    display_progress, finalize_temp_file, get_id, get_reqwest_client_ratelimited,
+    display_progress, finalize_temp_file, get_id, get_reqwest_client_ratelimited_with_auth,
     get_temp_file_path, read_index_item_from_file, send_request,
 };
 
@@ -49,9 +50,18 @@ pub async fn download_index(index_file_path: &Path) -> Result<()> {
     // set platform
     let platform = Platform::Metaculus;
 
+    // get API key from environment
+    let api_key =
+        env::var("METACULUS_API_KEY").expect("METACULUS_API_KEY environment variable is required");
+    let auth_header = format!("Token {}", api_key);
+
     // get client
     let api_url = METACULUS_API_BASE.to_owned() + "/posts/";
-    let client = get_reqwest_client_ratelimited(METACULUS_RATELIMIT, METACULUS_RATELIMIT_MS);
+    let client = get_reqwest_client_ratelimited_with_auth(
+        METACULUS_RATELIMIT,
+        METACULUS_RATELIMIT_MS,
+        Some(auth_header),
+    );
 
     // write to temporary file first for atomic operation
     let temp_file_path = get_temp_file_path(index_file_path);
@@ -161,7 +171,17 @@ pub async fn download_data(
 ) -> Result<()> {
     // get client
     let platform = Platform::Metaculus;
-    let client = get_reqwest_client_ratelimited(METACULUS_RATELIMIT, METACULUS_RATELIMIT_MS);
+
+    // get API key from environment
+    let api_key =
+        env::var("METACULUS_API_KEY").expect("METACULUS_API_KEY environment variable is required");
+    let auth_header = format!("Token {}", api_key);
+
+    let client = get_reqwest_client_ratelimited_with_auth(
+        METACULUS_RATELIMIT,
+        METACULUS_RATELIMIT_MS,
+        Some(auth_header),
+    );
 
     // Set progress counters
     let start_time = Instant::now();

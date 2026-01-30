@@ -2,6 +2,7 @@
 
 use anyhow::{Context, Result, anyhow};
 use log::{debug, error, info, trace, warn};
+use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue};
 use reqwest_leaky_bucket::leaky_bucket::RateLimiter;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{RetryTransientMiddleware, policies::ExponentialBackoff};
@@ -20,6 +21,16 @@ use crate::platforms::{IndexItem, Platform};
 pub fn get_reqwest_client_ratelimited(
     request_count: usize,
     interval_ms: u64,
+) -> ClientWithMiddleware {
+    get_reqwest_client_ratelimited_with_auth(request_count, interval_ms, None)
+}
+
+/// A default API client with middleware to ratelimit and retry on failure.
+/// Optionally includes an Authorization header.
+pub fn get_reqwest_client_ratelimited_with_auth(
+    request_count: usize,
+    interval_ms: u64,
+    auth_header: Option<String>,
 ) -> ClientWithMiddleware {
     // convert to duration
     let interval_duration = std::time::Duration::from_millis(interval_ms);
@@ -42,7 +53,23 @@ pub fn get_reqwest_client_ratelimited(
         .interval(interval_duration)
         .build();
 
-    ClientBuilder::new(reqwest::Client::new())
+    // build default headers if auth is provided
+    let client = if let Some(auth_value) = auth_header {
+        let mut headers = HeaderMap::new();
+        let header_value = HeaderValue::from_str(&auth_value)
+            .expect("Failed to create header value from auth string");
+        headers.insert(AUTHORIZATION, header_value);
+
+        trace!("Building client with Authorization header");
+        reqwest::Client::builder()
+            .default_headers(headers)
+            .build()
+            .expect("Failed to build reqwest client with headers")
+    } else {
+        reqwest::Client::new()
+    };
+
+    ClientBuilder::new(client)
         .with(RetryTransientMiddleware::new_with_policy(retry_policy))
         .with(reqwest_leaky_bucket::rate_limit_all(rate_limiter))
         .build()
