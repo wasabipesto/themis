@@ -7,7 +7,7 @@ use reqwest_middleware::ClientWithMiddleware;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use serde_jsonlines::append_json_lines;
-
+use std::cmp::Ordering;
 use std::path::Path;
 use std::time::Instant;
 
@@ -189,16 +189,16 @@ async fn get_trades(client: &ClientWithMiddleware, market: &Value) -> Result<Vec
         // Check the length of the returned array
         // If the length is less than the limit, we've reached the end of the trades
         if trades_arr.len() >= limit {
-            // update the cursor
+            // Update the cursor
             offset += limit;
-            // save the trades
+            // Save the trades
             trades.extend(trades_arr);
-            // save the previous last hash
+            // Save the previous last hash
             prev_last_hash = Some(last_hash);
         } else {
-            // save the trades
+            // Save the trades
             trades.extend(trades_arr);
-            // break out
+            // Break out
             break;
         }
     }
@@ -274,7 +274,7 @@ pub async fn download_index(index_file_path: &Path) -> Result<()> {
     );
 
     // Loop through questions endpoint until all are downloaded
-    let limit = 500;
+    let limit = 1000;
     let mut total_items = 0;
     let mut cursor: Option<String> = None;
     loop {
@@ -297,7 +297,8 @@ pub async fn download_index(index_file_path: &Path) -> Result<()> {
 
         // Build items from batch
         let mut items = Vec::new();
-        for market in batch.clone() {
+        let batch_size = batch.len();
+        for market in batch {
             let id = market
                 .get("question_id")
                 .context("Expected 'question_id' field in market.")?
@@ -319,33 +320,33 @@ pub async fn download_index(index_file_path: &Path) -> Result<()> {
 
         // Immediately write batch to temp file
         append_json_lines(&temp_file_path, items)?;
-        total_items += batch.len();
-        trace!(
-            "{platform}: Wrote {} items to temp file (total: {})",
-            batch.len(),
-            total_items
-        );
+        total_items += batch_size;
+        trace!("{platform}: Wrote {batch_size} items to temp file (total: {total_items})");
 
         // Update the cursor or break
-        if batch.len() == limit {
-            let cursor_some = response
-                .get("next_cursor")
-                .context("Expected 'next_cursor' field in response.")?
-                .as_str()
-                .context("Failed to interpret 'next_cursor' as string.")?
-                .to_owned();
-            debug!(
-                "Got {} items and new {platform} cursor: {cursor_some}",
-                batch.len()
-            );
-            cursor = Some(cursor_some);
-        } else {
-            debug!(
-                "Batch size {} was smaller than limit {}, we must be done here.",
-                batch.len(),
-                limit
-            );
-            break;
+        match batch_size.cmp(&limit) {
+            Ordering::Equal => {
+                let cursor_some = response
+                    .get("next_cursor")
+                    .context("Expected 'next_cursor' field in response.")?
+                    .as_str()
+                    .context("Failed to interpret 'next_cursor' as string.")?
+                    .to_owned();
+                debug!("Got {batch_size} items and new {platform} cursor: {cursor_some}");
+                cursor = Some(cursor_some);
+            }
+            Ordering::Greater => {
+                error!(
+                    "Batch size {batch_size} was larger than limit {limit}! Something weird is going on."
+                );
+                break;
+            }
+            Ordering::Less => {
+                debug!(
+                    "Batch size {batch_size} was smaller than limit {limit}, we must be done here."
+                );
+                break;
+            }
         }
     }
 
