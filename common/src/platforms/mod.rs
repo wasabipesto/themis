@@ -3,7 +3,7 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use clap::ValueEnum;
-use log::{debug, error, info, warn};
+use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
 use std::collections::{HashMap, HashSet};
@@ -94,6 +94,7 @@ impl Platform {
     /// - The index item doesn't have the appropriate key
     ///   (`close_time`, `resolutionTime`, `actual_close_time`, or `end_date_iso`)
     /// - The value couldn't be converted to a `DateTime` with `Timestamp`
+    /// - The market hasn't closed yet
     fn get_close_datetime(self, item: &IndexItem) -> Result<DateTime<Utc>> {
         let close_datetime = match self {
             Platform::Kalshi => {
@@ -159,7 +160,7 @@ impl Platform {
                 let close_datetime = match self.get_close_datetime(&item) {
                     Ok(dt) => Some(dt),
                     Err(e) => {
-                        error!("Failed to get close datetime for item {id}: {e}");
+                        debug!("Failed to get close datetime for item {id}: {e}");
                         None
                     }
                 };
