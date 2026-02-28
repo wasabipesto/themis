@@ -6,11 +6,14 @@ use lipsum::{lipsum_title_with_rng, lipsum_with_rng, lipsum_words_with_rng};
 use rand::Rng;
 use sluggify::sluggify::sluggify;
 
-use crate::{
-    HistoryChart, ImpactType, Label, Link, MarketData, MarketStatus, MarketTitle, MarketType,
+use super::{HistoryChart, ImpactType, Link, XRayAnalysis, XRayAssessment, XRayConfidenceAspect};
+use crate::market::{Market, MarketStatus, MarketTitle, MarketType};
+use crate::outcomes::{
     OutcomeBinary, OutcomeContinuous, OutcomeDate, OutcomeDiscrete, OutcomeNumeric, Outcomes,
-    Platform, Probability, Url, XRayAnalysis, XRayAssessment, XRayConfidenceAspect,
 };
+use crate::platform::Platform;
+use crate::probability::Probability;
+use crate::{Label, Url};
 
 fn sample_market_outcomes(market_type: &MarketType) -> Result<Outcomes> {
     let mut rng = rand::rng();
@@ -150,7 +153,7 @@ fn sample_market_outcomes(market_type: &MarketType) -> Result<Outcomes> {
     Ok(outcomes)
 }
 
-fn sample_market_data() -> Result<MarketData> {
+fn sample_market_data() -> Result<Market> {
     let mut rng = rand::rng();
     let platform = Platform::Kalshi;
     let title_text = lipsum_title_with_rng(&mut rng);
@@ -186,7 +189,7 @@ fn sample_market_data() -> Result<MarketData> {
     let tags = (0..5).map(|_| lipsum_words_with_rng(&mut rng, 2)).collect();
     let outcomes = sample_market_outcomes(&market_type)?;
 
-    let data = MarketData {
+    let data = Market {
         platform_name: platform.into(),
         title: MarketTitle(title_text),
         url,
@@ -204,7 +207,7 @@ fn sample_market_data() -> Result<MarketData> {
     Ok(data)
 }
 
-fn sample_confidence_aspects(_market: &MarketData) -> Result<Vec<XRayConfidenceAspect>> {
+fn sample_confidence_aspects(_market: &Market) -> Result<Vec<XRayConfidenceAspect>> {
     let data = vec![
         XRayConfidenceAspect {
             icon: "mdi:arrow-collapse-horizontal".into(),
@@ -366,7 +369,7 @@ fn sample_assessment_data(confidence_aspects: &[XRayConfidenceAspect]) -> Result
     }
 }
 
-fn sample_history_chart(_market: &MarketData) -> Result<HistoryChart> {
+fn sample_history_chart(_market: &Market) -> Result<HistoryChart> {
     let data = HistoryChart {
         title: "History Chart".to_string(),
         points: vec![],
@@ -374,7 +377,7 @@ fn sample_history_chart(_market: &MarketData) -> Result<HistoryChart> {
     Ok(data)
 }
 
-fn sample_similar_markets(count: usize) -> Result<Vec<MarketData>> {
+fn sample_similar_markets(count: usize) -> Result<Vec<Market>> {
     let mut data = Vec::with_capacity(count);
     for _ in 0..count {
         data.push(sample_market_data()?);

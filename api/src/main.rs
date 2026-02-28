@@ -15,9 +15,9 @@ use std::env;
 mod error;
 use error::ResultExt;
 
-use themis_common::XRayAnalysis;
 use themis_common::db_util::debug::{TableDebugInfo, get_table_debug_info};
 use themis_common::db_util::pool::{DbPool, init_db_pool};
+use themis_common::xray::XRayAnalysis;
 use themis_common::xray::sample::sample_xray_analysis;
 
 // ============================================================================

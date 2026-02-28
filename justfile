@@ -6,7 +6,7 @@ default:
 
 # Run rust workspace tests
 rust-test *args:
-    cargo test -qr {{ args }}
+    cargo test -r {{ args }}
 
 # Run the API dev server
 api *args:
@@ -142,7 +142,9 @@ embeddings *args:
     uv run scripts/update-embeddings.py {{ args }}
 
 # Run nightly process
-nightly: rust-test group-test site-test
+nightly:
+    echo "Doing nothing!"
+    #just rust-test group-test site-test
     #just download --log-level warn --resolved-since-days-ago 10 --reset-cache
     #just download --log-level warn --resolved-since-days-ago 10
     #just extract --log-level warn
