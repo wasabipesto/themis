@@ -1,8 +1,7 @@
 //! Criterion points are specific instantaneous probabilities or
 //! aggregated probabilities that can be used as the outcome prediction value.
 
-use crate::market::Market;
-use crate::probability::Probability;
+use crate::{MarketData, Probability};
 use serde::{Deserialize, Serialize};
 
 /// All possible criterion types.
@@ -50,7 +49,7 @@ impl CriterionType {
     }
 
     /// Given a market, get the criterion probability.
-    pub fn get_criterion_probability(_market: Market) -> Probability {
+    pub fn get_criterion_probability(_market: MarketData) -> Probability {
         todo!()
     }
 }

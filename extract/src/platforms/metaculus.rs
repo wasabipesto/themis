@@ -153,31 +153,29 @@ pub enum MetaculusQuestion {
         /// Unknown.
         resolution: Option<String>,
     },
+    /// TODO
+    Discrete {
+        /// Typical attributes.
+        id: u64,
+        title: String,
+        description: String,
+        resolution_criteria: String,
+        fine_print: String,
+        aggregations: MetaculusAggregationSeries,
+        /// TODO
+        resolution: Option<String>,
+    },
 }
 impl MetaculusQuestion {
     /// Get the ID from any question type
     pub fn id(&self) -> u64 {
         match self {
-            Self::Binary {
-                id,
-                ..
-            } => *id,
-            Self::Numeric {
-                id,
-                ..
-            } => *id,
-            Self::Date {
-                id,
-                ..
-            } => *id,
-            Self::MultipleChoice {
-                id,
-                ..
-            } => *id,
-            Self::Conditional {
-                id,
-                ..
-            } => *id,
+            Self::Binary { id, .. } => *id,
+            Self::Numeric { id, .. } => *id,
+            Self::Date { id, .. } => *id,
+            Self::MultipleChoice { id, .. } => *id,
+            Self::Conditional { id, .. } => *id,
+            Self::Discrete { id, .. } => *id,
         }
     }
 }
@@ -418,15 +416,11 @@ fn standardize_single(
                 criterion_probabilities,
             })
         }
-        MetaculusQuestion::Numeric {
-            ..
-        } => Err(MarketError::MarketTypeNotImplemented(
+        MetaculusQuestion::Numeric { .. } => Err(MarketError::MarketTypeNotImplemented(
             market_id.to_owned(),
             "Metaculus::Numeric".to_string(),
         )),
-        MetaculusQuestion::Date {
-            ..
-        } => Err(MarketError::MarketTypeNotImplemented(
+        MetaculusQuestion::Date { .. } => Err(MarketError::MarketTypeNotImplemented(
             market_id.to_owned(),
             "Metaculus::Date".to_string(),
         )),
@@ -464,8 +458,10 @@ fn standardize_single(
             let title = format!("{} | {}", title, resolved_option);
 
             // Get index of resolved option for prob lookup.
-            let index =
-                options.iter().position(|option| option == resolved_option).ok_or_else(|| {
+            let index = options
+                .iter()
+                .position(|option| option == resolved_option)
+                .ok_or_else(|| {
                     MarketError::DataInvalid(
                         market_id.to_owned(),
                         "Multiple choice resolution {resolved_option} not found in options."
@@ -520,11 +516,13 @@ fn standardize_single(
                 criterion_probabilities,
             })
         }
-        MetaculusQuestion::Conditional {
-            ..
-        } => Err(MarketError::MarketTypeNotImplemented(
+        MetaculusQuestion::Conditional { .. } => Err(MarketError::MarketTypeNotImplemented(
             market_id.to_owned(),
             "Metaculus::Conditional".to_string(),
+        )),
+        MetaculusQuestion::Discrete { .. } => Err(MarketError::MarketTypeNotImplemented(
+            market_id.to_owned(),
+            "Metaculus::Discrete".to_string(),
         )),
     }
 }
@@ -535,7 +533,10 @@ fn format_market_description(
     resolution_criteria: &str,
     fine_print: &str,
 ) -> String {
-    format!("{}\n\n{}\n\n{}", description, resolution_criteria, fine_print)
+    format!(
+        "{}\n\n{}\n\n{}",
+        description, resolution_criteria, fine_print
+    )
 }
 
 /// Creates a standardized market URL from a Metaculus question ID
@@ -624,16 +625,15 @@ pub fn build_prob_segments(
         let means = item.means.unwrap_or_default();
         let prob = match means.get(index) {
             None => {
-                return Err(anyhow!("Could not get index {index} in means list {:?}.", means));
+                return Err(anyhow!(
+                    "Could not get index {index} in means list {:?}.",
+                    means
+                ));
             }
             Some(prob) => prob.to_owned(),
         };
 
-        segments.push(ProbSegment {
-            start,
-            end,
-            prob,
-        });
+        segments.push(ProbSegment { start, end, prob });
     }
     Ok(segments)
 }

@@ -9,20 +9,24 @@ rust-test *args:
     cargo test -r {{ args }}
 
 # Run the API dev server
+build *args:
+    cargo build -r {{ args }}
+
+# Run the API dev server
 api *args:
-    cargo run -qr -p themis_api -- {{ args }}
+    cargo run -r -p themis_api -- {{ args }}
 
 # Download new markets to cache
 download *args:
-    cargo run -qr -p themis_download -- {{ args }}
+    cargo run -r -p themis_download -- {{ args }}
 
 # Extract markets from cache
 extract *args:
-    cargo run -qr -p themis_extract -- {{ args }}
+    cargo run -r -p themis_extract -- {{ args }}
 
 # Grade markets
 grade *args:
-    cargo run -qr -p themis_grader -- {{ args }}
+    cargo run -r -p themis_grader -- {{ args }}
 
 # Start the database containers
 db-up:

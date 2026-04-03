@@ -1,7 +1,9 @@
 //! Themis database utilities
 
 use anyhow::{Context, Result};
+#[allow(clippy::wildcard_imports)]
 use diesel::prelude::*;
+#[allow(clippy::wildcard_imports)]
 use diesel::sql_types::*;
 use serde::{Deserialize, Serialize};
 
@@ -35,8 +37,14 @@ pub struct TableDebugInfo {
 }
 
 /// Get all tables and their row counts, for debugging
+///
+/// # Errors
+/// Returns an error if:
+/// - The database connection fails
+/// - The SQL query fails to evaluate
+/// - The returned data fails to deserialize
 pub fn get_table_debug_info(conn: &mut DbConn) -> Result<Vec<TableDebugInfo>> {
-    let query = r#"
+    let query = "
         SELECT
             t.tablename as table_name,
             (xpath('/row/cnt/text()', xml_count))[1]::text::bigint as row_count,
@@ -58,7 +66,7 @@ pub fn get_table_debug_info(conn: &mut DbConn) -> Result<Vec<TableDebugInfo>> {
         ) t
         LEFT JOIN pg_stat_user_tables s ON s.relname = t.tablename AND s.schemaname = 'public'
         ORDER BY table_name
-    "#;
+    ";
 
     let results: Vec<TableDebugInfo> = diesel::sql_query(query)
         .load(conn)
