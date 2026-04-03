@@ -2,16 +2,16 @@
 //! Manifold API docs: https://docs.manifold.markets/api
 //! Source code: https://github.com/manifoldmarkets/manifold/tree/main/backend/api/src
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chrono::serde::{ts_milliseconds, ts_milliseconds_option};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
 
-use crate::criteria::{calculate_all_criteria, CriterionProbability};
+use crate::criteria::{CriterionProbability, calculate_all_criteria};
 use crate::platforms::{MarketAndProbs, MarketResult};
-use crate::{helpers, MarketError, ProbSegment, StandardMarket};
+use crate::{MarketError, ProbSegment, StandardMarket, helpers};
 
 const MANIFOLD_EXCHANGE_RATE: f32 = 100.0;
 
@@ -382,7 +382,7 @@ pub fn standardize(input: &ManifoldData) -> MarketResult<Vec<MarketAndProbs>> {
                         return Err(MarketError::DataInvalid(
                             market_id.to_owned(),
                             "Market lacks resolution value.".to_string(),
-                        ))
+                        ));
                     }
                 };
 
@@ -607,17 +607,19 @@ pub fn build_prob_segments(raw_history: &[ManifoldBet]) -> Vec<ProbSegment> {
         // Get the probability after the bet was made.
         let prob = bet.prob_after;
 
-        segments.push(ProbSegment { start, end, prob });
+        segments.push(ProbSegment {
+            start,
+            end,
+            prob,
+        });
     }
     segments
 }
 
 /// Get the number of unique traders from the bet log.
 fn get_traders_count(bets: &[ManifoldBet]) -> u32 {
-    bets.iter()
-        .map(|bet| bet.user_id.clone())
-        .collect::<std::collections::HashSet<_>>()
-        .len() as u32
+    bets.iter().map(|bet| bet.user_id.clone()).collect::<std::collections::HashSet<_>>().len()
+        as u32
 }
 
 /// Get the total trade volume from the bet log.
@@ -725,6 +727,5 @@ fn get_category(tags: &[String]) -> Option<String> {
 
     let category_map: HashMap<&str, &str> = CATEGORIES.iter().cloned().collect();
 
-    tags.iter()
-        .find_map(|tag| category_map.get(tag.as_str()).map(|&cat| cat.to_string()))
+    tags.iter().find_map(|tag| category_map.get(tag.as_str()).map(|&cat| cat.to_string()))
 }

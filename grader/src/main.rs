@@ -9,7 +9,7 @@ use reqwest::blocking::Client;
 use std::env;
 use std::time::Duration;
 
-use themis_grader::{api, scores, Market, PostgrestParams};
+use themis_grader::{Market, PostgrestParams, api, scores};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about)]
@@ -23,16 +23,8 @@ fn main() -> Result<()> {
     // Get command line args
     let args = Args::parse();
 
-    // Read log level from arg and update environment variable
-    let log_level = args.log_level.to_lowercase();
-    match log_level.as_str() {
-        "error" | "warn" | "info" | "debug" | "trace" => env::set_var("RUST_LOG", log_level),
-        _ => {
-            println!("Invalid log level, resetting to INFO.");
-            env::set_var("RUST_LOG", "info")
-        }
-    }
-    env_logger::init();
+    // Set log level from environment or CLI argument
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or(&args.log_level));
     debug!("Command line args: {:?}", args);
 
     // Get environment variables

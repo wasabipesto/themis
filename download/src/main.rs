@@ -1,17 +1,19 @@
 //! Themis fetch binary source.
 //! Be warned: running this with all platforms enabled takes a lot of memory and disk space!
 
+#![deny(clippy::all)]
+#![warn(clippy::pedantic)]
+
 use chrono::DateTime;
 use chrono::Duration;
 use chrono::Utc;
 use clap::Parser;
-use log::{debug, info};
-use std::env;
+use log::{debug, error, info};
 use std::fs;
 use std::path::PathBuf;
 use tokio::task::JoinHandle;
 
-use themis_download::platforms::{Platform, PlatformHandler};
+use themis_common::platforms::{Platform, PlatformHandler};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about)]
@@ -21,7 +23,7 @@ struct Args {
     platform: Option<Platform>,
 
     /// Output directory for JSON files
-    #[arg(short, long, default_value = "../cache")]
+    #[arg(short, long, default_value = "cache/download")]
     output_dir: PathBuf,
 
     /// Only download markets that resolved since this date/time (ISO 8601)
@@ -47,63 +49,76 @@ struct Args {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    // get command line args
+    // Get command line args
     let args = Args::parse();
 
-    // read log level from arg and update environment variable
-    let log_level = args.log_level.to_lowercase();
-    match log_level.as_str() {
-        "error" | "warn" | "info" | "debug" | "trace" => env::set_var("RUST_LOG", log_level),
-        _ => {
-            // invalid, reset to 'info' as a default
-            println!("Invalid log level, resetting to INFO.");
-            env::set_var("RUST_LOG", "info")
-        }
-    }
-    env_logger::init();
-    debug!("Command line args: {:?}", args);
+    // Set log level from environment or CLI argument
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or(&args.log_level));
+    debug!("Command line args: {args:?}");
 
-    // if the user requested a specific platform, format it into a list
+    // If the user requested a specific platform, format it into a list
     // otherwise, return the default platform list
     let platforms: Vec<Platform> = match args.platform {
         Some(platform) => Vec::from([platform]),
         None => Platform::all(),
     };
-    debug!("Platforms to process: {:?}", platforms);
+    debug!("Platforms to process: {platforms:?}");
 
-    // ensure output directory exists
-    // if it doesn't exist, create it
+    // Ensure output directory exists
+    // If it doesn't exist, create it
     let output_dir = args.output_dir;
     if !output_dir.exists() {
         info!("Creating output directory \"{}\"", output_dir.display());
         fs::create_dir_all(&output_dir).expect("Could not create output directory!");
     }
 
-    // start the download for all platforms in parallel
+    // Start the download for all platforms in parallel
     let resolved_since = match args.resolved_since_days_ago {
         Some(days_ago) => Some(Utc::now() - Duration::days(days_ago)),
         None => args.resolved_since,
     };
-    let tasks: Vec<JoinHandle<()>> = platforms
+    let tasks: Vec<JoinHandle<Result<(), anyhow::Error>>> = platforms
         .into_iter()
         .map(|platform| {
             tokio::spawn({
                 let output_dir = output_dir.clone();
                 async move {
-                    platform
+                    match platform
                         .download(
                             &output_dir,
                             &args.reset_index,
                             &args.reset_cache,
-                            &resolved_since,
+                            resolved_since,
                         )
-                        .await;
+                        .await
+                    {
+                        Ok(()) => Ok(()),
+                        Err(e) => {
+                            error!("{platform}: Download failed: {e}");
+                            Err(e)
+                        }
+                    }
                 }
             })
         })
         .collect();
-    futures::future::try_join_all(tasks)
+    let results = futures::future::try_join_all(tasks)
         .await
         .expect("Failed to join tasks");
-    info!("All platform downloads complete.");
+
+    let mut success_count = 0;
+    let mut failure_count = 0;
+    for result in results {
+        match result {
+            Ok(()) => success_count += 1,
+            Err(_) => failure_count += 1,
+        }
+    }
+
+    if failure_count == 0 {
+        info!("All {success_count} platform downloads completed successfully.");
+    } else {
+        error!("{failure_count} platform download(s) failed, {success_count} succeeded.");
+        std::process::exit(1);
+    }
 }

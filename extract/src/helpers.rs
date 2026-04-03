@@ -1,7 +1,7 @@
 //! Helper functions for dealing with probabilities over time
 
 use crate::{DailyProbability, ProbSegment};
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use chrono::{DateTime, Duration, TimeDelta, TimeZone, Utc};
 use log::{debug, error, warn};
 
@@ -49,13 +49,8 @@ pub fn get_prob_time_avg(
     if total_weight > 0.0 {
         Ok(weighted_sum / total_weight)
     } else {
-        error!(
-            "No prob segments found in window ({start} to {end}): {:?}",
-            probs
-        );
-        Err(anyhow!(
-            "No valid time segments found for probability calculation"
-        ))
+        error!("No prob segments found in window ({start} to {end}): {:?}", probs);
+        Err(anyhow!("No valid time segments found for probability calculation"))
     }
 }
 
@@ -93,9 +88,8 @@ pub fn get_prob_at_percent(
     }
 
     let duration_seconds = (end - start).num_seconds();
-    let time_from_start = TimeDelta::new((duration_seconds as f32 * percent) as i64, 0).ok_or(
-        anyhow!("Could not create TimeDelta for {percent} between {start} and {end}"),
-    )?;
+    let time_from_start = TimeDelta::new((duration_seconds as f32 * percent) as i64, 0)
+        .ok_or(anyhow!("Could not create TimeDelta for {percent} between {start} and {end}"))?;
     let time = start + time_from_start;
     get_prob_at_time(probs, time)
 }
@@ -129,14 +123,8 @@ pub fn get_daily_probabilities(
         return Ok(vec![]);
     }
 
-    let range_start = probs
-        .first()
-        .context("Failed to get first probability segment")?
-        .start;
-    let range_end = probs
-        .last()
-        .context("Failed to get last probability segment")?
-        .end;
+    let range_start = probs.first().context("Failed to get first probability segment")?.start;
+    let range_end = probs.last().context("Failed to get last probability segment")?.end;
 
     let mut daily_probs = Vec::new();
     let mut day_start = dt_set_hour(range_start, 0)?;
@@ -198,19 +186,19 @@ pub fn validate_prob_segments(probs: &[ProbSegment]) -> Result<()> {
             // Check that the previous segment does not intrude
             if segment.start < prev.end {
                 return Err(anyhow!(
-                "Overlapping segments detected: previous segment ends at {}, this segment starts at {}",
-                prev.end,
-                segment.start
-            ));
+                    "Overlapping segments detected: previous segment ends at {}, this segment starts at {}",
+                    prev.end,
+                    segment.start
+                ));
             }
 
             // Check that the previous segment meets this one
             if segment.start > prev.end {
                 return Err(anyhow!(
-                "Gap between segments detected: previous segment ends at {}, this segment starts at {}",
-                prev.end,
-                segment.start
-            ));
+                    "Gap between segments detected: previous segment ends at {}, this segment starts at {}",
+                    prev.end,
+                    segment.start
+                ));
             }
         }
 
@@ -234,9 +222,7 @@ mod tests {
     use chrono::TimeZone;
 
     fn create_dt(year: i32, month: u32, day: u32, hour: u32) -> DateTime<Utc> {
-        Utc.with_ymd_and_hms(year, month, day, hour, 0, 0)
-            .single()
-            .unwrap()
+        Utc.with_ymd_and_hms(year, month, day, hour, 0, 0).single().unwrap()
     }
 
     #[test]
@@ -473,9 +459,7 @@ mod tests {
 
         // Empty input
         let empty_probs: Vec<ProbSegment> = vec![];
-        assert!(get_daily_probabilities(&empty_probs, "")
-            .unwrap()
-            .is_empty());
+        assert!(get_daily_probabilities(&empty_probs, "").unwrap().is_empty());
     }
 
     #[test]
@@ -505,10 +489,7 @@ mod tests {
 
         // Empty segments
         let empty_probs: Vec<ProbSegment> = vec![];
-        assert_eq!(
-            get_prob_at_percent(&empty_probs, start, end, 0.5).unwrap(),
-            0.5
-        );
+        assert_eq!(get_prob_at_percent(&empty_probs, start, end, 0.5).unwrap(), 0.5);
     }
 
     #[test]

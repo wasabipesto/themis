@@ -1,0 +1,359 @@
+{
+    "market": {
+        "platform_name": "Kalshi",
+        "title": "Nollem Vituperatum Iam",
+        "url": "https://kalshi.com/markets/nollem-vituperatum-iam",
+        "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi ut aliquip ex ea commodi consequatur? Quis autem vel eum iure reprehenderit, qui in una virtute ponunt et.\n Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magnam aliquam quaerat voluptatem. Ut enim sapientiam, temperantiam, fortitudinem copulatas esse docui cum.",
+        "market_status": "Open",
+        "market_type": "Binary",
+        "volume_usd": 260418.0,
+        "unique_traders": 2158,
+        "open_datetime": "2020-11-17T22:22:58.373756125Z",
+        "expected_close_datetime": "2030-05-16T00:22:58.373761795Z",
+        "last_updated_datetime": "2026-01-21T04:22:58.373762445Z",
+        "tags": [
+            "Ignoratione rerum.",
+            "Saluto: 'chaere.",
+            "Nihil posse.",
+            "Civium, qua.",
+            "Inquit, sententiam."
+        ],
+        "outcomes": { "Binary": { "probability": 0.2989503 } }
+    },
+    "assessment": {
+        "title": "High Confidence",
+        "description": "",
+        "confidence_percent": 80.0
+    },
+    "confidence_aspects": [
+        {
+            "icon": "mdi:arrow-collapse-horizontal",
+            "title": "Narrow bid-ask spread",
+            "aspect_name": "narrow-bid-ask-spread",
+            "impact_type": "Positive",
+            "impact_amount": 10.0,
+            "description": "A small gap between \"bid\" and \"ask\" orders means that traders are confident in the current probability. Currently the bid-ask spread is just 1 cent, the lowest it can be.",
+            "links": []
+        },
+        {
+            "icon": "mdi:trophy-variant",
+            "title": "Good past performance on Survivor questions",
+            "aspect_name": "past-performance-in-niche",
+            "impact_type": "Positive",
+            "impact_amount": 10.0,
+            "description": "Kalshi has 14 past markets about Survivor with a cumulative trade volume of $1,148,345. One month prior to resolution, those markets were on average 11% away from the actual resolution value.",
+            "links": []
+        },
+        {
+            "icon": "mdi:handshake",
+            "title": "Other prediction markets agree",
+            "aspect_name": "arbitrage",
+            "impact_type": "Positive",
+            "impact_amount": 10.0,
+            "description": "Polymarket has their own market on this question with $34,125 in volume and an estimate within 5% of this one.",
+            "links": [
+                {
+                    "preface": null,
+                    "text": "See it here.",
+                    "url": "https://polymarket.com/event/survivor-49-winner"
+                }
+            ]
+        },
+        {
+            "icon": "mdi:clock-fast",
+            "title": "Expected to resolve soon",
+            "aspect_name": "resolution-timeframe",
+            "impact_type": "Positive",
+            "impact_amount": 5.0,
+            "description": "This market is scheduled to close in less than a week, which means traders can invest without locking up capital for a long time.",
+            "links": []
+        },
+        {
+            "icon": "mdi:chart-line-variant",
+            "title": "Price has been stable for 30 days",
+            "aspect_name": "price-stability",
+            "impact_type": "Positive",
+            "impact_amount": 5.0,
+            "description": "The price hasn't drifted more than 10% in the last month, even though the market has been liquid the entire time.",
+            "links": []
+        },
+        {
+            "icon": "mdi:waves",
+            "title": "Good market depth",
+            "aspect_name": "overall-market-depth",
+            "impact_type": "Positive",
+            "impact_amount": 0.0,
+            "description": "There are $14,323 of limit orders within 5% of the current price, which is very high for Kalshi and indicates high confidence. If you had insider information, you could wager $10,000 to win up to $104,365.",
+            "links": []
+        },
+        {
+            "icon": "mdi:percent",
+            "title": "Kalshi return on investment",
+            "aspect_name": "kalshi-return-on-investment",
+            "impact_type": "Positive",
+            "impact_amount": 0.0,
+            "description": "Kalshi offers 3.25% interest on held positions. On longer markets this would be expected to improve accuracy but this market will resolve soon so the point is moot.",
+            "links": []
+        },
+        {
+            "icon": "mdi:gavel",
+            "title": "Unambiguous resolution criteria",
+            "aspect_name": "resolution-criteria",
+            "impact_type": "Positive",
+            "impact_amount": 0.0,
+            "description": "The resolution criteria is very clear and covers edge cases clearly. We should expect that the market's resolution will seem fair in hindsight.",
+            "links": []
+        },
+        {
+            "icon": "mdi:gift",
+            "title": "Moderate liquidity rewards",
+            "aspect_name": "liquidity-rewards",
+            "impact_type": "Positive",
+            "impact_amount": 0.0,
+            "description": "Kalshi provides liquidity rewards for at least one contract within this question, with a pool of $300 for those with open orders. This is moderate for Kalshi.",
+            "links": []
+        },
+        {
+            "icon": "mdi:volume-low",
+            "title": "Low recent trade volume",
+            "aspect_name": "recent-trade-volume",
+            "impact_type": "Negative",
+            "impact_amount": -5.0,
+            "description": "Trade volume in the last week is low compared to other points in this market's history. This could indicate that new information has yet to be priced into this market.",
+            "links": []
+        },
+        {
+            "icon": "mdi:account-group-outline",
+            "title": "Low number of unique traders",
+            "aspect_name": "total-unique-traders",
+            "impact_type": "Negative",
+            "impact_amount": -5.0,
+            "description": "The majority of trades on this market are from just 24 accounts. This is low for Kalshi and could indicate poor visibility.",
+            "links": []
+        },
+        {
+            "icon": "mdi:account-alert",
+            "title": "Many new or unprofitable traders",
+            "aspect_name": "trader-profiling",
+            "impact_type": "Neutral",
+            "impact_amount": 0.0,
+            "description": "There are 13 instances of new users betting large amounts on this market, which could affect the price significantly. Additionally, there are 2 instances of users with very poor past performance shifting this market by more than 3%. However, all of these have been corrected by other traders.",
+            "links": []
+        },
+        {
+            "icon": "mdi:alert-circle",
+            "title": "Potential misinformation in comments",
+            "aspect_name": "comment-misinformation",
+            "impact_type": "Neutral",
+            "impact_amount": 0.0,
+            "description": "Analysis of the comment section shows that some users may be attempting to manipulate the market through misinformation.",
+            "links": []
+        },
+        {
+            "icon": "mdi:newspaper-variant-outline",
+            "title": "Inconsistent news coverage",
+            "aspect_name": "news-coverage",
+            "impact_type": "Neutral",
+            "impact_amount": 0.0,
+            "description": "Recent news articles seem to indicate that the probability may be more uncertain than this market indicates.",
+            "links": []
+        }
+    ],
+    "history_chart": { "title": "History Chart", "points": [] },
+    "similar_markets": [
+        {
+            "platform_name": "Kalshi",
+            "title": "Voluptas sit Aspernatur aut Odit aut Fugit",
+            "url": "https://kalshi.com/markets/voluptas-sit-aspernatur-aut-odit-aut-fugit",
+            "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore disputandum putant. Sed ut iis bonis erigimur, quae expectamus, sic laetamur iis, quae recordamur. Stulti autem malorum memoria torquentur, sapientes bona praeterita grata recordatione renovata delectant. Est autem situm in nobis ut et.\n Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore disputandum putant. Sed ut perspiciatis, unde omnis iste natus error sit voluptatem accusantium.",
+            "market_status": "Open",
+            "market_type": "Date",
+            "volume_usd": 700722.94,
+            "unique_traders": 1554,
+            "open_datetime": "2021-02-17T08:22:58.375068561Z",
+            "expected_close_datetime": "2029-05-02T17:22:58.375071631Z",
+            "last_updated_datetime": "2026-01-24T03:22:58.375072191Z",
+            "tags": [
+                "Ex quo.",
+                "Dicit perpauca.",
+                "Et pro.",
+                "Multam operam.",
+                "Quam illum."
+            ],
+            "outcomes": {
+                "Date": [
+                    {
+                        "label": "Se Cohaerescant ex",
+                        "date_strike_low": "2026-01-29T21:22:58.375097861Z",
+                        "date_strike_midpoint": "2026-02-05T07:40:06.946526432Z",
+                        "date_strike_high": "2026-02-11T17:57:15.517955003Z",
+                        "probability": 0.1680752
+                    },
+                    {
+                        "label": "Praeterea et Appetendi et",
+                        "date_strike_low": "2026-02-11T17:57:15.517955003Z",
+                        "date_strike_midpoint": "2026-02-18T04:14:24.089383574Z",
+                        "date_strike_high": "2026-02-24T14:31:32.660812145Z",
+                        "probability": 0.17123604
+                    },
+                    {
+                        "label": "Tribuat Quid in Omni re Doloris Amotio",
+                        "date_strike_low": "2026-02-24T14:31:32.660812145Z",
+                        "date_strike_midpoint": "2026-03-03T00:48:41.232240716Z",
+                        "date_strike_high": "2026-03-09T11:05:49.803669287Z",
+                        "probability": 0.67132795
+                    },
+                    {
+                        "label": "Poetae Fabulas Male Credo Mererer",
+                        "date_strike_low": "2026-03-09T11:05:49.803669287Z",
+                        "date_strike_midpoint": "2026-03-15T21:22:58.375097858Z",
+                        "date_strike_high": "2026-03-22T07:40:06.946526429Z",
+                        "probability": 0.6610625
+                    },
+                    {
+                        "label": "Hostem Impetum Fecisse aut in Liberos",
+                        "date_strike_low": "2026-03-22T07:40:06.946526429Z",
+                        "date_strike_midpoint": "2026-03-28T17:57:15.517955Z",
+                        "date_strike_high": "2026-04-04T04:14:24.089383571Z",
+                        "probability": 0.8003161
+                    },
+                    {
+                        "label": "Esse Tractatas ne Ipsos Quidem Graecos est",
+                        "date_strike_low": "2026-04-04T04:14:24.089383571Z",
+                        "date_strike_midpoint": "2026-04-10T14:31:32.660812142Z",
+                        "date_strike_high": "2026-04-17T00:48:41.232240713Z",
+                        "probability": 0.15445542
+                    },
+                    {
+                        "label": "In Physicis Plurimum",
+                        "date_strike_low": "2026-04-17T00:48:41.232240713Z",
+                        "date_strike_midpoint": "2026-04-23T11:05:49.803669284Z",
+                        "date_strike_high": "2026-04-29T21:22:58.375097855Z",
+                        "probability": 0.05212474
+                    }
+                ]
+            }
+        },
+        {
+            "platform_name": "Kalshi",
+            "title": "Amicitia Tamen Ipsi Amici Propter se",
+            "url": "https://kalshi.com/markets/amicitia-tamen-ipsi-amici-propter-se",
+            "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magnam aliquam quaerat voluptatem. Ut enim virtutes, de quibus neque depravate iudicant neque corrupte, nonne ei maximam gratiam habere debemus, qui hac exaudita quasi voce naturae sic eam firme graviterque comprehenderit, ut omnes.\n Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magnam aliquam quaerat voluptatem. Ut enim aeque doleamus animo, cum corpore dolemus, fieri.",
+            "market_status": "Open",
+            "market_type": "Binary",
+            "volume_usd": 455998.34,
+            "unique_traders": 4560,
+            "open_datetime": "2024-08-20T11:22:58.376071635Z",
+            "expected_close_datetime": "2030-07-19T18:22:58.376073705Z",
+            "last_updated_datetime": "2025-12-23T23:22:58.376074345Z",
+            "tags": [
+                "Plura suscepi.",
+                "Romanum atque.",
+                "Tamen eum.",
+                "Defuit? Ego.",
+                "Iudicandum est."
+            ],
+            "outcomes": { "Binary": { "probability": 0.9812957 } }
+        },
+        {
+            "platform_name": "Kalshi",
+            "title": "Suavitate Afflueret et Illaberetur nec Manus",
+            "url": "https://kalshi.com/markets/suavitate-afflueret-et-illaberetur-nec-manus",
+            "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magnam aliquam quaerat voluptatem. Ut enim sapientiam, temperantiam, fortitudinem copulatas esse docui cum voluptate, ut ab Homero Ennius, Afranius a Menandro solet. Nec vero, ut noster Lucilius, recusabo, quo minus animus a se.\n Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magnam aliquam quaerat voluptatem. Ut enim medicorum scientiam non ipsius artis, sed bonae.",
+            "market_status": "Open",
+            "market_type": "DiscreteMulti",
+            "volume_usd": 767745.25,
+            "unique_traders": null,
+            "open_datetime": "2022-09-12T23:22:58.377004269Z",
+            "expected_close_datetime": "2026-04-23T19:22:58.377006189Z",
+            "last_updated_datetime": "2025-12-23T09:22:58.377006589Z",
+            "tags": [
+                "Parabilis et.",
+                "Esse bonum.",
+                "Inliberali labore.",
+                "Est, omnis.",
+                "Labores magnosque."
+            ],
+            "outcomes": {
+                "Discrete": [
+                    {
+                        "label": "Dixit Atomum Perpaulum quo Nihil",
+                        "probability": 0.86428666
+                    },
+                    { "label": "Vocant Tota ab", "probability": 0.06728995 },
+                    {
+                        "label": "Ortum Esse e Corpore",
+                        "probability": 0.99703467
+                    },
+                    {
+                        "label": "Quae Dicat Ille Bene",
+                        "probability": 0.64395654
+                    },
+                    {
+                        "label": "Si Amicitiam Propter Nostram",
+                        "probability": 0.9695084
+                    },
+                    {
+                        "label": "Interpretaris Sicine eos Censes",
+                        "probability": 0.59558296
+                    },
+                    { "label": "Is qui Consul cum", "probability": 0.37720728 },
+                    {
+                        "label": "Quidem Quam Fuit Quem Imitarentur",
+                        "probability": 0.7084677
+                    }
+                ]
+            }
+        },
+        {
+            "platform_name": "Kalshi",
+            "title": "A spe Pariendarum Voluptatum Seiungi non Potest",
+            "url": "https://kalshi.com/markets/a-spe-pariendarum-voluptatum-seiungi-non-potest",
+            "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magnam aliquam quaerat voluptatem. Ut enim medicorum scientiam non ipsius artis, sed bonae valetudinis causa probamus, et gubernatoris ars, quia bene navigandi rationem habet, utilitate, non arte laudatur, sic sapientia, quae ars vivendi.\n Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magnam aliquam quaerat voluptatem. Ut enim sapientiam, temperantiam, fortitudinem copulatas esse docui cum.",
+            "market_status": "Open",
+            "market_type": "Binary",
+            "volume_usd": 952308.9,
+            "unique_traders": 8797,
+            "open_datetime": "2020-06-05T04:22:58.378025404Z",
+            "expected_close_datetime": "2027-02-16T21:22:58.378027294Z",
+            "last_updated_datetime": "2026-01-07T20:22:58.378027734Z",
+            "tags": [
+                "Mererer de.",
+                "Familiari suo.",
+                "Laudabilis aut.",
+                "'Eadem', inquit.",
+                "Late patet."
+            ],
+            "outcomes": { "Binary": { "probability": 0.65138483 } }
+        },
+        {
+            "platform_name": "Kalshi",
+            "title": "Maximam Animi aut",
+            "url": "https://kalshi.com/markets/maximam-animi-aut",
+            "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magnam aliquam quaerat voluptatem. Ut enim aeque doleamus animo, cum corpore dolemus, fieri tamen permagna accessio potest, si aliquod aeternum et infinitum impendere malum nobis opinemur. Quod idem licet transferre in voluptatem, ut.\n Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magnam aliquam quaerat voluptatem. Ut enim medicorum scientiam non ipsius artis, sed bonae.",
+            "market_status": "Open",
+            "market_type": "Continuous",
+            "volume_usd": 428878.8,
+            "unique_traders": 2961,
+            "open_datetime": "2022-09-25T22:22:58.378974098Z",
+            "expected_close_datetime": "2026-07-22T03:22:58.378975878Z",
+            "last_updated_datetime": "2026-01-08T12:22:58.378976298Z",
+            "tags": [
+                "Sic e.",
+                "Quae eidola.",
+                "Quasi concordia.",
+                "Fit ut.",
+                "Ipsam causam."
+            ],
+            "outcomes": {
+                "Continuous": {
+                    "label": "Ita Videri Necesse est Quid",
+                    "continuous_min": 50.0,
+                    "continuous_peak": 55.02835,
+                    "continuous_max": 150.0,
+                    "probability": 0.62935865
+                }
+            }
+        }
+    ]
+}

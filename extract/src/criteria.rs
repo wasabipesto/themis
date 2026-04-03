@@ -5,7 +5,7 @@ use chrono::TimeDelta;
 use serde::{Serialize, Serializer};
 use std::fmt::{self, Display};
 
-use crate::{helpers, ProbSegment};
+use crate::{ProbSegment, helpers};
 
 /// A probability data point used for calibration plots.
 #[derive(Debug, Serialize, Clone)]

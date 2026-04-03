@@ -1,0 +1,22 @@
+[package]
+name = "themis_api"
+description = "API server for the Themis project"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+readme.workspace = true
+license-file.workspace = true
+categories.workspace = true
+keywords.workspace = true
+
+[dependencies]
+themis_common = { workspace = true }
+anyhow = { version = "1.0" }
+build-time = { version = "0.1" }
+env_logger = { version = "0.11" }
+log = { version = "0.4" }
+rand = { version = "0.9.2" }
+rocket = { version = "0.5.1", features = ["json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0" }

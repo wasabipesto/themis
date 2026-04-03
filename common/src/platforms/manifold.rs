@@ -1,18 +1,22 @@
 //! Tools to download and process markets from the Manifold API.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
 use log::{debug, error, trace, warn};
 use reqwest_middleware::ClientWithMiddleware;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use serde_jsonlines::append_json_lines;
-use std::collections::HashMap;
+
+use std::env;
 use std::path::Path;
 use std::time::Instant;
 
 use super::{IndexItem, Platform};
-use crate::util::{display_progress, get_id, get_reqwest_client_ratelimited, send_request};
+use crate::download_util::{
+    finalize_temp_file, get_id, get_reqwest_client_ratelimited_with_auth, get_temp_file_path,
+    pretty_print_download_progress, read_index_item_from_file, send_request,
+};
 
 const MANIFOLD_API_BASE: &str = "https://api.manifold.markets/v0";
 const MANIFOLD_RATELIMIT: usize = 15;
@@ -45,8 +49,8 @@ async fn get_full_market(client: &ClientWithMiddleware, id: &str) -> Result<Valu
 /// Download extended data from the `/bets` endpoint.
 /// Detect errors and warn but don't stop processing.
 /// Source links:
-/// https://github.com/manifoldmarkets/manifold/blob/d23cb16f7a2b781d5097648c29d01ed3bebbf55e/common/src/api/schema.ts#L359
-/// https://github.com/manifoldmarkets/manifold/blob/d23cb16f7a2b781d5097648c29d01ed3bebbf55e/backend/shared/src/supabase/bets.ts#L34
+/// <https://github.com/manifoldmarkets/manifold/blob/d23cb16f7a2b781d5097648c29d01ed3bebbf55e/common/src/api/schema.ts#L359>
+/// <https://github.com/manifoldmarkets/manifold/blob/d23cb16f7a2b781d5097648c29d01ed3bebbf55e/backend/shared/src/supabase/bets.ts#L34>
 async fn get_bet_data(client: &ClientWithMiddleware, market_id: &str) -> Result<Vec<Value>> {
     trace!("Getting Manifold bet data for Market {market_id}");
     let api_url = MANIFOLD_API_BASE.to_owned() + "/bets";
@@ -54,9 +58,9 @@ async fn get_bet_data(client: &ClientWithMiddleware, market_id: &str) -> Result<
     let mut before: Option<String> = None;
     let mut bets: Vec<Value> = Vec::new();
 
-    // loop until all bets are downloaded
+    // Loop until all bets are downloaded
     loop {
-        // send the request
+        // Send the request
         let response = match send_request(
             client
                 .get(&api_url)
@@ -67,9 +71,9 @@ async fn get_bet_data(client: &ClientWithMiddleware, market_id: &str) -> Result<
         )
         .await
         {
-            // if the response came through with no errors, pass along
+            // If the response came through with no errors, pass along
             Ok(resp) => resp,
-            // otherwise, pass an empty vec so we don't break processing
+            // Otherwise, pass an empty Vec so we don't break processing
             Err(err) => {
                 warn!("Failed to fetch bet data for Market {market_id}: {err}");
                 trace!("Returning null JSON object instead.");
@@ -77,32 +81,29 @@ async fn get_bet_data(client: &ClientWithMiddleware, market_id: &str) -> Result<
             }
         };
 
-        // format as an array
+        // Format as an array
         let bet_arr = response
             .as_array()
             .ok_or_else(|| {
-                anyhow!(
-                    "Could not format API response as array. Response: {:?}",
-                    response
-                )
+                anyhow!("Could not format API response as array. Response: {response:?}")
             })?
             .to_owned();
 
-        // check the length of the returned array
-        // if the length is less than the limit, we've reached the end of the bets
+        // Check the length of the returned array
+        // If the length is less than the limit, we've reached the end of the bets
         if bet_arr.len() == limit {
-            // update the cursor
+            // Update the cursor
             let last_bet = bet_arr
                 .last()
                 .ok_or_else(|| anyhow!("Bet batch missing items!"))?;
             let last_id = get_id(last_bet)?;
             before = Some(last_id);
-            // save the bets
+            // Save the bets
             bets.extend(bet_arr);
         } else {
-            // save the bets
+            // Save the bets
             bets.extend(bet_arr);
-            // break out
+            // Break out
             break;
         }
     }
@@ -117,35 +118,50 @@ async fn get_bet_data(client: &ClientWithMiddleware, market_id: &str) -> Result<
 /// Downloads everything to build a market item.
 async fn get_data_and_build_item(
     client: &ClientWithMiddleware,
-    cache: &HashMap<String, IndexItem>,
+    index_file_path: &Path,
     id: &str,
 ) -> Result<ManifoldItem> {
-    // return the row ready for writing
+    // Get market from index file
+    let index_item = read_index_item_from_file(index_file_path, id)?;
+    // Return the row ready for writing
     Ok(ManifoldItem {
         id: id.to_owned(),
         last_updated: Utc::now(),
-        lite_market: cache
-            .get(id)
-            .ok_or_else(|| anyhow!("Cache missing market key {id}!"))?
-            .data
-            .clone(),
+        lite_market: index_item.data.clone(),
         full_market: get_full_market(client, id).await?,
         bets: get_bet_data(client, id).await?,
     })
 }
 
-/// Downloads and returns a new index.
-pub async fn download_index() -> Result<Vec<IndexItem>> {
-    // set platform
+/// Downloads index and streams it directly to disk.
+pub async fn download_index(index_file_path: &Path) -> Result<()> {
+    // Set platform
     let platform = Platform::Manifold;
 
-    // get url and client
-    let api_url = MANIFOLD_API_BASE.to_owned() + "/markets";
-    let client = get_reqwest_client_ratelimited(MANIFOLD_RATELIMIT, MANIFOLD_RATELIMIT_MS);
+    // Get optional API key from environment
+    let auth_header = env::var("MANIFOLD_API_KEY")
+        .ok()
+        .filter(|key| !key.is_empty())
+        .map(|key| format!("Key {key}"));
 
-    // loop through questions endpoint until all are downloaded
+    // Get URL and client
+    let api_url = MANIFOLD_API_BASE.to_owned() + "/markets";
+    let client = get_reqwest_client_ratelimited_with_auth(
+        MANIFOLD_RATELIMIT,
+        MANIFOLD_RATELIMIT_MS,
+        auth_header,
+    )?;
+
+    // Write to temporary file first for atomic operation
+    let temp_file_path = get_temp_file_path(index_file_path);
+    debug!(
+        "{platform}: Writing index to temp file: {}",
+        temp_file_path.display()
+    );
+
+    // Loop through questions endpoint until all are downloaded
     let limit = 1000;
-    let mut index = Vec::new();
+    let mut total_num_items = 0;
     let mut before: Option<String> = None;
     loop {
         let response = send_request(
@@ -158,10 +174,11 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
 
         let batch = response
             .as_array()
-            .map(|response_array| response_array.to_owned())
-            .ok_or_else(|| anyhow!("Could not format API reponse as array {}", response))?;
+            .map(Vec::to_owned)
+            .ok_or_else(|| anyhow!("Could not format API reponse as array {response}"))?;
 
-        // add batch to cache
+        // Build items from batch
+        let mut items = Vec::with_capacity(batch.len());
         for question in batch.clone() {
             let question_id = get_id(&question)?;
             let item = IndexItem {
@@ -169,10 +186,16 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
                 last_updated: Utc::now(),
                 data: question,
             };
-            index.push(item);
+            items.push(item);
         }
 
-        // update the cursor or break
+        // Immediately write batch to temp file
+        append_json_lines(&temp_file_path, items)?;
+        let batch_num_items = batch.len();
+        total_num_items += batch_num_items;
+        trace!("{platform}: Wrote {batch_num_items} items to temp file (total: {total_num_items})");
+
+        // Update the cursor or break
         if batch.len() == limit {
             let cursor_some = batch
                 .last()
@@ -194,19 +217,34 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
             break;
         }
     }
-    Ok(index)
+
+    // Atomically move temp file to final location
+    finalize_temp_file(&temp_file_path, index_file_path)?;
+    debug!("{platform}: Index download complete with {total_num_items} total items");
+    Ok(())
 }
 
 /// Downloads extended data for all markets that haven't been downloaded.
 /// Appends directly into data file.
 pub async fn download_data(
-    index: HashMap<String, IndexItem>,
+    index_file_path: &Path,
     ids_to_download: &[String],
     data_file_path: &Path,
 ) -> Result<()> {
     // Get client
     let platform = Platform::Manifold;
-    let client = get_reqwest_client_ratelimited(MANIFOLD_RATELIMIT, MANIFOLD_RATELIMIT_MS);
+
+    // Get optional API key from environment
+    let auth_header = env::var("MANIFOLD_API_KEY")
+        .ok()
+        .filter(|key| !key.is_empty())
+        .map(|key| format!("Key {key}"));
+
+    let client = get_reqwest_client_ratelimited_with_auth(
+        MANIFOLD_RATELIMIT,
+        MANIFOLD_RATELIMIT_MS,
+        auth_header,
+    )?;
 
     // Set progress counters
     let start_time = Instant::now();
@@ -217,7 +255,7 @@ pub async fn download_data(
     for batch in ids_to_download.chunks(10) {
         let futures = batch
             .iter()
-            .map(|id| get_data_and_build_item(&client, &index, id));
+            .map(|market_id| get_data_and_build_item(&client, index_file_path, market_id));
 
         // Wait for all tasks in the batch to finish
         let results = futures::future::join_all(futures).await;
@@ -228,7 +266,7 @@ pub async fn download_data(
             match result {
                 Ok(item) => {
                     trace!("Item processed: {:?}", item.id);
-                    lines.push(item)
+                    lines.push(item);
                 }
                 Err(e) => error!("Error downloading item {id}: {e}"),
             }
@@ -240,7 +278,7 @@ pub async fn download_data(
 
         // Calculate progress and elapsed time every n items
         completed += batch.len();
-        display_progress(&platform, completed, download_count, &start_time);
+        pretty_print_download_progress(&platform, completed, download_count, &start_time);
     }
     Ok(())
 }

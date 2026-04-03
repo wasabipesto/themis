@@ -1,13 +1,13 @@
 //! Module containing score types and their implementations.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use log::{error, warn};
 use serde::{Serialize, Serializer};
 use std::collections::HashMap;
 use std::fmt::{self, Display};
 
 use crate::{
-    helpers, Category, CriterionProbabilityPoint, DailyProbabilityPoint, Market, Platform, Question,
+    Category, CriterionProbabilityPoint, DailyProbabilityPoint, Market, Platform, Question, helpers,
 };
 
 pub mod brier;
@@ -41,16 +41,10 @@ impl Serialize for ScoreType {
 impl ScoreType {
     /// List of all possible score types.
     pub fn all() -> Vec<ScoreType> {
-        let mut score_types = AbsoluteScoreType::all()
-            .into_iter()
-            .map(ScoreType::Absolute)
-            .collect::<Vec<_>>();
+        let mut score_types =
+            AbsoluteScoreType::all().into_iter().map(ScoreType::Absolute).collect::<Vec<_>>();
 
-        score_types.extend(
-            RelativeScoreType::all()
-                .into_iter()
-                .map(ScoreType::Relative),
-        );
+        score_types.extend(RelativeScoreType::all().into_iter().map(ScoreType::Relative));
 
         score_types
     }
@@ -317,10 +311,7 @@ pub fn calculate_absolute_scores(
     // Index the criterion probabilities by market ID to optimize lookup times.
     let mut criterion_prob_map = HashMap::with_capacity(criterion_probs.len());
     for prob in criterion_probs {
-        criterion_prob_map
-            .entry(prob.market_id.to_owned())
-            .or_insert_with(Vec::new)
-            .push(prob);
+        criterion_prob_map.entry(prob.market_id.to_owned()).or_insert_with(Vec::new).push(prob);
     }
 
     let score_types = AbsoluteScoreType::all();
@@ -335,10 +326,9 @@ pub fn calculate_absolute_scores(
                 match score_type.score_market(market, market_criterion_probs) {
                     Ok(Some(market_score)) => scores.push(market_score),
                     Ok(None) => continue,
-                    Err(e) => error!(
-                        "Error calculating absolute scores for market {}: {}",
-                        market.id, e
-                    ),
+                    Err(e) => {
+                        error!("Error calculating absolute scores for market {}: {}", market.id, e)
+                    }
                 }
             }
         } else {
@@ -362,30 +352,23 @@ pub fn calculate_relative_scores(
         log::trace!("Calculating relative scores for question {}", question.id);
 
         // Filter to markets for the current question
-        let question_markets: Vec<Market> = markets
-            .iter()
-            .filter(|m| m.question_id == Some(question.id))
-            .cloned()
-            .collect();
+        let question_markets: Vec<Market> =
+            markets.iter().filter(|m| m.question_id == Some(question.id)).cloned().collect();
 
         // Get the market IDs for this question
         let question_markets_ids: Vec<String> =
             question_markets.iter().map(|m| m.id.clone()).collect();
 
         // Filter to probs for the current question
-        let question_probs: Vec<DailyProbabilityPoint> = probs
-            .iter()
-            .filter(|p| question_markets_ids.contains(&p.market_id))
-            .cloned()
-            .collect();
+        let question_probs: Vec<DailyProbabilityPoint> =
+            probs.iter().filter(|p| question_markets_ids.contains(&p.market_id)).cloned().collect();
 
         for score_type in &score_types {
             match score_type.score_market(question, &question_markets, &question_probs) {
                 Ok(mut market_scores) => scores.append(&mut market_scores),
-                Err(e) => error!(
-                    "Error calculating relative scores for question {}: {e}",
-                    question.id
-                ),
+                Err(e) => {
+                    error!("Error calculating relative scores for question {}: {e}", question.id)
+                }
             }
         }
     }
@@ -467,10 +450,7 @@ pub fn aggregate_platform_category_scores(
     }
     let mut markets_and_scores = Vec::new();
     for market in markets {
-        let question = questions
-            .iter()
-            .find(|q| market.question_id == Some(q.id))
-            .unwrap();
+        let question = questions.iter().find(|q| market.question_id == Some(q.id)).unwrap();
         for score in market_scores {
             if score.market_id == market.id {
                 markets_and_scores.push(QuestionsMarketsAndScores {

@@ -46,12 +46,7 @@ impl fmt::Display for Platform {
 
 impl Platform {
     pub fn all() -> Vec<Platform> {
-        vec![
-            Platform::Kalshi,
-            Platform::Manifold,
-            Platform::Metaculus,
-            Platform::Polymarket,
-        ]
+        vec![Platform::Kalshi, Platform::Manifold, Platform::Metaculus, Platform::Polymarket]
     }
 
     /// Based on platform, deserialize a line into that platform's datatype.
@@ -236,26 +231,26 @@ mod tests {
                         .unwrap_or(column_substr.len());
                     let column_str = &column_substr[..column_end];
 
-                    if !column_str.is_empty() {
-                        if let Ok(column) = column_str.parse::<usize>() {
-                            println!("  Extracted column: {}", column);
+                    if !column_str.is_empty()
+                        && let Ok(column) = column_str.parse::<usize>()
+                    {
+                        println!("  Extracted column: {}", column);
 
-                            // Show context like our real code does
-                            if column > 0 && column <= malformed_json.len() {
-                                let chars: Vec<char> = malformed_json.chars().collect();
-                                if column - 1 < chars.len() {
-                                    let char_pos = column - 1;
-                                    let start_char_pos = char_pos.saturating_sub(25);
-                                    let end_char_pos = std::cmp::min(char_pos + 25, chars.len());
+                        // Show context like our real code does
+                        if column > 0 && column <= malformed_json.len() {
+                            let chars: Vec<char> = malformed_json.chars().collect();
+                            if column - 1 < chars.len() {
+                                let char_pos = column - 1;
+                                let start_char_pos = char_pos.saturating_sub(25);
+                                let end_char_pos = std::cmp::min(char_pos + 25, chars.len());
 
-                                    let before: String =
-                                        chars[start_char_pos..char_pos].iter().collect();
-                                    let at_pos = chars[char_pos];
-                                    let after: String =
-                                        chars[char_pos + 1..end_char_pos].iter().collect();
+                                let before: String =
+                                    chars[start_char_pos..char_pos].iter().collect();
+                                let at_pos = chars[char_pos];
+                                let after: String =
+                                    chars[char_pos + 1..end_char_pos].iter().collect();
 
-                                    println!("  Context: \"{}[{}]{}\"", before, at_pos, after);
-                                }
+                                println!("  Context: \"{}[{}]{}\"", before, at_pos, after);
                             }
                         }
                     }

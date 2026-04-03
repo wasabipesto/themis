@@ -1,8 +1,8 @@
 //! Tools to download and process markets from the Kalshi API.
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use chrono::{DateTime, Utc};
-use lazy_static::lazy_static;
+
 use log::{debug, error, trace, warn};
 use reqwest_middleware::ClientWithMiddleware;
 use serde::{Deserialize, Serialize};
@@ -10,23 +10,24 @@ use serde_json::Value;
 use serde_jsonlines::append_json_lines;
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::{Arc, Mutex};
+use std::sync::{LazyLock, Mutex};
 use std::time::Instant;
 
 use super::{IndexItem, Platform};
-use crate::util::{display_progress, get_reqwest_client_ratelimited, send_request};
+use crate::download_util::{
+    finalize_temp_file, get_reqwest_client_ratelimited, get_temp_file_path,
+    pretty_print_download_progress, read_index_item_from_file, send_request,
+};
 
 const KALSHI_API_BASE: &str = "https://api.elections.kalshi.com/trade-api/v2";
 const KALSHI_RATELIMIT: usize = 10;
 const KALSHI_RATELIMIT_MS: u64 = 1000;
 
-// cache maps
-lazy_static! {
-    static ref EVENT_CACHE: Arc<Mutex<HashMap<String, Value>>> =
-        Arc::new(Mutex::new(HashMap::new()));
-    static ref SERIES_CACHE: Arc<Mutex<HashMap<String, Value>>> =
-        Arc::new(Mutex::new(HashMap::new()));
-}
+// Caches for event and series data to avoid extra lookups
+static EVENT_CACHE: LazyLock<Mutex<HashMap<String, Value>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+static SERIES_CACHE: LazyLock<Mutex<HashMap<String, Value>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// Format of data saved to JSON
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -49,8 +50,12 @@ async fn get_event(client: &ClientWithMiddleware, market: &Value) -> Result<Valu
         .context("Failed to interpret 'event_ticker' as string.")?;
 
     // Check cache first
-    if let Some(cached_event) = EVENT_CACHE.lock().unwrap().get(event_ticker) {
-        trace!("Cache hit for event ticker: {}", event_ticker);
+    if let Some(cached_event) = EVENT_CACHE
+        .lock()
+        .map_err(|e| anyhow!("Failed to lock event cache: {e}"))?
+        .get(event_ticker)
+    {
+        trace!("Cache hit for event ticker: {event_ticker}");
         return Ok(cached_event.clone());
     }
 
@@ -65,7 +70,7 @@ async fn get_event(client: &ClientWithMiddleware, market: &Value) -> Result<Valu
     // Add to cache
     EVENT_CACHE
         .lock()
-        .unwrap()
+        .map_err(|e| anyhow!("Failed to lock event cache: {e}"))?
         .insert(event_ticker.to_owned(), event.clone());
     Ok(event)
 }
@@ -82,8 +87,12 @@ async fn get_series(client: &ClientWithMiddleware, event: &Value) -> Result<Valu
         .context("Failed to interpret 'series_ticker' as string.")?;
 
     // Check cache first
-    if let Some(cached_series) = SERIES_CACHE.lock().unwrap().get(series_ticker) {
-        trace!("Cache hit for series ticker: {}", series_ticker);
+    if let Some(cached_series) = SERIES_CACHE
+        .lock()
+        .map_err(|e| anyhow!("Failed to lock series cache: {e}"))?
+        .get(series_ticker)
+    {
+        trace!("Cache hit for series ticker: {series_ticker}");
         return Ok(cached_series.clone());
     }
 
@@ -98,7 +107,7 @@ async fn get_series(client: &ClientWithMiddleware, event: &Value) -> Result<Valu
     // Add to cache
     SERIES_CACHE
         .lock()
-        .unwrap()
+        .map_err(|e| anyhow!("Failed to lock series cache: {e}"))?
         .insert(series_ticker.to_owned(), series.clone());
     Ok(series)
 }
@@ -124,11 +133,11 @@ async fn get_trades(
         return Ok(Vec::new());
     }
 
-    // prep for requests
+    // Prep for requests
     let api_url = KALSHI_API_BASE.to_owned() + "/markets/trades";
     let limit: usize = 1000;
 
-    // loop until we have all history items
+    // Loop until we have all history items
     let mut cursor: Option<String> = None;
     let mut all_trades = Vec::new();
     loop {
@@ -142,7 +151,7 @@ async fn get_trades(
         )
         .await?;
 
-        // get history array and save
+        // Get history array and save
         let trades = response
             .get("trades")
             .context("Expected 'trades' field in response.")?
@@ -151,18 +160,17 @@ async fn get_trades(
             .to_owned();
         all_trades.extend(trades.clone());
 
-        // warn if there seems like too many trades
+        // Warn if there seems like too many trades
         // I had an issue once where it just kept going until it OOM'd
         if all_trades.len() > 500_000 && all_trades.len() % (limit * 10) == 0 {
             warn!(
-                "Kalshi market {ticker} has accumulated {} trades, something may be wrong. Curent cursor: {}. Last trade: {:?}",
+                "Kalshi market {ticker} has accumulated {} trades, something may be wrong. Curent cursor: {cursor:?}. Last trade: {:?}",
                 all_trades.len(),
-                cursor.unwrap(),
-                all_trades.last().unwrap()
+                all_trades.last()
             );
         }
 
-        // update the cursor or break
+        // Update the cursor or break
         if trades.len() == limit {
             let cursor_some = response
                 .get("cursor")
@@ -195,20 +203,17 @@ async fn get_trades(
 /// Downloads everything to build a market item.
 async fn get_data_and_build_item(
     client: &ClientWithMiddleware,
-    index: &HashMap<String, IndexItem>,
+    index_file_path: &Path,
     ticker: &str,
 ) -> Result<KalshiItem> {
-    // get market from index
-    let market = index
-        .get(ticker)
-        .ok_or_else(|| anyhow!("Index missing market key {ticker}!"))?
-        .data
-        .clone();
-    // get event data...
+    // Get market from index file
+    let index_item = read_index_item_from_file(index_file_path, ticker)?;
+    let market = index_item.data.clone();
+    // Get event data...
     let event = get_event(client, &market).await?;
-    // and series data...
+    // And series data...
     let series = get_series(client, &event).await?;
-    // return the row ready for writing
+    // Return the row ready for writing
     Ok(KalshiItem {
         id: ticker.to_owned(),
         last_updated: Utc::now(),
@@ -219,18 +224,25 @@ async fn get_data_and_build_item(
     })
 }
 
-/// Downloads and returns a new index.
-pub async fn download_index() -> Result<Vec<IndexItem>> {
-    // set platform
+/// Downloads index and streams it directly to disk.
+pub async fn download_index(index_file_path: &Path) -> Result<()> {
+    // Set platform
     let platform = Platform::Kalshi;
 
-    // get url, client, login token
+    // Get URL, client, login token
     let api_url = KALSHI_API_BASE.to_owned() + "/markets";
-    let client = get_reqwest_client_ratelimited(KALSHI_RATELIMIT, KALSHI_RATELIMIT_MS);
+    let client = get_reqwest_client_ratelimited(KALSHI_RATELIMIT, KALSHI_RATELIMIT_MS)?;
 
-    // loop through questions endpoint until all are downloaded
+    // Write to temporary file first for atomic operation
+    let temp_file_path = get_temp_file_path(index_file_path);
+    debug!(
+        "{platform}: Writing index to temp file: {}",
+        temp_file_path.display()
+    );
+
+    // Loop through questions endpoint until all are downloaded
     let limit = 1000;
-    let mut index = Vec::new();
+    let mut total_items = 0;
     let mut cursor: Option<String> = None;
     loop {
         let response = send_request(
@@ -247,7 +259,8 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
             .context("Failed to interpret 'markets' as array.")?
             .to_owned();
 
-        // add batch to index
+        // Build items from batch
+        let mut items = Vec::with_capacity(batch.len());
         for market in batch.clone() {
             let market_ticker = market
                 .get("ticker")
@@ -260,10 +273,19 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
                 last_updated: Utc::now(),
                 data: market,
             };
-            index.push(item);
+            items.push(item);
         }
 
-        // update the cursor or break
+        // Immediately write batch to temp file
+        append_json_lines(&temp_file_path, items)?;
+        total_items += batch.len();
+        trace!(
+            "{platform}: Wrote {} items to temp file (total: {})",
+            batch.len(),
+            total_items
+        );
+
+        // Update the cursor or break
         if batch.len() == limit {
             let cursor_some = response
                 .get("cursor")
@@ -285,19 +307,23 @@ pub async fn download_index() -> Result<Vec<IndexItem>> {
             break;
         }
     }
-    Ok(index)
+
+    // Atomically move temp file to final location
+    finalize_temp_file(&temp_file_path, index_file_path)?;
+    debug!("{platform}: Index download complete with {total_items} total items");
+    Ok(())
 }
 
 /// Downloads extended data for all markets that haven't been downloaded.
 /// Appends directly into data file.
 pub async fn download_data(
-    index: HashMap<String, IndexItem>,
+    index_file_path: &Path,
     ids_to_download: &[String],
     data_file_path: &Path,
 ) -> Result<()> {
     // Get client
     let platform = Platform::Kalshi;
-    let client = get_reqwest_client_ratelimited(KALSHI_RATELIMIT, KALSHI_RATELIMIT_MS);
+    let client = get_reqwest_client_ratelimited(KALSHI_RATELIMIT, KALSHI_RATELIMIT_MS)?;
 
     // Set progress counters
     let start_time = Instant::now();
@@ -308,7 +334,7 @@ pub async fn download_data(
     for batch in ids_to_download.chunks(10) {
         let futures = batch
             .iter()
-            .map(|ticker| get_data_and_build_item(&client, &index, ticker));
+            .map(|ticker| get_data_and_build_item(&client, index_file_path, ticker));
 
         // Wait for all tasks in the batch to finish
         let results = futures::future::join_all(futures).await;
@@ -319,7 +345,7 @@ pub async fn download_data(
             match result {
                 Ok(item) => {
                     trace!("Item processed: {:?}", item.id);
-                    lines.push(item)
+                    lines.push(item);
                 }
                 Err(e) => error!("Error downloading item {id}: {e}"),
             }
@@ -331,7 +357,7 @@ pub async fn download_data(
 
         // Calculate progress and elapsed time every n items
         completed += batch.len();
-        display_progress(&platform, completed, download_count, &start_time);
+        pretty_print_download_progress(&platform, completed, download_count, &start_time);
     }
     Ok(())
 }
